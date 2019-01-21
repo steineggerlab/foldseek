@@ -1,20 +1,20 @@
 include_directories(commons)
-add_subdirectory(strucclust)
+add_subdirectory(strucclustutils)
 add_subdirectory(commons)
 add_subdirectory(version)
 add_subdirectory(workflow)
 
-add_executable(plass
+add_executable(strucclust
         ${commons_source_files}
-        ${strucclust_source_files}
+        ${strucclustutils_source_files}
         ${workflow_source_files}
         LocalCommandDeclarations.h
-        plass.cpp
+        strucclust.cpp
         )
 
 mmseqs_setup_derived_target(strucclust)
-target_link_libraries(strucclust version)
+target_link_libraries(strucclust version dssp tmalign)
 
-add_dependencies(plass local-generated)
+add_dependencies(strucclust local-generated)
 
-install(TARGETS plass DESTINATION bin)
+install(TARGETS strucclust DESTINATION bin)

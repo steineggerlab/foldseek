@@ -17,58 +17,31 @@ public:
     }
 
     std::vector<MMseqsParameter> strucclust;
+    std::vector<MMseqsParameter> tmalign;
 
-    PARAMETER(PARAM_FILTER_PROTEINS)
-    PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
-
-    int filterProteins;
-    float proteinFilterThreshold;
-
+    PARAMETER(PARAM_TMSCORE_THRESHOLD)
+    float tmScoreThr;
 private:
     LocalParameters() :
-            Parameters()
+            Parameters(),
+            PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
     {
-        // assembleresult
-        assembleresults.push_back(PARAM_MIN_SEQ_ID);
-        assembleresults.push_back(PARAM_THREADS);
-        assembleresults.push_back(PARAM_V);
 
-        extractorfssubset.push_back(PARAM_TRANSLATION_TABLE);
-        extractorfssubset.push_back(PARAM_USE_ALL_TABLE_STARTS);
-        extractorfssubset.push_back(PARAM_THREADS);
-        extractorfssubset.push_back(PARAM_V);
+        tmalign.push_back(PARAM_MIN_SEQ_ID);
+        tmalign.push_back(PARAM_C);
+        tmalign.push_back(PARAM_COV_MODE);
+        tmalign.push_back(PARAM_INCLUDE_IDENTITY);
+        tmalign.push_back(PARAM_TMSCORE_THRESHOLD);
+        tmalign.push_back(PARAM_THREADS);
+        tmalign.push_back(PARAM_V);
 
-        filternoncoding.push_back(PARAM_PROTEIN_FILTER_THRESHOLD);
-        filternoncoding.push_back(PARAM_THREADS);
-        filternoncoding.push_back(PARAM_V);
+        // strucclust
+        strucclust = combineList(clust, align);
+        strucclust = combineList(strucclust, kmermatcher);
+        strucclust.push_back(PARAM_REMOVE_TMP_FILES);
+        strucclust.push_back(PARAM_RUNNER);
 
-        // assembler workflow
-        assemblerworkflow = combineList(rescorediagonal, kmermatcher);
-        assemblerworkflow = combineList(assemblerworkflow, extractorfs);
-        assemblerworkflow = combineList(assemblerworkflow, assembleresults);
-        assemblerworkflow = combineList(assemblerworkflow, filternoncoding);
-
-        assemblerworkflow.push_back(PARAM_FILTER_PROTEINS);
-        assemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
-        assemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
-        assemblerworkflow.push_back(PARAM_RUNNER);
-
-        // nucl assembler workflow
-        nuclassemblerworkflow = combineList(rescorediagonal, kmermatcher);
-        nuclassemblerworkflow = combineList(nuclassemblerworkflow, assembleresults);
-        nuclassemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
-        nuclassemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
-        nuclassemblerworkflow.push_back(PARAM_RUNNER);
-
-        // hybridassembleresults
-        hybridassembleresults = combineList(rescorediagonal, kmermatcher);
-        hybridassembleresults.push_back(PARAM_NUM_ITERATIONS);
-        hybridassembleresults.push_back(PARAM_REMOVE_TMP_FILES);
-        hybridassembleresults.push_back(PARAM_RUNNER);
-
-        filterProteins = 1;
-        proteinFilterThreshold = 0.2;
-
+        tmScoreThr = 0.5;
     }
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};
