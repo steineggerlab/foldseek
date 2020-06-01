@@ -7,7 +7,7 @@
 
 
 #include <iostream>
-
+#include <vector>
 //	Our CIF implementation consists of flyweight classes.
 
 namespace mmCIF
@@ -52,7 +52,7 @@ namespace mmCIF
         }
 
         const char*			m_data;
-        int32				m_field;
+        int32_t				m_field;
         std::vector<field>	m_fields;
     };
 
@@ -107,7 +107,7 @@ namespace mmCIF
         const char*		m_start;
         const char*		m_end;
         bool			m_loop;
-        uint32			m_field_count;
+        uint32_t			m_field_count;
         std::string		m_name;
     };
 

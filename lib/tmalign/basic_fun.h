@@ -19,7 +19,6 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
-#include <malloc.h>
 
 #include <sstream>
 #include <iostream>
@@ -144,7 +143,7 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
     sscanf(cstr, "%d", no);
 }
 
-int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
+int get_PDB_lines(std::istream& fin, vector<vector<string> >&PDB_lines,
     vector<string> &chainID_list, vector<string> &resi_vec,
     const int byresi_opt, const int ter_opt=3, const int infmt_opt=0,
     const string atom_opt="auto", const int split_opt=0)
@@ -153,33 +152,18 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
     string line;    
     char chainID=0;
     string resi="";
-    bool select_atom=false;
+    bool select_atom=true;
     int model_idx=0;
     vector<string> tmp_str_vec;
     
     int compress_type=0; // uncompressed file
-    ifstream fin;
-    redi::ipstream fin_gz; // if file is compressed
-    if (filename.size()>=3 && 
-        filename.substr(filename.size()-3,3)==".gz")
-    {
-        fin_gz.open("zcat "+filename);
-        compress_type=1;
-    }
-    else if (filename.size()>=4 && 
-        filename.substr(filename.size()-4,4)==".bz2")
-    {
-        fin_gz.open("bzcat "+filename);
-        compress_type=2;
-    }
-    else fin.open(filename.c_str());
+
 
     if (infmt_opt==0) // PDB format
     {
-        while (compress_type?fin_gz.good():fin.good())
+        while (fin.good())
         {
-            if (compress_type) getline(fin_gz, line);
-            else               getline(fin, line);
+            getline(fin, line);
             if (i > 0)
             {
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
@@ -266,13 +250,11 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
     {
         int L=0;
         float x,y,z;
-        while (compress_type?fin_gz.good():fin.good())
+        while (fin.good())
         {
-            if (compress_type) fin_gz>>L>>x>>y>>z;
-            else               fin   >>L>>x>>y>>z;
-            if (compress_type) getline(fin_gz, line);
-            else               getline(fin, line);
-            if (!(compress_type?fin_gz.good():fin.good())) break;
+            fin   >>L>>x>>y>>z;
+            getline(fin, line);
+            if (!fin.good()) break;
             model_idx++;
             stringstream i8_stream;
             i8_stream << ':' << model_idx;
@@ -280,8 +262,7 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             PDB_lines.push_back(tmp_str_vec);
             for (i=0;i<L;i++)
             {
-                if (compress_type) fin_gz>>x>>y>>z;
-                else               fin   >>x>>y>>z;
+                fin   >>x>>y>>z;
                 stringstream i8_stream;
                 i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  UNK  "<<setw(4)
                     <<i+1<<"    "<<setiosflags(ios::fixed)<<setprecision(3)
@@ -291,30 +272,26 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
                 if (byresi_opt>=2) resi_vec.push_back(line.substr(22,5)+' ');
                 PDB_lines.back().push_back(line);
             }
-            if (compress_type) getline(fin_gz, line);
-            else               getline(fin, line);
+            getline(fin, line);
         }
     }
     else if (infmt_opt==2) // xyz format
     {
         int L=0;
         char A;
-        while (compress_type?fin_gz.good():fin.good())
+        while (fin.good())
         {
-            if (compress_type) getline(fin_gz, line);
-            else               getline(fin, line);
+            getline(fin, line);
             L=atoi(line.c_str());
-            if (compress_type) getline(fin_gz, line);
-            else               getline(fin, line);
+            getline(fin, line);
             for (i=0;i<line.size();i++)
                 if (line[i]==' '||line[i]=='\t') break;
-            if (!(compress_type?fin_gz.good():fin.good())) break;
+            if (!fin.good()) break;
             chainID_list.push_back(':'+line.substr(0,i));
             PDB_lines.push_back(tmp_str_vec);
             for (i=0;i<L;i++)
             {
-                if (compress_type) getline(fin_gz, line);
-                else               getline(fin, line);
+                getline(fin, line);
                 stringstream i8_stream;
                 i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  "
                     <<AAmap(line[0])<<"  "<<setw(4)<<i+1<<"    "
@@ -326,8 +303,6 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             }
         }
     }
-    if (compress_type) fin_gz.close();
-    else               fin.close();
     line.clear();
     if (!split_opt) chainID_list.push_back("");
     return PDB_lines.size();

@@ -134,7 +134,9 @@ int main(int argc, char *argv[])
     for (i=0;i<chain_list.size();i++)
     {
         xname=chain_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
+        ifstream fin;
+        fin.open(xname.c_str());
+        xchainnum=get_PDB_lines(fin, PDB_lines, chainID_list,
             resi_vec, 0, ter_opt, infmt_opt, atom_opt, split_opt);
         if (!xchainnum)
         {

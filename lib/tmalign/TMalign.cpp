@@ -487,8 +487,12 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
+        ifstream fin;
+        fin.open(xname.c_str());
+
+        xchainnum=get_PDB_lines(fin, PDB_lines1, chainID_list1,
             resi_vec1, byresi_opt, ter_opt, infmt1_opt, atom_opt, split_opt);
+        fin.close();
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -522,9 +526,13 @@ int main(int argc, char *argv[])
                 if (PDB_lines2.size()==0)
                 {
                     yname=chain2_list[j];
-                    ychainnum=get_PDB_lines(yname, PDB_lines2,
+                    ifstream fin;
+                    fin.open(yname.c_str());
+
+                    ychainnum=get_PDB_lines(fin, PDB_lines2,
                         chainID_list2, resi_vec2, byresi_opt, ter_opt,
                         infmt2_opt, atom_opt, split_opt);
+                    fin.close();
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname

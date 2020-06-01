@@ -1,23 +1,16 @@
-#ifndef SUBSTITUTION_MATRIX_H
-#define SUBSTITUTION_MATRIX_H
-
-// Written by Maria Hauser mhauser@genzentrum.lmu.de
-//  
-// Represents a simple amino acid substitution matrix. 
-// Can read a straight-forward substitution matrix file (.mat ending of the file) and probabilities file (.out ending of the file).
-// If a probabilities file is given, it calculates a biased matrix (produces shorter = more precise alignments).
-//
+#ifndef STRUCTSUBSTITUTION_MATRIX_H
+#define STRUCTSUBSTITUTION_MATRIX_H
 
 #include <cstddef>
 #include "BaseMatrix.h"
 #include "ProfileStates.h"
 
-class SubstitutionMatrix: public BaseMatrix {
+class StructSubstitutionMatrix: public BaseMatrix {
 
     public:
-        SubstitutionMatrix(const char *scoringMatrixFileName_, float bitFactor, float scoreBias);
+        StructSubstitutionMatrix(const char *scoringMatrixFileName_, float bitFactor, float scoreBias);
 
-        virtual ~SubstitutionMatrix();
+        virtual ~StructSubstitutionMatrix();
 
         virtual float getBitFactor() {return bitFactor; }
     
@@ -71,6 +64,8 @@ class SubstitutionMatrix: public BaseMatrix {
                               (const char*) matrixData,
                               asciiStart);
         }
+
+        int alphabetSize;
 
 private:
 

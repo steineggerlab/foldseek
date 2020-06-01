@@ -11,19 +11,13 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include <boost/iostreams/copy.hpp>
-#include <boost/iostreams/device/back_inserter.hpp>
-#include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
-#include <boost/algorithm/string.hpp>
+#include <cstring>
 
 #include "iocif.h"
 #include "utils.h"
 
 using namespace std;
-namespace io = boost::iostreams;
-namespace ba = boost::algorithm;
+
 
 //	Our CIF implementation consists of flyweight classes.
 
@@ -39,7 +33,7 @@ namespace mmCIF
     {
         string result;
 
-                foreach (const field& f, m_fields)
+                for (const field& f : m_fields)
                     {
                         if (strncmp(inName, f.m_name, f.m_name_end - f.m_name) == 0)
                         {
@@ -61,7 +55,7 @@ namespace mmCIF
 
         if (m_loop)
         {
-            for (uint32 i = 0; i < m_field_count; ++i)
+            for (uint32_t i = 0; i < m_field_count; ++i)
             {
                 assert(*p == '_');
                 assert(*(p + m_name.length()) == '.');
@@ -79,7 +73,7 @@ namespace mmCIF
                 result.m_fields.push_back(field);
             }
 
-                    foreach (field& fld, result.m_fields)
+                    for (field& fld : result.m_fields)
                         {
                             fld.m_data = skip_white(p, m_end);
                             fld.m_data_end = skip_value(fld.m_data, m_end);
@@ -88,7 +82,7 @@ namespace mmCIF
         }
         else
         {
-            for (uint32 i = 0; i < m_field_count; ++i)
+            for (uint32_t i = 0; i < m_field_count; ++i)
             {
                 assert(*p == '_');
                 assert(*(p + m_name.length()) == '.');
@@ -138,7 +132,7 @@ namespace mmCIF
             }
             else
             {
-                        foreach (field& fld, row.m_fields)
+                        for (field& fld : row.m_fields)
                             {
                                 fld.m_data = skip_white(p, m_end);
                                 fld.m_data_end = skip_value(fld.m_data, m_end);
@@ -173,8 +167,8 @@ namespace mmCIF
     {
         // first extract data into a buffer
         m_buffer.reserve(10 * 1024 * 1024);	// reserve 10 MB, should be sufficient for most
-
-        io::copy(is, io::back_inserter(m_buffer));
+        //TODO
+        //io::copy(is, io::back_inserter(m_buffer));
 
         m_data = &m_buffer[0];
         m_end = m_data + m_buffer.size();
@@ -186,7 +180,7 @@ namespace mmCIF
         const char* p = m_data;
 
         if (strncmp(p, "data_", 5) != 0)
-            throw mas_exception("Is this an mmCIF file?");
+            cerr << "Is this an mmCIF file?";
 
         p = skip_line(p, m_end);
 
@@ -290,7 +284,7 @@ namespace mmCIF
             if (rec.m_loop == false)
             {
                 // guess we should never reach this point
-                throw mas_exception("invalid CIF file? (unexpected data, not in loop)");
+                cerr  << "invalid CIF file? (unexpected data, not in loop)";
             }
 
             p = skip_value(p, m_end);
@@ -298,7 +292,7 @@ namespace mmCIF
 
             // check for a new data_ block
             if (p != m_end and strncmp(p, "data_", 5) == 0)
-                throw mas_exception("Multiple data blocks in CIF file");
+                cerr << "Multiple data blocks in CIF file";
         }
 
         if (not m_records.empty() and m_records.back().m_end == nullptr)
@@ -324,7 +318,7 @@ namespace mmCIF
         const char* p = strchr(inName, '.');
         assert(p != nullptr);
         if (p == nullptr)
-            throw logic_error("incorrect name");
+            cerr << "incorrect name";
 
         record r = operator[](string(inName, p).c_str());
         return r.front()[string(p + 1).c_str()];
@@ -335,7 +329,7 @@ namespace mmCIF
         const char* p = strchr(inName, '.');
         assert(p != nullptr);
         if (p == nullptr)
-            throw logic_error("incorrect name");
+            cerr << "incorrect name";
 
         record test;
         test.m_name.assign(inName, p);
@@ -432,23 +426,4 @@ namespace mmCIF
     }
 
 }
-
-//void ReadCIF(std::istream& in, MProtein& out)
-//{
-//	file cif(&buffer[0], buffer.size() - 1);
-//	
-//	
-//
-//	cout << "id: " << cif["_entry"].front()["id"].value() << endl;
-//	
-//	foreach (const row& row, cif["_atom_type"])
-//	{
-//		cout << row["symbol"].value() << endl;
-//	}
-//	
-//	foreach (const row& row, cif["_atom_site"])
-//	{
-//		cout << "ATOM  " << row["Cartn_x"].value() << ' ' << row["Cartn_y"].value() << ' ' << row["Cartn_z"].value() << endl;
-//	}
-//}
 //
