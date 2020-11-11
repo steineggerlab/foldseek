@@ -27,8 +27,7 @@ StructSubstitutionMatrix::StructSubstitutionMatrix(const char *scoringMatrixFile
 
     //print(probMatrix, int2aa, alphabetSize);
     generateSubMatrix(this->probMatrix, this->subMatrixPseudoCounts,
-                      this->subMatrix, this->subMatrix2Bit,
-                      this->alphabetSize, true, bitFactor, scoreBias);
+                      this->subMatrix, this->alphabetSize, true, bitFactor, scoreBias);
     this->bitFactor = bitFactor;
 }
 
@@ -100,17 +99,17 @@ void StructSubstitutionMatrix::setupLetterMapping(){
             case 'Z':
             case '[':
             case '\\':
-                this->aa2int[static_cast<int>(letter)] = this->aa2int[static_cast<int>(upperLetter)];
+                this->aa2num[static_cast<int>(letter)] = this->aa2num[static_cast<int>(upperLetter)];
                 break;
             default:
-                this->aa2int[static_cast<int>(letter)] = this->aa2int[(int) 'X'];
+                this->aa2num[static_cast<int>(letter)] = this->aa2num[(int) 'X'];
                 break;
         }
     }
 }
 
-int StructSubstitutionMatrix::parseAlphabet(char *word, char *int2aa, int *aa2int) {
-    char *charReader = word;
+int StructSubstitutionMatrix::parseAlphabet(const char *word, char *int2aa, unsigned char *aa2int) {
+    const char *charReader = word;
     int minAAInt = INT_MAX;
     // find amino acid with minimal int value
     while (isgraph(*charReader)) {
@@ -137,7 +136,7 @@ int StructSubstitutionMatrix::readProbMatrix(const std::string &matrixData) {
     std::string line;
     bool probMatrixStart = false;
 
-    char *words[256];
+    const char *words[256];
     int column_aa[32];
     int column_aa_sorted[32];
     int alphabetSize = 0;
@@ -168,7 +167,7 @@ int StructSubstitutionMatrix::readProbMatrix(const std::string &matrixData) {
                     Debug(Debug::ERROR) << "Probability matrix must start with alphabet header.\n";
                     EXIT(EXIT_FAILURE);
                 }
-                column_aa[i] = parseAlphabet(words[i], int2aa, aa2int);
+                column_aa[i] = parseAlphabet(words[i], num2aa, aa2num);
             }
             alphabetSize = wordCnt;
             if (alphabetSize > 32) {
@@ -183,11 +182,11 @@ int StructSubstitutionMatrix::readProbMatrix(const std::string &matrixData) {
             for (int i = 0; i < alphabetSize; i++) {
                 for (int j = 0; j < alphabetSize; j++) {
                     if (column_aa_sorted[i] == column_aa[j]) {
-                        const char repAA = int2aa[column_aa[j]];
+                        const char repAA = num2aa[column_aa[j]];
                         for (size_t z = 'A'; z < 'Z'; z++) {
-                            aa2int[z] = (aa2int[z] == column_aa_sorted[i]) ? i : aa2int[z];
+                            aa2num[z] = (aa2num[z] == column_aa_sorted[i]) ? i : aa2num[z];
                         }
-                        int2aa[i] = repAA;
+                        aa2num[i] = repAA;
                         column_aa[j] = i;
                     }
                 }
@@ -200,7 +199,7 @@ int StructSubstitutionMatrix::readProbMatrix(const std::string &matrixData) {
                 Debug(Debug::ERROR) << "First element in probability line must be an alphabet letter.\n";
                 EXIT(EXIT_FAILURE);
             }
-            int aa = parseAlphabet(words[0], int2aa, aa2int);
+            int aa = parseAlphabet(words[0], num2aa, aa2num);
             for (int i = 0; i < alphabetSize; i++) {
                 double f = strtod(words[i + 1], NULL);
                 probMatrix[aa][column_aa[i]] = f; // divided by 2 because we scale bit/2 ot bit
@@ -210,10 +209,10 @@ int StructSubstitutionMatrix::readProbMatrix(const std::string &matrixData) {
     bool containsX = false;
     bool xIsPositive = false;
     for (int i = 0; i < alphabetSize; i++) {
-        if (column_aa[i] == aa2int[(int)'X']) {
+        if (column_aa[i] == aa2num[(int)'X']) {
             containsX = true;
             for (int j = 0; j < alphabetSize; j++) {
-                int xIndex = aa2int[(int)'X'];
+                int xIndex = aa2num[(int)'X'];
                 if ((probMatrix[xIndex][j] > 0) || (probMatrix[j][xIndex] > 0)) {
                     xIsPositive = true;
                     break;
@@ -233,11 +232,11 @@ int StructSubstitutionMatrix::readProbMatrix(const std::string &matrixData) {
             Debug(Debug::ERROR) << "Computing inverse of substitution matrix failed\n";
             EXIT(EXIT_FAILURE);
         }
-        pBack[aa2int[(int)'\\']]=ANY_BACK;
+        pBack[aa2num[(int)'\\']]=ANY_BACK;
     }
     if(xIsPositive == false){
         for (int i = 0; i < alphabetSize - 1; i++) {
-            pBack[i] = pBack[i] * (1.0 - pBack[aa2int[(int)'\\']]);
+            pBack[i] = pBack[i] * (1.0 - pBack[aa2num[(int)'\\']]);
         }
     }
     // Reconstruct Probability Sab=(Pab/Pa*Pb) -> Pab = exp(Sab) * Pa * Pb

@@ -18,34 +18,36 @@
 int tmalign(int argc, const char **argv, const Command& command) {
 
     LocalParameters &par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, 4);
+    par.parseParameters(argc, argv, command, false, 0, MMseqsParameter::COMMAND_ALIGN);
+
 
     Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
-    DBReader<unsigned int> qdbr(par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     qdbr.open(DBReader<unsigned int>::NOSORT);
 
     DBReader<unsigned int> *tdbr = NULL;
+    bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
 
     bool sameDB = false;
     if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
         tdbr = &qdbr;
     } else {
-        tdbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str());
+        tdbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
         tdbr->open(DBReader<unsigned int>::NOSORT);
-        if (par.noPreload == false) {
+        if (touch) {
             tdbr->readMmapedDataInMemory();
         }
     }
 
 
     Debug(Debug::INFO) << "Result database: " << par.db3 << "\n";
-    DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str());
+    DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
 
     Debug(Debug::INFO) << "Output file: " << par.db4 << "\n";
-    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads));
+    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
     dbw.open();
 
 
@@ -72,6 +74,8 @@ int tmalign(int argc, const char **argv, const Command& command) {
     int infmt1_opt = 0;     // PDB format for chain_1
     int infmt2_opt = 0;
     int byresi_opt = 0;     // set -byresi to 0
+    Debug::Progress progress(resultReader.getSize());
+
 #pragma omp parallel
     {
 
@@ -111,12 +115,11 @@ int tmalign(int argc, const char **argv, const Command& command) {
         std::string resultBuffer;
 #pragma omp for schedule(dynamic, 1)
         for (size_t id = 0; id < resultReader.getSize(); id++) {
-            Debug::printProgress(id);
-
-            char *data = resultReader.getData(id);
+            progress.updateProgress();
+            char *data = resultReader.getData(id, thread_idx);
             size_t queryKey = resultReader.getDbKey(id);
             unsigned int queryId = qdbr.getId(queryKey);
-            char *querySeq = qdbr.getData(queryId);
+            char *querySeq = qdbr.getData(queryId, thread_idx);
             unsigned int chain_i = 0;
 
             std::istringstream xpdb(querySeq);
@@ -151,7 +154,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     resultBuffer.append(buffer, len);
                     continue;
                 }
-                char * targetSeq = tdbr->getData(targetId);
+                char * targetSeq = tdbr->getData(targetId, thread_idx);
                 unsigned int chain_j = 0;
                 std::istringstream ypdb(targetSeq);
 

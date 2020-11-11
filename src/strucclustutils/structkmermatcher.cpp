@@ -2,9 +2,9 @@
 // Created by Martin Steinegger on 02.10.18.
 //
 #include "kmermatcher.h"
-#include <mmseqs/src/commons/Timer.h>
-#include <mmseqs/src/prefiltering/QueryMatcher.h>
-#include <mmseqs/src/prefiltering/ReducedMatrix.h>
+#include "Timer.h"
+#include "QueryMatcher.h"
+#include "ReducedMatrix.h"
 #include "StructSubstitutionMatrix.h"
 
 
@@ -26,20 +26,20 @@ int structkmermatcher(int argc, const char **argv, const Command &command) {
 
     Parameters &par = Parameters::getInstance();
     setStructKmerFilterDefault(&par);
-    par.parseParameters(argc, argv, command, 2, false, 0, MMseqsParameter::COMMAND_CLUSTLINEAR);
+    par.parseParameters(argc, argv, command, false, 0, MMseqsParameter::COMMAND_CLUSTLINEAR);
 
-    DBReader<unsigned int> seqDbr(par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> seqDbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     seqDbr.open(DBReader<unsigned int>::NOSORT);
     int querySeqType  =  seqDbr.getDbtype();
 
     setKmerLengthAndAlphabet(par, seqDbr.getAminoAcidDBSize(), querySeqType);
-    std::vector<MMseqsParameter>* params = command.params;
+    std::vector<MMseqsParameter*>* params = command.params;
     par.printParameters(command.cmd, argc, argv, *params);
     Debug(Debug::INFO) << "Database type: " << seqDbr.getDbTypeName() << "\n";
 
-    SubstitutionMatrix structMat(par.scoringMatrixFile.c_str(), 2.0, 0.0);
+    SubstitutionMatrix structMat(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
     BaseMatrix *subMat = &structMat;
-    subMat = new ReducedMatrix(structMat.probMatrix, structMat.subMatrixPseudoCounts, structMat.aa2int, structMat.int2aa, structMat.alphabetSize,  par.alphabetSize, 2.0);
+    //subMat = new ReducedMatrix(structMat.probMatrix, structMat.subMatrixPseudoCounts, structMat.aa2num, structMat.num2aa, structMat.alphabetSize,  par.alphabetSize, 2.0);
 
 
     //seqDbr.readMmapedDataInMemory();
@@ -54,7 +54,7 @@ int structkmermatcher(int argc, const char **argv, const Command &command) {
     }
     Debug(Debug::INFO) << "\n";
     size_t totalKmers = computeKmerCount(seqDbr, KMER_SIZE, chooseTopKmer);
-    size_t totalSizeNeeded = computeMemoryNeededLinearfilter(totalKmers);
+    size_t totalSizeNeeded = computeMemoryNeededLinearfilter<short>(totalKmers);
     Debug(Debug::INFO) << "Needed memory (" << totalSizeNeeded << " byte) of total memory (" << memoryLimit << " byte)\n";
     // compute splits
     size_t splits = static_cast<size_t>(std::ceil(static_cast<float>(totalSizeNeeded) / memoryLimit));
@@ -65,7 +65,7 @@ int structkmermatcher(int argc, const char **argv, const Command &command) {
 
     Debug(Debug::INFO) << "Process file into " << splits << " parts\n";
     std::vector<std::string> splitFiles;
-    KmerPosition *hashSeqPair = NULL;
+    KmerPosition<short> *hashSeqPair = NULL;
 
     size_t mpiRank = 0;
 #ifdef HAVE_MPI
@@ -88,7 +88,7 @@ int structkmermatcher(int argc, const char **argv, const Command &command) {
 
     for(size_t split = fromSplit; split < fromSplit+splitCount; split++) {
         std::string splitFileName = par.db2 + "_split_" +SSTR(split);
-        hashSeqPair = doComputation(totalKmers, split, splits, splitFileName, seqDbr, par, subMat, KMER_SIZE, chooseTopKmer);
+        hashSeqPair = doComputation<short>(totalKmers, split, splits, splitFileName, seqDbr, par, subMat, KMER_SIZE, chooseTopKmer);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     if(mpiRank == 0){
@@ -100,7 +100,7 @@ int structkmermatcher(int argc, const char **argv, const Command &command) {
 #else
     for(size_t split = 0; split < splits; split++) {
         std::string splitFileName = par.db2 + "_split_" +SSTR(split);
-        hashSeqPair = doComputation(totalKmers, split, splits, splitFileName, seqDbr, par, subMat, KMER_SIZE, chooseTopKmer);
+//        hashSeqPair = doComputation<short>(totalKmers, split, splits, splitFileName, seqDbr, par, subMat, KMER_SIZE, chooseTopKmer);
         splitFiles.push_back(splitFileName);
     }
 #endif
@@ -108,16 +108,16 @@ int structkmermatcher(int argc, const char **argv, const Command &command) {
         std::vector<char> repSequence(seqDbr.getSize());
         std::fill(repSequence.begin(), repSequence.end(), false);
         // write result
-        DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), par.threads);
+        DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_PREFILTER_RES);
         dbw.open();
 
         Timer timer;
         if(splits > 1) {
             std::cout << "How many splits: " << splits<<std::endl;
             seqDbr.unmapData();
-            mergeKmerFilesAndOutput(seqDbr, dbw, splitFiles, repSequence, par.covMode, par.cov);
+            mergeKmerFilesAndOutput<Parameters::DBTYPE_AMINO_ACIDS, KmerEntry>(dbw, splitFiles, repSequence);
         } else {
-            writeKmerMatcherResult(seqDbr, dbw, hashSeqPair, totalKmers, repSequence, par.covMode, par.cov, par.threads);
+            writeKmerMatcherResult<Parameters::DBTYPE_AMINO_ACIDS>(dbw, hashSeqPair, totalKmers, repSequence, par.threads);
         }
         Debug(Debug::INFO) << "Time for fill: " << timer.lap() << "\n";
         // add missing entries to the result (needed for clustering)
@@ -132,7 +132,7 @@ int structkmermatcher(int argc, const char **argv, const Command &command) {
 #endif
                 if (repSequence[id] == false) {
                     hit_t h;
-                    h.pScore = 0;
+                    h.prefScore = 0;
                     h.diagonal = 0;
                     h.seqId = seqDbr.getDbKey(id);
                     int len = QueryMatcher::prefilterHitToBuffer(buffer, h);

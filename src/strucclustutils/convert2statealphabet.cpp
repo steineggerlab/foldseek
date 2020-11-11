@@ -13,19 +13,20 @@
 
 int convert2statealphabet(int argc, const char **argv, const Command& command)  {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, 2);
+    par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_COMMON);
+
 
     Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
-    DBReader<unsigned int> dsspDb (par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> dsspDb(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     dsspDb.open(DBReader<unsigned int>::NOSORT);
 
     Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
-    DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads));
+    DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     dbw.open();
 
 
     Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
-    DBWriter dbwh((par.db2+"_h").c_str(), (par.db2+"_h.index").c_str(), static_cast<unsigned int>(par.threads));
+    DBWriter dbwh((par.db2+"_h").c_str(), (par.db2+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
     dbwh.open();
 
     char coding[18][36];
@@ -67,7 +68,7 @@ int convert2statealphabet(int argc, const char **argv, const Command& command)  
 #pragma omp for schedule(static)
         for (size_t id = 0; id < dsspDb.getSize(); id++) {
             MProtein a;
-            char *data = dsspDb.getData(id);
+            char *data = dsspDb.getData(id, thread_idx);
             std::istringstream pdb(data);
             a.ReadPDB(pdb);
             a.CalculateSecondaryStructure();
@@ -115,7 +116,7 @@ int convert2statealphabet(int argc, const char **argv, const Command& command)  
 
         }
     }
-    dbw.close(Sequence::AMINO_ACIDS);
+    dbw.close();
     dbwh.close();
     dsspDb.close();
     return EXIT_SUCCESS;

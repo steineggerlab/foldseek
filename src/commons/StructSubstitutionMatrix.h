@@ -54,9 +54,9 @@ class StructSubstitutionMatrix: public BaseMatrix {
             char * matrixData = new char[range*range];
             for(size_t i = 0; i < range; i++) {
                 matrix[i] = matrixData+(i*range);
-                int curr_i = submat.aa2int[asciiStart+i];
+                int curr_i = submat.aa2num[asciiStart+i];
                 for (size_t j = 0; j < range; j++) {
-                    int curr_j = submat.aa2int[asciiStart+j];
+                    int curr_j = submat.aa2num[asciiStart+j];
                     matrix[i][j] = static_cast<char>(submat.subMatrix[curr_i][curr_j]);
                 }
             }
@@ -71,7 +71,7 @@ private:
 
         const char* scoringMatrixFileName;
 
-        int parseAlphabet(char * word, char * int2aa, int * aa2int);
+        int parseAlphabet(const char * word, char * int2aa, unsigned char * aa2int);
 
         int readProbMatrix(const std::string &matrixData);
 
