@@ -13,7 +13,7 @@ add_executable(strucclust
         )
 
 mmseqs_setup_derived_target(strucclust)
-target_link_libraries(strucclust version dssp tmalign)
+target_link_libraries(strucclust version dssp pdbtools)
 
 add_dependencies(strucclust local-generated)
 

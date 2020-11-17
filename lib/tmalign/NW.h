@@ -21,8 +21,8 @@
 *     because it is about 1.5 times faster than a complete N-W code
 *     and does not influence much the final structure alignment result.
 */
-void NWDP_TM( double **score, bool **path, double **val,
-    int len1, int len2, double gap_open, int j2i[])
+void NWDP_TM( float **score, bool **path, float **val,
+    int len1, int len2, float gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
     //not a standard implementation of NW algorithm
@@ -31,7 +31,7 @@ void NWDP_TM( double **score, bool **path, double **val,
     //path[0:len1, 0:len2]=1,2,3, from diagonal, horizontal, vertical
 
     int i, j;
-    double h, v, d;
+    float h, v, d;
 
     //initialization
     val[0][0]=0;
@@ -58,13 +58,11 @@ void NWDP_TM( double **score, bool **path, double **val,
 
             //symbol insertion in horizontal (= a gap in vertical)
             h=val[i-1][j];
-            if(path[i-1][j]) //aligned in last position
-                h += gap_open;
+            h += (path[i-1][j]) ? gap_open : 0.0;
 
             //symbol insertion in vertical
             v=val[i][j-1];
-            if(path[i][j-1]) //aligned in last position
-                v += gap_open;
+            v += (path[i][j-1]) ? gap_open : 0.0f;
 
 
             if(d>=h && d>=v)
@@ -110,9 +108,9 @@ void NWDP_TM( double **score, bool **path, double **val,
     }
 }
 
-void NWDP_TM( double **score, bool **path, double **val,
-    double **x, double **y, int len1, int len2, double t[3], double u[3][3],
-    double d02, double gap_open, int j2i[])
+void NWDP_TM( float **score, bool **path, float **val,
+    const float *x, const float *y, int len1, int len2, float t[3], float u[3][3],
+    float d02, float gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
     //not a standard implementation of NW algorithm
@@ -121,7 +119,7 @@ void NWDP_TM( double **score, bool **path, double **val,
     //path[0:len1, 0:len2]=1,2,3, from diagonal, horizontal, vertical
 
     int i, j;
-    double h, v, d;
+    float h, v, d;
 
     //initialization
     val[0][0]=0;
@@ -137,29 +135,27 @@ void NWDP_TM( double **score, bool **path, double **val,
         path[0][j]=false; //not from diagonal
         j2i[j]=-1;    //all are not aligned, only use j2i[1:len2]
     }      
-    double xx[3], dij;
+    float xx[3], dij;
 
 
     //decide matrix and path
     for(i=1; i<=len1; i++)
     {
-        transform(t, u, &x[i-1][0], xx);
+        transform(t, u, &x[(i-1)*3], xx);
         for(j=1; j<=len2; j++)
         {
             //d=val[i-1][j-1]+score[i][j]; //diagonal
-            dij=dist(xx, &y[j-1][0]);    
-            d=val[i-1][j-1] +  1.0/(1+dij/d02);
+            dij=dist(xx, &y[(j-1)*3]);
+            d=val[i-1][j-1] + 1.0/(1+dij/d02);
 
             //symbol insertion in horizontal (= a gap in vertical)
             h=val[i-1][j];
-            if(path[i-1][j]) //aligned in last position
-                h += gap_open;
+            h += (path[i-1][j]) ? gap_open : 0.0;
+
 
             //symbol insertion in vertical
             v=val[i][j-1];
-            if(path[i][j-1]) //aligned in last position
-                v += gap_open;
-
+            v += (path[i][j-1]) ? gap_open : 0.0f;
 
             if(d>=h && d>=v)
             {
@@ -205,9 +201,9 @@ void NWDP_TM( double **score, bool **path, double **val,
 }
 
 //+ss
-void NWDP_TM(double **score, bool **path, double **val,
-    const int *secx, const int *secy, const int len1, const int len2,
-    const double gap_open, int j2i[])
+void NWDP_TM(float **score, bool **path, float **val,
+             const int *secx, const int *secy, const int len1, const int len2,
+             const float gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
     //not a standard implementation of NW algorithm
@@ -216,7 +212,7 @@ void NWDP_TM(double **score, bool **path, double **val,
     //path[0:len1, 0:len2]=1,2,3, from diagonal, horizontal, vertical
 
     int i, j;
-    double h, v, d;
+    float h, v, d;
 
     //initialization
     val[0][0]=0;

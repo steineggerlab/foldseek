@@ -16,6 +16,8 @@ public:
         return static_cast<LocalParameters&>(LocalParameters::getInstance());
     }
 
+    static const int DBTYPE_TOSION_SEQUENCE = 20;
+    static const int DBTYPE_CA_ALPHA = 21;
 
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;

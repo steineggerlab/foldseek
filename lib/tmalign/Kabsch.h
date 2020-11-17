@@ -29,13 +29,13 @@ rms   - sum of w*(ux+t-y)**2 over all atom pairs            (output)
 u    - u(i,j) is   rotation  matrix for best superposition  (output)
 t    - t(i)   is translation vector for best superposition  (output)
 **************************************************************************/
-bool Kabsch(double **x,
-    double **y,
+bool Kabsch(float *x,
+    float *y,
     int n,
     int mode,
-    double *rms,
-    double t[3],
-    double u[3][3]
+    float *rms,
+    float t[3],
+    float u[3][3]
     )
 {
     int i, j, m, m1, l, k;
@@ -89,26 +89,45 @@ bool Kabsch(double **x,
     {
         return false;
     }
-
+    float c1tmp[3], c2tmp[3];
+    float s1tmp[3], s2tmp[3];
+    float sxtmp[3], sytmp[3], sztmp[3];
+    for (i = 0; i < 3; i++)
+    {
+        s1tmp[i] = 0.0;
+        s2tmp[i] = 0.0;
+        sxtmp[i] = 0.0;
+        sytmp[i] = 0.0;
+        sztmp[i] = 0.0;
+    }
     //compute centers for vector sets x, y
     for (i = 0; i<n; i++)
     {
         for (j = 0; j < 3; j++)
         {
-            c1[j] = x[i][j];
-            c2[j] = y[i][j];
+            c1tmp[j] = x[i*3+j];
+            c2tmp[j] = y[i*3+j];
 
-            s1[j] += c1[j];
-            s2[j] += c2[j];
+            s1tmp[j] += c1tmp[j];
+            s2tmp[j] += c2tmp[j];
         }
 
         for (j = 0; j < 3; j++)
         {
-            sx[j] += c1[0] * c2[j];
-            sy[j] += c1[1] * c2[j];
-            sz[j] += c1[2] * c2[j];
+            sxtmp[j] += c1tmp[0] * c2tmp[j];
+            sytmp[j] += c1tmp[1] * c2tmp[j];
+            sztmp[j] += c1tmp[2] * c2tmp[j];
         }
     }
+    for (i = 0; i < 3; i++)
+    {
+        s1[i]=s1tmp[i];
+        s2[i]=s2tmp[i];
+        sx[i]=sxtmp[i];
+        sy[i]=sytmp[i];
+        sz[i]=sztmp[i];
+    }
+
     for (i = 0; i < 3; i++)
     {
         xc[i] = s1[i] / n;
@@ -120,10 +139,12 @@ bool Kabsch(double **x,
         {
             for (int nn = 0; nn < 3; nn++)
             {
-                e0 += (x[mm][nn] - xc[nn]) * (x[mm][nn] - xc[nn]) + (y[mm][nn] - yc[nn]) * (y[mm][nn] - yc[nn]);
+                e0 += (x[mm*3+nn] - xc[nn]) * (x[mm*3+nn] - xc[nn]) +
+                      (y[mm*3+nn] - yc[nn]) * (y[mm*3+nn] - yc[nn]);
             }
         }
     }
+
     for (j = 0; j < 3; j++)
     {
         r[j][0] = sx[j] - s1[0] * s2[j] / n;
@@ -208,22 +229,22 @@ bool Kabsch(double **x,
                     ss[4] = (d - rr[0]) * rr[4] + rr[1] * rr[3];
                     ss[5] = (d - rr[0]) * (d - rr[2]) - rr[1] * rr[1];
 
-                    if (fabs(ss[0]) <= epsilon) ss[0] = 0.0;
-                    if (fabs(ss[1]) <= epsilon) ss[1] = 0.0;
-                    if (fabs(ss[2]) <= epsilon) ss[2] = 0.0;
-                    if (fabs(ss[3]) <= epsilon) ss[3] = 0.0;
-                    if (fabs(ss[4]) <= epsilon) ss[4] = 0.0;
-                    if (fabs(ss[5]) <= epsilon) ss[5] = 0.0;
+                    if (fabsf(ss[0]) <= epsilon) ss[0] = 0.0;
+                    if (fabsf(ss[1]) <= epsilon) ss[1] = 0.0;
+                    if (fabsf(ss[2]) <= epsilon) ss[2] = 0.0;
+                    if (fabsf(ss[3]) <= epsilon) ss[3] = 0.0;
+                    if (fabsf(ss[4]) <= epsilon) ss[4] = 0.0;
+                    if (fabsf(ss[5]) <= epsilon) ss[5] = 0.0;
 
-                    if (fabs(ss[0]) >= fabs(ss[2]))
+                    if (fabsf(ss[0]) >= fabs(ss[2]))
                     {
                         j = 0;
-                        if (fabs(ss[0]) < fabs(ss[5]))
+                        if (fabsf(ss[0]) < fabs(ss[5]))
                         {
                             j = 2;
                         }
                     }
-                    else if (fabs(ss[2]) >= fabs(ss[5]))
+                    else if (fabsf(ss[2]) >= fabsf(ss[5]))
                     {
                         j = 1;
                     }

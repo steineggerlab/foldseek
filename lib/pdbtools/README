@@ -1,0 +1,183 @@
+================
+code description
+================
+
+
+Part I: fundamental structure
+
+1.1 getopt
+parse argument
+
+1.2 struc Fast_Sort
+basic structure for quick sort
+
+1.3 Dynamic_Programming
+dynamic programming
+
+1.4 Computation_Utility
+computation utility. including matrix, string operation 
+
+1.5 Utility
+for debug
+
+----------------------
+
+
+Part II: basic XYZ manipulation
+
+2.1 struc XYZ
+basic structure to deal with XYZ coordinate
+
+2.2 class XYZ_DBT
+basic class to transform XYZ to inner coordinate
+
+2.3 class PhiPsi_Trans
+basic class to transform PhiPsi to ThetaTau
+
+2.4 class Hydro_Bond
+basic class to deal with hydrogen bond
+
+2.5 class Acc_Surface
+basic class to deal with solvent surface
+
+----------------------
+
+
+Part III: basic PDB representation
+
+3.1 PDB_Utility
+basic PDB utility for chain and atom
+
+3.2 class Backbone_Sidechain
+basic class to deal with backbone & sidechain in PDB
+
+3.3 class PDB_Residue
+basic class to deal with residues in PDB
+
+3.4 class PDB_Chain
+basic class to deal with chains in PDB
+
+3.5 class PDB_Chain_Fold : public PDB_Chain
+derived class to deal with the fold of the chains in PDB
+
+----------------------
+
+
+Part IV: basic PDB file operation
+
+4.1 class PDB_File
+basic class to deal with PDB file
+
+4.2 class Mol_Ori
+basic class for range-based PDB input
+
+4.3 class Mol_File : public Mol_Ori, public PDB_File
+derived class for range-based PDB input 
+
+4.4 class Mol_Load : public Mol_Ori, public PDB_To_CLE
+derived class for range-based PDB and CLE input
+
+4.5 class Mol_Out
+basic class to output PDB file
+
+--------------------
+
+
+Part V: basic CLE manipulation
+
+5.1 class Confo_Lett
+basic class to generate CLE from XYZ
+
+5.2 class Confo_Beta 
+basic class to regenerate CB given XYZ
+
+5.3 class Confo_Back : public Confo_Lett
+derived class to regenerate backbone given CLE and XYZ
+
+5.4 class PDB_To_CLE : public PDB_File, public Confo_Lett
+derived class to generate CLE from PDB
+
+5.5 class Bioinfo_Code
+basic class for CLESUM operation
+
+-------------------
+
+
+Part VI: basic structure alignment
+
+6.1 class Kabsch
+basic class to deal with superposition
+
+6.2 class Ali_Ori : public Kabsch
+derived class for one-to-one correspondence
+
+6.3 class Ali_AFP : public Ali_Ori
+derived class for aligned-fragment-pair
+
+6.4 class Ali_Ali3 : public Ali_Ori
+derived class for one-to-multi correspondence
+
+6.5 Align_Utility
+alignment record
+
+-------------------
+
+
+Part VII: advanced structure alignment
+
+7.1 class TM_score : public Kabsch
+derived class to calculate TMscore
+
+7.2 class TM_align : public TM_score
+derived class for alignment based on TMscore
+
+7.3 class TM_Align_Main : public TM_align
+derived class for other heuristics in TMalign
+
+7.4 class Envo_Align : public TM_align, public Bioinfo_Code (obsoleted)
+derived class that uses more heuristics in structure alignment
+
+-------------------
+
+
+Part VIII:  CLEPAPS, CLEFAPS and DeepAlign ( pairwise structure alignment )
+
+8.1 class CLEPAPS_Ori
+basic class for the whole framework for CLEPAPS, CLEFAPS and DeepAlign
+
+8.2 class CLEFAPS : public Ali_Ali3, public Ali_AFP, public CLEPAPS_Ori, public TM_align 
+derived class for CLEFAPS framework that based on TM_align and CLEPAPS
+
+8.3 class CLEFAPS_CLE : public CLEFAPS, public Bioinfo_Code
+derived class to realize CLEFAPS that utilizes CLE and CLESUM
+
+8.4 class CLEFAPS_Main : public Envo_Align, public CLEFAPS_CLE, public TM_Align_Main 
+derived class that uses more heuristics in structure alignment
+
+8.5 class CLEPAPS_Out : public Mol_Out
+derived class to output pairwise structure alignment in PDB files
+
+-------------------
+
+
+Part IX: BLOMAPS, BLOSEN and 3DCOMB ( multiple structure alignment )
+
+9.1 class BLOMAPS_Ori
+basic class for the whole framework for BLOMAPS, BLOSEN and 3DCOMB
+
+9.2 class ZoomIn_Align : public Ali_Ali3, public Ali_AFP, public TM_align
+derived class for pairwise refinement procedures in multiple structure alignment
+
+9.3 class MultiAlign_Cent : public TM_align
+derived class for pivot-based consensus refinement produceure
+
+9.4 class BLOSEN : public BLOMAPS_Ori, public ZoomIn_Align, public MultiAlign_Cent
+derived class for BLOSEN framework that based on pairwise refine and pivot consensus
+
+9.5 class BLOSEN_CLE : public BLOSEN, public Bioinfo_Code
+derived class to realize BLOSEN that utilizes CLE and CLESUM
+
+9.6 class MultiAlign_Out
+basic class to output multiple structure alignment in PDB files
+
+

@@ -382,32 +382,32 @@ int read_PDB(const vector<string> &PDB_lines, double **a, char *seq, int *resno)
     return i;
 }
 
-double dist(double x[3], double y[3])
+float dist(const float x[3], const float y[3])
 {
-    double d1=x[0]-y[0];
-    double d2=x[1]-y[1];
-    double d3=x[2]-y[2];
+    float d1=x[0]-y[0];
+    float d2=x[1]-y[1];
+    float d3=x[2]-y[2];
  
     return (d1*d1 + d2*d2 + d3*d3);
 }
 
-double dot(double *a, double *b)
+double dotProd(const float *a, const float *b)
 {
     return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
 }
 
-void transform(double t[3], double u[3][3], double *x, double *x1)
+void transform(float t[3], float u[3][3], const float *x, float *x1)
 {
-    x1[0]=t[0]+dot(&u[0][0], x);
-    x1[1]=t[1]+dot(&u[1][0], x);
-    x1[2]=t[2]+dot(&u[2][0], x);
+    x1[0]=t[0]+dotProd(&u[0][0], x);
+    x1[1]=t[1]+dotProd(&u[1][0], x);
+    x1[2]=t[2]+dotProd(&u[2][0], x);
 }
 
-void do_rotation(double **x, double **x1, int len, double t[3], double u[3][3])
+void do_rotation(const float *x, float *x1, int len, float t[3], float u[3][3])
 {
     for(int i=0; i<len; i++)
     {
-        transform(t, u, &x[i][0], &x1[i][0]);
+        transform(t, u, &x[i*3], &x1[i*3]);
     }    
 }
 
