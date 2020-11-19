@@ -98,69 +98,78 @@ int tmalign(int argc, const char **argv, const Command& command) {
         for (size_t id = 0; id < resultReader.getSize(); id++) {
             progress.updateProgress();
             char *data = resultReader.getData(id, thread_idx);
-            size_t queryKey = resultReader.getDbKey(id);
-            unsigned int queryId = qdbr.getId(queryKey);
-            char *querySeq = qdbr.getData(queryId, thread_idx);
-            int queryLen = static_cast<int>(qdbr.getSeqLen(queryId));
-            float * queryCaCords = (float*) qcadbr.getData(queryId, thread_idx);
-            memset(querySecStruc, 0, sizeof(int)*queryLen);
-            make_sec(queryCaCords, queryLen, querySecStruc); // secondary structure assignment
-            std::vector<hit_t> results = QueryMatcher::parsePrefilterHits(data);
-            for (size_t entryIdx = 0; entryIdx < results.size(); entryIdx++) {
-                unsigned int targetId = tdbr->getId(results[entryIdx].seqId);
-                const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB))? true : false;
-//                if(isIdentity == true){
-//                    std::string backtrace = "";
-//                    Matcher::result_t result(results[entryIdx].seqId, 0 , 1.0, 1.0, 1.0, TM1, std::max(queryLen,queryLen), 0, queryLen-1, queryLen, 0, queryLen-1, queryLen, backtrace);
-//                    size_t len = Matcher::resultToBuffer(buffer, result, true, false);
-//                    resultBuffer.append(buffer, len);
-//                    continue;
-//                }
-                char * targetSeq = tdbr->getData(targetId, thread_idx);
-                int targetLen = static_cast<int>(tdbr->getSeqLen(targetId));
-                float * targetCaCords = (float*) tcadbr->getData(targetId, thread_idx);
-                if(Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)==false){
-                    continue;
-                }
-                memset(targetSecStruc, 0, sizeof(int)*targetLen);
-                make_sec(targetCaCords, targetLen, targetSecStruc); // secondary structure assignment
-                /* entry function for structure alignment */
-                float t0[3], u0[3][3];
-                float TM1, TM2;
-                float TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
-                float d0_0, TM_0;
-                float d0A, d0B, d0u, d0a;
-                float d0_out = 5.0;
-                float rmsd0 = 0.0;
-                int L_ali;                // Aligned length in standard_TMscore
-                float Liden = 0;
-                float TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
-                int n_ali = 0;
-                int n_ali8 = 0;
-                TMalign_main(
-                        queryCaCords, targetCaCords, querySeq, targetSeq, querySecStruc, targetSecStruc,
-                        t0, u0, TM1, TM2, TM3, TM4, TM5,
-                        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
-                        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-                        queryLen, targetLen, Lnorm_ass, d0_scale,
-                        i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt);
-                double seqId = Liden/(static_cast<double>(n_ali8));
-                int rmsdScore = static_cast<int>(rmsd0*1000.0);
-                std::string backtrace = "";
-                Matcher::result_t result(results[entryIdx].seqId, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM1, std::max(queryLen,targetLen), 0, queryLen-1, queryLen, 0, targetLen-1, targetLen, backtrace);
+            if(*data != '\0') {
+                size_t queryKey = resultReader.getDbKey(id);
+                unsigned int queryId = qdbr.getId(queryKey);
+                char *querySeq = qdbr.getData(queryId, thread_idx);
+                int queryLen = static_cast<int>(qdbr.getSeqLen(queryId));
+                float *queryCaCords = (float *) qcadbr.getData(queryId, thread_idx);
+                memset(querySecStruc, 0, sizeof(int) * queryLen);
+                make_sec(queryCaCords, queryLen, querySecStruc); // secondary structure assignment
+
+                size_t passedNum = 0;
+                unsigned int rejected = 0;
+                while (*data != '\0' && passedNum < par.maxAccept && rejected < par.maxRejected) {
+                    char dbKeyBuffer[255 + 1];
+                    const char* words[10];
+                    Util::parseKey(data, dbKeyBuffer);
+                    data = Util::skipLine(data);
+                    const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
+                    unsigned int targetId = tdbr->getId(dbKey);
+                    const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB))? true : false;
+                    if(isIdentity == true){
+                        std::string backtrace = "";
+                        Matcher::result_t result(dbKey, 0 , 1.0, 1.0, 1.0, 1.0, std::max(queryLen,queryLen), 0, queryLen-1, queryLen, 0, queryLen-1, queryLen, backtrace);
+                        size_t len = Matcher::resultToBuffer(buffer, result, true, false);
+                        resultBuffer.append(buffer, len);
+                        continue;
+                    }
+                    char * targetSeq = tdbr->getData(targetId, thread_idx);
+                    int targetLen = static_cast<int>(tdbr->getSeqLen(targetId));
+                    float * targetCaCords = (float*) tcadbr->getData(targetId, thread_idx);
+                    if(Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)==false){
+                        continue;
+                    }
+                    memset(targetSecStruc, 0, sizeof(int)*targetLen);
+                    make_sec(targetCaCords, targetLen, targetSecStruc); // secondary structure assignment
+                    /* entry function for structure alignment */
+                    float t0[3], u0[3][3];
+                    float TM1, TM2;
+                    float TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+                    float d0_0, TM_0;
+                    float d0A, d0B, d0u, d0a;
+                    float d0_out = 5.0;
+                    float rmsd0 = 0.0;
+                    int L_ali;                // Aligned length in standard_TMscore
+                    float Liden = 0;
+                    float TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+                    int n_ali = 0;
+                    int n_ali8 = 0;
+                    TMalign_main(
+                            queryCaCords, targetCaCords, querySeq, targetSeq, querySecStruc, targetSecStruc,
+                            t0, u0, TM1, TM2, TM3, TM4, TM5,
+                            d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                            seqM, seqxA, seqyA,
+                            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                            queryLen, targetLen, Lnorm_ass, d0_scale,
+                            i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt);
+                    double seqId = Liden/(static_cast<double>(n_ali8));
+                    int rmsdScore = static_cast<int>(rmsd0*1000.0);
+                    std::string backtrace = "";
+                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM1, std::max(queryLen,targetLen), 0, queryLen-1, queryLen, 0, targetLen-1, targetLen, backtrace);
 
 
-                bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
-                bool hasSeqId = seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
-                bool hasTMscore = (TM1 >= par.tmScoreThr);
-                if(hasCov && hasSeqId  && hasTMscore){
-                    size_t len = Matcher::resultToBuffer(buffer, result, true, false);
-                    resultBuffer.append(buffer, len);
+                    bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
+                    bool hasSeqId = seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
+                    bool hasTMscore = (TM1 >= par.tmScoreThr);
+                    if(hasCov && hasSeqId  && hasTMscore){
+                        size_t len = Matcher::resultToBuffer(buffer, result, true, false);
+                        resultBuffer.append(buffer, len);
+                    }
                 }
+                dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, thread_idx);
+                resultBuffer.clear();
             }
-            dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, thread_idx);
-            resultBuffer.clear();
         }
     }
 
