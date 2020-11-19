@@ -33,6 +33,9 @@ private:
         tmalign.push_back(&PARAM_MIN_SEQ_ID);
         tmalign.push_back(&PARAM_C);
         tmalign.push_back(&PARAM_COV_MODE);
+        tmalign.push_back(&PARAM_MAX_REJECTED);
+        tmalign.push_back(&PARAM_MAX_ACCEPT);
+        tmalign.push_back(&PARAM_ADD_BACKTRACE);
         tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
         tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
         tmalign.push_back(&PARAM_THREADS);

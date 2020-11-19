@@ -109,7 +109,7 @@ void NWDP_TM( float **score, bool **path, float **val,
 }
 
 void NWDP_TM( float **score, bool **path, float **val,
-    const float *x, const float *y, int len1, int len2, float t[3], float u[3][3],
+    const Coordinates &x, const Coordinates &y, int len1, int len2, float t[3], float u[3][3],
     float d02, float gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
@@ -141,11 +141,11 @@ void NWDP_TM( float **score, bool **path, float **val,
     //decide matrix and path
     for(i=1; i<=len1; i++)
     {
-        transform(t, u, &x[(i-1)*3], xx);
+        transform(t, u, x.x[i-1], x.y[i-1], x.z[i-1], xx[0], xx[1], xx[2]);
         for(j=1; j<=len2; j++)
         {
             //d=val[i-1][j-1]+score[i][j]; //diagonal
-            dij=dist(xx, &y[(j-1)*3]);
+            dij=dist(xx[0], xx[1], xx[2], y.x[(j-1)], y.y[(j-1)], y.z[(j-1)]);
             d=val[i-1][j-1] + 1.0/(1+dij/d02);
 
             //symbol insertion in horizontal (= a gap in vertical)

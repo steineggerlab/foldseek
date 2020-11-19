@@ -249,9 +249,9 @@ int convert2db(int argc, const char **argv, const Command& command) {
                     hdbw.writeData(name.c_str(), name.size(), i, thread_idx);
                     name.clear();
                     for(int res = 0; res < totalLen; res++){
-                        camol[res*3 + 0] = mol[res].X;
-                        camol[res*3 + 1] = mol[res].Y;
-                        camol[res*3 + 2] = mol[res].Z;
+                        camol[res] = mol[res].X;
+                        camol[totalLen  +res] = mol[res].Y;
+                        camol[2*totalLen+res] = mol[res].Z;
                     }
                     cadbw.writeData((const char*)camol, totalLen * 3 * sizeof(float), i, thread_idx);
                 }
@@ -270,7 +270,7 @@ int convert2db(int argc, const char **argv, const Command& command) {
     aadbw.close(true);
     //if (par.subDbMode == Parameters::SUBDB_MODE_SOFT) {
     DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ca", DBFiles::HEADERS);
-    DBReader<unsigned int>::softlinkDb(outputName, outputName+"_tortion", DBFiles::HEADERS);
+    DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ss", DBFiles::HEADERS);
     //}
     Debug(Debug::INFO) << incorrectFiles << " out of " << filenames.size() << " entries are incorrect.\n";
     return EXIT_SUCCESS;

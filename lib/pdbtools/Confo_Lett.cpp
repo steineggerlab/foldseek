@@ -22,9 +22,15 @@ Confo_Lett::~Confo_Lett(void)
 //================================================PART_I====================================// STC_Related
 //pi:mode weight; ni:mode counts; sig:|\sqrt(2\pi)\sigma|^-1; mid:mean; var:variance
 
+
+
+
 //the main data of the 17 conformational letter
 int Ori_id[Confo_Cluster]=
-{'I','J','H','K','F','E','C','D','A','B','G','L','M','N','O','P','Q'};
+//{'I','J','H','K','F','E','C','D','A','B','G','L','M','N','O','P','Q'};
+{'K','L','I','M','G','F', 'D', 'E', 'A', 'C', 'H','N','P','Q','R','S','T'};
+//{'K','L','I','M','G','F', 'D', 'E', 'A', 'C', 'H','N','P','Q','R','S','T'};
+
 int Ant_id[Confo_Cluster]=
 {8,9,6,7,5,4,10,2,0,1,3,11,12,13,14,15,16};
 
@@ -188,7 +194,7 @@ void Confo_Lett::btb_ori(double *dist,double *bend,double *tort,int n,XYZ *r,cha
 		if(dist!=NULL)for(i=0;i<n;i++)dist[i]=-1.0;
 		if(bend!=NULL)for(i=0;i<n;i++)bend[i]=-9.9;
 		if(tort!=NULL)for(i=0;i<n;i++)tort[i]=-9.9;
-		if(CLE!=NULL)for(i=0;i<n;i++)CLE[i]='R';
+		if(CLE!=NULL)for(i=0;i<n;i++)CLE[i]='V';
 		if(Profile!=NULL)for(i=0;i<n;i++)for(k=0;k<Confo_Cluster;k++)Profile[i][k]=-1.0;
 		if(n==2)
 		{
@@ -234,11 +240,11 @@ void Confo_Lett::btb_ori(double *dist,double *bend,double *tort,int n,XYZ *r,cha
 	}
 	if(CLE!=NULL)
 	{
-		CLE[0]='R';
-		CLE[1]='R';
-		CLE[n-1]='R';
-		if(x0<CLE_CUT_MIN||x0>CLE_CUT_MAX)for(j=0;j<3;j++)if(0+j<n)CLE[0+j]='R';
-		if(x1<CLE_CUT_MIN||x1>CLE_CUT_MAX)for(j=0;j<3;j++)if(1+j<n)CLE[1+j]='R';
+		CLE[0]='V';
+		CLE[1]='V';
+		CLE[n-1]='V';
+		if(x0<CLE_CUT_MIN||x0>CLE_CUT_MAX)for(j=0;j<3;j++)if(0+j<n)CLE[0+j]='V';
+		if(x1<CLE_CUT_MIN||x1>CLE_CUT_MAX)for(j=0;j<3;j++)if(1+j<n)CLE[1+j]='V';
 	}
 	if(Profile!=NULL)
 	{
@@ -278,8 +284,8 @@ void Confo_Lett::btb_ori(double *dist,double *bend,double *tort,int n,XYZ *r,cha
 		if(tort!=NULL)tort[i]=cle_w_point[1];
 		if(CLE!=NULL)
 		{
-			if(CLE[i-1]!='R')CLE[i-1]=btb_stc(cle_w_point);
-			if(x1<CLE_CUT_MIN||x1>CLE_CUT_MAX)for(j=0;j<3;j++)if(i-1+j<n)CLE[i-1+j]='R';
+			if(CLE[i-1]!='V')CLE[i-1]=btb_stc(cle_w_point);
+			if(x1<CLE_CUT_MIN||x1>CLE_CUT_MAX)for(j=0;j<3;j++)if(i-1+j<n)CLE[i-1+j]='V';
 		}
 		if(Profile!=NULL)
 		{

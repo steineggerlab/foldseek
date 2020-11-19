@@ -20,7 +20,7 @@
 
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
-int score_fun8( float *xa, float *ya, int n_ali, float d, int i_ali[],
+int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
                 float *score1, int score_sum_method, const float Lnorm,
                 const float score_d8, const float d0)
 {
@@ -37,7 +37,7 @@ int score_fun8( float *xa, float *ya, int n_ali, float d, int i_ali[],
         score_sum=0;
         for(i=0; i<n_ali; i++)
         {
-            di = dist(&xa[i*3], &ya[i*3]);
+            di = dist(xa.x[i], xa.y[i], xa.z[i], ya.x[i], ya.y[i], ya.z[i]);
             if(di<d_tmp)
             {
                 i_ali[n_cut]=i;
@@ -63,7 +63,7 @@ int score_fun8( float *xa, float *ya, int n_ali, float d, int i_ali[],
     return n_cut;
 }
 
-int score_fun8_standard(float *xa, float *ya, int n_ali, float d,
+int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
                         int i_ali[], float *score1, int score_sum_method,
                         float score_d8, float d0)
 {
@@ -79,7 +79,8 @@ int score_fun8_standard(float *xa, float *ya, int n_ali, float d,
         score_sum = 0;
         for (i = 0; i<n_ali; i++)
         {
-            di = dist(&xa[i*3], &ya[i*3]);
+            di = dist(xa.x[i], xa.y[i], xa.z[i],
+                      ya.x[i], ya.y[i], ya.z[i]);
             if (di<d_tmp)
             {
                 i_ali[n_cut] = i;
@@ -108,8 +109,9 @@ int score_fun8_standard(float *xa, float *ya, int n_ali, float d,
     return n_cut;
 }
 
-double TMscore8_search(float *r1, float *r2, float *xtm, float *ytm,
-                       float *xt, int Lali, float t0[3], float u0[3][3], int simplify_step,
+double TMscore8_search(Coordinates &r1, Coordinates &r2,
+                       Coordinates &xtm, Coordinates & ytm,
+                       Coordinates &xt, int Lali, float t0[3], float u0[3][3], int simplify_step,
                        int score_sum_method, float *Rcomm, float local_d0_search, float Lnorm,
                        float score_d8, float d0)
 {
@@ -165,13 +167,13 @@ double TMscore8_search(float *r1, float *r2, float *xtm, float *ytm,
             for(k=0; k<L_frag; k++)
             {
                 int kk=k+i;
-                r1[k*3+0]=xtm[kk*3+0];
-                r1[k*3+1]=xtm[kk*3+1];
-                r1[k*3+2]=xtm[kk*3+2];
+                r1.x[k]=xtm.x[kk];
+                r1.y[k]=xtm.y[kk];
+                r1.z[k]=xtm.z[kk];
 
-                r2[k*3+0]=ytm[kk*3+0];
-                r2[k*3+1]=ytm[kk*3+1];
-                r2[k*3+2]=ytm[kk*3+2];
+                r2.x[k]=ytm.x[kk];
+                r2.y[k]=ytm.y[kk];
+                r2.z[k]=ytm.z[kk];
 
                 k_ali[ka]=kk;
                 ka++;
@@ -209,13 +211,13 @@ double TMscore8_search(float *r1, float *r2, float *xtm, float *ytm,
                 for(k=0; k<n_cut; k++)
                 {
                     m=i_ali[k];
-                    r1[k*3+0]=xtm[m*3+0];
-                    r1[k*3+1]=xtm[m*3+1];
-                    r1[k*3+2]=xtm[m*3+2];
+                    r1.x[k]=xtm.x[m];
+                    r1.y[k]=xtm.y[m];
+                    r1.z[k]=xtm.z[m];
 
-                    r2[k*3+0]=ytm[m*3+0];
-                    r2[k*3+1]=ytm[m*3+1];
-                    r2[k*3+2]=ytm[m*3+2];
+                    r2.x[k]=ytm.x[m];
+                    r2.y[k]=ytm.y[m];
+                    r2.z[k]=ytm.z[m];
 
                     k_ali[ka]=m;
                     ka++;
@@ -263,8 +265,8 @@ double TMscore8_search(float *r1, float *r2, float *xtm, float *ytm,
 }
 
 
-double TMscore8_search_standard(float *r1, float *r2,
-                                float *xtm, float *ytm, float *xt, int Lali,
+double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
+                                Coordinates &xtm, Coordinates &ytm, Coordinates &xt, int Lali,
                                 float t0[3], float u0[3][3], int simplify_step, int score_sum_method,
                                 float *Rcomm, float local_d0_search, float score_d8, float d0)
 {
@@ -319,13 +321,13 @@ double TMscore8_search_standard(float *r1, float *r2,
             for (k = 0; k<L_frag; k++)
             {
                 int kk = k + i;
-                r1[k*3+0] = xtm[kk*3+0];
-                r1[k*3+1] = xtm[kk*3+1];
-                r1[k*3+2] = xtm[kk*3+2];
+                r1.x[k] = xtm.x[kk];
+                r1.y[k] = xtm.y[kk];
+                r1.z[k] = xtm.z[kk];
 
-                r2[k*3+0] = ytm[kk*3+0];
-                r2[k*3+1] = ytm[kk*3+1];
-                r2[k*3+2] = ytm[kk*3+2];
+                r2.x[k] = ytm.x[kk];
+                r2.y[k] = ytm.y[kk];
+                r2.z[k] = ytm.z[kk];
 
                 k_ali[ka] = kk;
                 ka++;
@@ -363,13 +365,13 @@ double TMscore8_search_standard(float *r1, float *r2,
                 for (k = 0; k<n_cut; k++)
                 {
                     m = i_ali[k];
-                    r1[k*3+0] = xtm[m*3+0];
-                    r1[k*3+1] = xtm[m*3+1];
-                    r1[k*3+2] = xtm[m*3+2];
+                    r1.x[k] = xtm.x[m];
+                    r1.y[k] = xtm.y[m];
+                    r1.z[k] = xtm.z[m];
 
-                    r2[k*3+0] = ytm[m*3+0];
-                    r2[k*3+1] = ytm[m*3+1];
-                    r2[k*3+2] = ytm[m*3+2];
+                    r2.x[k] = ytm.x[m];
+                    r2.y[k] = ytm.y[m];
+                    r2.z[k] = ytm.z[m];
 
                     k_ali[ka] = m;
                     ka++;
@@ -423,8 +425,8 @@ double TMscore8_search_standard(float *r1, float *r2,
 //          score_sum_method: 0 for score over all pairs
 //                            8 for socre over the pairs with dist<score_d8
 // output:  the best rotaion matrix t, u that results in highest TMscore
-double detailed_search(float *r1, float *r2, float *xtm, float *ytm,
-                       float *xt, const float *x, const  float *y, int xlen, int ylen,
+double detailed_search(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
+                       Coordinates &xt, const Coordinates &x, const Coordinates &y, int xlen, int ylen,
                        int invmap0[], float t[3], float u[3][3], int simplify_step,
                        int score_sum_method, float local_d0_search, float Lnorm,
                        float score_d8, float d0)
@@ -440,13 +442,13 @@ double detailed_search(float *r1, float *r2, float *xtm, float *ytm,
         j=invmap0[i];
         if(j>=0) //aligned
         {
-            xtm[k*3+0]=x[j*3+0];
-            xtm[k*3+1]=x[j*3+1];
-            xtm[k*3+2]=x[j*3+2];
+            xtm.x[k]=x.x[j];
+            xtm.y[k]=x.y[j];
+            xtm.z[k]=x.z[j];
 
-            ytm[k*3+0]=y[i*3+0];
-            ytm[k*3+1]=y[i*3+1];
-            ytm[k*3+2]=y[i*3+2];
+            ytm.x[k]=y.x[i];
+            ytm.y[k]=y.y[i];
+            ytm.z[k]=y.z[i];
             k++;
         }
     }
@@ -457,8 +459,9 @@ double detailed_search(float *r1, float *r2, float *xtm, float *ytm,
     return tmscore;
 }
 
-double detailed_search_standard( float *r1, float *r2,
-                                 float *xtm, float *ytm, float *xt, const float *x, const float *y,
+double detailed_search_standard( Coordinates &r1, Coordinates &r2,
+                                 Coordinates &xtm, Coordinates &ytm, Coordinates &xt,
+                                 const Coordinates &x, const Coordinates &y,
                                  int xlen, int ylen, int invmap0[], float t[3], float u[3][3],
                                  int simplify_step, int score_sum_method, double local_d0_search,
                                  const bool& bNormalize, float Lnorm, float score_d8, float d0)
@@ -474,13 +477,13 @@ double detailed_search_standard( float *r1, float *r2,
         j=invmap0[i];
         if(j>=0) //aligned
         {
-            xtm[k*3+0]=x[j*3+0];
-            xtm[k*3+1]=x[j*3+1];
-            xtm[k*3+2]=x[j*3+2];
+            xtm.x[k]=x.x[j];
+            xtm.y[k]=x.y[j];
+            xtm.z[k]=x.z[j];
 
-            ytm[k*3+0]=y[i*3+0];
-            ytm[k*3+1]=y[i*3+1];
-            ytm[k*3+2]=y[i*3+2];
+            ytm.x[k]=y.x[i];
+            ytm.y[k]=y.y[i];
+            ytm.z[k]=y.z[i];
             k++;
         }
     }
@@ -495,8 +498,8 @@ double detailed_search_standard( float *r1, float *r2,
 }
 
 //compute the score quickly in three iterations
-double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
-                       const float *x, const float *y, int xlen, int ylen, int invmap[],
+double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
+                       const Coordinates &x, const Coordinates &y, int xlen, int ylen, int invmap[],
                        float d0, float d0_search, float t[3], float u[3][3])
 {
     float rms, tmscore, tmscore1, tmscore2;
@@ -508,21 +511,21 @@ double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
         i=invmap[j];
         if(i>=0)
         {
-            r1[k*3+0]=x[i*3+0];
-            r1[k*3+1]=x[i*3+1];
-            r1[k*3+2]=x[i*3+2];
+            r1.x[k]=x.x[i];
+            r1.y[k]=x.y[i];
+            r1.z[k]=x.z[i];
 
-            r2[k*3+0]=y[j*3+0];
-            r2[k*3+1]=y[j*3+1];
-            r2[k*3+2]=y[j*3+2];
+            r2.x[k]=y.x[j];
+            r2.y[k]=y.y[j];
+            r2.z[k]=y.z[j];
 
-            xtm[k*3+0]=x[i*3+0];
-            xtm[k*3+1]=x[i*3+1];
-            xtm[k*3+2]=x[i*3+2];
+            xtm.x[k]=x.x[i];
+            xtm.y[k]=x.y[i];
+            xtm.z[k]=x.z[i];
 
-            ytm[k*3+0]=y[j*3+0];
-            ytm[k*3+1]=y[j*3+1];
-            ytm[k*3+2]=y[j*3+2];
+            ytm.x[k]=y.x[j];
+            ytm.y[k]=y.y[j];
+            ytm.z[k]=y.z[j];
 
             k++;
         }
@@ -543,8 +546,9 @@ double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
     tmscore=0;
     for(k=0; k<n_ali; k++)
     {
-        transform(t, u, &xtm[k*3+0], xrot);
-        di=dist(xrot, &ytm[k*3+0]);
+        transform(t, u, xtm.x[k], xtm.y[k], xtm.z[k], xrot[0], xrot[1], xrot[2]);
+        di=dist(xrot[0], xrot[1], xrot[2],
+                ytm.x[k], ytm.y[k], ytm.z[k]);
         dis[k]=di;
         tmscore += 1/(1+di/d02);
     }
@@ -560,13 +564,13 @@ double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
         {
             if(dis[k]<=d002t)
             {
-                r1[j*3+0]=xtm[k*3+0];
-                r1[j*3+1]=xtm[k*3+1];
-                r1[j*3+2]=xtm[k*3+2];
+                r1.x[j]=xtm.x[k];
+                r1.y[j]=xtm.y[k];
+                r1.z[j]=xtm.z[k];
 
-                r2[j*3+0]=ytm[k*3+0];
-                r2[j*3+1]=ytm[k*3+1];
-                r2[j*3+2]=ytm[k*3+2];
+                r2.x[j]=ytm.x[k];
+                r2.y[j]=ytm.y[k];
+                r2.z[j]=ytm.z[k];
 
                 j++;
             }
@@ -582,8 +586,9 @@ double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
         tmscore1=0;
         for(k=0; k<n_ali; k++)
         {
-            transform(t, u, &xtm[k*3+0], xrot);
-            di=dist(xrot, &ytm[k*3+0]);
+            transform(t, u, xtm.x[k],  xtm.y[k], xtm.z[k], xrot[0], xrot[1], xrot[2]);
+            di=dist(xrot[0], xrot[1], xrot[2],
+                    ytm.x[k], ytm.y[k], ytm.z[k]);
             dis[k]=di;
             tmscore1 += 1/(1+di/d02);
         }
@@ -598,14 +603,12 @@ double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
             {
                 if(dis[k]<=d002t)
                 {
-                    r1[j*3+0]=xtm[k*3+0];
-                    r1[j*3+1]=xtm[k*3+1];
-                    r1[j*3+2]=xtm[k*3+2];
-
-                    r2[j*3+0]=ytm[k*3+0];
-                    r2[j*3+1]=ytm[k*3+1];
-                    r2[j*3+2]=ytm[k*3+2];
-
+                    r1.x[j]=xtm.x[k];
+                    r1.y[j]=xtm.y[k];
+                    r1.z[j]=xtm.z[k];
+                    r2.x[j]=ytm.x[k];
+                    r2.y[j]=ytm.y[k];
+                    r2.z[j]=ytm.z[k];
                     j++;
                 }
             }
@@ -619,8 +622,9 @@ double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
         tmscore2=0;
         for(k=0; k<n_ali; k++)
         {
-            transform(t, u, &xtm[k*3+0], xrot);
-            di=dist(xrot, &ytm[k*3+0]);
+            transform(t, u, xtm.x[k],  xtm.y[k], xtm.z[k], xrot[0], xrot[1], xrot[2]);
+            di=dist(xrot[0], xrot[1], xrot[2],
+                    ytm.x[k], ytm.y[k], ytm.z[k]);
             tmscore2 += 1/(1+di/d02);
         }
     }
@@ -642,8 +646,9 @@ double get_score_fast( float *r1, float *r2, float *xtm, float *ytm,
 //y2x0[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
-double get_initial(float *r1, float *r2, float *xtm, float *ytm,
-                   const float *x, const float *y, int xlen, int ylen, int *y2x,
+double get_initial(Coordinates &r1, Coordinates &r2,
+                   Coordinates &xtm, Coordinates &ytm,
+                   const Coordinates &x, const Coordinates &y, int xlen, int ylen, int *y2x,
                    float d0, float d0_search, const bool fast_opt,
                    float t[3], float u[3][3])
 {
@@ -766,7 +771,7 @@ int sec_str(float dis13, float dis14, float dis15,
 
 
 //1->coil, 2->helix, 3->turn, 4->strand
-void make_sec(float *x, int len, int *sec)
+void make_sec(Coordinates &x, int len, int *sec)
 {
     int j1, j2, j3, j4, j5;
     float d13, d14, d15, d24, d25, d35;
@@ -781,12 +786,12 @@ void make_sec(float *x, int len, int *sec)
 
         if(j1>=0 && j5<len)
         {
-            d13=sqrt(dist(&x[j1*3], &x[j3*3]));
-            d14=sqrt(dist(&x[j1*3], &x[j4*3]));
-            d15=sqrt(dist(&x[j1*3], &x[j5*3]));
-            d24=sqrt(dist(&x[j2*3], &x[j4*3]));
-            d25=sqrt(dist(&x[j2*3], &x[j5*3]));
-            d35=sqrt(dist(&x[j3*3], &x[j5*3]));
+            d13=sqrt(dist(x.x[j1], x.y[j1], x.z[j1], x.x[j3], x.y[j3], x.z[j3]));
+            d14=sqrt(dist(x.x[j1], x.y[j1], x.z[j1], x.x[j4], x.y[j4], x.z[j4]));
+            d15=sqrt(dist(x.x[j1], x.y[j1], x.z[j1], x.x[j5], x.y[j5], x.z[j5]));
+            d24=sqrt(dist(x.x[j2], x.y[j2], x.z[j2], x.x[j4], x.y[j4], x.z[j4]));
+            d25=sqrt(dist(x.x[j2], x.y[j2], x.z[j2], x.x[j5], x.y[j5], x.z[j5]));
+            d35=sqrt(dist(x.x[j3], x.y[j3], x.z[j3], x.x[j5], x.y[j5], x.z[j5]));
             sec[i]=sec_str(d13, d14, d15, d24, d25, d35);
         }
     }
@@ -814,9 +819,9 @@ void get_initial_ss( float **score, bool **path, float **val,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
-bool get_initial5( float *r1, float *r2, float *xtm, float *ytm,
+bool get_initial5( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
                    float **score, bool **path, float **val,
-                   const float *x, const float *y, int xlen, int ylen, int *y2x,
+                   const Coordinates &x, const Coordinates &y, int xlen, int ylen, int *y2x,
                    float d0, float d0_search, const bool fast_opt, const float D0_MIN)
 {
     float GL, rmsd;
@@ -882,13 +887,13 @@ bool get_initial5( float *r1, float *r2, float *xtm, float *ytm,
             {
                 for (int k = 0; k<n_frag[i_frag]; k++) //fragment in y
                 {
-                    r1[k*3+0] = x[(k + i)*3+0];
-                    r1[k*3+1] = x[(k + i)*3+1];
-                    r1[k*3+2] = x[(k + i)*3+2];
+                    r1.x[k] = x.x[k + i];
+                    r1.y[k] = x.y[k + i];
+                    r1.z[k] = x.z[k + i];
 
-                    r2[k*3+0] = y[(k + j)*3+0];
-                    r2[k*3+1] = y[(k + j)*3+1];
-                    r2[k*3+2] = y[(k + j)*3+2];
+                    r2.x[k] = y.x[k + j];
+                    r2.y[k] = y.y[k + j];
+                    r2.z[k] = y.z[k + j];
                 }
 
                 // superpose the two structures and rotate it
@@ -913,9 +918,9 @@ bool get_initial5( float *r1, float *r2, float *xtm, float *ytm,
     return flag;
 }
 
-void score_matrix_rmsd_sec( float *r1,  float *r2,
+void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
                             float **score, const int *secx, const int *secy,
-                            const float *x, const float *y, int xlen, int ylen,
+                            const Coordinates &x, const Coordinates &y, int xlen, int ylen,
                             int *y2x, const float D0_MIN, float d0)
 {
     float t[3], u[3][3];
@@ -931,13 +936,13 @@ void score_matrix_rmsd_sec( float *r1,  float *r2,
         i=y2x[j];
         if(i>=0)
         {
-            r1[k*3+0]=x[i*3+0];
-            r1[k*3+1]=x[i*3+1];
-            r1[k*3+2]=x[i*3+2];
+            r1.x[k]=x.x[i];
+            r1.y[k]=x.y[i];
+            r1.z[k]=x.z[i];
 
-            r2[k*3+0]=y[j*3+0];
-            r2[k*3+1]=y[j*3+1];
-            r2[k*3+2]=y[j*3+2];
+            r2.x[k]=y.x[j];
+            r2.y[k]=y.y[j];
+            r2.z[k]=y.z[j];
 
             k++;
         }
@@ -947,10 +952,10 @@ void score_matrix_rmsd_sec( float *r1,  float *r2,
 
     for(int ii=0; ii<xlen; ii++)
     {
-        transform(t, u, &x[ii*3+0], xx);
+        transform(t, u, x.x[ii], x.y[ii], x.z[ii], xx[0], xx[1], xx[2]);
         for(int jj=0; jj<ylen; jj++)
         {
-            dij=dist(xx, &y[jj*3+0]);
+            dij=dist(xx[0], xx[1], xx[2], y.x[jj], y.y[jj], y.z[jj]);
             if (secx[ii]==secy[jj])
                 score[ii+1][jj+1] = 1.0/(1+dij/d02) + 0.5;
             else
@@ -966,8 +971,8 @@ void score_matrix_rmsd_sec( float *r1,  float *r2,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ssplus(float *r1, float *r2, float **score, bool **path,
-                        float **val, const int *secx, const int *secy, const float *x, const float *y,
+void get_initial_ssplus(Coordinates &r1, Coordinates &r2, float **score, bool **path,
+                        float **val, const int *secx, const int *secy, const Coordinates &x, const Coordinates &y,
                         int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0)
 {
     //create score matrix for DP
@@ -978,7 +983,7 @@ void get_initial_ssplus(float *r1, float *r2, float **score, bool **path,
     NWDP_TM(score, path, val, xlen, ylen, gap_open, y2x);
 }
 
-void find_max_frag(const float *x, int len, int *start_max,
+void find_max_frag(const Coordinates &x, int len, int *start_max,
                    int *end_max, float dcu0, const bool fast_opt)
 {
     int r_min, fra_min=4;           //minimum fragment for search
@@ -1000,7 +1005,7 @@ void find_max_frag(const float *x, int len, int *start_max,
         start=0;
         for(int i=1; i<len; i++)
         {
-            if(dist(&x[(i-1)*3], &x[i*3]) < dcu_cut)
+            if(dist(x.x[i-1], x.y[i-1], x.z[i-1], x.x[i], x.y[i], x.z[i]) < dcu_cut)
             {
                 j++;
 
@@ -1044,8 +1049,8 @@ void find_max_frag(const float *x, int len, int *start_max,
 //y2x0[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
-double get_initial_fgt(float *r1, float *r2, float *xtm, float *ytm,
-                       const float *x, const float *y, int xlen, int ylen,
+double get_initial_fgt(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
+                       const Coordinates &x, const Coordinates &y, int xlen, int ylen,
                        int *y2x, float d0, float d0_search,
                        float dcu0, const bool fast_opt, float t[3], float u[3][3])
 {
@@ -1175,9 +1180,10 @@ double get_initial_fgt(float *r1, float *r2, float *xtm, float *ytm,
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
 //output: best alignment that maximizes the TMscore, will be stored in invmap
-double DP_iter(float *r1, float *r2, float *xtm, float *ytm,
-               float *xt, float **score, bool **path, float **val,
-               const float *x, const  float *y, int xlen, int ylen, float t[3], float u[3][3],
+double DP_iter(Coordinates &r1, Coordinates &r2,
+               Coordinates &xtm, Coordinates &ytm,
+               Coordinates &xt, float **score, bool **path, float **val,
+               const Coordinates &x, const Coordinates &y, int xlen, int ylen, float t[3], float u[3][3],
                int invmap0[], int g1, int g2, int iteration_max, float local_d0_search,
                float D0_MIN, float Lnorm, float d0, float score_d8)
 {
@@ -1206,13 +1212,13 @@ double DP_iter(float *r1, float *r2, float *xtm, float *ytm,
 
                 if(i>=0) //aligned
                 {
-                    xtm[k*3+0]=x[i*3+0];
-                    xtm[k*3+1]=x[i*3+1];
-                    xtm[k*3+2]=x[i*3+2];
+                    xtm.x[k]=x.x[i];
+                    xtm.y[k]=x.y[i];
+                    xtm.z[k]=x.z[i];
 
-                    ytm[k*3+0]=y[j*3+0];
-                    ytm[k*3+1]=y[j*3+1];
-                    ytm[k*3+2]=y[j*3+2];
+                    ytm.x[k]=y.x[j];
+                    ytm.y[k]=y.y[j];
+                    ytm.z[k]=y.z[j];
                     k++;
                 }
             }
@@ -1406,8 +1412,8 @@ void output_results(
         output_superpose(xname, fname_super, t, u, ter_opt);
 }
 
-double standard_TMscore(float *r1, float *r2, float *xtm, float *ytm,
-                        float *xt, float *x, float *y, int xlen, int ylen, int invmap[],
+double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
+                        Coordinates &xt, Coordinates &x, Coordinates &y, int xlen, int ylen, int invmap[],
                         int& L_ali, float& RMSD, float D0_MIN, float Lnorm, float d0,
                         float d0_search, float score_d8, float t[3], float u[3][3])
 {
@@ -1429,22 +1435,21 @@ double standard_TMscore(float *r1, float *r2, float *xtm, float *ytm,
         i = invmap[j];
         if (i >= 0)
         {
-            xtm[n_al*3+0] = x[i*3+0];
-            xtm[n_al*3+1] = x[i*3+1];
-            xtm[n_al*3+2] = x[i*3+2];
+            xtm.x[n_al] = x.x[i];
+            xtm.y[n_al] = x.y[i];
+            xtm.z[n_al] = x.z[i];
 
-            ytm[n_al*3+0] = y[j*3+0];
-            ytm[n_al*3+1] = y[j*3+1];
-            ytm[n_al*3+2] = y[j*3+2];
+            ytm.x[n_al] = y.x[j];
+            ytm.y[n_al] = y.y[j];
+            ytm.z[n_al] = y.z[j];
 
-            r1[n_al*3+0] = x[i*3+0];
-            r1[n_al*3+1] = x[i*3+1];
-            r1[n_al*3+2] = x[i*3+2];
+            r1.x[n_al] = x.x[i];
+            r1.y[n_al] = x.y[i];
+            r1.z[n_al] = x.z[i];
 
-            r2[n_al*3+0] = y[j*3+0];
-            r2[n_al*3+1] = y[j*3+1];
-            r2[n_al*3+2] = y[j*3+2];
-
+            r2.x[n_al] = y.x[j];
+            r2.y[n_al] = y.y[j];
+            r2.z[n_al] = y.z[j];
             n_al++;
         }
         else if (i != -1) PrintErrorAndQuit("Wrong map!\n");
@@ -1468,7 +1473,7 @@ double standard_TMscore(float *r1, float *r2, float *xtm, float *ytm,
 
 /* entry function for TMalign */
 int TMalign_main(
-        const float *xa, const float *ya,
+        const Coordinates &xa, const Coordinates &ya,
         const char *seqx, const char *seqy, const int *secx, const int *secy,
         float t0[3], float u0[3][3],
         float &TM1, float &TM2, float &TM3, float &TM4, float &TM5,
@@ -1491,11 +1496,12 @@ int TMalign_main(
     float **score;     // Input score table for dynamic programming
     bool   **path;     // for dynamic programming
     float **val;       // for dynamic programming
-    float *xtm = new float[minlen*3];
-    float *ytm = new float[minlen*3]; // for TMscore search engine
-    float *xt = new float[minlen*3];         //for saving the superposed version of r_1 or xtm
-    float *r1 = new float[minlen*3];
-    float *r2 = new float[minlen*3];    // for Kabsch rotation
+    Coordinates xtm(minlen);
+    Coordinates ytm(minlen);
+    Coordinates xt(xlen);
+    Coordinates r1(minlen);
+    Coordinates r2(minlen);
+
 
     /***********************/
     /* allocate memory     */
@@ -1637,6 +1643,7 @@ int TMalign_main(
     /*    get initial alignment based on fragment gapless threading    */
     /*******************************************************************/
     //=initial4 in original TM-align
+    //TODO
     get_initial_fgt(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
                     invmap, d0, d0_search, dcu0, fast_opt, t, u);
     TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
@@ -1706,27 +1713,25 @@ int TMalign_main(
         if(i>=0)//aligned
         {
             n_ali++;
-            d=sqrt(dist(&xt[i*3+0], &ya[j*3+0]));
+            d =sqrt( dist(xt.x[i], xt.y[i], xt.z[i], ya.x[j], ya.y[j], ya.z[j]));
+
             if (d <= score_d8 || (I_opt == true))
             {
                 m1[k]=i;
                 m2[k]=j;
 
-                xtm[k*3+0]=xa[i*3+0];
-                xtm[k*3+1]=xa[i*3+1];
-                xtm[k*3+2]=xa[i*3+2];
-
-                ytm[k*3+0]=ya[j*3+0];
-                ytm[k*3+1]=ya[j*3+1];
-                ytm[k*3+2]=ya[j*3+2];
-
-                r1[k*3+0] = xt[i*3+0];
-                r1[k*3+1] = xt[i*3+1];
-                r1[k*3+2] = xt[i*3+2];
-                r2[k*3+0] = ya[j*3+0];
-                r2[k*3+1] = ya[j*3+1];
-                r2[k*3+2] = ya[j*3+2];
-
+                xtm.x[k]=xa.x[i];
+                xtm.y[k]=xa.y[i];
+                xtm.z[k]=xa.z[i];
+                ytm.x[k]=ya.x[j];
+                ytm.y[k]=ya.y[j];
+                ytm.z[k]=ya.z[j];
+                r1.x[k] = xt.x[i];
+                r1.y[k] = xt.y[i];
+                r1.z[k] = xt.z[i];
+                r2.x[k] = ya.x[j];
+                r2.y[k] = ya.y[j];
+                r2.z[k] = ya.z[j];
                 k++;
             }
         }
@@ -1844,7 +1849,8 @@ int TMalign_main(
         seqxA[kk]=seqx[m1[k]];
         seqyA[kk]=seqy[m2[k]];
         Liden+=(seqxA[kk]==seqyA[kk]);
-        d=sqrt(dist(&xt[m1[k]*3+0], &ya[m2[k]*3+0]));
+        d=sqrt(dist(xt.x[m1[k]], xt.y[m1[k]], xt.z[m1[k]], ya.x[m2[k]], ya.y[m2[k]], ya.z[m2[k]]));
+
         if(d<d0_out) seqM[kk]=':';
         else         seqM[kk]='.';
         kk++;
@@ -1878,14 +1884,31 @@ int TMalign_main(
     delete [] invmap;
     delete [] m1;
     delete [] m2;
-    delete [] xtm;
-    delete [] ytm;
-    delete [] xt;
-    delete [] r1;
-    delete [] r2;
     DeleteArray(&score, xlen+1);
     DeleteArray(&path, xlen+1);
     DeleteArray(&val, xlen+1);
+
+    delete [] xtm.x;
+    delete [] xtm.y;
+    delete [] xtm.z;
+
+    delete [] ytm.x;
+    delete [] ytm.y;
+    delete [] ytm.z;
+
+    delete [] xt.x;
+    delete [] xt.y;
+    delete [] xt.z;
+
+    delete [] r1.x;
+    delete [] r1.y;
+    delete [] r1.z;
+
+    delete [] r2.x;
+    delete [] r2.y;
+    delete [] r2.z;
+
+
 //    DeleteArray(&xtm, minlen);
 //    DeleteArray(&ytm, minlen);
 //    DeleteArray(&xt, xlen);

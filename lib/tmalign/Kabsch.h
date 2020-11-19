@@ -15,7 +15,6 @@
 */
 
 
-
 /**************************************************************************
 Implemetation of Kabsch algoritm for finding the best rotation matrix
 ---------------------------------------------------------------------------
@@ -29,14 +28,13 @@ rms   - sum of w*(ux+t-y)**2 over all atom pairs            (output)
 u    - u(i,j) is   rotation  matrix for best superposition  (output)
 t    - t(i)   is translation vector for best superposition  (output)
 **************************************************************************/
-bool Kabsch(float *x,
-    float *y,
-    int n,
-    int mode,
-    float *rms,
-    float t[3],
-    float u[3][3]
-    )
+bool Kabsch(Coordinates & x,
+            Coordinates & y,
+            int n,
+            int mode,
+            float *rms,
+            float t[3],
+            float u[3][3])
 {
     int i, j, m, m1, l, k;
     double e0, rms1, d, h, g;
@@ -103,14 +101,23 @@ bool Kabsch(float *x,
     //compute centers for vector sets x, y
     for (i = 0; i<n; i++)
     {
-        for (j = 0; j < 3; j++)
-        {
-            c1tmp[j] = x[i*3+j];
-            c2tmp[j] = y[i*3+j];
 
-            s1tmp[j] += c1tmp[j];
-            s2tmp[j] += c2tmp[j];
-        }
+        c1tmp[0] = x.x[i];
+        c1tmp[1] = x.y[i];
+        c1tmp[2] = x.z[i];
+
+        c2tmp[0] = y.x[i];
+        c2tmp[1] = y.y[i];
+        c2tmp[2] = y.z[i];
+
+        s1tmp[0] += c1tmp[0];
+        s1tmp[1] += c1tmp[1];
+        s1tmp[2] += c1tmp[2];
+
+        s2tmp[0] += c2tmp[0];
+        s2tmp[1] += c2tmp[1];
+        s2tmp[2] += c2tmp[2];
+
 
         for (j = 0; j < 3; j++)
         {
@@ -137,11 +144,12 @@ bool Kabsch(float *x,
     {
         for (int mm = 0; mm < n; mm++)
         {
-            for (int nn = 0; nn < 3; nn++)
-            {
-                e0 += (x[mm*3+nn] - xc[nn]) * (x[mm*3+nn] - xc[nn]) +
-                      (y[mm*3+nn] - yc[nn]) * (y[mm*3+nn] - yc[nn]);
-            }
+            e0 += (x.x[mm] - xc[0]) * (x.x[mm] - xc[0]) +
+                  (y.x[mm] - yc[0]) * (y.x[mm] - yc[0]);
+            e0 += (x.y[mm] - xc[1]) * (x.y[mm] - xc[1]) +
+                  (y.y[mm] - yc[1]) * (y.y[mm] - yc[1]);
+            e0 += (x.z[mm] - xc[2]) * (x.z[mm] - xc[2]) +
+                  (y.z[mm] - yc[2]) * (y.z[mm] - yc[2]);
         }
     }
 

@@ -36,6 +36,20 @@
 using namespace std;
 
 
+struct Coordinates{
+    Coordinates(int size){
+        x = new float[size];
+        y = new float[size];
+        z = new float[size];
+    }
+    Coordinates(){
+    }
+    float * x;
+    float * y;
+    float * z;
+};
+
+
 void PrintErrorAndQuit(string sErrorString)
 {
     cout << sErrorString << endl;
@@ -382,12 +396,12 @@ int read_PDB(const vector<string> &PDB_lines, double **a, char *seq, int *resno)
     return i;
 }
 
-float dist(const float x[3], const float y[3])
+float dist(const float xx, const float xy, const float xz,
+           const float yx, const float yy, const float yz)
 {
-    float d1=x[0]-y[0];
-    float d2=x[1]-y[1];
-    float d3=x[2]-y[2];
- 
+    float d1=xx-yx;
+    float d2=xy-yy;
+    float d3=xz-yz;
     return (d1*d1 + d2*d2 + d3*d3);
 }
 
@@ -396,11 +410,23 @@ double dotProd(const float *a, const float *b)
     return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
 }
 
-void transform(float t[3], float u[3][3], const float *x, float *x1)
+void transform(float t[3], float u[3][3], const float x[3], float *x1)
 {
     x1[0]=t[0]+dotProd(&u[0][0], x);
     x1[1]=t[1]+dotProd(&u[1][0], x);
     x1[2]=t[2]+dotProd(&u[2][0], x);
+}
+
+void transform(float t[3], float u[3][3], const float xx, const float xy, const float xz,
+               float &yx, float & yy, float & yz)
+{
+    float xyz[3];
+    xyz[0] = xx;
+    xyz[1] = xy;
+    xyz[2] = xz;
+    yx=t[0]+dotProd(&u[0][0], xyz);
+    yy=t[1]+dotProd(&u[1][0], xyz);
+    yz=t[2]+dotProd(&u[2][0], xyz);
 }
 
 void do_rotation(const float *x, float *x1, int len, float t[3], float u[3][3])
@@ -409,6 +435,15 @@ void do_rotation(const float *x, float *x1, int len, float t[3], float u[3][3])
     {
         transform(t, u, &x[i*3], &x1[i*3]);
     }    
+}
+
+void do_rotation( const Coordinates & x,  Coordinates & y,
+                  int len, float t[3], float u[3][3])
+{
+    for(int i=0; i<len; i++)
+    {
+        transform(t, u, x.x[i], x.y[i], x.z[i], y.x[i], y.y[i], y.z[i]);
+    }
 }
 
 /* strip white space at the begining or end of string */

@@ -103,8 +103,12 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 unsigned int queryId = qdbr.getId(queryKey);
                 char *querySeq = qdbr.getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.getSeqLen(queryId));
-                float *queryCaCords = (float *) qcadbr.getData(queryId, thread_idx);
+                float *qdata = (float *) qcadbr.getData(queryId, thread_idx);
                 memset(querySecStruc, 0, sizeof(int) * queryLen);
+                Coordinates queryCaCords;
+                queryCaCords.x = qdata;
+                queryCaCords.y = &qdata[queryLen];
+                queryCaCords.z = &qdata[queryLen+queryLen];
                 make_sec(queryCaCords, queryLen, querySecStruc); // secondary structure assignment
 
                 size_t passedNum = 0;
@@ -126,11 +130,15 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     }
                     char * targetSeq = tdbr->getData(targetId, thread_idx);
                     int targetLen = static_cast<int>(tdbr->getSeqLen(targetId));
-                    float * targetCaCords = (float*) tcadbr->getData(targetId, thread_idx);
+                    float * tdata = (float*) tcadbr->getData(targetId, thread_idx);
                     if(Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)==false){
                         continue;
                     }
                     memset(targetSecStruc, 0, sizeof(int)*targetLen);
+                    Coordinates targetCaCords;
+                    targetCaCords.x = tdata;
+                    targetCaCords.y = &tdata[targetLen];
+                    targetCaCords.z = &tdata[targetLen+targetLen];
                     make_sec(targetCaCords, targetLen, targetSecStruc); // secondary structure assignment
                     /* entry function for structure alignment */
                     float t0[3], u0[3][3];
