@@ -91,6 +91,14 @@ int tmalign(int argc, const char **argv, const Command& command) {
         // --> superpose xa onto ya
         int * querySecStruc  = new int[par.maxSeqLen];
         int * targetSecStruc = new int[par.maxSeqLen];
+        float * query_x = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
+        float * query_y = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
+        float * query_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
+
+        float * target_x = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
+        float * target_y = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
+        float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
+        float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
 
         char buffer[1024+32768];
         std::string resultBuffer;
@@ -106,9 +114,12 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 float *qdata = (float *) qcadbr.getData(queryId, thread_idx);
                 memset(querySecStruc, 0, sizeof(int) * queryLen);
                 Coordinates queryCaCords;
-                queryCaCords.x = qdata;
-                queryCaCords.y = &qdata[queryLen];
-                queryCaCords.z = &qdata[queryLen+queryLen];
+                memcpy(query_x, qdata, sizeof(float) * queryLen);
+                memcpy(query_y, &qdata[queryLen], sizeof(float) * queryLen);
+                memcpy(query_z, &qdata[queryLen+queryLen], sizeof(float) * queryLen);
+                queryCaCords.x = query_x;
+                queryCaCords.y = query_y;
+                queryCaCords.z = query_z;
                 make_sec(queryCaCords, queryLen, querySecStruc); // secondary structure assignment
 
                 size_t passedNum = 0;
@@ -123,6 +134,20 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB))? true : false;
                     if(isIdentity == true){
                         std::string backtrace = "";
+                        float rmsdbla;
+                        float bR[3][3];
+                        float bt[3];
+                        int anat= (queryLen%4) ? (queryLen/4)*4+4 : queryLen;
+                        for(int i=queryLen;i<anat;i++){
+                            query_x[i]=0.0f;
+                            query_x[i]=0.0f;
+                            query_x[i]=0.0f;
+                        }
+
+//                        float tmscore= tmscore_cpu_soa_sse2(queryLen,
+//                                                            query_x, query_y, query_z,
+//                                                            query_x, query_y, query_z,
+//                                                            0,0,0);
                         Matcher::result_t result(dbKey, 0 , 1.0, 1.0, 1.0, 1.0, std::max(queryLen,queryLen), 0, queryLen-1, queryLen, 0, queryLen-1, queryLen, backtrace);
                         size_t len = Matcher::resultToBuffer(buffer, result, true, false);
                         resultBuffer.append(buffer, len);
@@ -136,9 +161,13 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     }
                     memset(targetSecStruc, 0, sizeof(int)*targetLen);
                     Coordinates targetCaCords;
-                    targetCaCords.x = tdata;
-                    targetCaCords.y = &tdata[targetLen];
-                    targetCaCords.z = &tdata[targetLen+targetLen];
+                    memcpy(target_x, tdata, sizeof(float) * targetLen);
+                    memcpy(target_y, &tdata[targetLen], sizeof(float) * targetLen);
+                    memcpy(target_z, &tdata[targetLen+targetLen], sizeof(float) * targetLen);
+
+                    targetCaCords.x = target_x;
+                    targetCaCords.y = target_y;
+                    targetCaCords.z = target_z;
                     make_sec(targetCaCords, targetLen, targetSecStruc); // secondary structure assignment
                     /* entry function for structure alignment */
                     float t0[3], u0[3][3];
@@ -153,6 +182,8 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     float TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
                     int n_ali = 0;
                     int n_ali8 = 0;
+
+
                     TMalign_main(
                             queryCaCords, targetCaCords, querySeq, targetSeq, querySecStruc, targetSecStruc,
                             t0, u0, TM1, TM2, TM3, TM4, TM5,
@@ -160,7 +191,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                             seqM, seqxA, seqyA,
                             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                             queryLen, targetLen, Lnorm_ass, d0_scale,
-                            i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt);
+                            i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
                     double seqId = Liden/(static_cast<double>(n_ali8));
                     int rmsdScore = static_cast<int>(rmsd0*1000.0);
                     std::string backtrace = "";

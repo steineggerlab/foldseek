@@ -18,11 +18,336 @@
 #include "NW.h"
 #include "Kabsch.h"
 
+float LG_score_soa_sse (float r[16],int nat, float *x1,float *y1,float *z1, float *x2, float *y2, float *z2, float *d,float invd0d0){//coords organized x4,y4,z4
+    //no hadds - compatible with SSE2
+    float fsum=0;
+    __m128 r0 = _mm_load_ps(r);
+    __m128 r1 = _mm_load_ps(&(r[4]));
+    __m128 r2 = _mm_load_ps(&(r[8]));
+    __m128 one=_mm_set_ps(1.0f,1.0f,1.0f,1.0f);
+    //4th multiplication unecessary as it is all zeros
+    __m128 d0 = _mm_load1_ps(&invd0d0);
+    __m128 sum=_mm_setzero_ps();
+    int i=0, lower_nat4=(nat/4)*4;
+    //four points at a time - otherwise do it scalar
+    for( ;i <lower_nat4; i+=4){
+        __m128 mx1 = _mm_load_ps(&(x1[i]));
+        __m128 my1 = _mm_load_ps(&(y1[i]));
+        __m128 mz1 = _mm_load_ps(&(z1[i]));
+        __m128 mx2 = _mm_load_ps(&(x2[i]));
+
+        __m128 tx1= _mm_add_ps(_mm_mul_ps(my1,_mm_shuffle_ps(r0,r0,0x55)),_mm_mul_ps(mx1,_mm_shuffle_ps(r0,r0,0x00)));
+        __m128 tx2= _mm_add_ps(_mm_mul_ps(mz1,_mm_shuffle_ps(r0,r0,0xAA)),_mm_shuffle_ps(r0,r0,0xFF));
+        tx2= _mm_add_ps(tx2,tx1);
+        tx2= _mm_sub_ps(tx2,mx2);
+        mx2 = _mm_load_ps(&(y2[i]));
+        __m128 d1 = _mm_mul_ps(tx2,tx2);
+
+        tx1= _mm_add_ps(_mm_mul_ps(my1,_mm_shuffle_ps(r1,r1,0x55)),_mm_mul_ps(mx1,_mm_shuffle_ps(r1,r1,0x00)));
+        tx2= _mm_add_ps(_mm_mul_ps(mz1,_mm_shuffle_ps(r1,r1,0xAA)),_mm_shuffle_ps(r1,r1,0xFF));
+        tx2= _mm_add_ps(tx2,tx1);
+        tx2= _mm_sub_ps(tx2,mx2);
+        mx2= _mm_load_ps(&(z2[i]));
+        d1 = _mm_add_ps(d1,_mm_mul_ps(tx2,tx2));
+
+        tx1= _mm_add_ps(_mm_mul_ps(my1,_mm_shuffle_ps(r2,r2,0x55)),_mm_mul_ps(mx1,_mm_shuffle_ps(r2,r2,0x00)));
+        tx2= _mm_add_ps(_mm_mul_ps(mz1,_mm_shuffle_ps(r2,r2,0xAA)),_mm_shuffle_ps(r2,r2,0xFF));
+        tx2= _mm_add_ps(tx2,tx1);
+        tx2= _mm_sub_ps(tx2,mx2);
+        d1 = _mm_add_ps(d1,_mm_mul_ps(tx2,tx2));
+        _mm_store_ps(&(d[i]),d1); //write out 4 differences
+        mx1= _mm_mul_ps(d1,d0);
+        mx1= _mm_add_ps(mx1,one);
+#ifdef FAST_DIVISION
+        mx1= _mm_rcp_ps(mx1);
+#else
+        mx1=_mm_div_ps(one,mx1);
+#endif
+        sum=_mm_add_ps(sum,mx1);
+    }
+
+    for( ;i <nat; i++){
+        float v[4] __attribute__ ((aligned (16))) ={x1[i],y1[i],z1[i],1};
+        float w[4] __attribute__ ((aligned (16))) ={x2[i],y2[i],z2[i],1};
+        __m128 x1 = _mm_load_ps(v);
+        __m128 y1 = _mm_load_ps(w);
+        __m128 a1 = _mm_mul_ps(r0,x1);
+        __m128 b1 = _mm_mul_ps(r1,x1);
+
+        x1 = _mm_mul_ps(r2,x1);
+
+        a1 = _mm_add_ps(_mm_unpacklo_ps(a1,x1),_mm_unpackhi_ps(a1,x1));
+        x1 = _mm_add_ps(_mm_unpacklo_ps(b1,one),_mm_unpackhi_ps(b1,one));
+        x1 = _mm_add_ps(_mm_unpacklo_ps(a1,x1),_mm_unpackhi_ps(a1,x1));
+
+        x1 = _mm_sub_ps(x1,y1);
+        x1 = _mm_mul_ps(x1,x1);
+
+        x1 = _mm_add_ps(x1, _mm_movehl_ps(x1, x1));
+        x1 = _mm_add_ss(x1, _mm_shuffle_ps(x1, x1, 1));
+
+        _mm_store_ss(&(d[i]),x1);
+        x1= _mm_mul_ss(x1,d0);
+        x1= _mm_add_ss(x1,one);
+#ifdef FAST_DIVISION
+        x1= _mm_rcp_ps(x1);
+#else
+        x1=_mm_div_ps(one,x1);
+#endif
+        sum=_mm_add_ss(sum,x1);
+    }
+    //not worth writing two versions for SSE/SSE3 - avoid the hadds
+    sum=_mm_add_ps(sum,_mm_movehl_ps(sum, sum));
+    sum=_mm_add_ss(sum, _mm_shuffle_ps(sum, sum, 1));
+    _mm_store_ss(&(fsum),sum);
+    return(fsum);
+}
+
+int score_fun_soa_sse(int nat, float d0, float d, float *r,float *x1, float *y1, float *z1, float *x2, float *y2, float *z2, int *ialign,int *nalign,float *tm_score){
+    //ialign points to atom number
+    int k,ncut=0,nchange=0,my_nalign=*nalign,upper_nat= (nat%4)?(nat/4)*4+4 : nat;
+    float d2=d*d,invfnat=1.0f/(float)nat;
+    float invd0d0=1.0f/(d0*d0);
+    float* dist=(float*)mem_align(16,upper_nat*sizeof(float));
+    //keep nmin smallest distances && distances < dtmp
+    float my_score=LG_score_soa_sse(r,nat,x1,y1,z1,x2,y2,z2,dist,invd0d0);
+    for(int k=0;k<nat;k++){
+        if(dist[k]<d2) ncut++;
+    }
+
+    //adjust d until there are at least 3 the same - rare use another routine for this
+    while(ncut <3){
+        d2=d*d;
+        ncut=0;
+        for(k=0;k<nat;k++)
+            if(dist[k]<d2) ncut++;
+        d+=0.5f;
+    }
+    ncut=0;
+    for(k=0;k<nat;k++){
+        if(dist[k]<d2){
+            if(ncut < my_nalign && ialign[ncut] == k)ncut++;
+            else{
+                nchange=1;
+                ialign[ncut++]=k;
+            }
+        }
+    }
+    free (dist);
+
+    *tm_score=my_score*invfnat;
+    if(!nchange)return(0);
+    *nalign=ncut;
+    return(1);
+}
+
+double rmsd_svd(int nat,double *dcoords,double u[3][3], double t[3],bool rmsd_flag){
+    const double inv3=1.0/3.0;
+    const double dnat=(double)nat;
+    const double invdnat=1.0/(double)nat;
+    double drms=0,r[9]={0,0,0,0,0,0,0,0,0};
+    double s1x=0,s1y=0,s1z=0,s2x=0,s2y=0,s2z=0,ssq=0;
+    int m=0;
+    for (int i=0;i<nat;i++){
+        double c1x=dcoords[m++];
+        double c1y=dcoords[m++];
+        double c1z=dcoords[m++];
+        double c2x=dcoords[m++];
+        double c2y=dcoords[m++];
+        double c2z=dcoords[m++];
+        r[0]+=c1x*c2x; r[1]+=c1x*c2y; r[2]+=c1x*c2z; r[3]+=c1y*c2x; r[4]+=c1y*c2y; r[5]+=c1y*c2z; r[6]+=c1z*c2x; r[7]+=c1z*c2y; r[8]+=c1z*c2z;
+        s1x+=c1x;s1y+=c1y;s1z+=c1z;s2x+=c2x;s2y+=c2y;s2z+=c2z;
+        if(rmsd_flag) ssq+=c1x*c1x+c1y*c1y+c1z*c1z+c2x*c2x+c2y*c2y+c2z*c2z;
+    }
+    r[0]-=s1x*s2x*invdnat;
+    r[1]-=s1x*s2y*invdnat;
+    r[2]-=s1x*s2z*invdnat;
+    r[3]-=s1y*s2x*invdnat;
+    r[4]-=s1y*s2y*invdnat;
+    r[5]-=s1y*s2z*invdnat;
+    r[6]-=s1z*s2x*invdnat;
+    r[7]-=s1z*s2y*invdnat;
+    r[8]-=s1z*s2z*invdnat;
+    double det= r[0] * ( (r[4]*r[8]) - (r[5]*r[7]) )- r[1] * ( (r[3]*r[8]) - (r[5]*r[6]) ) + r[2] * ( (r[3]*r[7]) - (r[4]*r[6]) );
+    //for symmetric matrix
+    //lower triangular matrix rr
+    double detsq=det*det;
+    //lower triangular matrix rr
+
+
+    double rr[6]={r[0]*r[0]+ r[1]*r[1]+ r[2]*r[2],
+                  r[3]*r[0]+ r[4]*r[1]+ r[5]*r[2],
+                  r[3]*r[3]+ r[4]*r[4]+ r[5]*r[5],
+                  r[6]*r[0]+ r[7]*r[1]+ r[8]*r[2],
+                  r[6]*r[3]+ r[7]*r[4]+ r[8]*r[5],
+                  r[6]*r[6]+ r[7]*r[7]+ r[8]*r[8]};
+
+    double spur=((double)(rr[0]+rr[2]+rr[5]))*inv3;
+    double cof=((double)(rr[2]*rr[5] - rr[4]*rr[4] + rr[0]*rr[5]- rr[3]*rr[3] + rr[0]*rr[2] - rr[1]*rr[1])) *inv3;
+    double e[3] ={spur,spur,spur};
+    double h=( spur > 0 )? spur*spur-cof : -1.0;
+    if(h>0)
+    {
+        double g = (spur*cof - detsq)*0.5 - spur*h;
+        double sqrth = sqrt(h);
+        double d1 = h*h*h - g*g;
+        d1= ( d1<0 ) ? atan2(0,-g)*inv3 : atan2(sqrt(d1),-g)*inv3;
+        double cth = sqrth * cos(d1);
+        double sth = sqrth*SQRT3*sin(d1);
+        e[0]+=  cth+cth;
+        e[1]+= -cth+sth;
+        e[2]+= -cth-sth;
+    }
+    e[0]=(e[0] < 0) ? 0 : sqrt(e[0]);
+    e[1]=(e[1] < 0) ? 0 : sqrt(e[1]);
+    e[2]=(e[2] < 0) ? 0 : sqrt(e[2]);
+
+    double d=(det<0)? e[0] + e[1] -e[2] : e[0] + e[1]+e[2];
+    if(rmsd_flag){
+        double xm=s1x*s1x+s1y*s1y*+s1z*s1z+s2x*s2x+s2y*s2y+s2z*s2z;
+        drms=(ssq-xm*dnat-d-d)*invdnat;
+        drms=(drms>1e-8)?sqrt(drms) : 0.0f;
+    }
+    if(rmsd_flag){
+        double xm=s1x*s1x+s1y*s1y+s1z*s1z+s2x*s2x+s2y*s2y+s2z*s2z;
+        double r2=(ssq-xm*invdnat-d-d)*invdnat;
+        drms=(r2>1.0e-8) ? sqrt(r2) : 0.0;
+    }
+    if(u && t){
+        rmatrix(d,r,u);
+        t[0] =s2x*invdnat - (u[0][0]*s1x*invdnat + u[1][0]*s1y*invdnat + u[2][0]*s1z*invdnat);
+        t[1]= s2y*invdnat - (u[0][1]*s1x*invdnat + u[1][1]*s1y*invdnat + u[2][1]*s1z*invdnat);
+        t[2]= s2z*invdnat - (u[0][2]*s1x*invdnat + u[1][2]*s1y*invdnat + u[2][2]*s1z*invdnat);
+    }
+    return(drms);
+}
+
+float tmscore_cpu_soa_sse2(int nat,float *x1, float *y1,float *z1,float *x2,float *y2,float *z2,float bR[3][3], float bt[3],float *rmsd){
+    int nalign=0,best_nalign=0;
+    int *ialign=new int[nat];
+    int *best_align=new int[nat];
+    float max_score=-1,rms;
+    float r[16] __attribute__ ((aligned (16)));
+    //d0
+    float d0=1.24*pow((nat-15),(1.0/3.0))-1.8;
+    if(d0< 0.5)d0=0.5;
+    //d0_search ----->
+    float d,d0_search=d0;
+    if(d0_search > 8)d0_search=8;
+    if(d0_search <4.5)d0_search=4.5;
+    //iterative parameters ----->
+    int n_it=20;      //maximum number of iterations
+    int n_init_max=6; //maximum number of L_init
+    int n_init=0;
+    int L_ini_min=4;
+    int L_ini[6];
+
+    if(nat < 4) L_ini_min=nat;
+    int len=nat;
+    int divisor=1;
+    while(len > L_ini_min && n_init <5){
+        L_ini[n_init++]=len;
+        divisor*=2;
+        len=nat/divisor;
+    }
+    L_ini[n_init++]=4;
+    if (L_ini[n_init-1] > L_ini_min)L_ini[n_init++]=L_ini_min;;
+
+    // find the maximum score starting from local structures superposition
+    float score; //TM-score
+    for (int seed=0;seed<n_init;seed++)
+    {
+        //find the initial rotation matrix using the initial seed residues
+        int L_init=L_ini[seed];
+        for(int istart=0;istart<=nat-L_init;istart++)
+        {
+            int nchanges=1;
+            int nalign=L_init;
+            {
+                int m=0;
+                int n=0;
+                for(int i=0;i<nat;i++){
+                    if(i>=istart && i<istart+L_init){
+                        ialign[n++]=i;
+                    }
+                }
+            }
+            if(rmsd && !seed)
+                *rmsd=kabsch_quat_soa_sse2(nalign,ialign,x1,y1,z1,x2,y2,z2,r);
+            else
+                kabsch_quat_soa_sse2(nalign,ialign,x1,y1,z1,x2,y2,z2,r);
+            score_fun_soa_sse(nat, d0, d0_search-1,r,x1,y1,z1,x2,y2,z2,ialign,&nalign,&score);
+            d=d0_search+1.0f;
+            if(score > max_score){
+                max_score=score;
+                memmove(best_align,ialign,nalign*sizeof(int));
+                best_nalign=nalign;
+            }
+            //extend search from seed
+            for (int iter=0;iter<n_it && nchanges;iter++){
+                kabsch_quat_soa_sse2(nalign,ialign,x1,y1,z1,x2,y2,z2,r);
+                nchanges=score_fun_soa_sse(nat, d0, d,r,x1,y1,z1,x2,y2,z2,ialign,&nalign,&score);
+                if(score > max_score){
+                    max_score=score;
+                    memmove(best_align,ialign,nalign*sizeof(int));
+                    best_nalign=nalign;
+                }
+            }
+        }
+    }
+
+    //for best frame re-calculate matrix with double precision
+    double R[3][3],t[3];
+    double *acoords=new double [best_nalign*6];
+    for(int k=0;k<best_nalign;k++){
+        int i=best_align[k];
+        acoords[6*k]  =x1[i];
+        acoords[6*k+1]=y1[i];
+        acoords[6*k+2]=z1[i];
+        acoords[6*k+3]=x2[i];
+        acoords[6*k+4]=y2[i];
+        acoords[6*k+5]=z2[i];
+    }
+    rmsd_svd(best_nalign,acoords,R, t,0);
+    if(bR){
+        for(int i=0;i<3;i++)
+            for(int j=0;j<3;j++)
+                bR[i][j]=R[i][j];
+    }
+    if(bt){
+        for(int i=0;i<3;i++)
+            bt[i]=t[i];
+    }
+    double invd0d0=1.0/(double)(d0*d0);
+    double dist;
+    float invdnat=1.0/(double)nat;
+    double my_score=0;
+    for(int k=0;k<nat;k++){
+        double u[3];
+        double v[3]={x1[k],y1[k],z1[k]};
+        double w[3]={x2[k],y2[k],z2[k]};
+        u[0]=t[0]+R[0][0]*v[0]+R[1][0]*v[1]+R[2][0]*v[2]-w[0];
+        u[1]=t[1]+R[0][1]*v[0]+R[1][1]*v[1]+R[2][1]*v[2]-w[1];
+        u[2]=t[2]+R[0][2]*v[0]+R[1][2]*v[1]+R[2][2]*v[2]-w[2];
+        dist=u[0]*u[0]+u[1]*u[1]+u[2]*u[2];
+        my_score+=1.0/(1.0+dist*invd0d0);
+    }
+
+    delete [] best_align;
+    delete [] ialign;
+    delete [] acoords;
+    return(my_score*invdnat);
+}
+
+
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
 int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
                 float *score1, int score_sum_method, const float Lnorm,
-                const float score_d8, const float d0)
+                const float score_d8, const float d0
+                , float * mem
+
+                )
 {
     float score_sum=0, di;
     float d_tmp=d*d;
@@ -30,24 +355,40 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
     float score_d8_cut = score_d8*score_d8;
 
     int i, n_cut, inc=0;
-
+    float *distArray = mem;
     while(1)
     {
         n_cut=0;
         score_sum=0;
+
+        for(i=0; i < n_ali; i+=VECSIZE_FLOAT){
+            //    float d1=xx-yx;
+            //    float d2=xy-yy;
+            //    float d3=xz-yz;
+            //    return (d1*d1 + d2*d2 + d3*d3);
+            simd_float xa_x = simdf32_load(&xa.x[i]);
+            simd_float ya_x = simdf32_load(&ya.x[i]);
+            simd_float xa_y = simdf32_load(&xa.y[i]);
+            simd_float ya_y = simdf32_load(&ya.y[i]);
+            simd_float xa_z = simdf32_load(&xa.z[i]);
+            simd_float ya_z = simdf32_load(&ya.z[i]);
+            simd_float xx = simdf32_sub(xa_x, ya_x);
+            simd_float yy = simdf32_sub(xa_y, ya_y);
+            simd_float zz = simdf32_sub(xa_z, ya_z);
+            xx = simdf32_mul(xx, xx);
+            yy = simdf32_mul(yy, yy);
+            zz = simdf32_mul(zz, zz);
+            simd_float res = simdf32_add(xx, yy);
+            simdf32_store(&distArray[i],simdf32_add(res, zz));
+        }
+
         for(i=0; i<n_ali; i++)
         {
-            di = dist(xa.x[i], xa.y[i], xa.z[i], ya.x[i], ya.y[i], ya.z[i]);
-            if(di<d_tmp)
-            {
-                i_ali[n_cut]=i;
-                n_cut++;
-            }
-            if(score_sum_method==8)
-            {
-                if(di<=score_d8_cut) score_sum += 1/(1+di/d02);
-            }
-            else score_sum += 1/(1+di/d02);
+            di = distArray[i];
+            i_ali[n_cut]=i;
+            n_cut+=(di<d_tmp);
+            score_sum += (di<=score_d8_cut) ? 1/(1+di/d02) : 0;
+            //else score_sum += 1/(1+di/d02);
         }
         //there are not enough feasible pairs, reliefe the threshold
         if(n_cut<3 && n_ali>3)
@@ -109,11 +450,36 @@ int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
     return n_cut;
 }
 
+bool KabschFast(Coordinates & x,
+                 Coordinates & y,
+                 int n,
+                 int mode,
+                 float *rms,
+                 float t[3],
+                 float u[3][3],
+                 float * mem){
+    float r[16] __attribute__ ((aligned (16)));
+    float rmsdbla = kabsch_quat_soa_avx(n, NULL, x.x, x.y, x.z, y.x, y.y, y.z, r, mem);
+    t[0] = r[3];
+    t[1] = r[7];
+    t[2] = r[11];
+    u[0][0] = r[0];
+    u[0][1] = r[1];
+    u[0][2] = r[2];
+    u[1][0] = r[4];
+    u[1][1] = r[5];
+    u[1][2] = r[6];
+    u[2][0] = r[8];
+    u[2][1] = r[9];
+    u[2][2] = r[10];
+    return true;
+}
+
 double TMscore8_search(Coordinates &r1, Coordinates &r2,
                        Coordinates &xtm, Coordinates & ytm,
                        Coordinates &xt, int Lali, float t0[3], float u0[3][3], int simplify_step,
                        int score_sum_method, float *Rcomm, float local_d0_search, float Lnorm,
-                       float score_d8, float d0)
+                       float score_d8, float d0, float * mem)
 {
     int i, m;
     float score_max, score, rmsd;
@@ -180,7 +546,13 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
             }
 
             //extract rotation matrix based on the fragment
-            Kabsch(r1, r2, L_frag, 1, &rmsd, t, u);
+            //float r[16] __attribute__ ((aligned (16)));
+            //float rmsdbla = kabsch_quat_soa_sse2(L_frag, NULL, r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, r);
+            //float rmsdbla;
+//            float bR[3][3];
+//            float bt[3];
+            //float TMscore = tmscore_cpu_soa_sse2(L_frag, r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, bR, bt, &rmsdbla);
+            KabschFast(r1, r2, L_frag, 1, &rmsd, t, u, mem);
             if (simplify_step != 1)
                 *Rcomm = 0;
             do_rotation(xtm, xt, Lali, t, u);
@@ -188,7 +560,7 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
             //get subsegment of this fragment
             d = local_d0_search - 1;
             n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score,
-                             score_sum_method, Lnorm, score_d8, d0);
+                             score_sum_method, Lnorm, score_d8, d0, mem);
             if(score>score_max)
             {
                 score_max=score;
@@ -222,11 +594,14 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
                     k_ali[ka]=m;
                     ka++;
                 }
+                //KabschFast();
                 //extract rotation matrix based on the fragment
-                Kabsch(r1, r2, n_cut, 1, &rmsd, t, u);
+                //float rmsdbla = kabsch_quat_soa_sse2(L_frag, NULL, r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, r);
+
+                KabschFast(r1, r2, n_cut, 1, &rmsd, t, u, mem);
                 do_rotation(xtm, xt, Lali, t, u);
                 n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score,
-                                 score_sum_method, Lnorm, score_d8, d0);
+                                 score_sum_method, Lnorm, score_d8, d0, mem);
                 if(score>score_max)
                 {
                     score_max=score;
@@ -268,7 +643,7 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
 double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                                 Coordinates &xtm, Coordinates &ytm, Coordinates &xt, int Lali,
                                 float t0[3], float u0[3][3], int simplify_step, int score_sum_method,
-                                float *Rcomm, float local_d0_search, float score_d8, float d0)
+                                float *Rcomm, float local_d0_search, float score_d8, float d0, float * mem)
 {
     int i, m;
     float score_max, score, rmsd;
@@ -333,7 +708,7 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                 ka++;
             }
             //extract rotation matrix based on the fragment
-            Kabsch(r1, r2, L_frag, 1, &rmsd, t, u);
+            KabschFast(r1, r2, L_frag, 1, &rmsd, t, u, mem);
             if (simplify_step != 1)
                 *Rcomm = 0;
             do_rotation(xtm, xt, Lali, t, u);
@@ -377,7 +752,7 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                     ka++;
                 }
                 //extract rotation matrix based on the fragment
-                Kabsch(r1, r2, n_cut, 1, &rmsd, t, u);
+                KabschFast(r1, r2, n_cut, 1, &rmsd, t, u, mem);
                 do_rotation(xtm, xt, Lali, t, u);
                 n_cut = score_fun8_standard(xt, ytm, Lali, d, i_ali, &score,
                                             score_sum_method, score_d8, d0);
@@ -429,7 +804,7 @@ double detailed_search(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
                        Coordinates &xt, const Coordinates &x, const Coordinates &y, int xlen, int ylen,
                        int invmap0[], float t[3], float u[3][3], int simplify_step,
                        int score_sum_method, float local_d0_search, float Lnorm,
-                       float score_d8, float d0)
+                       float score_d8, float d0, float * mem)
 {
     //x is model, y is template, try to superpose onto y
     int i, j, k;
@@ -455,7 +830,7 @@ double detailed_search(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
 
     //detailed search 40-->1
     tmscore = TMscore8_search(r1, r2, xtm, ytm, xt, k, t, u, simplify_step,
-                              score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+                              score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0, mem);
     return tmscore;
 }
 
@@ -464,7 +839,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
                                  const Coordinates &x, const Coordinates &y,
                                  int xlen, int ylen, int invmap0[], float t[3], float u[3][3],
                                  int simplify_step, int score_sum_method, double local_d0_search,
-                                 const bool& bNormalize, float Lnorm, float score_d8, float d0)
+                                 const bool& bNormalize, float Lnorm, float score_d8, float d0, float * mem)
 {
     //x is model, y is template, try to superpose onto y
     int i, j, k;
@@ -490,7 +865,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
 
     //detailed search 40-->1
     tmscore = TMscore8_search_standard( r1, r2, xtm, ytm, xt, k, t, u,
-                                        simplify_step, score_sum_method, &rmsd, local_d0_search, score_d8, d0);
+                                        simplify_step, score_sum_method, &rmsd, local_d0_search, score_d8, d0, mem);
     if (bNormalize)// "-i", to use standard_TMscore, then bNormalize=true, else bNormalize=false;
         tmscore = tmscore * k / Lnorm;
 
@@ -500,7 +875,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
 //compute the score quickly in three iterations
 double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
                        const Coordinates &x, const Coordinates &y, int xlen, int ylen, int invmap[],
-                       float d0, float d0_search, float t[3], float u[3][3])
+                       float d0, float d0_search, float t[3], float u[3][3], float * mem)
 {
     float rms, tmscore, tmscore1, tmscore2;
     int i, j, k;
@@ -531,7 +906,7 @@ double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
         }
         else if(i!=-1) PrintErrorAndQuit("Wrong map!\n");
     }
-    Kabsch(r1, r2, k, 1, &rms, t, u);
+    KabschFast(r1, r2, k, 1, &rms, t, u, mem);
 
     //evaluate score
     double di;
@@ -582,7 +957,7 @@ double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
 
     if(n_ali!=j)
     {
-        Kabsch(r1, r2, j, 1, &rms, t, u);
+        KabschFast(r1, r2, j, 1, &rms, t, u, mem);
         tmscore1=0;
         for(k=0; k<n_ali; k++)
         {
@@ -618,7 +993,7 @@ double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
         }
 
         //evaluate the score
-        Kabsch(r1, r2, j, 1, &rms, t, u);
+        KabschFast(r1, r2, j, 1, &rms, t, u, mem);
         tmscore2=0;
         for(k=0; k<n_ali; k++)
         {
@@ -650,7 +1025,7 @@ double get_initial(Coordinates &r1, Coordinates &r2,
                    Coordinates &xtm, Coordinates &ytm,
                    const Coordinates &x, const Coordinates &y, int xlen, int ylen, int *y2x,
                    float d0, float d0_search, const bool fast_opt,
-                   float t[3], float u[3][3])
+                   float t[3], float u[3][3], float * mem)
 {
     int min_len=getmin(xlen, ylen);
     if(min_len<=5) PrintErrorAndQuit("Sequence is too short <=5!\n");
@@ -678,7 +1053,7 @@ double get_initial(Coordinates &r1, Coordinates &r2,
         //evaluate the map quickly in three iterations
         //this is not real tmscore, it is used to evaluate the goodness of the initial alignment
         tmscore=get_score_fast(r1, r2, xtm, ytm,
-                               x, y, xlen, ylen, y2x, d0,d0_search, t, u);
+                               x, y, xlen, ylen, y2x, d0,d0_search, t, u, mem);
         if(tmscore>=tmscore_max)
         {
             tmscore_max=tmscore;
@@ -822,7 +1197,7 @@ void get_initial_ss( float **score, bool **path, float **val,
 bool get_initial5( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
                    float **score, bool **path, float **val,
                    const Coordinates &x, const Coordinates &y, int xlen, int ylen, int *y2x,
-                   float d0, float d0_search, const bool fast_opt, const float D0_MIN)
+                   float d0, float d0_search, const bool fast_opt, const float D0_MIN, float * mem)
 {
     float GL, rmsd;
     float t[3];
@@ -897,13 +1272,13 @@ bool get_initial5( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinat
                 }
 
                 // superpose the two structures and rotate it
-                Kabsch(r1, r2, n_frag[i_frag], 1, &rmsd, t, u);
+                KabschFast(r1, r2, n_frag[i_frag], 1, &rmsd, t, u, mem);
 
                 float gap_open = 0.0;
                 NWDP_TM(score, path, val,
                         x, y, xlen, ylen, t, u, d02, gap_open, invmap);
                 GL = get_score_fast(r1, r2, xtm, ytm, x, y, xlen, ylen,
-                                    invmap, d0, d0_search, t, u);
+                                    invmap, d0, d0_search, t, u, mem);
                 if (GL>GLmax)
                 {
                     GLmax = GL;
@@ -921,7 +1296,7 @@ bool get_initial5( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinat
 void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
                             float **score, const int *secx, const int *secy,
                             const Coordinates &x, const Coordinates &y, int xlen, int ylen,
-                            int *y2x, const float D0_MIN, float d0)
+                            int *y2x, const float D0_MIN, float d0, float * mem)
 {
     float t[3], u[3][3];
     float rmsd, dij;
@@ -947,7 +1322,7 @@ void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
             k++;
         }
     }
-    Kabsch(r1, r2, k, 1, &rmsd, t, u);
+    KabschFast(r1, r2, k, 1, &rmsd, t, u, mem);
 
 
     for(int ii=0; ii<xlen; ii++)
@@ -973,11 +1348,11 @@ void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
 //the jth element in y is aligned to a gap in x if i==-1
 void get_initial_ssplus(Coordinates &r1, Coordinates &r2, float **score, bool **path,
                         float **val, const int *secx, const int *secy, const Coordinates &x, const Coordinates &y,
-                        int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0)
+                        int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0, float * mem)
 {
     //create score matrix for DP
     score_matrix_rmsd_sec(r1, r2, score, secx, secy, x, y, xlen, ylen,
-                          y2x0, D0_MIN,d0);
+                          y2x0, D0_MIN,d0, mem);
 
     float gap_open=-1.0;
     NWDP_TM(score, path, val, xlen, ylen, gap_open, y2x);
@@ -1052,7 +1427,8 @@ void find_max_frag(const Coordinates &x, int len, int *start_max,
 double get_initial_fgt(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
                        const Coordinates &x, const Coordinates &y, int xlen, int ylen,
                        int *y2x, float d0, float d0_search,
-                       float dcu0, const bool fast_opt, float t[3], float u[3][3])
+                       float dcu0, const bool fast_opt, float t[3], float u[3][3],
+                       float * mem)
 {
     int fra_min=4;           //minimum fragment for search
     if (fast_opt) fra_min=8;
@@ -1127,7 +1503,7 @@ double get_initial_fgt(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
 
             //evaluate the map quickly in three iterations
             tmscore=get_score_fast(r1, r2, xtm, ytm, x, y, xlen, ylen, y2x_,
-                                   d0, d0_search, t, u);
+                                   d0, d0_search, t, u, mem);
 
             if(tmscore>=tmscore_max)
             {
@@ -1161,7 +1537,7 @@ double get_initial_fgt(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
 
             //evaluate the map quickly in three iterations
             tmscore=get_score_fast(r1, r2, xtm, ytm,
-                                   x, y, xlen, ylen, y2x_, d0,d0_search, t, u);
+                                   x, y, xlen, ylen, y2x_, d0,d0_search, t, u, mem);
             if(tmscore>=tmscore_max)
             {
                 tmscore_max=tmscore;
@@ -1185,7 +1561,7 @@ double DP_iter(Coordinates &r1, Coordinates &r2,
                Coordinates &xt, float **score, bool **path, float **val,
                const Coordinates &x, const Coordinates &y, int xlen, int ylen, float t[3], float u[3][3],
                int invmap0[], int g1, int g2, int iteration_max, float local_d0_search,
-               float D0_MIN, float Lnorm, float d0, float score_d8)
+               float D0_MIN, float Lnorm, float d0, float score_d8, float * mem)
 {
     float gap_open[2]={-0.6, 0};
     float rmsd;
@@ -1225,7 +1601,7 @@ double DP_iter(Coordinates &r1, Coordinates &r2,
 
             tmscore = TMscore8_search(r1, r2, xtm, ytm, xt, k, t, u,
                                       simplify_step, score_sum_method, &rmsd, local_d0_search,
-                                      Lnorm, score_d8, d0);
+                                      Lnorm, score_d8, d0, mem);
 
 
             if(tmscore>tmscore_max)
@@ -1415,7 +1791,7 @@ void output_results(
 double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
                         Coordinates &xt, Coordinates &x, Coordinates &y, int xlen, int ylen, int invmap[],
                         int& L_ali, float& RMSD, float D0_MIN, float Lnorm, float d0,
-                        float d0_search, float score_d8, float t[3], float u[3][3])
+                        float d0_search, float score_d8, float t[3], float u[3][3], float * mem)
 {
     D0_MIN = 0.5;
     Lnorm = ylen;
@@ -1456,7 +1832,7 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
     }
     L_ali = n_al;
 
-    Kabsch(r1, r2, n_al, 0, &RMSD, t, u);
+    KabschFast(r1, r2, n_al, 0, &RMSD, t, u, mem);
     RMSD = sqrt( RMSD/(1.0*n_al) );
 
     int temp_simplify_step = 1;
@@ -1465,7 +1841,7 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
     float rms = 0.0;
     tmscore = TMscore8_search_standard(r1, r2, xtm, ytm, xt, n_al, t, u,
                                        temp_simplify_step, temp_score_sum_method, &rms, d0_input,
-                                       score_d8, d0);
+                                       score_d8, d0, mem);
     tmscore = tmscore * n_al / (1.0*Lnorm);
 
     return tmscore;
@@ -1485,7 +1861,7 @@ int TMalign_main(
         const int xlen, const int ylen, const float Lnorm_ass,
         const float d0_scale,
         const bool i_opt, const bool I_opt, const bool a_opt,
-        const bool u_opt, const bool d_opt, const bool fast_opt)
+        const bool u_opt, const bool d_opt, const bool fast_opt, float * mem)
 {
     int minlen = min(xlen, ylen);
 
@@ -1540,15 +1916,15 @@ int TMalign_main(
     /******************************************************/
 
     get_initial(r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap0, d0,
-                d0_search, fast_opt, t, u);
+                d0_search, fast_opt, t, u, mem);
     TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap0,
                          t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
-                         score_d8, d0);
+                         score_d8, d0, mem);
     if (TM>TMmax) TMmax = TM;
     //run dynamic programing iteratively to find the best alignment
     TM = DP_iter( r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                   xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search,
-                  D0_MIN, Lnorm, d0, score_d8);
+                  D0_MIN, Lnorm, d0, score_d8, mem);
     if (TM>TMmax)
     {
         TMmax = TM;
@@ -1562,7 +1938,7 @@ int TMalign_main(
     get_initial_ss(score, path, val, secx, secy, xlen, ylen, invmap);
     TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
                          t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
-                         score_d8, d0);
+                         score_d8, d0, mem);
     if (TM>TMmax)
     {
         TMmax = TM;
@@ -1572,7 +1948,7 @@ int TMalign_main(
     {
         TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                      xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
-                     local_d0_search, D0_MIN, Lnorm, d0, score_d8);
+                     local_d0_search, D0_MIN, Lnorm, d0, score_d8, mem);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -1586,11 +1962,11 @@ int TMalign_main(
     /************************************************************/
     //=initial5 in original TM-align
     if (get_initial5( r1, r2, xtm, ytm, score, path, val, xa, ya,
-                      xlen, ylen, invmap, d0, d0_search, fast_opt, D0_MIN))
+                      xlen, ylen, invmap, d0, d0_search, fast_opt, D0_MIN, mem))
     {
         TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
                              invmap, t, u, simplify_step, score_sum_method,
-                             local_d0_search, Lnorm, score_d8, d0);
+                             local_d0_search, Lnorm, score_d8, d0, mem);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -1600,7 +1976,7 @@ int TMalign_main(
         {
             TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                          xlen, ylen, t, u, invmap, 0, 2, 2, local_d0_search,
-                         D0_MIN, Lnorm, d0, score_d8);
+                         D0_MIN, Lnorm, d0, score_d8, mem);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -1617,10 +1993,10 @@ int TMalign_main(
     /********************************************************************/
     //=initial3 in original TM-align
     get_initial_ssplus(r1, r2, score, path, val, secx, secy, xa, ya,
-                       xlen, ylen, invmap0, invmap, D0_MIN, d0);
+                       xlen, ylen, invmap0, invmap, D0_MIN, d0, mem);
     TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
                          t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
-                         score_d8, d0);
+                         score_d8, d0, mem);
     if (TM>TMmax)
     {
         TMmax = TM;
@@ -1630,7 +2006,7 @@ int TMalign_main(
     {
         TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                      xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
-                     local_d0_search, D0_MIN, Lnorm, d0, score_d8);
+                     local_d0_search, D0_MIN, Lnorm, d0, score_d8, mem);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -1645,10 +2021,10 @@ int TMalign_main(
     //=initial4 in original TM-align
     //TODO
     get_initial_fgt(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
-                    invmap, d0, d0_search, dcu0, fast_opt, t, u);
+                    invmap, d0, d0_search, dcu0, fast_opt, t, u, mem);
     TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
                          t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
-                         score_d8, d0);
+                         score_d8, d0, mem);
     if (TM>TMmax)
     {
         TMmax = TM;
@@ -1658,7 +2034,7 @@ int TMalign_main(
     {
         TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                      xlen, ylen, t, u, invmap, 1, 2, 2, local_d0_search, D0_MIN,
-                     Lnorm, d0, score_d8);
+                     Lnorm, d0, score_d8, mem);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -1697,7 +2073,7 @@ int TMalign_main(
     score_sum_method=8;
     TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
                                   invmap0, t, u, simplify_step, score_sum_method, local_d0_search,
-                                  false, Lnorm, score_d8, d0);
+                                  false, Lnorm, score_d8, d0, mem);
 
     //select pairs with dis<d8 for final TMscore computation and output alignment
     int k=0;
@@ -1738,7 +2114,7 @@ int TMalign_main(
     }
     n_ali8=k;
 
-    Kabsch(r1, r2, n_ali8, 0, &rmsd0, t, u);// rmsd0 is used for final output, only recalculate rmsd0, not t & u
+    KabschFast(r1, r2, n_ali8, 0, &rmsd0, t, u, mem);// rmsd0 is used for final output, only recalculate rmsd0, not t & u
     rmsd0 = sqrt(rmsd0 / n_ali8);
 
 
@@ -1759,7 +2135,7 @@ int TMalign_main(
     d0_0=d0A;
     local_d0_search = d0_search;
     TM1 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0, simplify_step,
-                          score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+                          score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0, mem);
     TM_0 = TM1;
 
     //normalized by length of structure B
@@ -1768,7 +2144,7 @@ int TMalign_main(
     d0B=d0;
     local_d0_search = d0_search;
     TM2 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
-                          score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+                          score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0, mem);
 
     double Lnorm_d0;
     if (a_opt)
@@ -1783,7 +2159,7 @@ int TMalign_main(
 
         TM3 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
                               simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
-                              score_d8, d0);
+                              score_d8, d0, mem);
         TM_0=TM3;
     }
     if (u_opt)
@@ -1797,7 +2173,7 @@ int TMalign_main(
         local_d0_search = d0_search;
         TM4 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
                               simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
-                              score_d8, d0);
+                              score_d8, d0, mem);
         TM_0=TM4;
     }
     if (d_opt)
@@ -1812,7 +2188,7 @@ int TMalign_main(
         local_d0_search = d0_search;
         TM5 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
                               simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
-                              score_d8, d0);
+                              score_d8, d0, mem);
         TM_0=TM5;
     }
 
@@ -1888,25 +2264,25 @@ int TMalign_main(
     DeleteArray(&path, xlen+1);
     DeleteArray(&val, xlen+1);
 
-    delete [] xtm.x;
-    delete [] xtm.y;
-    delete [] xtm.z;
+    free(xtm.x);
+    free(xtm.y);
+    free(xtm.z);
 
-    delete [] ytm.x;
-    delete [] ytm.y;
-    delete [] ytm.z;
+    free(ytm.x);
+    free(ytm.y);
+    free(ytm.z);
 
-    delete [] xt.x;
-    delete [] xt.y;
-    delete [] xt.z;
+    free(xt.x);
+    free(xt.y);
+    free(xt.z);
 
-    delete [] r1.x;
-    delete [] r1.y;
-    delete [] r1.z;
+    free(r1.x);
+    free(r1.y);
+    free(r1.z);
 
-    delete [] r2.x;
-    delete [] r2.y;
-    delete [] r2.z;
+    free(r2.x);
+    free(r2.y);
+    free(r2.z);
 
 
 //    DeleteArray(&xtm, minlen);

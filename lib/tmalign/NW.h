@@ -46,7 +46,7 @@ void NWDP_TM( float **score, bool **path, float **val,
         val[0][j]=0;
         path[0][j]=false; //not from diagonal
         j2i[j]=-1;    //all are not aligned, only use j2i[1:len2]
-    }      
+    }
 
 
     //decide matrix and path
@@ -65,19 +65,9 @@ void NWDP_TM( float **score, bool **path, float **val,
             v += (path[i][j-1]) ? gap_open : 0.0f;
 
 
-            if(d>=h && d>=v)
-            {
-                path[i][j]=true; //from diagonal
-                val[i][j]=d;
-            }
-            else 
-            {
-                path[i][j]=false; //from horizontal
-                if(v>=h)
-                    val[i][j]=v;
-                else
-                    val[i][j]=h;
-            }
+            path[i][j]= (d>=h && d>=v) ? true : false; //from diagonal
+            val[i][j]=(v>=h) ? v : h;
+            val[i][j]=(path[i][j] == true) ? d : val[i][j];
         } //for i
     } //for j
 
@@ -92,7 +82,7 @@ void NWDP_TM( float **score, bool **path, float **val,
             i--;
             j--;
         }
-        else 
+        else
         {
             h=val[i-1][j];
             if(path[i-1][j]) h +=gap_open;
@@ -134,7 +124,7 @@ void NWDP_TM( float **score, bool **path, float **val,
         val[0][j]=0;
         path[0][j]=false; //not from diagonal
         j2i[j]=-1;    //all are not aligned, only use j2i[1:len2]
-    }      
+    }
     float xx[3], dij;
 
 
@@ -157,19 +147,9 @@ void NWDP_TM( float **score, bool **path, float **val,
             v=val[i][j-1];
             v += (path[i][j-1]) ? gap_open : 0.0f;
 
-            if(d>=h && d>=v)
-            {
-                path[i][j]=true; //from diagonal
-                val[i][j]=d;
-            }
-            else 
-            {
-                path[i][j]=false; //from horizontal
-                if(v>=h)
-                    val[i][j]=v;
-                else
-                    val[i][j]=h;
-            }
+            path[i][j]= (d>=h && d>=v) ? true : false; //from diagonal
+            val[i][j]=(v>=h) ? v : h;
+            val[i][j]=(path[i][j] == true) ? d : val[i][j];
         } //for i
     } //for j
 
@@ -184,7 +164,7 @@ void NWDP_TM( float **score, bool **path, float **val,
             i--;
             j--;
         }
-        else 
+        else
         {
             h=val[i-1][j];
             if(path[i-1][j]) h +=gap_open;
@@ -227,7 +207,7 @@ void NWDP_TM(float **score, bool **path, float **val,
         val[0][j]=0;
         path[0][j]=false; //not from diagonal
         j2i[j]=-1;    //all are not aligned, only use j2i[1:len2]
-    }      
+    }
 
     //decide matrix and path
     for(i=1; i<=len1; i++)
@@ -255,19 +235,9 @@ void NWDP_TM(float **score, bool **path, float **val,
                 v += gap_open;
 
 
-            if(d>=h && d>=v)
-            {
-                path[i][j]=true; //from diagonal
-                val[i][j]=d;
-            }
-            else 
-            {
-                path[i][j]=false; //from horizontal
-                if(v>=h)
-                    val[i][j]=v;
-                else
-                    val[i][j]=h;
-            }
+            path[i][j]= (d>=h && d>=v) ? true : false; //from diagonal
+            val[i][j]=(v>=h) ? v : h;
+            val[i][j]=(path[i][j] == true) ? d : val[i][j];
         } //for i
     } //for j
 
@@ -282,7 +252,7 @@ void NWDP_TM(float **score, bool **path, float **val,
             i--;
             j--;
         }
-        else 
+        else
         {
             h=val[i-1][j];
             if(path[i-1][j]) h +=gap_open;
