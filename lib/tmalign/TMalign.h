@@ -342,12 +342,84 @@ float tmscore_cpu_soa_sse2(int nat,float *x1, float *y1,float *z1,float *x2,floa
 
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
+//int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
+//                float *score1, int score_sum_method, const float Lnorm,
+//                const float score_d8, const float d0
+//                , float * mem
+//
+//                )
+//{
+//    float score_sum=0, di;
+//    float d_tmp=d*d;
+//    float d02=d0*d0;
+//    float score_d8_cut = score_d8*score_d8;
+//
+//    int i, n_cut, inc=0;
+//    float *distArray = mem;
+//    while(1)
+//    {
+//        n_cut=0;
+//        score_sum=0;
+//        simd_float sum = simdf32_set(0);
+//        simd_float vscore_d8_cut = simdf32_set(score_d8_cut);
+//        simd_float vd02 = simdf32_set(d02);
+//        simd_float one = simdf32_set(1.0f);
+//        for(i=0; i < n_ali; i+=VECSIZE_FLOAT){
+//            //    float d1=xx-yx;
+//            //    float d2=xy-yy;
+//            //    float d3=xz-yz;
+//            //    return (d1*d1 + d2*d2 + d3*d3);
+//            simd_float xa_x = simdf32_load(&xa.x[i]);
+//            simd_float ya_x = simdf32_load(&ya.x[i]);
+//            simd_float xa_y = simdf32_load(&xa.y[i]);
+//            simd_float ya_y = simdf32_load(&ya.y[i]);
+//            simd_float xa_z = simdf32_load(&xa.z[i]);
+//            simd_float ya_z = simdf32_load(&ya.z[i]);
+//            ya_x = simdf32_sub(xa_x, ya_x);
+//            ya_y = simdf32_sub(xa_y, ya_y);
+//            ya_z = simdf32_sub(xa_z, ya_z);
+//            ya_x = simdf32_mul(ya_x, ya_x);
+//            ya_y = simdf32_mul(ya_y, ya_y);
+//            ya_z = simdf32_mul(ya_z, ya_z);
+//            simd_float res = simdf32_add(ya_x, ya_y);
+//            simd_float di = simdf32_add(res, ya_z);
+//            simdf32_store(&distArray[i], di);
+//            simd_float di_lt_score_d8 = simdf32_lt(di, vscore_d8_cut);
+//            simd_float oneDividedDist = simdf32_div(one, simdf32_add(one, simdf32_div(di,vd02)));
+//            sum = simdf32_add(sum, (simd_float)simdi_and((simd_int) di_lt_score_d8, (simd_int) oneDividedDist ));
+//        }
+//        for(i=0; i < VECSIZE_FLOAT; i++){
+//            score_sum+=((float*)&sum)[i];
+//        }
+//
+//        for(i=0; i<n_ali; i++)
+//        {
+//            di = distArray[i];
+//            i_ali[n_cut]=i;
+//            n_cut+=(di<d_tmp);
+//            //score_sum += (di<=score_d8_cut) ? 1/(1+di/d02) : 0;
+//            //else score_sum += 1/(1+di/d02);
+//        }
+//        //there are not enough feasible pairs, reliefe the threshold
+//        if(n_cut<3 && n_ali>3)
+//        {
+//            inc++;
+//            double dinc=(d+inc*0.5);
+//            d_tmp = dinc * dinc;
+//        }
+//        else break;
+//    }
+//
+//    *score1=score_sum/Lnorm;
+//    return n_cut;
+//}
+
+
+//     1, collect those residues with dis<d;
+//     2, calculate TMscore
 int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
                 float *score1, int score_sum_method, const float Lnorm,
-                const float score_d8, const float d0
-                , float * mem
-
-                )
+                const float score_d8, const float d0, float * mem)
 {
     float score_sum=0, di;
     float d_tmp=d*d;
@@ -356,11 +428,17 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
 
     int i, n_cut, inc=0;
     float *distArray = mem;
+    int anat= (n_ali%4) ? (n_ali/VECSIZE_FLOAT)*VECSIZE_FLOAT+VECSIZE_FLOAT : n_ali;
+
+
     while(1)
     {
         n_cut=0;
         score_sum=0;
-
+        simd_float sum = simdf32_set(0);
+        simd_float vscore_d8_cut = simdf32_set(score_d8_cut);
+        simd_float vd02 = simdf32_set(d02);
+        simd_float one = simdf32_set(1.0f);
         for(i=0; i < n_ali; i+=VECSIZE_FLOAT){
             //    float d1=xx-yx;
             //    float d2=xy-yy;
@@ -372,14 +450,21 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
             simd_float ya_y = simdf32_load(&ya.y[i]);
             simd_float xa_z = simdf32_load(&xa.z[i]);
             simd_float ya_z = simdf32_load(&ya.z[i]);
-            simd_float xx = simdf32_sub(xa_x, ya_x);
-            simd_float yy = simdf32_sub(xa_y, ya_y);
-            simd_float zz = simdf32_sub(xa_z, ya_z);
-            xx = simdf32_mul(xx, xx);
-            yy = simdf32_mul(yy, yy);
-            zz = simdf32_mul(zz, zz);
-            simd_float res = simdf32_add(xx, yy);
-            simdf32_store(&distArray[i],simdf32_add(res, zz));
+            ya_x = simdf32_sub(xa_x, ya_x);
+            ya_y = simdf32_sub(xa_y, ya_y);
+            ya_z = simdf32_sub(xa_z, ya_z);
+            ya_x = simdf32_mul(ya_x, ya_x);
+            ya_y = simdf32_mul(ya_y, ya_y);
+            ya_z = simdf32_mul(ya_z, ya_z);
+            simd_float res = simdf32_add(ya_x, ya_y);
+            simd_float di = simdf32_add(res, ya_z);
+            simdf32_store(&distArray[i], di);
+            simd_float di_lt_score_d8 = simdf32_lt(di, vscore_d8_cut);
+            simd_float oneDividedDist = simdf32_div(one, simdf32_add(one, simdf32_div(di,vd02)));
+            sum = simdf32_add(sum, (simd_float)simdi_and((simd_int) di_lt_score_d8, (simd_int) oneDividedDist ));
+        }
+        for(i=0; i < VECSIZE_FLOAT; i++){
+            score_sum+=((float*)&sum)[i];
         }
 
         for(i=0; i<n_ali; i++)
@@ -387,7 +472,7 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
             di = distArray[i];
             i_ali[n_cut]=i;
             n_cut+=(di<d_tmp);
-            score_sum += (di<=score_d8_cut) ? 1/(1+di/d02) : 0;
+            //score_sum += (di<=score_d8_cut) ? 1/(1+di/d02) : 0;
             //else score_sum += 1/(1+di/d02);
         }
         //there are not enough feasible pairs, reliefe the threshold
@@ -403,6 +488,50 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
     *score1=score_sum/Lnorm;
     return n_cut;
 }
+
+
+//int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
+//                float *score1, int score_sum_method, const float Lnorm,
+//                const float score_d8, const float d0, float * mem)
+//{
+//    float score_sum=0, di;
+//    float d_tmp=d*d;
+//    float d02=d0*d0;
+//    float score_d8_cut = score_d8*score_d8;
+//
+//    int i, n_cut, inc=0;
+//
+//    while(1)
+//    {
+//        n_cut=0;
+//        score_sum=0;
+//        for(i=0; i<n_ali; i++)
+//        {
+//            di = dist(xa.x[i], xa.y[i], xa.z[i], ya.x[i], ya.y[i], ya.z[i]);
+//            if(di<d_tmp)
+//            {
+//                i_ali[n_cut]=i;
+//                n_cut++;
+//            }
+//            if(score_sum_method==8)
+//            {
+//                if(di<=score_d8_cut) score_sum += 1/(1+di/d02);
+//            }
+//            else score_sum += 1/(1+di/d02);
+//        }
+//        //there are not enough feasible pairs, reliefe the threshold
+//        if(n_cut<3 && n_ali>3)
+//        {
+//            inc++;
+//            double dinc=(d+inc*0.5);
+//            d_tmp = dinc * dinc;
+//        }
+//        else break;
+//    }
+//
+//    *score1=score_sum/Lnorm;
+//    return n_cut;
+//}
 
 int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
                         int i_ali[], float *score1, int score_sum_method,
@@ -553,6 +682,8 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
 //            float bt[3];
             //float TMscore = tmscore_cpu_soa_sse2(L_frag, r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, bR, bt, &rmsdbla);
             KabschFast(r1, r2, L_frag, 1, &rmsd, t, u, mem);
+            //Kabsch(r1, r2, L_frag, 1, &rmsd, t, u);//, mem);
+
             if (simplify_step != 1)
                 *Rcomm = 0;
             do_rotation(xtm, xt, Lali, t, u);
@@ -598,7 +729,9 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
                 //extract rotation matrix based on the fragment
                 //float rmsdbla = kabsch_quat_soa_sse2(L_frag, NULL, r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, r);
 
-                KabschFast(r1, r2, n_cut, 1, &rmsd, t, u, mem);
+//                KabschFast(r1, r2, n_cut, 1, &rmsd, t, u, mem);
+                Kabsch(r1, r2, n_cut, 1, &rmsd, t, u);
+
                 do_rotation(xtm, xt, Lali, t, u);
                 n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score,
                                  score_sum_method, Lnorm, score_d8, d0, mem);
@@ -1276,7 +1409,7 @@ bool get_initial5( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinat
 
                 float gap_open = 0.0;
                 NWDP_TM(score, path, val,
-                        x, y, xlen, ylen, t, u, d02, gap_open, invmap);
+                        x, y, xlen, ylen, t, u, d02, gap_open, invmap, mem);
                 GL = get_score_fast(r1, r2, xtm, ytm, x, y, xlen, ylen,
                                     invmap, d0, d0_search, t, u, mem);
                 if (GL>GLmax)
@@ -1579,7 +1712,7 @@ double DP_iter(Coordinates &r1, Coordinates &r2,
         for(iteration=0; iteration<iteration_max; iteration++)
         {
             NWDP_TM(score, path, val, x, y, xlen, ylen,
-                    t, u, d02, gap_open[g], invmap);
+                    t, u, d02, gap_open[g], invmap, mem);
 
             k=0;
             for(j=0; j<ylen; j++)

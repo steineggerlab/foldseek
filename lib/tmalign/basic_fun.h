@@ -444,7 +444,7 @@ void do_rotation( const Coordinates & x,  Coordinates & y,
     simd_float t0 = simdf32_set(t[0]);
     simd_float t1 = simdf32_set(t[1]);
     simd_float t2 = simdf32_set(t[2]);
-
+//
     simd_float u00 = simdf32_set(u[0][0]);
     simd_float u01 = simdf32_set(u[0][1]);
     simd_float u02 = simdf32_set(u[0][2]);
@@ -455,7 +455,9 @@ void do_rotation( const Coordinates & x,  Coordinates & y,
     simd_float u21 = simdf32_set(u[2][1]);
     simd_float u22 = simdf32_set(u[2][2]);
     for(int i=0; i<len; i+=VECSIZE_FLOAT)
-    {
+//        for(int i=0; i<len; i++)
+
+        {
 //        float xyz[3];
 //        xyz[0] = xx;
 //        xyz[1] = xy;
@@ -485,7 +487,7 @@ void do_rotation( const Coordinates & x,  Coordinates & y,
         zz = simdf32_add(xx, zz);
         simdf32_store(&y.z[i], simdf32_add(t2, zz));
 
-        //transform(t, u, x.x[i], x.y[i], x.z[i], y.x[i], y.y[i], y.z[i]);
+//        transform(t, u, x.x[i], x.y[i], x.z[i], y.x[i], y.y[i], y.z[i]);
     }
 }
 
