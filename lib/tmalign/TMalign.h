@@ -729,8 +729,8 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
                 //extract rotation matrix based on the fragment
                 //float rmsdbla = kabsch_quat_soa_sse2(L_frag, NULL, r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, r);
 
-//                KabschFast(r1, r2, n_cut, 1, &rmsd, t, u, mem);
-                Kabsch(r1, r2, n_cut, 1, &rmsd, t, u);
+                KabschFast(r1, r2, n_cut, 1, &rmsd, t, u, mem);
+//                Kabsch(r1, r2, n_cut, 1, &rmsd, t, u);
 
                 do_rotation(xtm, xt, Lali, t, u);
                 n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score,
