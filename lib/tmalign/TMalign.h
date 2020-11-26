@@ -17,6 +17,7 @@
 #include "param_set.h"
 #include "NW.h"
 #include "Kabsch.h"
+#include "affineneedlemanwunsch.h"
 
 float LG_score_soa_sse (float r[16],int nat, float *x1,float *y1,float *z1, float *x2, float *y2, float *z2, float *d,float invd0d0){//coords organized x4,y4,z4
     //no hadds - compatible with SSE2
@@ -102,243 +103,6 @@ float LG_score_soa_sse (float r[16],int nat, float *x1,float *y1,float *z1, floa
     _mm_store_ss(&(fsum),sum);
     return(fsum);
 }
-
-int score_fun_soa_sse(int nat, float d0, float d, float *r,float *x1, float *y1, float *z1, float *x2, float *y2, float *z2, int *ialign,int *nalign,float *tm_score){
-    //ialign points to atom number
-    int k,ncut=0,nchange=0,my_nalign=*nalign,upper_nat= (nat%4)?(nat/4)*4+4 : nat;
-    float d2=d*d,invfnat=1.0f/(float)nat;
-    float invd0d0=1.0f/(d0*d0);
-    float* dist=(float*)mem_align(16,upper_nat*sizeof(float));
-    //keep nmin smallest distances && distances < dtmp
-    float my_score=LG_score_soa_sse(r,nat,x1,y1,z1,x2,y2,z2,dist,invd0d0);
-    for(int k=0;k<nat;k++){
-        if(dist[k]<d2) ncut++;
-    }
-
-    //adjust d until there are at least 3 the same - rare use another routine for this
-    while(ncut <3){
-        d2=d*d;
-        ncut=0;
-        for(k=0;k<nat;k++)
-            if(dist[k]<d2) ncut++;
-        d+=0.5f;
-    }
-    ncut=0;
-    for(k=0;k<nat;k++){
-        if(dist[k]<d2){
-            if(ncut < my_nalign && ialign[ncut] == k)ncut++;
-            else{
-                nchange=1;
-                ialign[ncut++]=k;
-            }
-        }
-    }
-    free (dist);
-
-    *tm_score=my_score*invfnat;
-    if(!nchange)return(0);
-    *nalign=ncut;
-    return(1);
-}
-
-double rmsd_svd(int nat,double *dcoords,double u[3][3], double t[3],bool rmsd_flag){
-    const double inv3=1.0/3.0;
-    const double dnat=(double)nat;
-    const double invdnat=1.0/(double)nat;
-    double drms=0,r[9]={0,0,0,0,0,0,0,0,0};
-    double s1x=0,s1y=0,s1z=0,s2x=0,s2y=0,s2z=0,ssq=0;
-    int m=0;
-    for (int i=0;i<nat;i++){
-        double c1x=dcoords[m++];
-        double c1y=dcoords[m++];
-        double c1z=dcoords[m++];
-        double c2x=dcoords[m++];
-        double c2y=dcoords[m++];
-        double c2z=dcoords[m++];
-        r[0]+=c1x*c2x; r[1]+=c1x*c2y; r[2]+=c1x*c2z; r[3]+=c1y*c2x; r[4]+=c1y*c2y; r[5]+=c1y*c2z; r[6]+=c1z*c2x; r[7]+=c1z*c2y; r[8]+=c1z*c2z;
-        s1x+=c1x;s1y+=c1y;s1z+=c1z;s2x+=c2x;s2y+=c2y;s2z+=c2z;
-        if(rmsd_flag) ssq+=c1x*c1x+c1y*c1y+c1z*c1z+c2x*c2x+c2y*c2y+c2z*c2z;
-    }
-    r[0]-=s1x*s2x*invdnat;
-    r[1]-=s1x*s2y*invdnat;
-    r[2]-=s1x*s2z*invdnat;
-    r[3]-=s1y*s2x*invdnat;
-    r[4]-=s1y*s2y*invdnat;
-    r[5]-=s1y*s2z*invdnat;
-    r[6]-=s1z*s2x*invdnat;
-    r[7]-=s1z*s2y*invdnat;
-    r[8]-=s1z*s2z*invdnat;
-    double det= r[0] * ( (r[4]*r[8]) - (r[5]*r[7]) )- r[1] * ( (r[3]*r[8]) - (r[5]*r[6]) ) + r[2] * ( (r[3]*r[7]) - (r[4]*r[6]) );
-    //for symmetric matrix
-    //lower triangular matrix rr
-    double detsq=det*det;
-    //lower triangular matrix rr
-
-
-    double rr[6]={r[0]*r[0]+ r[1]*r[1]+ r[2]*r[2],
-                  r[3]*r[0]+ r[4]*r[1]+ r[5]*r[2],
-                  r[3]*r[3]+ r[4]*r[4]+ r[5]*r[5],
-                  r[6]*r[0]+ r[7]*r[1]+ r[8]*r[2],
-                  r[6]*r[3]+ r[7]*r[4]+ r[8]*r[5],
-                  r[6]*r[6]+ r[7]*r[7]+ r[8]*r[8]};
-
-    double spur=((double)(rr[0]+rr[2]+rr[5]))*inv3;
-    double cof=((double)(rr[2]*rr[5] - rr[4]*rr[4] + rr[0]*rr[5]- rr[3]*rr[3] + rr[0]*rr[2] - rr[1]*rr[1])) *inv3;
-    double e[3] ={spur,spur,spur};
-    double h=( spur > 0 )? spur*spur-cof : -1.0;
-    if(h>0)
-    {
-        double g = (spur*cof - detsq)*0.5 - spur*h;
-        double sqrth = sqrt(h);
-        double d1 = h*h*h - g*g;
-        d1= ( d1<0 ) ? atan2(0,-g)*inv3 : atan2(sqrt(d1),-g)*inv3;
-        double cth = sqrth * cos(d1);
-        double sth = sqrth*SQRT3*sin(d1);
-        e[0]+=  cth+cth;
-        e[1]+= -cth+sth;
-        e[2]+= -cth-sth;
-    }
-    e[0]=(e[0] < 0) ? 0 : sqrt(e[0]);
-    e[1]=(e[1] < 0) ? 0 : sqrt(e[1]);
-    e[2]=(e[2] < 0) ? 0 : sqrt(e[2]);
-
-    double d=(det<0)? e[0] + e[1] -e[2] : e[0] + e[1]+e[2];
-    if(rmsd_flag){
-        double xm=s1x*s1x+s1y*s1y*+s1z*s1z+s2x*s2x+s2y*s2y+s2z*s2z;
-        drms=(ssq-xm*dnat-d-d)*invdnat;
-        drms=(drms>1e-8)?sqrt(drms) : 0.0f;
-    }
-    if(rmsd_flag){
-        double xm=s1x*s1x+s1y*s1y+s1z*s1z+s2x*s2x+s2y*s2y+s2z*s2z;
-        double r2=(ssq-xm*invdnat-d-d)*invdnat;
-        drms=(r2>1.0e-8) ? sqrt(r2) : 0.0;
-    }
-    if(u && t){
-        rmatrix(d,r,u);
-        t[0] =s2x*invdnat - (u[0][0]*s1x*invdnat + u[1][0]*s1y*invdnat + u[2][0]*s1z*invdnat);
-        t[1]= s2y*invdnat - (u[0][1]*s1x*invdnat + u[1][1]*s1y*invdnat + u[2][1]*s1z*invdnat);
-        t[2]= s2z*invdnat - (u[0][2]*s1x*invdnat + u[1][2]*s1y*invdnat + u[2][2]*s1z*invdnat);
-    }
-    return(drms);
-}
-
-float tmscore_cpu_soa_sse2(int nat,float *x1, float *y1,float *z1,float *x2,float *y2,float *z2,float bR[3][3], float bt[3],float *rmsd){
-    int nalign=0,best_nalign=0;
-    int *ialign=new int[nat];
-    int *best_align=new int[nat];
-    float max_score=-1,rms;
-    float r[16] __attribute__ ((aligned (16)));
-    //d0
-    float d0=1.24*pow((nat-15),(1.0/3.0))-1.8;
-    if(d0< 0.5)d0=0.5;
-    //d0_search ----->
-    float d,d0_search=d0;
-    if(d0_search > 8)d0_search=8;
-    if(d0_search <4.5)d0_search=4.5;
-    //iterative parameters ----->
-    int n_it=20;      //maximum number of iterations
-    int n_init_max=6; //maximum number of L_init
-    int n_init=0;
-    int L_ini_min=4;
-    int L_ini[6];
-
-    if(nat < 4) L_ini_min=nat;
-    int len=nat;
-    int divisor=1;
-    while(len > L_ini_min && n_init <5){
-        L_ini[n_init++]=len;
-        divisor*=2;
-        len=nat/divisor;
-    }
-    L_ini[n_init++]=4;
-    if (L_ini[n_init-1] > L_ini_min)L_ini[n_init++]=L_ini_min;;
-
-    // find the maximum score starting from local structures superposition
-    float score; //TM-score
-    for (int seed=0;seed<n_init;seed++)
-    {
-        //find the initial rotation matrix using the initial seed residues
-        int L_init=L_ini[seed];
-        for(int istart=0;istart<=nat-L_init;istart++)
-        {
-            int nchanges=1;
-            int nalign=L_init;
-            {
-                int m=0;
-                int n=0;
-                for(int i=0;i<nat;i++){
-                    if(i>=istart && i<istart+L_init){
-                        ialign[n++]=i;
-                    }
-                }
-            }
-            if(rmsd && !seed)
-                *rmsd=kabsch_quat_soa_sse2(nalign,ialign,x1,y1,z1,x2,y2,z2,r);
-            else
-                kabsch_quat_soa_sse2(nalign,ialign,x1,y1,z1,x2,y2,z2,r);
-            score_fun_soa_sse(nat, d0, d0_search-1,r,x1,y1,z1,x2,y2,z2,ialign,&nalign,&score);
-            d=d0_search+1.0f;
-            if(score > max_score){
-                max_score=score;
-                memmove(best_align,ialign,nalign*sizeof(int));
-                best_nalign=nalign;
-            }
-            //extend search from seed
-            for (int iter=0;iter<n_it && nchanges;iter++){
-                kabsch_quat_soa_sse2(nalign,ialign,x1,y1,z1,x2,y2,z2,r);
-                nchanges=score_fun_soa_sse(nat, d0, d,r,x1,y1,z1,x2,y2,z2,ialign,&nalign,&score);
-                if(score > max_score){
-                    max_score=score;
-                    memmove(best_align,ialign,nalign*sizeof(int));
-                    best_nalign=nalign;
-                }
-            }
-        }
-    }
-
-    //for best frame re-calculate matrix with double precision
-    double R[3][3],t[3];
-    double *acoords=new double [best_nalign*6];
-    for(int k=0;k<best_nalign;k++){
-        int i=best_align[k];
-        acoords[6*k]  =x1[i];
-        acoords[6*k+1]=y1[i];
-        acoords[6*k+2]=z1[i];
-        acoords[6*k+3]=x2[i];
-        acoords[6*k+4]=y2[i];
-        acoords[6*k+5]=z2[i];
-    }
-    rmsd_svd(best_nalign,acoords,R, t,0);
-    if(bR){
-        for(int i=0;i<3;i++)
-            for(int j=0;j<3;j++)
-                bR[i][j]=R[i][j];
-    }
-    if(bt){
-        for(int i=0;i<3;i++)
-            bt[i]=t[i];
-    }
-    double invd0d0=1.0/(double)(d0*d0);
-    double dist;
-    float invdnat=1.0/(double)nat;
-    double my_score=0;
-    for(int k=0;k<nat;k++){
-        double u[3];
-        double v[3]={x1[k],y1[k],z1[k]};
-        double w[3]={x2[k],y2[k],z2[k]};
-        u[0]=t[0]+R[0][0]*v[0]+R[1][0]*v[1]+R[2][0]*v[2]-w[0];
-        u[1]=t[1]+R[0][1]*v[0]+R[1][1]*v[1]+R[2][1]*v[2]-w[1];
-        u[2]=t[2]+R[0][2]*v[0]+R[1][2]*v[1]+R[2][2]*v[2]-w[2];
-        dist=u[0]*u[0]+u[1]*u[1]+u[2]*u[2];
-        my_score+=1.0/(1.0+dist*invd0d0);
-    }
-
-    delete [] best_align;
-    delete [] ialign;
-    delete [] acoords;
-    return(my_score*invdnat);
-}
-
 
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
@@ -1327,7 +1091,8 @@ void get_initial_ss( float **score, bool **path, float **val,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
-bool get_initial5( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
+bool get_initial5(AffineNeedlemanWunsch *affineNW,
+                   Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
                    float **score, bool **path, float **val,
                    const Coordinates &x, const Coordinates &y, int xlen, int ylen, int *y2x,
                    float d0, float d0_search, const bool fast_opt, const float D0_MIN, float * mem)
@@ -1408,8 +1173,14 @@ bool get_initial5( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinat
                 KabschFast(r1, r2, n_frag[i_frag], 1, &rmsd, t, u, mem);
 
                 float gap_open = 0.0;
-                NWDP_TM(score, path, val,
-                        x, y, xlen, ylen, t, u, d02, gap_open, invmap, mem);
+                //NWDP_TM(score, path, val,
+                //        x, y, xlen, ylen, t, u, d02, gap_open, invmap, mem);
+                std::fill(invmap, invmap+ylen, -1);
+                AffineNeedlemanWunsch::profile_t *profile = affineNW->profile_xyz_create(NULL, ylen, y.x, y.y, y.z);
+                AffineNeedlemanWunsch::alignment_t result = affineNW->alignXYZ(profile, (const unsigned char * ) NULL, ylen,
+                                                                              (const unsigned char * ) NULL, xlen, x.x, x.y, x.z,
+                                                                              d02, t, u, gap_open, 0.0, invmap);
+
                 GL = get_score_fast(r1, r2, xtm, ytm, x, y, xlen, ylen,
                                     invmap, d0, d0_search, t, u, mem);
                 if (GL>GLmax)
@@ -1689,7 +1460,8 @@ double get_initial_fgt(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
 //output: best alignment that maximizes the TMscore, will be stored in invmap
-double DP_iter(Coordinates &r1, Coordinates &r2,
+double DP_iter(AffineNeedlemanWunsch * affineNW, const char *seqx, const char *seqy,
+               Coordinates &r1, Coordinates &r2,
                Coordinates &xtm, Coordinates &ytm,
                Coordinates &xt, float **score, bool **path, float **val,
                const Coordinates &x, const Coordinates &y, int xlen, int ylen, float t[3], float u[3][3],
@@ -1711,14 +1483,21 @@ double DP_iter(Coordinates &r1, Coordinates &r2,
     {
         for(iteration=0; iteration<iteration_max; iteration++)
         {
-            NWDP_TM(score, path, val, x, y, xlen, ylen,
-                    t, u, d02, gap_open[g], invmap, mem);
+//            NWDP_TM(score, path, val, x, y, xlen, ylen,
+//                    t, u, d02, gap_open[g], invmap, mem);
+            std::fill(invmap, invmap+ylen, -1);
+            AffineNeedlemanWunsch::profile_t *profile = affineNW->profile_xyz_create(NULL, ylen, y.x, y.y, y.z);
+            AffineNeedlemanWunsch::alignment_t result = affineNW->alignXYZ(profile, (const unsigned char * ) seqy, ylen,
+                                                                          (const unsigned char * ) seqx, xlen, x.x, x.y, x.z,
+                                                                          d02, t, u, -gap_open[g], 0.0, invmap);
+//            std::cout << result.start_query << "\t" << result.start_target << std::endl;
+//            std::cout << result.end_query << "\t" << result.end_target << std::endl;
+
 
             k=0;
             for(j=0; j<ylen; j++)
             {
                 i=invmap[j];
-
                 if(i>=0) //aligned
                 {
                     xtm.x[k]=x.x[i];
@@ -1982,6 +1761,7 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
 
 /* entry function for TMalign */
 int TMalign_main(
+        AffineNeedlemanWunsch * affineNW,
         const Coordinates &xa, const Coordinates &ya,
         const char *seqx, const char *seqy, const int *secx, const int *secy,
         float t0[3], float u0[3][3],
@@ -2055,7 +1835,7 @@ int TMalign_main(
                          score_d8, d0, mem);
     if (TM>TMmax) TMmax = TM;
     //run dynamic programing iteratively to find the best alignment
-    TM = DP_iter( r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+    TM = DP_iter(affineNW, seqx, seqy,  r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                   xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search,
                   D0_MIN, Lnorm, d0, score_d8, mem);
     if (TM>TMmax)
@@ -2079,7 +1859,7 @@ int TMalign_main(
     }
     if (TM > TMmax*0.2)
     {
-        TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+        TM = DP_iter(affineNW, seqx, seqy, r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                      xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
                      local_d0_search, D0_MIN, Lnorm, d0, score_d8, mem);
         if (TM>TMmax)
@@ -2094,7 +1874,7 @@ int TMalign_main(
     /*    get initial alignment based on local superposition    */
     /************************************************************/
     //=initial5 in original TM-align
-    if (get_initial5( r1, r2, xtm, ytm, score, path, val, xa, ya,
+    if (get_initial5(affineNW, r1, r2, xtm, ytm, score, path, val, xa, ya,
                       xlen, ylen, invmap, d0, d0_search, fast_opt, D0_MIN, mem))
     {
         TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
@@ -2107,7 +1887,7 @@ int TMalign_main(
         }
         if (TM > TMmax*ddcc)
         {
-            TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+            TM = DP_iter(affineNW, seqx, seqy, r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                          xlen, ylen, t, u, invmap, 0, 2, 2, local_d0_search,
                          D0_MIN, Lnorm, d0, score_d8, mem);
             if (TM>TMmax)
@@ -2137,7 +1917,7 @@ int TMalign_main(
     }
     if (TM > TMmax*ddcc)
     {
-        TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+        TM = DP_iter(affineNW, seqx, seqy, r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                      xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
                      local_d0_search, D0_MIN, Lnorm, d0, score_d8, mem);
         if (TM>TMmax)
@@ -2165,7 +1945,7 @@ int TMalign_main(
     }
     if (TM > TMmax*ddcc)
     {
-        TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+        TM = DP_iter(affineNW, seqx, seqy, r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                      xlen, ylen, t, u, invmap, 1, 2, 2, local_d0_search, D0_MIN,
                      Lnorm, d0, score_d8, mem);
         if (TM>TMmax)

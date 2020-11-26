@@ -99,6 +99,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         float * target_y = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
+        AffineNeedlemanWunsch affineNW(par.maxSeqLen, 3);
 
         char buffer[1024+32768];
         std::string resultBuffer;
@@ -183,8 +184,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     int n_ali = 0;
                     int n_ali8 = 0;
 
-
-                    TMalign_main(
+                    TMalign_main(&affineNW,
                             queryCaCords, targetCaCords, querySeq, targetSeq, querySecStruc, targetSecStruc,
                             t0, u0, TM1, TM2, TM3, TM4, TM5,
                             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
@@ -192,6 +192,8 @@ int tmalign(int argc, const char **argv, const Command& command) {
                             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                             queryLen, targetLen, Lnorm_ass, d0_scale,
                             i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
+                    std::cout << queryId << "\t" << targetId << "\t" <<  TM_0 << "\t" << TM1 << std::endl;
+
                     double seqId = Liden/(static_cast<double>(n_ali8));
                     int rmsdScore = static_cast<int>(rmsd0*1000.0);
                     std::string backtrace = "";

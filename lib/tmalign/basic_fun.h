@@ -14,6 +14,9 @@
 =============================================================
 */
 
+#ifndef TMALIGN_BASIC_H
+#define TMALIGN_BASIC_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -501,3 +504,5 @@ string Trim(string inputString)
         result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
     return result;
 }
+
+#endif

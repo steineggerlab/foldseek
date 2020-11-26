@@ -98,6 +98,7 @@ void NWDP_TM( float **score, bool **path, float **val,
     }
 }
 
+
 void NWDP_TM( float **score, bool **path, float **val,
     const Coordinates &x, const Coordinates &y, int len1, int len2, float t[3], float u[3][3],
     float d02, float gap_open, int j2i[], float * tmp)
@@ -161,7 +162,8 @@ void NWDP_TM( float **score, bool **path, float **val,
         {
             //d=val[i-1][j-1]+score[i][j]; //diagonal
 //            dij=dist(xx[0], xx[1], xx[2], y.x[(j-1)], y.y[(j-1)], y.z[(j-1)]);
-//            d=val[i-1][j-1] + 1.0/(1+dij/d02);
+//            dij = 1.0/(1+dij/d02);
+//            d=val[i-1][j-1] + dij;
             d=val[i-1][j-1] + distArray[j-1];
 
             //symbol insertion in horizontal (= a gap in vertical)
@@ -186,6 +188,7 @@ void NWDP_TM( float **score, bool **path, float **val,
         } //for i
     } //for j
     //trace back to extract the alignment
+//    std::cout << val[i-1][j-1] << std::endl;
     i=len1;
     j=len2;
     while(i>0 && j>0)
