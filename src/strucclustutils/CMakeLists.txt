@@ -4,5 +4,7 @@ set(strucclustutils_source_files
         strucclustutils/convert2cle.cpp
         strucclustutils/convert2db.cpp
         strucclustutils/structkmermatcher.cpp
+        strucclustutils/PareunAlign.cpp
+        strucclustutils/PareunAlign.h
         PARENT_SCOPE
         )

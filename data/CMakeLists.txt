@@ -2,7 +2,7 @@ include(MMseqsResourceCompiler)
 
 set(COMPILED_RESOURCES
         strucclust.sh
-        BLAST3D.out
+        cle.out
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

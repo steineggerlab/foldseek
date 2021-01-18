@@ -36,22 +36,11 @@
 
 #include "pstream.h"
 #include "simd.h"
-
+#include "Coordinates.h"
 using namespace std;
 
 
-struct Coordinates{
-    Coordinates(int size){
-        x =(float*) mem_align(ALIGN_FLOAT, (size+VECSIZE_FLOAT)*sizeof(float));
-        y =(float*) mem_align(ALIGN_FLOAT, (size+VECSIZE_FLOAT)*sizeof(float));
-        z =(float*) mem_align(ALIGN_FLOAT, (size+VECSIZE_FLOAT)*sizeof(float));
-    }
-    Coordinates(){
-    }
-    float * x;
-    float * y;
-    float * z;
-};
+
 
 
 void PrintErrorAndQuit(string sErrorString)

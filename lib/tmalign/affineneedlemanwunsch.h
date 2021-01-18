@@ -95,12 +95,13 @@ public:
                          const unsigned char *query, long queryLen,
                          const unsigned char *target, long targetLen,
                          const float * targetX, const float * targetY, const float * targetZ,
-                         const float d02, float t[3], float u[3][3], float gapopen, float gapextend, int * invmap);
+                         const float d02, float t[3], float u[3][3], float gapopen, float gapextend,
+                         int * invmap);
 
     alignment_t align(AffineNeedlemanWunsch::profile_t *profile,
                       const unsigned char *query, long queryLen,
                       const unsigned char *target, long targetLen,
-                      float gapopen, float gapextend);
+                      float gapopen, float gapextend, int * invmap);
 
     static char cigar_decode_op(uint32_t cigar_int) {
 #define BAM_CIGAR_STR "MIDNSHP=XB"

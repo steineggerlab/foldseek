@@ -78,12 +78,14 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ(AffineNeedlem
 AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanWunsch::profile_t *profile,
                                                                 const unsigned char *query, long queryLen,
                                                                 const unsigned char *target, long targetLen,
-                                                                float gapopen, float gapextend) {
+                                                                float gapopen, float gapextend, int * invmap) {
     // fill matrix
     result_t *result = stripedAlign<SUBMAT>(
             profile, (const char *) target, targetLen,
                     NULL, NULL, NULL, 0.0, NULL, NULL,
                     gapopen, gapextend);
+    std::cout << result->score << std::endl;
+
     // compute backtrace
     cigar_t *cigar = cigar_striped_32(
             query,
@@ -93,7 +95,7 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanW
             result,
             false,
             NULL,
-            NULL);
+            invmap);
     return alignment_t(result->score, cigar->beg_query,result->end_query,
                        cigar->beg_ref, result->end_ref,
                        cigar->len, cigar->seq);
@@ -151,6 +153,7 @@ AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_xyz_create(
     profile->profile32.score = vProfile;
     return profile;
 }
+
 
 AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_create(
         const char * s1, const int s1Len,

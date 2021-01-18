@@ -10,6 +10,7 @@ add_library(tmalign
         pdb2fasta.cpp
         pdb2xyz.cpp
         param_set.h
+        Coordinates.h
         )
 
 

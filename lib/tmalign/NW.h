@@ -222,7 +222,7 @@ void NWDP_TM( float **score, bool **path, float **val,
 
 //+ss
 void NWDP_TM(float **score, bool **path, float **val,
-             const int *secx, const int *secy, const int len1, const int len2,
+             const char *secx, const char *secy, const int len1, const int len2,
              const float gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
@@ -266,13 +266,12 @@ void NWDP_TM(float **score, bool **path, float **val,
 
             //symbol insertion in horizontal (= a gap in vertical)
             h=val[i-1][j];
-            if(path[i-1][j]) //aligned in last position
-                h += gap_open;
+            h += (path[i-1][j]) ? gap_open : 0.0f; //aligned in last position
+
 
             //symbol insertion in vertical
             v=val[i][j-1];
-            if(path[i][j-1]) //aligned in last position
-                v += gap_open;
+            v += (path[i][j-1]) ? gap_open : 0.0f; //aligned in last position
 
 
             path[i][j]= (d>=h && d>=v) ? true : false; //from diagonal
@@ -280,7 +279,7 @@ void NWDP_TM(float **score, bool **path, float **val,
             val[i][j]=(path[i][j] == true) ? d : val[i][j];
         } //for i
     } //for j
-
+    std::cout << val[i-1][j-1] << std::endl;
     //trace back to extract the alignment
     i=len1;
     j=len2;

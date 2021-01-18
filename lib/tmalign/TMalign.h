@@ -384,7 +384,7 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
 
 
     //iterative parameters
-    int n_it=20;            //maximum number of iterations
+    int n_it=10;            //maximum number of iterations
     int n_init_max=6; //maximum number of different fragment length
     int L_ini[n_init_max];  //fragment lengths, Lali, Lali/2, Lali/4 ... 4
     int L_ini_min=4;
@@ -1043,7 +1043,7 @@ int sec_str(float dis13, float dis14, float dis15,
 
 
 //1->coil, 2->helix, 3->turn, 4->strand
-void make_sec(Coordinates &x, int len, int *sec)
+void make_sec(Coordinates &x, int len, char *sec)
 {
     int j1, j2, j3, j4, j5;
     float d13, d14, d15, d24, d25, d35;
@@ -1076,11 +1076,91 @@ void make_sec(Coordinates &x, int len, int *sec)
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ss( float **score, bool **path, float **val,
-                     const int *secx, const int *secy, int xlen, int ylen, int *y2x)
+void get_initial_ss(AffineNeedlemanWunsch *affineNW,
+                    float **score, bool **path, float **val,
+                    const char *secx, const char *secy, int xlen, int ylen, int *y2x)
 {
-    double gap_open=-1.0;
-    NWDP_TM(score, path, val, secx, secy, xlen, ylen, gap_open, y2x);
+    static const int ss_mat[] = {
+            0, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0,
+            0, 0, 0, 0, 1
+    };
+
+    static const int Ori_CLESUM_WS[18*18]={
+     //      A   C   D    E       F       G      H    I       K      L   M   N   P   Q   R   S   T  V  X
+            73,  20,  13,  -17,  -25,  -20,  -6,  -45,  -31, -23, -19, -11,  -2,  10,  25,  35,  16,  0,
+            20,  51,   7,   13,   15,    7,  13,  -96,  -74, -57, -50, -12, -13, -11, -12,  42,  12,  0,
+            13,   7,  53,   21,    3,   20,  -4,  -77,  -56, -43, -33,   0, -12,  -5,   3,   4,  29,  0,
+            -17,  13,  21,   52,   22,   22, -31, -124, -105, -88, -81, -22, -49, -44, -42, -10,  14,  0,
+            -25,  15,   3,   22,   36,   26, -22, -127, -108, -93, -84, -21, -47, -43, -48,  -5,  -6,  0,
+            -20,   7,  20,   22,   26,   50,  -5, -107,  -88, -73, -69, -16, -33, -32, -30,   0,   3,  0,
+            -6,  13,  -4,  -31,  -22,   -5,  69,  -51,  -34, -21, -13,  29,  21,  -8,  -1,   5,   8,  0,
+            -45, -96, -77, -124, -127, -107, -51,   23,   18,  13,   5, -62,  -4, -34, -55, -60, -87,  0,
+            -31, -74, -56, -105, -108,  -88, -34,   18,   23,  16,  21, -41,   1, -11, -34, -49, -62,  0,
+            -23, -57, -43,  -88,  -93,  -73, -21,   13,   16,  37,  13, -32,  16,  -2, -24, -34, -44,  0,
+            -19, -50, -33,  -81,  -84,  -69, -13,    5,   21,  13,  49,  -1,  12,  28,   5, -36, -24,  0,
+            -11, -12,   0,  -22,  -21,  -16,  29,  -62,  -41, -32,  -1,  74,   5,   8,  -4, -12,  26,  0,
+            -2, -13, -12,  -49,  -47,  -33,  21,   -4,    1,  16,  12,   5,  61,   7,   5,   8,  -7,  0,
+            10, -11,  -5,  -44,  -43,  -32,  -8,  -34,  -11,  -2,  28,   8,   7,  90,  15,  -3,  32,  0,
+            25, -12,   3,  -42,  -48,  -30,  -1,  -55,  -34, -24,   5,  -4,   5,  15, 104,   4, -13,  0,
+            35,  42,   4,  -10,   -5,    0,   5,  -60,  -49, -34, -36, -12,   8,  -3,   4,  66,   7,  0,
+            16,  12,  29,   14,   -6,    3,   8,  -87,  -62, -44, -24,  26,  -7,  32, -13,   7,  90,  0,
+            0,   0,   0,    0,    0,    0,   0,    0,    0,   0,   0,   0,   0,   0,   0,   0,   0,  0};//R
+// A   B   C    D    E    F   G    H    I   J   K   L   M   N   O   P   Q R
+
+//    static const int map[256] = {
+//            0, 1, 2, 3, 4
+//    };
+    //      A   C   D    E       F       G      H    I       K      L   M   N   P   Q   R   S   T  V  X
+    static const int map[256] = {
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23,  0, 20,  1,  2,  3, 4,  5,  6,  7, 23, 8, 9, 10,  11, 23,
+            12,  13,  14, 15, 16, 23, 17, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23,  0, 20,  1,  2,  3, 4,  5,  6,  7, 23, 8, 0, 10,  11, 23,
+            12,  13,  14, 15, 16, 23, 17, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+    };
+
+
+
+    static const AffineNeedlemanWunsch::matrix_t matrix = {
+            "ss",
+            Ori_CLESUM_WS,
+            map,
+            18,
+            1,
+            0
+    };
+
+
+
+//    NWDP_TM(score, path, val, secx, secy, xlen, ylen, -1.0, y2x);
+//    for(size_t i = 0; i < ylen; i++){
+//        if(y2x[i]!=-1)
+//        std::cout << i << "\t" << y2x[i] << "\t" << (int) secy[i] << "\t" << (int)  secx[y2x[i]] << std::endl;
+//    }
+    std::fill(y2x, y2x+ylen, -1);
+    AffineNeedlemanWunsch::profile_t *profile = affineNW->profile_create(secy, ylen, &matrix);
+    AffineNeedlemanWunsch::alignment_t result = affineNW->align(profile, (const unsigned char * ) secy, ylen,
+                                                                (const unsigned char * ) secx, xlen,
+                                                                100, 0, y2x);
+//    for(size_t i = 0; i < ylen; i++){
+//        if(y2x[i]!=-1)
+//            std::cout << i << "\t" << y2x[i] << "\t" <<  secy[i] << "\t" <<   secx[y2x[i]] << std::endl;
+//    }
+//    std::cout << std::endl;
 }
 
 
@@ -1198,7 +1278,7 @@ bool get_initial5(AffineNeedlemanWunsch *affineNW,
 }
 
 void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
-                            float **score, const int *secx, const int *secy,
+                            float **score, const char *secx, const char *secy,
                             const Coordinates &x, const Coordinates &y, int xlen, int ylen,
                             int *y2x, const float D0_MIN, float d0, float * mem)
 {
@@ -1251,7 +1331,8 @@ void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
 void get_initial_ssplus(Coordinates &r1, Coordinates &r2, float **score, bool **path,
-                        float **val, const int *secx, const int *secy, const Coordinates &x, const Coordinates &y,
+                        float **val, const char *secx, const char *secy,
+                        const Coordinates &x, const Coordinates &y,
                         int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0, float * mem)
 {
     //create score matrix for DP
@@ -1763,7 +1844,7 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
 int TMalign_main(
         AffineNeedlemanWunsch * affineNW,
         const Coordinates &xa, const Coordinates &ya,
-        const char *seqx, const char *seqy, const int *secx, const int *secy,
+        const char *seqx, const char *seqy, const char *secx, const char *secy,
         float t0[3], float u0[3][3],
         float &TM1, float &TM2, float &TM3, float &TM4, float &TM5,
         float &d0_0, float &TM_0,
@@ -1848,7 +1929,7 @@ int TMalign_main(
     /************************************************************/
     /*    get initial alignment based on secondary structure    */
     /************************************************************/
-    get_initial_ss(score, path, val, secx, secy, xlen, ylen, invmap);
+    get_initial_ss(affineNW, score, path, val, secx, secy, xlen, ylen, invmap);
     TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
                          t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
                          score_d8, d0, mem);
