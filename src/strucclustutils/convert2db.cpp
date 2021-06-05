@@ -5,76 +5,17 @@
 #include "LocalParameters.h"
 #include "Debug.h"
 #include "DBWriter.h"
-#include "XYZ.h"
-#include "Confo_Lett.h"
-#include "Mol_File.h"
+
+#include "structureto3di.h"
+#include "mmread.hpp"
+
 #include <iostream>
 #include <dirent.h>
+#include <mmseqs/src/commons/SubstitutionMatrix.h>
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
-
-using namespace std;
-//------------- Get_PDB_File_Len -----------//
-int Get_PDB_File_Len(string &pdbfile, string &name) //-> only suitable for pdb_BC100 pdb_file
-{
-    //--- list for mapping ---//
-    map<string, int> ws_mapping;
-    map<string, int>::iterator iter;
-    //read
-    ifstream fin;
-    string buf,temp;
-    fin.open(pdbfile.c_str(), ios::in);
-    if(fin.fail()!=0)
-    {
-        Debug(Debug::ERROR) << "File "<< pdbfile <<"not found!!\n";
-        EXIT(EXIT_FAILURE);
-    }
-    //process
-    int len;
-    int count=0;
-    const char * words[512];
-    bool headerFound = false;
-    for(;;)
-    {
-        //HEADER    ELECTRON TRANSFER(CUPROPROTEIN)         28-JUN-88   1PAZ
-        if(!getline(fin,buf,'\n'))break;
-        len=(int)buf.length();
-        if(len<3)continue;
-        //check ATOM
-        if(len<4)continue;
-        temp=buf.substr(0,6);
-        if(temp =="HEADER" ) {
-            headerFound = true;
-            buf.erase(std::find_if(buf.rbegin(), buf.rend(), [](unsigned char ch) {
-                return !std::isspace(ch);
-            }).base(), buf.end());
-            std::size_t len = Util::getWordsOfLine(buf.c_str(), words, 512);
-            size_t keyLen = words[len]-words[len-1];
-            name.assign(words[len-1], keyLen);
-            continue;
-        }
-
-
-        temp=buf.substr(0,4);
-        if(temp!="ATOM" && temp!="HETA")continue;
-        //check CA
-        temp=buf.substr(13,2);
-        if(temp!="CA") continue;
-        //record name
-        temp=buf.substr(21,6);
-        iter = ws_mapping.find(temp);
-        if(iter != ws_mapping.end())continue;
-        count++;
-        ws_mapping.insert(map < string, int >::value_type(temp, count));
-    }
-    if(headerFound == false){
-        name.assign(FileUtil::baseName(pdbfile));
-    }
-    //return
-    return count;
-}
 
 
 int convert2db(int argc, const char **argv, const Command& command) {
@@ -108,13 +49,8 @@ int convert2db(int argc, const char **argv, const Command& command) {
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
+    SubstitutionMatrix mat(par.scoringMatrixFile.aminoacids, 2.0, par.scoreBias);
 
-    const int INPUT_MODE=1; //main (default:1)
-    const int INPUT_TYPE=1; //main (default:1)
-    const int INPUT_GLYS=1; //vice (default:1)
-    const int WARN_OUT=1;   //vice (default:1)
-
-    string range="_";
     size_t incorrectFiles = 0;
     //===================== single_process ===================//__110710__//
 #pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, range, filenames) reduction(+:incorrectFiles)
@@ -123,147 +59,109 @@ int convert2db(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        int allocSize = static_cast<int>(par.maxSeqLen);
         //recon_related
-        XYZ *mol = new XYZ[allocSize]; //CA
-        float * camol = new float[allocSize*3]; //CA
-        char *cle = new char[allocSize + 1];
-        char *ami = new char[allocSize + 1];
-        PDB_Residue *pdb = new PDB_Residue[allocSize];
+        StructureTo3Di structureTo3Di;
+        std::vector<Vec3> ca;
+        std::vector<Vec3> cb;
+        std::vector<Vec3> n;
+        std::vector<Vec3> c;
+        std::vector<char> alphabet3di;
+        std::vector<char> ami;
+        std::vector<float> camol;
+        std::unordered_map<std::string,char> threeAA2oneAA = {
+                {"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
+                {"CYS",'C'},  {"GLN",'Q'},  {"GLU",'E'}, {"GLY",'G'},
+                {"HIS",'H'},  {"ILE",'I'},  {"LEU",'L'}, {"LYS",'K'},
+                {"MET",'M'},  {"PHE",'F'},  {"PRO",'P'}, {"SER",'S'},
+                {"THR",'T'},  {"TRP",'W'},  {"TYR",'Y'}, {"VAL",'V'}
+        };
         std::string name;
 #pragma omp for schedule(dynamic, 1)
         for (size_t i = 0; i < filenames.size(); i++) {
-            //get length
-            int totalLen = Get_PDB_File_Len(filenames[i], name);
-            if (totalLen <= 0) {
+
+            // clear memory
+            gemmi::Structure st = gemmi::read_structure_file(filenames[i], gemmi::CoorFormat::Pdb);
+            if(st.models.size() == 0 || st.models[0].chains.size() == 0 ||
+               st.models[0].chains[0].residues.size()  == 0 ){
                 incorrectFiles++;
                 continue;
             }
+            for (gemmi::Model& model : st.models){
+                for (gemmi::Chain& chain : model.chains){
+                    name.clear();
+                    ca.clear(); c.clear(); cb.clear(); n.clear(); ami.clear(); alphabet3di.clear();
+                    name = FileUtil::baseName(filenames[i]);
+                    name.push_back('_');
+                    name.append(chain.name);
+                    for (gemmi::Residue& res : chain.residues){
+                        if (res.het_flag != 'A')
+                            continue;
+                        Vec3 ca_atom = {NAN, NAN, NAN};
+                        Vec3 cb_atom = {NAN, NAN, NAN};
+                        Vec3 n_atom = {NAN, NAN, NAN};
+                        Vec3 c_atom = {NAN, NAN, NAN};
 
-            if(totalLen > allocSize){
-                //delete
-                delete[] pdb;
-                delete[] mol;
-                delete[] ami;
-                delete[] cle;
-                delete[] camol;
-                //create
-                pdb = new PDB_Residue[totalLen];
-                mol = new XYZ[totalLen];
-                camol = new float[totalLen * 3]; //CA
-                ami = new char[totalLen + 1];
-                cle = new char[totalLen + 1];
-                allocSize = totalLen;
-            }
-
-            //class
-            Mol_File mol_input;
-            Confo_Lett confo_lett;
-            mol_input.MODRES = 1;
-            //init
-            int moln;
-            string TER = "TER                                                                             ";
-            //open
-            mol_input.CbBACK = 1;
-            mol_input.CaONLY = 0; //consider Non-CA atoms !!//__110408__//
-            //macro
-            mol_input.OUTP_MODE = INPUT_TYPE;
-            mol_input.PROC_MODE = INPUT_MODE;
-            mol_input.GLYC_MODE = INPUT_GLYS;
-            //memory limit
-            mol_input.WARNING_out = WARN_OUT;
-            mol_input.MEMORY_LIMIT = totalLen;
-
-            //process
-            {
-                //pre_process
-                int ret_val = mol_input.XYZ_Input(filenames[i], range, 0, moln, 0, 0, 0, 0, 0);
-
-                if (ret_val <= 0) {
-                    if (ret_val != -12345){
-                        incorrectFiles++;
-                        continue;
-                    }
-                }
-                if (ret_val != 1){
-                    incorrectFiles++;
-                    continue;
-                }
-                //check memory
-                if (ret_val == -12345) {
-                    //add memory
-                    if (moln > allocSize) {
-                        totalLen = moln;
-                        allocSize = totalLen;
-                        //delete
-                        delete[] pdb;
-                        delete[] mol;
-                        delete[] ami;
-                        delete[] cle;
-                        delete[] camol;
-                        //create
-                        pdb = new PDB_Residue[totalLen];
-                        mol = new XYZ[totalLen];
-                        ami = new char[totalLen + 1];
-                        cle = new char[totalLen + 1];
-                        camol = new float[totalLen * 3]; //CA
-                        //memory limit
-                        mol_input.MEMORY_LIMIT = totalLen;
-                    }
-                }
-                //reload
-                int PRE_LOAD_ = mol_input.PRE_LOAD;
-                int WARNING_out_ = mol_input.WARNING_out;
-                mol_input.PRE_LOAD = 1;
-                mol_input.WARNING_out = 0;
-                mol_input.XYZ_Input(filenames[i], range, 0, totalLen, mol, ami, 0, 0, pdb);
-                mol_input.PRE_LOAD = PRE_LOAD_;
-                mol_input.WARNING_out = WARNING_out_;
-
-                //check if PDB files was correct
-                {
-                    int correct = 1; //default:OK
-                    for (int res = 0; res < totalLen; res++) {
-                        int iret = pdb[res].PDB_residue_backbone_check(4);
-                        if (iret != 1) {
-                            correct = 0;
-                            break;
+                        for (gemmi::Atom& atom : res.atoms){
+                            if (atom.name == "CA"){
+                                ca_atom.x = atom.pos.x;
+                                ca_atom.y = atom.pos.y;
+                                ca_atom.z = atom.pos.z;
+                            }
+                            else if (atom.name == "CB"){
+                                cb_atom.x = atom.pos.x;
+                                cb_atom.y = atom.pos.y;
+                                cb_atom.z = atom.pos.z;
+                            }
+                            else if (atom.name == "N"){
+                                n_atom.x = atom.pos.x;
+                                n_atom.y = atom.pos.y;
+                                n_atom.z = atom.pos.z;
+                            }
+                            else if (atom.name == "C"){
+                                c_atom.x = atom.pos.x;
+                                c_atom.y = atom.pos.y;
+                                c_atom.z = atom.pos.z;
+                            }
                         }
-                        iret = pdb[res].PDB_residue_CB_check();
-                        if (iret != 1) {
-                            correct = 0;
-                            break;
-                        }
+                        ca.push_back(ca_atom);
+                        cb.push_back(cb_atom);
+                        n.push_back(n_atom);
+                        c.push_back(c_atom);
+                        ami.push_back(threeAA2oneAA[res.name]);
                     }
-                    if(correct == 0){
-                        incorrectFiles++;
-                        continue;
+                    char * states = structureTo3Di.structure2states(ca, n, c, cb);
+                    for(size_t pos = 0; pos < ca.size(); pos++){
+                        alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
                     }
+                    alphabet3di.push_back('\n');
 
-                    confo_lett.btb_ori(0, 0, 0, totalLen, mol, cle);
-                    cle[totalLen]='\n';
-                    torsiondbw.writeData(cle, totalLen + 1, i, thread_idx);
-                    ami[totalLen]='\n';
-                    aadbw.writeData(ami, totalLen + 1, i, thread_idx);
+                    torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), i, thread_idx);
+                    ami.push_back('\n');
+                    aadbw.writeData(ami.data(), ami.size(), i, thread_idx);
                     name.push_back('\n');
                     hdbw.writeData(name.c_str(), name.size(), i, thread_idx);
                     name.clear();
-                    for(int res = 0; res < totalLen; res++){
-                        camol[res] = mol[res].X;
-                        camol[totalLen  +res] = mol[res].Y;
-                        camol[2*totalLen+res] = mol[res].Z;
+                    for(size_t res = 0; res < ca.size(); res++){
+                        camol.push_back(ca[res].x);
                     }
-                    cadbw.writeData((const char*)camol, totalLen * 3 * sizeof(float), i, thread_idx);
+                    for(size_t res = 0; res < ca.size(); res++) {
+                        camol.push_back(ca[res].y);
+                    }
+                    for(size_t res = 0; res < ca.size(); res++) {
+                        camol.push_back(ca[res].z);
+                    }
+                    cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), i, thread_idx);
+
+                    break;
                 }
+                break;
             }
+
+
         }
-        //delete
-        delete[] pdb;
-        delete[] mol;
-        delete[] ami;
-        delete[] cle;
-        delete[] camol;
     }
+
+
     torsiondbw.close(true);
     hdbw.close(true);
     cadbw.close(true);

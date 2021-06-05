@@ -1,5 +1,4 @@
 #include <dssp/structure.h>
-#include "StructSubstitutionMatrix.h"
 #include "Debug.h"
 #include "DBReader.h"
 #include "DBWriter.h"

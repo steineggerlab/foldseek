@@ -5,7 +5,6 @@
 #include "Timer.h"
 #include "QueryMatcher.h"
 #include "ReducedMatrix.h"
-#include "StructSubstitutionMatrix.h"
 
 
 #ifdef OPENMP

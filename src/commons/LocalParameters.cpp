@@ -1,14 +1,14 @@
 #include "LocalParameters.h"
-#include "cle.out.h"
+#include "mat3di.out.h"
 
 
 LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
 {
-    scoringMatrixFile = "cle.out";
-    seedScoringMatrixFile = "cle.out";
-    substitutionMatrices.emplace_back("cle.out", cle_out, cle_out_len);
+    scoringMatrixFile = "3di.out";
+    seedScoringMatrixFile = "3di.out";
+    substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
 
     tmalign.push_back(&PARAM_MIN_SEQ_ID);
     tmalign.push_back(&PARAM_C);

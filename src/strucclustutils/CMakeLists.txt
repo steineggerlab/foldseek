@@ -1,7 +1,6 @@
 set(strucclustutils_source_files
         strucclustutils/tmalign.cpp
         strucclustutils/convert2statealphabet.cpp
-        strucclustutils/convert2cle.cpp
         strucclustutils/convert2db.cpp
         strucclustutils/structkmermatcher.cpp
         strucclustutils/PareunAlign.cpp
