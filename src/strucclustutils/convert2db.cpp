@@ -73,7 +73,8 @@ int convert2db(int argc, const char **argv, const Command& command) {
                 {"CYS",'C'},  {"GLN",'Q'},  {"GLU",'E'}, {"GLY",'G'},
                 {"HIS",'H'},  {"ILE",'I'},  {"LEU",'L'}, {"LYS",'K'},
                 {"MET",'M'},  {"PHE",'F'},  {"PRO",'P'}, {"SER",'S'},
-                {"THR",'T'},  {"TRP",'W'},  {"TYR",'Y'}, {"VAL",'V'}
+                {"THR",'T'},  {"TRP",'W'},  {"TYR",'Y'}, {"VAL",'V'},
+                {"UNK",'X'}
         };
         std::string name;
 #pragma omp for schedule(dynamic, 1)
@@ -89,7 +90,8 @@ int convert2db(int argc, const char **argv, const Command& command) {
             for (gemmi::Model& model : st.models){
                 for (gemmi::Chain& chain : model.chains){
                     name.clear();
-                    ca.clear(); c.clear(); cb.clear(); n.clear(); ami.clear(); alphabet3di.clear();
+                    ca.clear(); c.clear(); cb.clear(); n.clear();
+                    ami.clear(); alphabet3di.clear(); camol.clear();
                     name = FileUtil::baseName(filenames[i]);
                     name.push_back('_');
                     name.append(chain.name);
@@ -127,7 +129,11 @@ int convert2db(int argc, const char **argv, const Command& command) {
                         cb.push_back(cb_atom);
                         n.push_back(n_atom);
                         c.push_back(c_atom);
-                        ami.push_back(threeAA2oneAA[res.name]);
+                        if(threeAA2oneAA.find(res.name) == threeAA2oneAA.end() ){
+                            ami.push_back('X');
+                        }else{
+                            ami.push_back(threeAA2oneAA[res.name]);
+                        }
                     }
                     char * states = structureTo3Di.structure2states(ca, n, c, cb);
                     for(size_t pos = 0; pos < ca.size(); pos++){
