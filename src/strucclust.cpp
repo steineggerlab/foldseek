@@ -3,9 +3,9 @@
 #include "LocalCommandDeclarations.h"
 #include "LocalParameters.h"
 
-const char* binary_name = "strucclust";
-const char* tool_name = "strucclust";
-const char* tool_introduction = "Protein Structure Clustering.";
+const char* binary_name = "foldseek";
+const char* tool_name = "foldseek";
+const char* tool_introduction = "Protein Structure Search and Clustering.";
 const char* main_author = "Martin Steinegger (martin.steinegger@snu.ac.kr)";
 const char* show_extended_help = NULL;
 const char* show_bash_info = NULL;

@@ -4,7 +4,7 @@ add_subdirectory(commons)
 add_subdirectory(version)
 add_subdirectory(workflow)
 
-add_executable(strucclust
+add_executable(foldseek
         ${commons_source_files}
         ${strucclustutils_source_files}
         ${workflow_source_files}
@@ -12,9 +12,9 @@ add_executable(strucclust
         strucclust.cpp
         )
 
-mmseqs_setup_derived_target(strucclust)
-target_link_libraries(strucclust version dssp 3di tmalign)
+mmseqs_setup_derived_target(foldseek)
+target_link_libraries(foldseek version dssp 3di tmalign)
 
-add_dependencies(strucclust local-generated)
+add_dependencies(foldseek local-generated)
 
-install(TARGETS strucclust DESTINATION bin)
+install(TARGETS foldseek DESTINATION bin)
