@@ -97,11 +97,13 @@ Vec3 StructureTo3Di::calcVirtualCenter(Vec3 ca, Vec3 cb, Vec3 n,
 }
 
 double StructureTo3Di::calcDistanceBetween(Vec3 & a, Vec3 & b){
-    return sqrt(
-            pow(a.x - b.x, 2) + pow(a.y - b.y, 2) + pow(a.z - b.z, 2));
+    const double dx = a.x - b.x;
+    const double dy = a.y - b.y;
+    const double dz = a.z - b.z;
+    return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
-void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, std::vector<Vec3> & cb,
+void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
                                          std::vector<bool> & validMask, const size_t n){
     // Pick for each residue the closest neighbour as partner
     // (in terms of distances between their virtual centers/C_betas).
@@ -122,7 +124,7 @@ void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, std::vec
 }
 
 // Describe interaction of residue i and j
-StructureTo3Di::Feature StructureTo3Di::calcFeatures(std::vector<Vec3> & ca, int i, int j){
+StructureTo3Di::Feature StructureTo3Di::calcFeatures(Vec3 * ca, int i, int j){
     Vec3 u1 = norm(sub(ca[i],       ca[i - 1]));
     Vec3 u2 = norm(sub(ca[i + 1],   ca[i]));
     Vec3 u3 = norm(sub(ca[j],       ca[j - 1]));
@@ -143,7 +145,7 @@ StructureTo3Di::Feature StructureTo3Di::calcFeatures(std::vector<Vec3> & ca, int
 }
 
 void StructureTo3Di::calcConformationDescriptors(std::vector<Feature> & features, std::vector<int> & partnerIdx,
-                                                 std::vector<Vec3> & ca, std::vector<bool> & mask,
+                                                 Vec3 * ca, std::vector<bool> & mask,
                                                  const size_t len){
     // Calculate for each residue a number of features.
     // Check that all 6 residues are valid and update the mask accordingly.
@@ -194,8 +196,9 @@ void StructureTo3Di::discretizeFeatures(std::vector<char> & states, std::vector<
     }
 }
 
-void StructureTo3Di::createResidueMask(std::vector<bool> & validMask, std::vector<Vec3> & ca,
-                                       std::vector<Vec3> & n, std::vector<Vec3> & c, const size_t len){
+void StructureTo3Di::createResidueMask(std::vector<bool> & validMask,
+                                       Vec3 * ca, Vec3 * n, Vec3 * c,
+                                       const size_t len){
     for (size_t i = 0; i < len; i++){
         if (isnan(ca[i].x) || isnan(c[i].x) || isnan(n[i].x)){
             validMask[i] = 0;
@@ -205,9 +208,9 @@ void StructureTo3Di::createResidueMask(std::vector<bool> & validMask, std::vecto
     }
 }
 
-char * StructureTo3Di::structure2states(std::vector<Vec3> & ca, std::vector<Vec3> & n,
-                                        std::vector<Vec3> & c, std::vector<Vec3> & cb){
-    const size_t len = ca.size();
+char * StructureTo3Di::structure2states(Vec3 * ca, Vec3 * n,
+                                        Vec3 * c, Vec3 * cb,
+                                        size_t len){
     features.clear();
     states.clear();
     partnerIdx.clear();

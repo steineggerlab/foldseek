@@ -7,11 +7,11 @@
 #include "DBWriter.h"
 
 #include "structureto3di.h"
-#include "mmread.hpp"
+#include "SubstitutionMatrix.h"
+#include "GemmiWrapper.h"
 
 #include <iostream>
 #include <dirent.h>
-#include <mmseqs/src/commons/SubstitutionMatrix.h>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -61,106 +61,52 @@ int convert2db(int argc, const char **argv, const Command& command) {
 #endif
         //recon_related
         StructureTo3Di structureTo3Di;
-        std::vector<Vec3> ca;
-        std::vector<Vec3> cb;
-        std::vector<Vec3> n;
-        std::vector<Vec3> c;
+        GemmiWrapper readStructure;
         std::vector<char> alphabet3di;
-        std::vector<char> ami;
         std::vector<float> camol;
-        std::unordered_map<std::string,char> threeAA2oneAA = {
-                {"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
-                {"CYS",'C'},  {"GLN",'Q'},  {"GLU",'E'}, {"GLY",'G'},
-                {"HIS",'H'},  {"ILE",'I'},  {"LEU",'L'}, {"LYS",'K'},
-                {"MET",'M'},  {"PHE",'F'},  {"PRO",'P'}, {"SER",'S'},
-                {"THR",'T'},  {"TRP",'W'},  {"TYR",'Y'}, {"VAL",'V'},
-                {"UNK",'X'}
-        };
+
         std::string name;
 #pragma omp for schedule(dynamic, 1)
         for (size_t i = 0; i < filenames.size(); i++) {
 
             // clear memory
-            gemmi::Structure st = gemmi::read_structure_file(filenames[i], gemmi::CoorFormat::Pdb);
-            if(st.models.size() == 0 || st.models[0].chains.size() == 0 ||
-               st.models[0].chains[0].residues.size()  == 0 ){
+            alphabet3di.clear();
+            camol.clear();
+            if(readStructure.load(filenames[i]) == false){
                 incorrectFiles++;
                 continue;
             }
-            for (gemmi::Model& model : st.models){
-                for (gemmi::Chain& chain : model.chains){
-                    name.clear();
-                    ca.clear(); c.clear(); cb.clear(); n.clear();
-                    ami.clear(); alphabet3di.clear(); camol.clear();
-                    name = FileUtil::baseName(filenames[i]);
-                    name.push_back('_');
-                    name.append(chain.name);
-                    for (gemmi::Residue& res : chain.residues){
-                        if (res.het_flag != 'A')
-                            continue;
-                        Vec3 ca_atom = {NAN, NAN, NAN};
-                        Vec3 cb_atom = {NAN, NAN, NAN};
-                        Vec3 n_atom = {NAN, NAN, NAN};
-                        Vec3 c_atom = {NAN, NAN, NAN};
-
-                        for (gemmi::Atom& atom : res.atoms){
-                            if (atom.name == "CA"){
-                                ca_atom.x = atom.pos.x;
-                                ca_atom.y = atom.pos.y;
-                                ca_atom.z = atom.pos.z;
-                            }
-                            else if (atom.name == "CB"){
-                                cb_atom.x = atom.pos.x;
-                                cb_atom.y = atom.pos.y;
-                                cb_atom.z = atom.pos.z;
-                            }
-                            else if (atom.name == "N"){
-                                n_atom.x = atom.pos.x;
-                                n_atom.y = atom.pos.y;
-                                n_atom.z = atom.pos.z;
-                            }
-                            else if (atom.name == "C"){
-                                c_atom.x = atom.pos.x;
-                                c_atom.y = atom.pos.y;
-                                c_atom.z = atom.pos.z;
-                            }
-                        }
-                        ca.push_back(ca_atom);
-                        cb.push_back(cb_atom);
-                        n.push_back(n_atom);
-                        c.push_back(c_atom);
-                        if(threeAA2oneAA.find(res.name) == threeAA2oneAA.end() ){
-                            ami.push_back('X');
-                        }else{
-                            ami.push_back(threeAA2oneAA[res.name]);
-                        }
-                    }
-                    char * states = structureTo3Di.structure2states(ca, n, c, cb);
-                    for(size_t pos = 0; pos < ca.size(); pos++){
-                        alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
-                    }
-                    alphabet3di.push_back('\n');
-
-                    torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), i, thread_idx);
-                    ami.push_back('\n');
-                    aadbw.writeData(ami.data(), ami.size(), i, thread_idx);
-                    name.push_back('\n');
-                    hdbw.writeData(name.c_str(), name.size(), i, thread_idx);
-                    name.clear();
-                    for(size_t res = 0; res < ca.size(); res++){
-                        camol.push_back(ca[res].x);
-                    }
-                    for(size_t res = 0; res < ca.size(); res++) {
-                        camol.push_back(ca[res].y);
-                    }
-                    for(size_t res = 0; res < ca.size(); res++) {
-                        camol.push_back(ca[res].z);
-                    }
-                    cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), i, thread_idx);
-
-                    break;
+            for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+                size_t chainStart = readStructure.chain[ch].first;
+                size_t chainEnd = readStructure.chain[ch].second;
+                size_t chainLen = chainEnd - chainStart;
+                char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
+                                                                &readStructure.n[chainStart],
+                                                                &readStructure.c[chainStart],
+                                                                &readStructure.cb[chainStart],
+                                                                chainLen);
+                for(size_t pos = 0; pos < chainLen; pos++){
+                    alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
                 }
-                break;
+                alphabet3di.push_back('\n');
+                torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), i, thread_idx);
+                aadbw.writeStart(thread_idx);
+                aadbw.writeAdd(&readStructure.ami[chainStart], chainLen, thread_idx);
+                char newline = '\n';
+                aadbw.writeAdd(&newline, 1, thread_idx);
+                aadbw.writeEnd(i, thread_idx);
+                hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), i, thread_idx);
+                name.clear();
+                for(size_t pos = 0; pos < chainLen; pos++){
+                    camol.push_back(readStructure.ca[chainStart+pos].x);
+                }
+                for(size_t pos = 0; pos < chainLen; pos++) {
+                    camol.push_back(readStructure.ca[chainStart+pos].y);
+                }
+                for(size_t pos = 0; pos < chainLen; pos++) {
+                    camol.push_back(readStructure.ca[chainStart+pos].z);
+                }
+                cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), i, thread_idx);
             }
 
 

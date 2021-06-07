@@ -5,7 +5,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/lib/mmse
 
 set(FRAMEWORK_ONLY 1 CACHE INTERNAL "" FORCE)
 include(MMseqsSetupDerivedTarget)
-add_subdirectory(lib/mmseqs)
+add_subdirectory(lib/mmseqs EXCLUDE_FROM_ALL)
+
 add_subdirectory(lib/dssp)
 add_subdirectory(lib/3di)
 add_subdirectory(lib/tmalign)

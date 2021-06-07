@@ -42,8 +42,9 @@ public:
 
     StructureTo3Di(){};
     ~StructureTo3Di(){};
-    char * structure2states(std::vector<Vec3> & ca, std::vector<Vec3> & n,
-                            std::vector<Vec3> & c, std::vector<Vec3> & cb);
+    char * structure2states(Vec3 * ca, Vec3 * n,
+                            Vec3 * c, Vec3 * cb,
+                            size_t len);
 
 private:
     struct Feature{
@@ -77,19 +78,18 @@ private:
     double calcDistanceBetween(Vec3 & a, Vec3 & b);
 
     // find closest member for every c beta atom
-    void findResiduePartners(std::vector<int> & partnerIdx, std::vector<Vec3> & cb,
+    void findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
                              std::vector<bool> & validMask, const size_t len);
 
     // Describe interaction of residue i and j
-    Feature calcFeatures(std::vector<Vec3> & ca, int i, int j);
+    Feature calcFeatures(Vec3 * ca, int i, int j);
 
     void calcConformationDescriptors(std::vector<Feature> & features, std::vector<int> & partnerIdx,
-                                     std::vector<Vec3> & ca, std::vector<bool> & mask, const size_t len);
+                                     Vec3 * ca, std::vector<bool> & mask, const size_t len);
 
     void discretizeFeatures(std::vector<char> & states, std::vector<Feature> & features,
                             std::vector<bool> & mask, const size_t len);
 
-    void createResidueMask(std::vector<bool> & validMask, std::vector<Vec3> & ca,
-                           std::vector<Vec3> & n, std::vector<Vec3> & c, const size_t len);
+    void createResidueMask(std::vector<bool> & validMask, Vec3 * ca, Vec3 * n, Vec3 * c, const size_t len);
 
 };

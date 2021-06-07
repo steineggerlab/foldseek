@@ -13,7 +13,7 @@ add_executable(foldseek
         )
 
 mmseqs_setup_derived_target(foldseek)
-target_link_libraries(foldseek version dssp 3di tmalign)
+target_link_libraries(foldseek version gemmiwrapper dssp 3di tmalign)
 
 add_dependencies(foldseek local-generated)
 
