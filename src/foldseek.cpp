@@ -14,12 +14,6 @@ bool hide_base_commands = true;
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 std::vector<struct Command> commands = {
-        {"strucclust",             strucclust,            &localPar.strucclust,    COMMAND_MAIN,
-                "Assemble protein sequences by iterative greedy overlap assembly.",
-                "Extends sequence to the left and right using ungapped alignments.",
-                "Martin Steinegger <martin.steinegger@snu.ac.kr> ",
-                "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
-                CITATION_PLASS },
         {"convert2db",             convert2db,            &localPar.threadsandcompression,    COMMAND_MAIN,
                 "Convert PDB/mmCIF files to an db.",
                 "Convert PDB/mmCIF files to an db.",

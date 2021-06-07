@@ -53,7 +53,7 @@ int convert2db(int argc, const char **argv, const Command& command) {
 
     size_t incorrectFiles = 0;
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, range, filenames) reduction(+:incorrectFiles)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames) reduction(+:incorrectFiles)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
