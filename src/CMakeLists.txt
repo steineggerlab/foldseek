@@ -9,7 +9,7 @@ add_executable(foldseek
         ${strucclustutils_source_files}
         ${workflow_source_files}
         LocalCommandDeclarations.h
-        strucclust.cpp
+        foldseek.cpp
         )
 
 mmseqs_setup_derived_target(foldseek)
