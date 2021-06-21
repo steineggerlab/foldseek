@@ -768,6 +768,73 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
 
     return tmscore;
 }
+double get_score4pareun( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
+                         const Coordinates &x, const Coordinates &y, vector<int> invmap, int ylen,
+                         float t[3], float u[3][3], float * mem ) {
+    float rms, tmscore;
+    int i, j, k;
+    float d0;
+
+    float D0_MIN = 0.5;
+    int Lnorm = ylen;
+
+    if (Lnorm > 21)
+        d0 = (1.24*pow((Lnorm*1.0 - 15), 1.0 / 3) - 1.8);
+    else
+        d0 = D0_MIN;
+    if (d0 < D0_MIN)
+        d0 = D0_MIN;
+
+    k=0;
+    for(j=0; j<invmap.size(); j++)
+    {
+        i=invmap[j];
+        //i = invmap[k][0];
+        //j = invmap[k][1];
+        if(i>=0)
+        {
+            r1.x[k]=x.x[i];
+            r1.y[k]=x.y[i];
+            r1.z[k]=x.z[i];
+
+            r2.x[k]=y.x[j];
+            r2.y[k]=y.y[j];
+            r2.z[k]=y.z[j];
+
+            xtm.x[k]=x.x[i];
+            xtm.y[k]=x.y[i];
+            xtm.z[k]=x.z[i];
+
+            ytm.x[k]=y.x[j];
+            ytm.y[k]=y.y[j];
+            ytm.z[k]=y.z[j];
+
+            k++;
+        }
+        else if(i!=-1) PrintErrorAndQuit("Wrong map!\n");
+    }
+    KabschFast(r1, r2, k, 1, &rms, t, u, mem);
+
+    //evaluate score
+    double di;
+    const int len=k;
+    double dis[len];
+    double d02=d0*d0;
+
+    int n_ali=k;
+    float xrot[3];
+    tmscore=0;
+    for(k=0; k<n_ali; k++)
+    {
+        transform(t, u, xtm.x[k], xtm.y[k], xtm.z[k], xrot[0], xrot[1], xrot[2]);
+        di=dist(xrot[0], xrot[1], xrot[2],
+                ytm.x[k], ytm.y[k], ytm.z[k]);
+        dis[k]=di;
+        tmscore += 1/(1+di/d02);
+        cout << "di: " << di << '\n' << "tmscore[k]: " << tmscore << endl;
+    }
+    return tmscore; // no need to normalize this score because it will not be used for latter scoring
+}
 
 //compute the score quickly in three iterations
 double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,

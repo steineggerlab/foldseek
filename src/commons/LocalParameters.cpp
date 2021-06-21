@@ -20,6 +20,8 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
+    tmalign.push_back(&PARAM_GAP_OPEN);
+    tmalign.push_back(&PARAM_GAP_EXTEND);
     // strucclust
     strucclust = combineList(clust, align);
     strucclust = combineList(strucclust, kmermatcher);

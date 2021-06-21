@@ -9,4 +9,6 @@ extern int convert2db(int argc, const char** argv, const Command &command);
 
 extern int structkmermatcher(int argc, const char** argv, const Command &command);
 extern int tmalign(int argc, const char** argv, const Command &command);
+extern int pareunaln(int argc, const char** argv, const Command &command);
+extern int aln2TMscore(int argc, const char** argv, const Command &command);
 #endif

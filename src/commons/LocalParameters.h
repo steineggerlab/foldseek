@@ -21,6 +21,7 @@ public:
 
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
+    //std::vector<MMseqsParameter *> aln2tmscore;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     float tmScoreThr;
