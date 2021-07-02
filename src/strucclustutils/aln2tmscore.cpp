@@ -73,6 +73,7 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
         int * invmap = new int[par.maxSeqLen];
+        std::string resultsStr;
 #pragma omp for schedule(dynamic, 1000)
         for (size_t i = 0; i < alndbr.getSize(); i++) {
             progress.updateProgress();
@@ -85,8 +86,6 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
 
             char *data = alndbr.getData(i, thread_idx);
             Matcher::readAlignmentResults(results, data, false);
-            dbw.writeStart(thread_idx);
-
             unsigned int queryId = qdbr.getId(queryKey);
             int queryLen = static_cast<int>((qdbr.getEntryLen(queryId)-1)/(3*sizeof(float)));
             float *qdata = (float *) qdbr.getData(queryId, thread_idx);
@@ -97,13 +96,9 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             queryCaCords.x = query_x;
             queryCaCords.y = query_y;
             queryCaCords.z = query_z;
-            if(queryKey == 4134){
-                std::cout << "break" << std::endl;
-            }
+
             for (size_t j = 0; j < results.size(); j++) {
                 Matcher::result_t& res = results[j];
-                size_t length = 0;
-
                 Coordinates targetCaCords;
                 char dbKeyBuffer[255 + 1];
                 const char* words[10];
@@ -121,19 +116,14 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 targetCaCords.y = target_y;
                 targetCaCords.z = target_z;
 
-
-
                 // Matching residue index collection
-                int iressize = res.qStartPos + res.backtrace.size();
                 int qPos = res.qStartPos;
                 int tPos = res.dbStartPos;
                 std::string cigarString = res.backtrace;
-                int invmapLen = 0;
                 std::fill(invmap, invmap+queryLen, -1);
                 for (size_t btPos = 0; btPos < cigarString.size(); btPos++) {
                     if (cigarString[btPos] == 'M') {
                         invmap[qPos] = tPos;
-                        invmapLen++;
                         qPos++;
                         tPos++;
                     }
@@ -150,21 +140,15 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 float t[3], u[3][3];
                 double TMalnScore = get_score4pareun(r1, r2,  xtm, ytm, queryCaCords, targetCaCords, invmap,
                                                      queryLen, t, u, mem);
-                std::stringstream ss;
-                ss << TMalnScore;
-                const char* strTMscore = ss.str().c_str();
-                std::stringstream ss2;
-                ss2 << targetId;
-                const char* strtargetID = ss2.str().c_str();
-
-                dbw.writeAdd(strtargetID, strlen(strtargetID), thread_idx);
-                dbw.writeAdd(&tab, 1, thread_idx);
-                dbw.writeAdd(strTMscore, 8, thread_idx);
-                dbw.writeAdd(&newline, 1, thread_idx);
-
+                resultsStr.append(SSTR(dbKey));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(TMalnScore));
+                resultsStr.push_back('\n');
             }
-            dbw.writeEnd(queryKey, thread_idx);
+            dbw.writeData(resultsStr.c_str(), resultsStr.size(), queryKey, thread_idx);
+
             results.clear();
+            resultsStr.clear();
         }
     }
     dbw.close();
