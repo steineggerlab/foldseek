@@ -154,6 +154,11 @@ double get_initial_fgt(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
                        float dcu0, const bool fast_opt, float t[3], float u[3][3],
                        float * mem);
 
+
+double get_score4pareun(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
+                        const Coordinates &x, const Coordinates &y, int * queryToTargetMapping, int ylen,
+                        float t[3], float u[3][3], float * mem );
+
 //heuristic run of dynamic programing iteratively to find the best alignment
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
