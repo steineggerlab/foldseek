@@ -38,7 +38,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         tdbr = &qdbr;
         tcadbr = &qcadbr;
     } else {
-        tdbr = new DBReader<unsigned int>((par.db2+"_ss").c_str(), (par.db2+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+        tdbr = new DBReader<unsigned int>((par.db2).c_str(), (par.db2 + ".index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
         tdbr->open(DBReader<unsigned int>::NOSORT);
         tcadbr = new DBReader<unsigned int>((par.db2+"_ca").c_str(), (par.db2+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
         tcadbr->open(DBReader<unsigned int>::NOSORT);
@@ -66,11 +66,11 @@ int tmalign(int argc, const char **argv, const Command& command) {
 
 
     // parsing code
-    string atom_opt = "auto";// use C alpha atom for protein and C3' for RNA
-    string suffix_opt = "";    // set -suffix to empty
-    string dir_opt = "";    // set -dir to empty
-    string dir1_opt = "";    // set -dir1 to empty
-    string dir2_opt = "";    // set -dir2 to empty
+    std::string atom_opt = "auto";// use C alpha atom for protein and C3' for RNA
+    std::string suffix_opt = "";    // set -suffix to empty
+    std::string dir_opt = "";    // set -dir to empty
+    std::string dir1_opt = "";    // set -dir1 to empty
+    std::string dir2_opt = "";    // set -dir2 to empty
     int ter_opt = 1;     // TER, END, or different chainID
     int split_opt = 2;     // split chain
     int infmt1_opt = 0;     // PDB format for chain_1
@@ -169,7 +169,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     targetCaCords.x = target_x;
                     targetCaCords.y = target_y;
                     targetCaCords.z = target_z;
-                    //make_sec(targetCaCords, targetLen, targetSecStruc); // secondary structure assignment
+                    make_sec(targetCaCords, targetLen, targetSecStruc); // secondary structure assignment
                     /* entry function for structure alignment */
                     float t0[3], u0[3][3];
                     float TM1, TM2;
@@ -185,14 +185,14 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     int n_ali8 = 0;
 
                     TMalign_main(&affineNW,
-                            queryCaCords, targetCaCords, querySeq, targetSeq, querySeq, targetSeq,
+                            queryCaCords, targetCaCords, querySeq, targetSeq, querySecStruc, targetSecStruc,
                             t0, u0, TM1, TM2, TM3, TM4, TM5,
                             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                             seqM, seqxA, seqyA,
                             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                             queryLen, targetLen, Lnorm_ass, d0_scale,
                             i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
-                    std::cout << queryId << "\t" << targetId << "\t" <<  TM_0 << "\t" << TM1 << std::endl;
+                    //std::cout << queryId << "\t" << targetId << "\t" <<  TM_0 << "\t" << TM1 << std::endl;
 
                     double seqId = Liden/(static_cast<double>(n_ali8));
                     int rmsdScore = static_cast<int>(rmsd0*1000.0);

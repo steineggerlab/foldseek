@@ -1,14 +1,15 @@
 add_library(tmalign
         affineneedlemanwunsch.cpp
         affineneedlemanwunsch.h
+        basic_fun.h
         TMalign.h
+        TMalign.cpp
         NW.h
+        NW.cpp
         Kabsch.h
         se.h
         xyz_sfetch.cpp
         pstream.h
-        pdb2fasta.cpp
-        pdb2xyz.cpp
         param_set.h
         Coordinates.h
         )

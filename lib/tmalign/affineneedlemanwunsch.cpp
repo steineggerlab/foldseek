@@ -84,7 +84,7 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanW
             profile, (const char *) target, targetLen,
                     NULL, NULL, NULL, 0.0, NULL, NULL,
                     gapopen, gapextend);
-    std::cout << result->score << std::endl;
+    //std::cout << result->score << std::endl;
 
     // compute backtrace
     cigar_t *cigar = cigar_striped_32(

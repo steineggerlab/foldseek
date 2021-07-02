@@ -14,6 +14,7 @@
 =============================================================
 */
 #include <simd.h>
+#include <string.h>
 
 float coords_sum_ssq_xyz_sse2(int nat, float *x, float *y,float *z,float center[3]){
     int lower_nat=(nat/4)*4;
