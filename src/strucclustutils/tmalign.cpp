@@ -183,7 +183,9 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     float TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
                     int n_ali = 0;
                     int n_ali8 = 0;
-
+                    if(queryLen <=5 || targetLen <=5){
+                        continue;
+                    }
                     TMalign_main(&affineNW,
                             queryCaCords, targetCaCords, querySeq, targetSeq, querySecStruc, targetSecStruc,
                             t0, u0, TM1, TM2, TM3, TM4, TM5,
