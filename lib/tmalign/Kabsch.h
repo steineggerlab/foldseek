@@ -470,7 +470,7 @@ void R34v4_sse3 (float r[12],float *x,float *Rx){
 
 float rmsd_uncentered_avx (int nat,float *c1x,float *c1y, float *c1z,float *c2x,float *c2y, float *c2z, float *rm){
 
-    float u[3][3];
+    double u[3][3];
     double invdnat=1.0/(double)nat;
     float fnat=(float)nat;
     float invfnat=1.0f/fnat;
@@ -700,14 +700,14 @@ float rmsd_uncentered_avx (int nat,float *c1x,float *c1y, float *c1z,float *c2x,
 
     double rms=(ssq-d-d)*invdnat;
     rms=(rms>1e-8)?sqrt(rms) : 0.0f;
-    float mr[3][3]={{r[0],r[1],r[2]},
+    double mr[3][3]={{r[0],r[1],r[2]},
                     {r[3],r[4],r[5]},
                     {r[6],r[7],r[8]}};
-    rmatrix<float>(d,mr,u);
+    rmatrix<double>(d,mr,u);
     float mrr[16] __attribute__ ((aligned (16)))=
-            {-u[0][0],-u[1][0],-u[2][0],center2[0],
-             -u[0][1],-u[1][1],-u[2][1],center2[1],
-             -u[0][2],-u[1][2],-u[2][2],center2[2]};
+            {static_cast<float>(-u[0][0]),static_cast<float>(-u[1][0]),static_cast<float>(-u[2][0]),center2[0],
+             static_cast<float>(-u[0][1]),static_cast<float>(-u[1][1]),static_cast<float>(-u[2][1]),center2[1],
+             static_cast<float>(-u[0][2]),static_cast<float>(-u[1][2]),static_cast<float>(-u[2][2]),center2[2]};
     float w[4]__attribute__ ((aligned (16)));
     float v[4]__attribute__ ((aligned (16)))={center1[0],center1[1],center1[2],1.0f};
     R34v4_sse3(mrr,v,w);
