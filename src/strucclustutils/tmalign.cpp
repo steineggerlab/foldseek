@@ -17,10 +17,10 @@
 
 int tmalign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, false, 0, MMseqsParameter::COMMAND_ALIGN);
+    par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
 
-    Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
+    //Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
     DBReader<unsigned int> qdbr((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     qdbr.open(DBReader<unsigned int>::NOSORT);
 
@@ -48,10 +48,10 @@ int tmalign(int argc, const char **argv, const Command& command) {
         }
     }
 
-    Debug(Debug::INFO) << "Result database: " << par.db3 << "\n";
+    //Debug(Debug::INFO) << "Result database: " << par.db3 << "\n";
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
-    Debug(Debug::INFO) << "Output file: " << par.db4 << "\n";
+    //Debug(Debug::INFO) << "Output file: " << par.db4 << "\n";
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
     dbw.open();
 

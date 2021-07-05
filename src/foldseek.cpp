@@ -42,7 +42,6 @@ std::vector<struct Command> commands = {
                                                     {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder },
                                                     {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                                     {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-
         {"search",               structuresearch,               &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Sensitive homology search",
                 "# Search multiple FASTA against FASTA (like BLASTP, TBLASTN, BLASTX, BLASTN --search-type 3, TBLASTX --search-type 2)\n"

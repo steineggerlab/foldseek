@@ -90,7 +90,6 @@ int doeasysearch(int argc, const char **argv, const Command &command, bool linse
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.searchworkflow, true).c_str());
 
-
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("GREEDY_BEST_HITS", par.greedyBestHits ? "TRUE" : NULL);
 

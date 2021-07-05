@@ -26,16 +26,20 @@ public:
         return static_cast<LocalParameters&>(LocalParameters::getInstance());
     }
 
-
     static const int DBTYPE_CA_ALPHA;
     static const int DBTYPE_TMSCORE;
+
+    static const int ALIGNMENT_TYPE_3DI = 0;
+    static const int ALIGNMENT_TYPE_TMALIGN = 1;
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
     std::vector<MMseqsParameter *> structuresearchworkflow;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
+    PARAMETER(PARAM_ALIGNMENT_TYPE)
     float tmScoreThr;
+    int alignmentType;
 private:
 
     LocalParameters(LocalParameters const&);

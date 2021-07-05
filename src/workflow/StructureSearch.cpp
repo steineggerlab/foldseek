@@ -38,18 +38,25 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("RESULTS", par.filenames.back().c_str());
     par.filenames.pop_back();
     std::string target = par.filenames.back().c_str();
-    target.append("_ss");
-    cmd.addVariable("TARGET", target.c_str());
+    cmd.addVariable("TARGET_PREFILTER", (target+"_ss").c_str());
     par.filenames.pop_back();
     std::string query = par.filenames.back().c_str();
-    query.append("_ss");
-    cmd.addVariable("QUERY", query.c_str());
+    cmd.addVariable("QUERY_PREFILTER", (query+"_ss").c_str());
 
     const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
     cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
-    cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
-    cmd.addVariable("ALIGNMENT_ALGO", "align");
+    if(par.alignmentMode == LocalParameters::ALIGNMENT_TYPE_3DI){
+        cmd.addVariable("ALIGNMENT_ALGO", "align");
+        cmd.addVariable("QUERY_ALIGNMENT", (query+"_ss").c_str());
+        cmd.addVariable("TARGET_ALIGNMENT", (target+"_ss").c_str());
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
+    }else{
+        cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
+        cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
+        cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+    }
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
 
