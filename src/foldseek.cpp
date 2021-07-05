@@ -24,17 +24,30 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 
 std::vector<struct Command> commands = {
-        {"createdb",             createdb,            &localPar.threadsandcompression,    COMMAND_MAIN,
+        {"createdb",             createdb,            &localPar.structurecreatedb,    COMMAND_MAIN,
                 "Convert PDB/mmCIF files to an db.",
                 "Convert PDB/mmCIF files to an db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:sequenceDB>",
                 CITATION_MMSEQS2 },
+        {"easy-search",          easysearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
+                "Sensitive homology search",
+                "# Search a single PDB file against a set of PDB files\n"
+                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n"
+                "# Search a set of PDB files against a set of PDB files\n"
+                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n",
+                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:alignmentFile> <tmpDir>",
+                CITATION_SERVER | CITATION_MMSEQS2,{{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder },
+                                                    {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder },
+                                                    {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
+                                                    {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+
         {"search",               structuresearch,               &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Sensitive homology search",
                 "# Search multiple FASTA against FASTA (like BLASTP, TBLASTN, BLASTX, BLASTN --search-type 3, TBLASTX --search-type 2)\n"
-                "mmseqs search queryDB targetDB resultDB tmp\n"
-                "mmseqs convertalis queryDB targetDB resultDB result.m8\n\n",
+                "foldseek search queryDB targetDB resultDB tmp\n"
+                "foldseek convertalis queryDB targetDB resultDB result.m8\n\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
                 CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },

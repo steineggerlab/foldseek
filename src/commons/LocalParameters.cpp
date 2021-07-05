@@ -14,7 +14,10 @@ LocalParameters::LocalParameters() :
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
-
+    // structurecreatedb
+    structurecreatedb.push_back(&PARAM_THREADS);
+    structurecreatedb.push_back(&PARAM_V);
+    // tmalign
     tmalign.push_back(&PARAM_MIN_SEQ_ID);
     tmalign.push_back(&PARAM_C);
     tmalign.push_back(&PARAM_COV_MODE);
@@ -31,11 +34,14 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     tmScoreThr = 0.5;
+    // structuresearchworkflow
     structuresearchworkflow = combineList(align, prefilter);
     // Setup DbValidation
-
+    easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
 
 }
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
 std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};
+std::vector<int> FoldSeekDbValidator::flatfileStdinAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_STDIN,LocalParameters::DBTYPE_DIRECTORY};
+std::vector<int> FoldSeekDbValidator::flatfileAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_DIRECTORY};

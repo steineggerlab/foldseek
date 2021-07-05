@@ -120,8 +120,8 @@ int createdb(int argc, const char **argv, const Command& command) {
     cadbw.close(true);
     aadbw.close(true);
     //if (par.subDbMode == Parameters::SUBDB_MODE_SOFT) {
-    DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ca", DBFiles::HEADERS);
-    DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ss", DBFiles::HEADERS);
+    //DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ca", DBFiles::HEADERS);
+    //DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ss", DBFiles::HEADERS);
     //}
     Debug(Debug::INFO) << incorrectFiles << " out of " << filenames.size() << " entries are incorrect.\n";
     return EXIT_SUCCESS;

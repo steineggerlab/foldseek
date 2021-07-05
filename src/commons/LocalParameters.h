@@ -6,6 +6,9 @@
 struct FoldSeekDbValidator : public DbValidator {
     static std::vector<int> tmscore;
     static std::vector<int> cadb;
+    static std::vector<int> flatfileStdinAndFolder;
+    static std::vector<int> flatfileAndFolder;
+
 };
 
 
@@ -29,6 +32,8 @@ public:
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
     std::vector<MMseqsParameter *> structuresearchworkflow;
+    std::vector<MMseqsParameter *> easystructuresearchworkflow;
+    std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     float tmScoreThr;
 private:

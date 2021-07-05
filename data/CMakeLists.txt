@@ -1,6 +1,7 @@
 include(MMseqsResourceCompiler)
 
 set(COMPILED_RESOURCES
+        easystructuresearch.sh
         structurecluster.sh
         structuresearch.sh
         mat3di.out
