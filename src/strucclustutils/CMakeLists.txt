@@ -1,7 +1,6 @@
 set(strucclustutils_source_files
         strucclustutils/tmalign.cpp
         strucclustutils/aln2tmscore.cpp
-        strucclustutils/convert2statealphabet.cpp
         strucclustutils/convert2db.cpp
         strucclustutils/PareunAlign.cpp
         strucclustutils/PareunAlign.h

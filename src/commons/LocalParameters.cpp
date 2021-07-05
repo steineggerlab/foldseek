@@ -1,6 +1,11 @@
 #include "LocalParameters.h"
+#include "Command.h"
+
 #include "mat3di.out.h"
 
+
+const int LocalParameters::DBTYPE_CA_ALPHA = 101;
+const int LocalParameters::DBTYPE_TMSCORE = 102;
 
 LocalParameters::LocalParameters() :
         Parameters(),
@@ -26,4 +31,11 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     tmScoreThr = 0.5;
+
+    // Setup DbValidation
+
+
 }
+
+std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
+std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};

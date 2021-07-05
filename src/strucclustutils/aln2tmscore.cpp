@@ -43,7 +43,7 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
     DBReader<unsigned int> alndbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alndbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
-    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, tdbr->getDbtype());
+    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_TMSCORE);
     dbw.open();
     Debug::Progress progress(alndbr.getSize());
 
@@ -148,6 +148,30 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 resultsStr.append(SSTR(dbKey));
                 resultsStr.push_back(' ');
                 resultsStr.append(SSTR(TM));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(t[0]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(t[1]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(t[2]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[0][0]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[0][1]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[0][2]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[1][0]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[1][1]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[1][2]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[2][0]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[2][1]));
+                resultsStr.push_back(' ');
+                resultsStr.append(SSTR(u[2][2]));
                 resultsStr.push_back('\n');
             }
             dbw.writeData(resultsStr.c_str(), resultsStr.size(), queryKey, thread_idx);

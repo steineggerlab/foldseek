@@ -41,7 +41,7 @@ int convert2db(int argc, const char **argv, const Command& command) {
     }
     Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
 
-    DBWriter torsiondbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_AMINO_ACIDS);
+    DBWriter torsiondbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     torsiondbw.open();
     DBWriter hdbw((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
     hdbw.open();
@@ -50,10 +50,11 @@ int convert2db(int argc, const char **argv, const Command& command) {
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
     SubstitutionMatrix mat(par.scoringMatrixFile.aminoacids, 2.0, par.scoreBias);
+    Debug::Progress progress(filenames.size());
 
     size_t incorrectFiles = 0;
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames) reduction(+:incorrectFiles)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress) reduction(+:incorrectFiles)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -68,7 +69,7 @@ int convert2db(int argc, const char **argv, const Command& command) {
         std::string name;
 #pragma omp for schedule(dynamic, 1)
         for (size_t i = 0; i < filenames.size(); i++) {
-
+            progress.updateProgress();
             // clear memory
             alphabet3di.clear();
             camol.clear();

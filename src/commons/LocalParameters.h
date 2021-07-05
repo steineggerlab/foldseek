@@ -3,6 +3,13 @@
 
 #include <Parameters.h>
 
+struct FoldSeekDbValidator : public DbValidator {
+    static std::vector<int> tmscore;
+    static std::vector<int> cadb;
+};
+
+
+
 class LocalParameters : public Parameters {
 public:
     static void initInstance() {
@@ -16,9 +23,9 @@ public:
         return static_cast<LocalParameters&>(LocalParameters::getInstance());
     }
 
-    static const int DBTYPE_TOSION_SEQUENCE = 20;
-    static const int DBTYPE_CA_ALPHA = 21;
 
+    static const int DBTYPE_CA_ALPHA;
+    static const int DBTYPE_TMSCORE;
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
 

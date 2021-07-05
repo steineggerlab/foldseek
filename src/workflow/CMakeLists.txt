@@ -1,4 +1,5 @@
 set(workflow_source_files
-        workflow/Strucclustworkflow.cpp
+        workflow/StructureCluster.cpp
+        workflow/StructureSearch.cpp
         PARENT_SCOPE
         )

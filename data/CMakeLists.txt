@@ -1,8 +1,8 @@
 include(MMseqsResourceCompiler)
 
 set(COMPILED_RESOURCES
-        strucclust.sh
-        cle.out
+        structurecluster.sh
+        structuresearch.sh
         mat3di.out
         )
 
