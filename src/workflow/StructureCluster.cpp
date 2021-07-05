@@ -111,7 +111,7 @@ int strucclust(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
 
 
-    FileUtil::writeFile(tmpDir + "/structurecluster.sh", strucclust_sh, strucclust_sh_len);
+    FileUtil::writeFile(tmpDir + "/structurecluster.sh", structurecluster_sh, structurecluster_sh_len);
     std::string program(tmpDir + "/structurecluster.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 

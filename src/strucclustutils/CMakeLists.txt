@@ -1,7 +1,7 @@
 set(strucclustutils_source_files
         strucclustutils/tmalign.cpp
         strucclustutils/aln2tmscore.cpp
-        strucclustutils/convert2db.cpp
+        strucclustutils/structcreatedb.cpp
         strucclustutils/PareunAlign.cpp
         strucclustutils/PareunAlign.h
         PARENT_SCOPE

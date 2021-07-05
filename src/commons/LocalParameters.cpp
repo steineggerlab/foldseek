@@ -31,7 +31,7 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     tmScoreThr = 0.5;
-
+    structuresearchworkflow = combineList(align, prefilter);
     // Setup DbValidation
 
 

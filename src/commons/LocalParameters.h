@@ -28,7 +28,7 @@ public:
     static const int DBTYPE_TMSCORE;
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
-
+    std::vector<MMseqsParameter *> structuresearchworkflow;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     float tmScoreThr;
 private:

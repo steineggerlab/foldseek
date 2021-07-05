@@ -24,12 +24,25 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 
 std::vector<struct Command> commands = {
-        {"convert2db",             convert2db,            &localPar.threadsandcompression,    COMMAND_MAIN,
+        {"createdb",             createdb,            &localPar.threadsandcompression,    COMMAND_MAIN,
                 "Convert PDB/mmCIF files to an db.",
                 "Convert PDB/mmCIF files to an db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:sequenceDB>",
                 CITATION_MMSEQS2 },
+        {"search",               structuresearch,               &localPar.structuresearchworkflow,       COMMAND_MAIN,
+                "Sensitive homology search",
+                "# Search multiple FASTA against FASTA (like BLASTP, TBLASTN, BLASTX, BLASTN --search-type 3, TBLASTX --search-type 2)\n"
+                "mmseqs search queryDB targetDB resultDB tmp\n"
+                "mmseqs convertalis queryDB targetDB resultDB result.m8\n\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
+                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+
+
         {"tmalign",      tmalign,      &localPar.tmalign,      COMMAND_HIDDEN,
                 "Compute tm-score ",
                 NULL,
