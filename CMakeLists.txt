@@ -7,7 +7,6 @@ set(FRAMEWORK_ONLY 1 CACHE INTERNAL "" FORCE)
 include(MMseqsSetupDerivedTarget)
 add_subdirectory(lib/mmseqs EXCLUDE_FROM_ALL)
 
-add_subdirectory(lib/dssp)
 add_subdirectory(lib/3di)
 add_subdirectory(lib/tmalign)
 add_subdirectory(data)

@@ -192,8 +192,8 @@ float rmsd_sse2_matrix_xyz (int nat,float *c1x,float *c1y, float *c1z,float *c2x
             __m128 mzy = _mm_setzero_ps();
             __m128 mzz = _mm_setzero_ps();
 
-            size_t i=0;
-            for(i=0;i<padded_nat;i+=4){
+
+            for(int i=0;i<padded_nat;i+=4){
                 //load the 4 sets of coords from molecule 2 and then load x,y,z of molecule 1
                 __m128 mc2x=_mm_load_ps(&(c2x[i]));
                 __m128 mc2y=_mm_load_ps(&(c2y[i]));
@@ -477,8 +477,7 @@ float rmsd_uncentered_avx (int nat,float *c1x,float *c1y, float *c1z,float *c2x,
     float c0[8] __attribute__ ((aligned (32)));
     float c1[16] __attribute__ ((aligned (32)));
     float frr[8] __attribute__ ((aligned (32)));
-    int lower8= (nat%8)? (nat/8)*8 : nat;
-    int upper8= (nat%8)? (nat/8)*8+8 : nat;
+    int upper8 = (nat%8) ? (nat/8)*8+8 : nat;
     {
         //use half registers to do everything at once rather than trying for different products
         //essentially SSE3 recipe but with twice as many registers to save one load pass to center coords
@@ -498,8 +497,7 @@ float rmsd_uncentered_avx (int nat,float *c1x,float *c1y, float *c1z,float *c2x,
             __m256 syxszy = _mm256_setzero_ps();
             __m256 syyszz = _mm256_setzero_ps();
 
-            size_t i=0;
-            for( ;i<upper8;i+=8){
+            for(int i=0 ; i < upper8; i += 8){
                 //load the 4 sets of coords from molecule 2 and then load x,y,z of molecule 1
                 __m256 mmc2x = _mm256_load_ps(&(c2x[i]));
                 __m256 mmc2y = _mm256_load_ps(&(c2y[i]));
@@ -720,9 +718,8 @@ float rmsd_uncentered_avx (int nat,float *c1x,float *c1y, float *c1z,float *c2x,
 
 #define COORDS_BUFFER_SIZE 768
 
-float kabsch_quat_soa_avx(int nat, int *map, float *x1, float *y1,float *z1, float *x2,float *y2, float *z2,float *r,float *mem){
+float kabsch_quat_soa_avx(int nat, float *x1, float *y1,float *z1, float *x2,float *y2, float *z2,float *r,float *mem){
     //most of time will be small number of coords
-    float fixed_mem[COORDS_BUFFER_SIZE]__attribute__ ((aligned (32)));
     int upper_nat8= (nat%8)? (nat/8)*8+8: nat;
     int size= 6*upper_nat8*sizeof(float);
 
@@ -782,7 +779,6 @@ bool Kabsch(Coordinates & x,
     *rms = 0;
     rms1 = 0;
     e0 = 0;
-    double c1[3], c2[3];
     double s1[3], s2[3];
     double sx[3], sy[3], sz[3];
     for (i = 0; i < 3; i++)
@@ -890,26 +886,7 @@ bool Kabsch(Coordinates & x,
         r[j][2] = sz[j] - s1[2] * s2[j] / n;
     }
 
-    //for(i=0; i<3; i++)
-    //{
-    //    xc[i] = xc[i]/n;
-    //    yc[i] = yc[i]/n;        
-    //}
-    //
-    ////compute e0 and matrix r
-    //for(m=0; m<n; m++)
-    //{
-    //    for (i=0; i<3; i++)
-    //    {
-    //        e0 += (x[m][i]-xc[i])*(x[m][i]-xc[i])+\
-        //              (y[m][i]-yc[i])*(y[m][i]-yc[i]);
-    //        d = y[m][i] - yc[i];
-    //        for(j=0; j<3; j++)
-    //        {
-    //            r[i][j] += d*(x[m][j] - xc[j]);
-    //        }
-    //    }        
-    //}
+
     //compute determinat of matrix r
     det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1])\
         - r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0])\

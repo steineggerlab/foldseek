@@ -23,18 +23,15 @@ void parameter_set4search(const int xlen, const int ylen,
                           float &score_d8, float &d0, float &d0_search, float &dcu0);
 
 void parameter_set4final(const float len, float &D0_MIN, float &Lnorm,
-                         float &score_d8, float &d0, float &d0_search, float &dcu0);
+                         float &d0, float &d0_search);
 
 void parameter_set4scale(const int len, const float d_s, float &Lnorm,
-                         float &score_d8, float &d0, float &d0_search, float &dcu0);
-
-float LG_score_soa_sse (float r[16],int nat, float *x1,float *y1,float *z1,
-                        float *x2, float *y2, float *z2, float *d,float invd0d0);
+                         float &d0, float &d0_search);
 
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
 int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
-                float *score1, int score_sum_method, const float Lnorm,
+                float *score1, const float Lnorm,
                 const float score_d8, const float d0, float * mem);
 
 int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
@@ -45,7 +42,6 @@ int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
 bool KabschFast(Coordinates & x,
                  Coordinates & y,
                  int n,
-                 int mode,
                  float *rms,
                  float t[3],
                  float u[3][3],
@@ -54,7 +50,7 @@ bool KabschFast(Coordinates & x,
 double TMscore8_search(Coordinates &r1, Coordinates &r2,
                        Coordinates &xtm, Coordinates & ytm,
                        Coordinates &xt, int Lali, float t0[3], float u0[3][3], int simplify_step,
-                       int score_sum_method, float *Rcomm, float local_d0_search, float Lnorm,
+                       float *Rcomm, float local_d0_search, float Lnorm,
                        float score_d8, float d0, float * mem);
 
 
@@ -71,20 +67,19 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
 //                            8 for socre over the pairs with dist<score_d8
 // output:  the best rotaion matrix t, u that results in highest TMscore
 double detailed_search(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
-                       Coordinates &xt, const Coordinates &x, const Coordinates &y, int xlen, int ylen,
+                       Coordinates &xt, const Coordinates &x, const Coordinates &y, int ylen,
                        int invmap0[], float t[3], float u[3][3], int simplify_step,
-                       int score_sum_method, float local_d0_search, float Lnorm,
-                       float score_d8, float d0, float * mem);
+                       float local_d0_search, float Lnorm, float score_d8, float d0, float * mem);
 
 double detailed_search_standard( Coordinates &r1, Coordinates &r2,
                                  Coordinates &xtm, Coordinates &ytm, Coordinates &xt,
                                  const Coordinates &x, const Coordinates &y,
-                                 int xlen, int ylen, int invmap0[], float t[3], float u[3][3],
+                                 int ylen, int invmap0[], float t[3], float u[3][3],
                                  int simplify_step, int score_sum_method, double local_d0_search,
                                  const bool& bNormalize, float Lnorm, float score_d8, float d0, float * mem);
 //compute the score quickly in three iterations
 double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
-                       const Coordinates &x, const Coordinates &y, int xlen, int ylen, int invmap[],
+                       const Coordinates &x, const Coordinates &y, int ylen, int invmap[],
                        float d0, float d0_search, float t[3], float u[3][3], float * mem);
 
 void smooth(int *sec, int len);
@@ -104,7 +99,6 @@ void make_sec(Coordinates &x, int len, char *sec);
 //the jth element in y is aligned to the ith element in x if i>=0
 //the jth element in y is aligned to a gap in x if i==-1
 void get_initial_ss(AffineNeedlemanWunsch *affineNW,
-                    float **score, bool **path, float **val,
                     const char *secx, const char *secy, int xlen, int ylen, int *y2x);
 
 
@@ -117,7 +111,6 @@ void get_initial_ss(AffineNeedlemanWunsch *affineNW,
 //the jth element in y is aligned to a gap in x if i==-1
 bool get_initial5(AffineNeedlemanWunsch *affineNW,
                    Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
-                   float **score, bool **path, float **val,
                    const Coordinates &x, const Coordinates &y, int xlen, int ylen, int *y2x,
                    float d0, float d0_search, const bool fast_opt, const float D0_MIN, float * mem);
 
@@ -163,16 +156,12 @@ double get_score4pareun(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
 //output: best alignment that maximizes the TMscore, will be stored in invmap
-double DP_iter(AffineNeedlemanWunsch * affineNW, const char *seqx, const char *seqy,
-               Coordinates &r1, Coordinates &r2,
+double DP_iter(AffineNeedlemanWunsch * affineNW, Coordinates &r1, Coordinates &r2,
                Coordinates &xtm, Coordinates &ytm,
-               Coordinates &xt, float **score, bool **path, float **val,
-               const Coordinates &x, const Coordinates &y, int xlen, int ylen, float t[3], float u[3][3],
+               Coordinates &xt, const Coordinates &x, const Coordinates &y,
+               int xlen, int ylen, float t[3], float u[3][3],
                int invmap0[], int g1, int g2, int iteration_max, float local_d0_search,
-               float D0_MIN, float Lnorm, float d0, float score_d8, float * mem);
-
-void output_superpose(const char *xname, const char *fname_super,
-                      float t[3], float u[3][3], const int ter_opt=3);
+               float Lnorm, float d0, float score_d8, float * mem);
 
 /* extract rotation matrix based on TMscore8 */
 void output_rotation_matrix(const char* fname_matrix,
@@ -197,9 +186,9 @@ void output_results(
         const bool u_opt, const bool d_opt);
 
 double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
-                        Coordinates &xt, Coordinates &x, Coordinates &y, int xlen, int ylen, int invmap[],
+                        Coordinates &xt, Coordinates &x, Coordinates &y, int ylen, int invmap[],
                         int& L_ali, float& RMSD, float D0_MIN, float Lnorm, float d0,
-                        float d0_search, float score_d8, float t[3], float u[3][3], float * mem);
+                        float score_d8, float t[3], float u[3][3], float * mem);
 
 /* entry function for TMalign */
 int TMalign_main(
@@ -211,9 +200,7 @@ int TMalign_main(
         float &d0_0, float &TM_0,
         float &d0A, float &d0B, float &d0u, float &d0a, float &d0_out,
         std::string &seqM, std::string &seqxA, std::string &seqyA,
-        float &rmsd0, int &L_ali, float &Liden,
-        float &TM_ali, float &rmsd_ali, int &n_ali, int &n_ali8,
+        float &rmsd0, float &Liden, int &n_ali, int &n_ali8,
         const int xlen, const int ylen, const float Lnorm_ass,
-        const float d0_scale,
-        const bool i_opt, const bool I_opt, const bool a_opt,
+        const float d0_scale, const bool I_opt, const bool a_opt,
         const bool u_opt, const bool d_opt, const bool fast_opt, float * mem);

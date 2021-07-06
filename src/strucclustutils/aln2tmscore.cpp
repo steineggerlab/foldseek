@@ -137,13 +137,14 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 int prevLnorm = Lnorm;
                 double prevd0 = d0;
                 double local_d0_search = d0_search;
-                double TMalnScore = standard_TMscore(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen, queryLen, invmap,
-                                                     L_ali, rmsd0, D0_MIN, Lnorm, d0, d0_search, score_d8, t, u,  mem);
+                double TMalnScore = standard_TMscore(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen, invmap,
+                                                     L_ali, rmsd0, D0_MIN, Lnorm, d0, score_d8, t, u,  mem);
                 D0_MIN = prevD0_MIN;
                 Lnorm = prevLnorm;
                 d0 = prevd0;
-                float TM = detailed_search_standard(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen, queryLen,
+                double TM = detailed_search_standard(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen,
                                               invmap, t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0, mem);
+                TM = std::max(TM, TMalnScore);
                 //std::cout << TMalnScore << std::endl;
                 resultsStr.append(SSTR(dbKey));
                 resultsStr.push_back(' ');

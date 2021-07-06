@@ -92,14 +92,12 @@ public:
     } alignment_t;
 
     alignment_t alignXYZ(AffineNeedlemanWunsch::profile_t *profile,
-                         const unsigned char *query, long queryLen,
-                         const unsigned char *target, long targetLen,
+                         long queryLen, long targetLen,
                          const float * targetX, const float * targetY, const float * targetZ,
                          const float d02, float t[3], float u[3][3], float gapopen, float gapextend,
                          int * invmap);
 
-    alignment_t align(AffineNeedlemanWunsch::profile_t *profile,
-                      const unsigned char *query, long queryLen,
+    alignment_t align(AffineNeedlemanWunsch::profile_t *profile, long queryLen,
                       const unsigned char *target, long targetLen,
                       float gapopen, float gapextend, int * invmap);
 
@@ -156,13 +154,9 @@ private:
 
 
     cigar_t* cigar_striped_32 (
-            const unsigned char *seqA,
             int lena,
-            const unsigned char *seqB,
             int lenb,
             result_t *result,
-            int case_sensitive,
-            const char *alphabet_aliases_,
             int * j2i);
 
 

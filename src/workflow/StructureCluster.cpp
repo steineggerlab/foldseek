@@ -86,7 +86,6 @@ int strucclust(int argc, const char **argv, const Command &command) {
     size_t kmerSize = par.kmerSize;
     bool kmerSizeWasSet = false;
     bool alphabetSizeWasSet = false;
-    bool clusterModeSet = false;
     for (size_t i = 0; i < par.strucclust.size(); i++) {
         if (par.strucclust[i]->uniqid == par.PARAM_K.uniqid && par.strucclust[i]->wasSet) {
             kmerSizeWasSet = true;

@@ -16,7 +16,7 @@ void setEasyStructureSearchDefaults(Parameters *p) {
 }
 
 
-int doeasysearch(int argc, const char **argv, const Command &command, bool linsearch) {
+int easystructuresearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -109,10 +109,4 @@ int doeasysearch(int argc, const char **argv, const Command &command, bool linse
     return EXIT_FAILURE;
 }
 
-int easysearch(int argc, const char **argv, const Command &command) {
-    return doeasysearch(argc, argv, command, false);
-}
 
-int easylinsearch(int argc, const char **argv, const Command &command) {
-    return doeasysearch(argc, argv, command, true);
-}

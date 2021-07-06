@@ -49,8 +49,7 @@ AffineNeedlemanWunsch::~AffineNeedlemanWunsch(){
 }
 
 AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ(AffineNeedlemanWunsch::profile_t *profile,
-                                                                   const unsigned char *query, long queryLen,
-                                                                   const unsigned char *target, long targetLen,
+                                                                   long queryLen, long targetLen,
                                                                    const float * targetX, const float * targetY, const float * targetZ,
                                                                    const float d02, float t[3], float u[3][3],
                                                                    float gapopen, float gapextend, int * invmap) {
@@ -62,21 +61,16 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ(AffineNeedlem
     //std::cout << result->score << std::endl;
     // compute backtrace
     cigar_t *cigar = cigar_striped_32(
-            query,
             queryLen,
-            target,
             targetLen,
             result,
-            false,
-            NULL,
             invmap);
     return alignment_t(result->score, cigar->beg_query,result->end_query,
                        cigar->beg_ref, result->end_ref,
                        cigar->len, cigar->seq);
 }
 
-AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanWunsch::profile_t *profile,
-                                                                const unsigned char *query, long queryLen,
+AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanWunsch::profile_t *profile, long queryLen,
                                                                 const unsigned char *target, long targetLen,
                                                                 float gapopen, float gapextend, int * invmap) {
     // fill matrix
@@ -88,13 +82,9 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanW
 
     // compute backtrace
     cigar_t *cigar = cigar_striped_32(
-            query,
             queryLen,
-            target,
             targetLen,
             result,
-            false,
-            NULL,
             invmap);
     return alignment_t(result->score, cigar->beg_query,result->end_query,
                        cigar->beg_ref, result->end_ref,
@@ -122,7 +112,6 @@ AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_xyz_create(
 {
     int32_t i = 0;
     int32_t j = 0;
-    int32_t k = 0;
     int32_t segNum = 0;
     const int32_t segWidth = VECSIZE_FLOAT; /* number of values in vector unit */
     const int32_t segLen = (s1Len + segWidth - 1) / segWidth;
@@ -657,13 +646,9 @@ uint32_t* AffineNeedlemanWunsch::reverse_uint32_t(const uint32_t *s, size_t leng
 
 
 AffineNeedlemanWunsch::cigar_t* AffineNeedlemanWunsch::cigar_striped_32 (
-        const unsigned char *seqA,
         int lena,
-        const unsigned char *seqB,
         int lenb,
         result_t *result,
-        int case_sensitive,
-        const char *alphabet_aliases_,
         int * j2i)
 {
 
@@ -712,8 +697,6 @@ do {                      \
     RESET;                \
 } while (0)
 
-    char alphabet_aliases[256];
-    size_t aliases_size = 0;
     size_t size = lena+lenb;
     cigar_t *cigar = (cigar_t*) malloc(sizeof(cigar_t));
     uint32_t *cigar_reverse = NULL;
@@ -731,14 +714,7 @@ do {                      \
     int64_t segLen = (lena + segWidth - 1) / segWidth;
     int64_t segLen8bit = (lena + segWidth*4 - 1) / (segWidth*4);
 
-    if (NULL != alphabet_aliases_) {
-        size_t i;
-        aliases_size = strlen(alphabet_aliases_);
-        for (i=0; i<aliases_size; ++i) {
-            alphabet_aliases[i] = case_sensitive ? alphabet_aliases_[i] :
-                                  toupper(alphabet_aliases_[i]);
-        }
-    }
+
     cigar->seq = cigarBuffer;
     cigar->len = 0;
     cigar->beg_query = 0;

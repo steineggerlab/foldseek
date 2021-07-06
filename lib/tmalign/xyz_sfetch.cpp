@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
     /* list all entries in xyz file */
     string line;
-    int L,i;
+    size_t L,i;
     int start_pos,end_pos; // position of starting and ending character
     if (list_opt.size()==0)
     {

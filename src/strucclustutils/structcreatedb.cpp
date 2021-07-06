@@ -25,6 +25,11 @@ int createdb(int argc, const char **argv, const Command& command) {
     std::vector<std::string> filenames(par.filenames);
     std::string outputName = filenames.back();
     filenames.pop_back();
+
+    if(FileUtil::fileExists(filenames.back().c_str()) == false){
+        Debug(Debug::ERROR) << "File does exist: " << filenames[0] << "\n";
+        EXIT(EXIT_FAILURE);
+    }
     if(filenames.size() == 1 && FileUtil::directoryExists(filenames.back().c_str())){
         std::string dir = filenames.back();
         filenames.pop_back();
@@ -52,6 +57,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     SubstitutionMatrix mat(par.scoringMatrixFile.aminoacids, 2.0, par.scoreBias);
     Debug::Progress progress(filenames.size());
 
+
     size_t incorrectFiles = 0;
     //===================== single_process ===================//__110710__//
 #pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress) reduction(+:incorrectFiles)
@@ -67,7 +73,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         std::vector<float> camol;
 
         std::string name;
-#pragma omp for schedule(dynamic, 1)
+#pragma omp for schedule(static)
         for (size_t i = 0; i < filenames.size(); i++) {
             progress.updateProgress();
             // clear memory
@@ -96,6 +102,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 char newline = '\n';
                 aadbw.writeAdd(&newline, 1, thread_idx);
                 aadbw.writeEnd(i, thread_idx);
+
                 hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), i, thread_idx);
                 name.clear();
                 for(size_t pos = 0; pos < chainLen; pos++){
@@ -109,8 +116,6 @@ int createdb(int argc, const char **argv, const Command& command) {
                 }
                 cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), i, thread_idx);
             }
-
-
         }
     }
 
@@ -119,6 +124,45 @@ int createdb(int argc, const char **argv, const Command& command) {
     hdbw.close(true);
     cadbw.close(true);
     aadbw.close(true);
+
+//
+//    if (par.writeLookup == true) {
+//        DBReader<unsigned int> readerHeader((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), 1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
+//        readerHeader.open(DBReader<unsigned int>::NOSORT);
+//        // create lookup file
+//        std::string lookupFile = outputName + ".lookup";
+//        FILE* file = FileUtil::openAndDelete(lookupFile.c_str(), "w");
+//        std::string buffer;
+//        buffer.reserve(2048);
+//        unsigned int splitIdx = 0;
+//        unsigned int splitCounter = 0;
+//        DBReader<unsigned int>::LookupEntry entry;
+//        for (size_t id = 0; id < readerHeader.getSize(); id++) {
+//            char *header = readerHeader.getData(id, 0);
+//            entry.id = id;
+//            entry.entryName = Util::parseFastaHeader(header);
+//            if (entry.entryName.empty()) {
+//                Debug(Debug::WARNING) << "Cannot extract identifier from entry " << entries_num << "\n";
+//            }
+//
+//            entry.fileNumber = idtofilenum[id];
+//            readerHeader.lookupEntryToBuffer(buffer, entry);
+//            int written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), file);
+//            if (written != (int)buffer.size()) {
+//                Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
+//                EXIT(EXIT_FAILURE);
+//            }
+//            buffer.clear();
+//            splitCounter++;
+//        }
+//        if (fclose(file) != 0) {
+//            Debug(Debug::ERROR) << "Cannot close file " << lookupFile << "\n";
+//            EXIT(EXIT_FAILURE);
+//        }
+//        readerHeader.close();
+//    }
+    //delete [] idtofilenum;
+
     //if (par.subDbMode == Parameters::SUBDB_MODE_SOFT) {
     //DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ca", DBFiles::HEADERS);
     //DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ss", DBFiles::HEADERS);

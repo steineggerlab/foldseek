@@ -24,12 +24,3 @@
 */
 void NWDP_TM( float **score, bool **path, float **val,
     int len1, int len2, float gap_open, int j2i[]);
-
-void NWDP_TM( float **score, bool **path, float **val,
-    const Coordinates &x, const Coordinates &y, int len1, int len2, float t[3], float u[3][3],
-    float d02, float gap_open, int j2i[], float * tmp);
-
-//+ss
-void NWDP_TM(float **score, bool **path, float **val,
-             const char *secx, const char *secy, const int len1, const int len2,
-             const float gap_open, int j2i[]);
