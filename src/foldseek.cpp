@@ -55,7 +55,7 @@ std::vector<struct Command> commands = {
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
 
 
-        {"tmalign",      tmalign,      &localPar.tmalign,      COMMAND_HIDDEN,
+        {"tmalign",      tmalign,      &localPar.tmalign,      COMMAND_ALIGNMENT,
                 "Compute tm-score ",
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",

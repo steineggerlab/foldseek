@@ -46,12 +46,12 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
     cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
-    if(par.alignmentMode == LocalParameters::ALIGNMENT_TYPE_3DI){
+    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         cmd.addVariable("ALIGNMENT_ALGO", "align");
         cmd.addVariable("QUERY_ALIGNMENT", (query+"_ss").c_str());
         cmd.addVariable("TARGET_ALIGNMENT", (target+"_ss").c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
-    }else{
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
         cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
