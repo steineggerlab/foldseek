@@ -15,5 +15,5 @@ add_library(gemmiwrapper OBJECT
 
 get_target_property(COMPILE_TMP mmseqs-framework COMPILE_FLAGS)
 get_target_property(LINK_TMP mmseqs-framework LINK_FLAGS)
-set_target_properties(gemmiwrapper PROPERTIES COMPILE_FLAGS "${COMPILE_TMP}" LINK_FLAGS "${LINK_TMP}")
+set_target_properties(gemmiwrapper PROPERTIES COMPILE_FLAGS "${COMPILE_TMP} -w" LINK_FLAGS "${LINK_TMP} -w")
 restore_exceptions(gemmiwrapper)
