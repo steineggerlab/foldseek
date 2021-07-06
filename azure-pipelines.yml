@@ -41,6 +41,7 @@ jobs:
           BUILD_TYPE: ASanOpt
     steps:
       - checkout: self
+        submodules: true
       - script: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get update
@@ -135,6 +136,7 @@ jobs:
       vmImage: 'macos-10.15'
     steps:
       - checkout: self
+        submodules: true
       - script: |
           sudo xcode-select -s "/Applications/Xcode_12.2.app"
         displayName: Use Xcode 12.2
