@@ -1,0 +1,28 @@
+set(alignment_header_files
+        alignment/Alignment.h
+        alignment/CompressedA3M.h
+        alignment/EvalueComputation.h
+        alignment/Matcher.h
+        alignment/MsaFilter.h
+        alignment/MultipleAlignment.h
+        alignment/PSSMCalculator.h
+        alignment/PSSMMasker.h
+        alignment/StripedSmithWaterman.h
+        alignment/BandedNucleotideAligner.h
+        alignment/DistanceCalculator.h
+        PARENT_SCOPE
+        )
+
+set(alignment_source_files
+        alignment/Alignment.cpp
+        alignment/CompressedA3M.cpp
+        alignment/Main.cpp
+        alignment/Matcher.cpp
+        alignment/MsaFilter.cpp
+        alignment/MultipleAlignment.cpp
+        alignment/PSSMCalculator.cpp
+        alignment/StripedSmithWaterman.cpp
+        alignment/BandedNucleotideAligner.cpp
+        alignment/rescorediagonal.cpp
+        PARENT_SCOPE
+        )

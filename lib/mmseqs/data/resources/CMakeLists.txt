@@ -1,0 +1,12 @@
+set(GENERATED_RESOURCES
+        resources/CovSeqidQscPercMinDiag.lib
+        resources/CovSeqidQscPercMinDiagTargetCov.lib
+        resources/ExpOpt3_8_polished.cs32.lib
+        resources/Library255_may17.lib
+        resources/libPolished_8.lib
+        resources/cs219.lib
+        resources/krona_prelude.html
+        resources/result_viz_prelude.html.zst
+
+        PARENT_SCOPE
+        )
