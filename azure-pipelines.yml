@@ -72,7 +72,7 @@ jobs:
         displayName: Build foldseek
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./regression/run_regression.sh ./build/src/foldseek examples EVAL
+          ./regression/run_regression.sh ./build/src/foldseek examples 
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
@@ -146,7 +146,7 @@ jobs:
         displayName: Build foldseek
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./regression/run_regression.sh ./build/foldseek examples EVAL
+          ./regression/run_regression.sh ./build/foldseek examples 
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
