@@ -1,0 +1,32 @@
+set(prefiltering_header_files
+        prefiltering/CacheFriendlyOperations.h
+        prefiltering/ExtendedSubstitutionMatrix.h
+        prefiltering/Indexer.h
+        prefiltering/IndexBuilder.h
+        prefiltering/IndexTable.h
+        prefiltering/KmerGenerator.h
+        prefiltering/Prefiltering.h
+        prefiltering/PrefilteringIndexReader.h
+        prefiltering/QueryMatcher.h
+        prefiltering/ReducedMatrix.h
+        prefiltering/SequenceLookup.h
+        prefiltering/UngappedAlignment.h
+        PARENT_SCOPE
+        )
+
+set(prefiltering_source_files
+        prefiltering/CacheFriendlyOperations.cpp
+        prefiltering/ExtendedSubstitutionMatrix.cpp
+        prefiltering/Indexer.cpp
+        prefiltering/IndexBuilder.cpp
+        prefiltering/KmerGenerator.cpp
+        prefiltering/Main.cpp
+        prefiltering/Prefiltering.cpp
+        prefiltering/PrefilteringIndexReader.cpp
+        prefiltering/QueryMatcher.cpp
+        prefiltering/ReducedMatrix.cpp
+        prefiltering/SequenceLookup.cpp
+        prefiltering/UngappedAlignment.cpp
+        prefiltering/ungappedprefilter.cpp
+        PARENT_SCOPE
+        )
