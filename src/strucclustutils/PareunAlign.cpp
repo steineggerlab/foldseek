@@ -191,7 +191,6 @@ struct alignmentInfo completingAlignment (vector<vector<int>> scoreMat, vector<v
 
 //function that collects residue index and C-alpha coordinates of the perfectly aligned sequences
 void PareunAlign::AlignedResidueIndex(Matcher::result_t  & optAlnResult, int * ires) {
-    int iressize = optAlnResult.qStartPos + optAlnResult.backtrace.size();
     int qPos = optAlnResult.qStartPos;
     int tPos = optAlnResult.dbStartPos;
     string cigarString = optAlnResult.backtrace;
@@ -204,7 +203,6 @@ void PareunAlign::AlignedResidueIndex(Matcher::result_t  & optAlnResult, int * i
             tPos++;
         } else {
             qPos++;
-
         }
     }
 }
