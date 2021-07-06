@@ -1,3 +1,6 @@
 [submodule "lib/mmseqs"]
 	path = lib/mmseqs
 	url = https://github.com/soedinglab/MMseqs2
+[submodule "util/regression"]
+	path = util/regression
+	url = https://github.com/steineggerlab/foldseek-regression
