@@ -22,8 +22,8 @@ AffineNeedlemanWunsch::AffineNeedlemanWunsch(int maxLen, int profileRange){
     traceTableRow     =  (simd_float*) mem_align(ALIGN_INT, (segLen+VECSIZE_FLOAT-1)*sizeof(simd_float));
     nextTraceTableRow =  (simd_float*) mem_align(ALIGN_INT, (segLen+VECSIZE_FLOAT-1)*sizeof(simd_float));
     boundary          =  (float*) mem_align(ALIGN_INT, (maxLen+1)*sizeof(float));
-    cigarBuffer       =  (uint32_t *) malloc(sizeof(uint32_t)*maxLen*maxLen);
-    reverCigarBuffer  =  (uint32_t *) malloc(sizeof(uint32_t)*maxLen*maxLen);
+    cigarBuffer       =  (uint32_t *) malloc(sizeof(uint32_t)*(maxLen+maxLen));
+    reverCigarBuffer  =  (uint32_t *) malloc(sizeof(uint32_t)*(maxLen+maxLen));
     result = result_new_trace(segLen8Bit, maxLen, ALIGN_INT, sizeof(simd_float));
     profile = (profile_t*)malloc(sizeof(profile_t));
     vProfile =  (simd_float*) mem_align(ALIGN_INT, profileRange * segLen*sizeof(simd_float));
