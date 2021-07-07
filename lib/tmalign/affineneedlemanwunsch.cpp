@@ -292,13 +292,13 @@ AffineNeedlemanWunsch::result_t* AffineNeedlemanWunsch::stripedAlign(
         //arr_store((simd_float*)result->trace->trace_table, (simd_float)vTDiagE, i, segLen, 0);
     }
 
+    simd_float vEF_opn = simdf32_set(0.0);
+    simd_float vF_ext = simdf32_set(0.0);
     /* outer loop over database sequence */
     for (j=0; j<s2Len; ++j) {
-        simd_float vEF_opn;
         simd_float vE;
         simd_float vE_ext;
         simd_float vF;
-        simd_float vF_ext;
         simd_float vFa;
         simd_float vFa_ext;
         simd_float vH;
