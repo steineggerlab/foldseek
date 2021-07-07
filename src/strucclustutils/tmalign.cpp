@@ -14,6 +14,20 @@
 #include <omp.h>
 #endif
 
+// need for sorting the results
+bool compareHitsByTMScore(const Matcher::result_t &first, const Matcher::result_t &second) {
+        if (first.eval != second.eval) {
+            return first.eval > second.eval;
+        }
+        if (first.score != second.score) {
+            return first.score > second.score;
+        }
+        if (first.dbLen != second.dbLen) {
+            return first.dbLen < second.dbLen;
+        }
+        return first.dbKey < second.dbKey;
+}
+
 
 int tmalign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -94,7 +108,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
         AffineNeedlemanWunsch affineNW(par.maxSeqLen, 3);
-
+        std::vector<Matcher::result_t> swResults;
         char buffer[1024+32768];
         std::string resultBuffer;
 #pragma omp for schedule(dynamic, 1)
@@ -194,12 +208,19 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     bool hasSeqId = seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
                     bool hasTMscore = (TM1 >= par.tmScoreThr);
                     if(hasCov && hasSeqId  && hasTMscore){
-                        size_t len = Matcher::resultToBuffer(buffer, result, true, false);
-                        resultBuffer.append(buffer, len);
+                        swResults.emplace_back(result);
                     }
                 }
+                SORT_SERIAL(swResults.begin(), swResults.end(), compareHitsByTMScore);
+
+                for(size_t i = 0; i < swResults.size(); i++){
+                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], true, false);
+                    resultBuffer.append(buffer, len);
+                }
+
                 dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, thread_idx);
                 resultBuffer.clear();
+                swResults.clear();
             }
         }
     }
