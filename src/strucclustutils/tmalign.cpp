@@ -107,7 +107,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         float * target_y = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
-        AffineNeedlemanWunsch affineNW(par.maxSeqLen, 3);
+        AffineNeedlemanWunsch affineNW(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), 20);
         std::vector<Matcher::result_t> swResults;
         char buffer[1024+32768];
         std::string resultBuffer;
