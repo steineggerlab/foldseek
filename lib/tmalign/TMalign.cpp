@@ -154,16 +154,14 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
     float d_tmp=d*d;
     float d02=d0*d0;
     float score_d8_cut = score_d8*score_d8;
-
     int i, n_cut, inc=0;
     float *distArray = mem;
-
+    float *sumArray = mem+((n_ali/VECSIZE_FLOAT+1)*VECSIZE_FLOAT);
 
     while(1)
     {
         n_cut=0;
         score_sum=0;
-        simd_float sum = simdf32_set(0);
         simd_float vscore_d8_cut = simdf32_set(score_d8_cut);
         simd_float vd02 = simdf32_set(d02);
         simd_float one = simdf32_set(1.0f);
@@ -189,17 +187,17 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
             simdf32_store(&distArray[i], di);
             simd_float di_lt_score_d8 = simdf32_lt(di, vscore_d8_cut);
             simd_float oneDividedDist = simdf32_div(one, simdf32_add(one, simdf32_div(di,vd02)));
-            sum = simdf32_add(sum, (simd_float)simdi_and((simd_int) di_lt_score_d8, (simd_int) oneDividedDist ));
+            //sum = simdf32_add(sum, (simd_float));
+            simdf32_store(&sumArray[i], (simd_float)simdi_and((simd_int) di_lt_score_d8, (simd_int) oneDividedDist ));
         }
-        for(i=0; i < VECSIZE_FLOAT; i++){
-            score_sum+=((float*)&sum)[i];
-        }
+
 
         for(i=0; i<n_ali; i++)
         {
             di = distArray[i];
             i_ali[n_cut]=i;
             n_cut+=(di<d_tmp);
+            score_sum+=sumArray[i];
             //score_sum += (di<=score_d8_cut) ? 1/(1+di/d02) : 0;
             //else score_sum += 1/(1+di/d02);
         }
