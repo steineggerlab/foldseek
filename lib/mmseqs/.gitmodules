@@ -1,4 +1,3 @@
 [submodule "util/regression"]
-	path = lib/mmseqs/util/regression
+	path = util/regression
 	url = https://github.com/soedinglab/MMseqs2-Regression.git
-	update = none
