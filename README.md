@@ -22,7 +22,7 @@ Precompiled binaries for other architectures (ARM64, PPC64LE) and very old AMD/I
 
 ### Quick start
     
-`easy-search` can search single or multiple queries formated in pdb/mcif format against a target database (`example/`) of protein structures. It outputs a tab separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
+`easy-search` can search single or multiple queries formatted in pdb/mcif format (flat or gz) against a target database (`example/`) of protein structures. It outputs a tab separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
 
     foldseek easy-search example/d1asha_ example/ aln.m8 tmpFolder
     
@@ -32,7 +32,7 @@ You can choose many different [output columns](https://github.com/soedinglab/mms
 The target database can be pre-processed by `createdb`. This make sense if searched multiple times.
  
     foldseek createdb example/ targetDB
-    foldseek search example/d1asha_ targetDB aln.m8 tmpFolder
+    foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
     
 ### Important parameters
 
@@ -43,9 +43,9 @@ The target database can be pre-processed by `createdb`. This make sense if searc
 
 ### Main Modules
 
-* `easy-search`       Predict phage-host matches from multiFASTA and common spacer files (PILER-CR, CRISPRDetect and CRT)
-* `easy-cluster`      Predict phage-host matches from multiFASTA and common spacer files (PILER-CR, CRISPRDetect and CRT)
-* `createdb`          Download spacers or GenBank phage genomes and create sequence database
+* `easy-search`       fast protein structure search  
+* `easy-cluster`      cluster protein structures 
+* `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 
 ### Compile from source
 
