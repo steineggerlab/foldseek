@@ -1185,6 +1185,7 @@ void get_initial_ss(AffineNeedlemanWunsch *affineNW,
     std::fill(y2x, y2x+ylen, -1);
     AffineNeedlemanWunsch::profile_t *profile = affineNW->profile_create(secy, ylen, &matrix);
     affineNW->align(profile, ylen, (const unsigned char * ) secx, xlen,  100, 0, y2x);
+
 //    for(size_t i = 0; i < ylen; i++){
 //        if(y2x[i]!=-1)
 //            std::cout << i << "\t" << y2x[i] << "\t" <<  secy[i] << "\t" <<   secx[y2x[i]] << std::endl;

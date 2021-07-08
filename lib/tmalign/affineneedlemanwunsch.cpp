@@ -60,14 +60,14 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ(AffineNeedlem
                     d02, t, u, gapopen, gapextend);
     //std::cout << result->score << std::endl;
     // compute backtrace
-    cigar_t *cigar = cigar_striped_32(
+    cigar_t cigar = cigar_striped_32(
             queryLen,
             targetLen,
             result,
             invmap);
-    return alignment_t(result->score, cigar->beg_query,result->end_query,
-                       cigar->beg_ref, result->end_ref,
-                       cigar->len, cigar->seq);
+    return alignment_t(result->score, cigar.beg_query,result->end_query,
+                       cigar.beg_ref, result->end_ref,
+                       cigar.len, cigar.seq);
 }
 
 AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanWunsch::profile_t *profile, long queryLen,
@@ -81,14 +81,14 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanW
     //std::cout << result->score << std::endl;
 
     // compute backtrace
-    cigar_t *cigar = cigar_striped_32(
+    cigar_t cigar = cigar_striped_32(
             queryLen,
             targetLen,
             result,
             invmap);
-    return alignment_t(result->score, cigar->beg_query,result->end_query,
-                       cigar->beg_ref, result->end_ref,
-                       cigar->len, cigar->seq);
+    return alignment_t(result->score, cigar.beg_query,result->end_query,
+                       cigar.beg_ref, result->end_ref,
+                       cigar.len, cigar.seq);
 }
 
 
@@ -645,7 +645,7 @@ uint32_t* AffineNeedlemanWunsch::reverse_uint32_t(const uint32_t *s, size_t leng
 
 
 
-AffineNeedlemanWunsch::cigar_t* AffineNeedlemanWunsch::cigar_striped_32 (
+AffineNeedlemanWunsch::cigar_t AffineNeedlemanWunsch::cigar_striped_32 (
         int lena,
         int lenb,
         result_t *result,
@@ -656,17 +656,17 @@ AffineNeedlemanWunsch::cigar_t* AffineNeedlemanWunsch::cigar_striped_32 (
 
 #define INC                                                       \
 do {                                                              \
-    cigar->len += 1;                                              \
-    if ((size_t)cigar->len >= size) {                             \
+    cigar.len += 1;                                              \
+    if ((size_t)cigar.len >= size) {                             \
         size = size * 2;                                          \
-        cigar->seq = (uint32_t*)realloc(cigar->seq, sizeof(uint32_t)*size);  \
+        cigar.seq = (uint32_t*)realloc(cigar.seq, sizeof(uint32_t)*size);  \
     }                                                             \
 } while (0);
 
 #define WRITE(VAL,CHAR)                                         \
 do {                                                            \
     INC;                                                        \
-    cigar->seq[cigar->len-1] = cigar_encode(VAL,CHAR); \
+    cigar.seq[cigar.len-1] = cigar_encode(VAL,CHAR); \
 } while (0)
 
 #define RESET  \
@@ -698,7 +698,7 @@ do {                      \
 } while (0)
 
     size_t size = lena+lenb;
-    cigar_t *cigar = (cigar_t*) malloc(sizeof(cigar_t));
+    cigar_t cigar;
     uint32_t *cigar_reverse = NULL;
     uint32_t c_mat = 0;
     uint32_t c_mis = 0;
@@ -715,10 +715,10 @@ do {                      \
     int64_t segLen8bit = (lena + segWidth*4 - 1) / (segWidth*4);
 
 
-    cigar->seq = cigarBuffer;
-    cigar->len = 0;
-    cigar->beg_query = 0;
-    cigar->beg_ref = 0;
+    cigar.seq = cigarBuffer;
+    cigar.len = 0;
+    cigar.beg_query = 0;
+    cigar.beg_ref = 0;
     /* semi-global alignment includes the end gaps */
 
     while (i >= 0 || j >= 0) {
@@ -804,7 +804,10 @@ do {                      \
                 where = INS;
             }
             else {
-                return NULL;
+                cigar.beg_ref = -1;
+                cigar.beg_query = -1;
+                cigar.len = -1;
+                return cigar;
             }
         }
         else if (DEL == where) {
@@ -820,24 +823,27 @@ do {                      \
                 where = DEL;
             }
             else {
-                return NULL;
+                cigar.beg_ref = -1;
+                cigar.beg_query = -1;
+                cigar.len = -1;
+                return cigar;
             }
         }
         else if (ZERO == where) {
             break;
         }
         else {
-            return NULL;
+            return cigar;
         }
     }
 
     /* in case we missed the last write */
     WRITE_ANY;
 
-    cigar_reverse = reverse_uint32_t(cigar->seq, cigar->len);
-    cigar->seq = cigar_reverse;
-    cigar->beg_query = i+1;
-    cigar->beg_ref = j+1;
+    cigar_reverse = reverse_uint32_t(cigar.seq, cigar.len);
+    cigar.seq = cigar_reverse;
+    cigar.beg_query = i+1;
+    cigar.beg_ref = j+1;
 
     return cigar;
 #undef WRITE

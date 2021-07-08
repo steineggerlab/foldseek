@@ -153,7 +153,7 @@ private:
             const float open, const float gap);
 
 
-    cigar_t* cigar_striped_32 (
+    cigar_t cigar_striped_32 (
             int lena,
             int lenb,
             result_t *result,

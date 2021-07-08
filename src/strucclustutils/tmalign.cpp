@@ -223,6 +223,16 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 swResults.clear();
             }
         }
+
+        delete [] querySecStruc;
+        delete [] targetSecStruc;
+        free(query_x);
+        free(query_y);
+        free(query_z);
+        free(target_x);
+        free(target_y);
+        free(target_z);
+        free(mem);
     }
 
     dbw.close();
