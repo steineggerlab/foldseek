@@ -26,18 +26,27 @@ int createdb(int argc, const char **argv, const Command& command) {
     std::string outputName = filenames.back();
     filenames.pop_back();
     if(filenames.size() == 1 && FileUtil::directoryExists(filenames.back().c_str())){
-        std::string dir = filenames.back();
+        std::vector<std::string> dirs;
+        dirs.push_back(filenames.back());
         filenames.pop_back();
-        DIR * dpdf = opendir(dir.c_str());
-        if (dpdf != NULL) {
-            while (dirent * epdf = readdir(dpdf)) {
-                std::string filename(epdf->d_name);
-                if(filename != "." && filename !=".."){
-                    filenames.push_back(dir+"/"+filename);
+        while(dirs.size() != 0){
+            std::string dir = dirs.back();
+            dirs.pop_back();
+            DIR * dpdf = opendir(dir.c_str());
+            if (dpdf != NULL) {
+                while (dirent * epdf = readdir(dpdf)) {
+                    std::string filename(epdf->d_name);
+                    if(filename != "." && filename !=".."){
+                        if (epdf->d_type == DT_DIR){
+                            dirs.push_back(dir+"/"+filename);
+                        }else{
+                            filenames.push_back(dir+"/"+filename);
+                        }
+                    }
                 }
+                closedir(dpdf);
             }
         }
-        closedir(dpdf);
     }
     Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
 
