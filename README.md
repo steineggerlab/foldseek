@@ -8,7 +8,7 @@ Software suite for searching and clustering protein structures
 `foldseek` can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system. We recommend using a system with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux).
 
     # install from bioconda
-    conda install -c conda-forge -c bioconda spacepharer
+    conda install -c conda-forge -c bioconda foldseek 
     # pull docker container
     docker pull steineggerlab/foldseek
     # static Linux AVX2 build
@@ -42,7 +42,8 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     
 ### Important parameters
 
-    -s                       adjust the sensitivity to speed trade-off (default: 7.5)
+    -s                       adjusyesornot the sensitivity to speed trade-off (default: 7.5)
+    --alignment-type         0: 3Di Gotoh-Smith-Waterman, 1: TMalign 
     -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
     --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
 
