@@ -67,7 +67,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         std::vector<float> camol;
 
         std::string name;
-#pragma omp for schedule(dynamic, 1)
+#pragma omp for schedule(static)
         for (size_t i = 0; i < filenames.size(); i++) {
             progress.updateProgress();
             // clear memory
