@@ -6,6 +6,7 @@
 #define FOLDSEEK_GEMMIWRAPPER_H
 #include <vector>
 #include <unordered_map>
+#include <string>
 #include "structureto3di.h"
 class GemmiWrapper {
 public:

@@ -1,5 +1,7 @@
 #pragma once
 #include <vector>
+#include <stddef.h>
+#include <cstring>
 
 namespace Alphabet3Di{
     static const size_t CENTROID_CNT = 16;

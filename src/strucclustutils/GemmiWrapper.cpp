@@ -1,9 +1,11 @@
 //
 // Created by Martin Steinegger on 6/7/21.
 //
-#include "mmread.hpp"
-#include "input.hpp"
 #include "GemmiWrapper.h"
+
+#include "mmread.hpp"
+#include "gz.hpp"
+#include "input.hpp"
 
 //#include "FileUtil.h"
 
@@ -16,13 +18,13 @@ GemmiWrapper::GemmiWrapper(){
                      {"UNK",'X'}};
 }
 
-gemmi::Structure openStructure(std::string & filename){
-    gemmi::BasicInput infile(filename);
+gemmi::Structure openStructure(const std::string & filename){
+    gemmi::MaybeGzipped infile(filename);
     gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
     if(format != gemmi::CoorFormat::Unknown && format != gemmi::CoorFormat::UnknownAny){
-        return gemmi::read_structure_file(filename, format);
+        return gemmi::read_structure(infile, format);
     }else{
-        return gemmi::read_structure_file(filename, gemmi::CoorFormat::Pdb);
+        return gemmi::read_structure(infile, gemmi::CoorFormat::Pdb);
     }
 }
 
