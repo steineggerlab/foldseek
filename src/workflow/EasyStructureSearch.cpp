@@ -88,7 +88,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
     cmd.addVariable("CREATELININDEX_PAR", NULL);
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.searchworkflow, true).c_str());
+    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("GREEDY_BEST_HITS", par.greedyBestHits ? "TRUE" : NULL);
