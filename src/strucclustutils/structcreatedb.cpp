@@ -114,15 +114,75 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
     }
 
-
     torsiondbw.close(true);
     hdbw.close(true);
     cadbw.close(true);
     aadbw.close(true);
-    //if (par.subDbMode == Parameters::SUBDB_MODE_SOFT) {
-    //DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ca", DBFiles::HEADERS);
-    //DBReader<unsigned int>::softlinkDb(outputName, outputName+"_ss", DBFiles::HEADERS);
-    //}
+
+    if (par.writeLookup == true) {
+        DBReader<unsigned int> readerHeader((outputName+"_h").c_str(), (outputName+"_h.index").c_str(),
+                                            1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
+        readerHeader.open(DBReader<unsigned int>::NOSORT);
+        // create lookup file
+        std::string sourceFilename = outputName + ".source";
+        FILE* sourceFile = FileUtil::openAndDelete(sourceFilename.c_str(), "w");
+        size_t prevFileKey = SIZE_MAX;
+        std::string lookupFile = outputName + ".lookup";
+        FILE* file = FileUtil::openAndDelete(lookupFile.c_str(), "w");
+        std::string buffer;
+        buffer.reserve(2048);
+        DBReader<unsigned int>::LookupEntry entry;
+        size_t globalCounter = 0;
+        for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
+            size_t fileKey = readerHeader.getDbKey(id);
+            char *header = readerHeader.getData(id, 0);
+            entry.id = globalCounter;
+            globalCounter++;
+            entry.entryName = Util::parseFastaHeader(header);
+            if (entry.entryName.empty()) {
+                Debug(Debug::WARNING) << "Cannot extract identifier from entry " << id << "\n";
+            }
+            entry.fileNumber = fileKey;
+            readerHeader.lookupEntryToBuffer(buffer, entry);
+            size_t written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), file);
+            if (written != buffer.size()) {
+                Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
+                EXIT(EXIT_FAILURE);
+            }
+            buffer.clear();
+
+            if(prevFileKey != fileKey){
+
+                char sourceBuffer[4096];
+
+                size_t len = snprintf(sourceBuffer, sizeof(sourceBuffer), "%zu\t%s\n", fileKey, FileUtil::baseName(filenames[fileKey].c_str()).c_str());
+                written = fwrite(sourceBuffer, sizeof(char), len, sourceFile);
+                if (written != len) {
+                    Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
+                    EXIT(EXIT_FAILURE);
+                }
+            }
+            prevFileKey = fileKey;
+        }
+        if (fclose(file) != 0) {
+            Debug(Debug::ERROR) << "Cannot close file " << lookupFile << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+        if(fclose(sourceFile) != 0){
+            Debug(Debug::ERROR) << "Cannot close file " << sourceFilename << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+        readerHeader.close();
+    }
+
+
+    DBWriter::createRenumberedDB((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBWriter::createRenumberedDB((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBWriter::createRenumberedDB((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBWriter::createRenumberedDB((outputName).c_str(), (outputName+".index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+
+
+
     Debug(Debug::INFO) << incorrectFiles << " out of " << filenames.size() << " entries are incorrect.\n";
     return EXIT_SUCCESS;
 }
