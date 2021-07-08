@@ -2,7 +2,9 @@
 // Created by Martin Steinegger on 6/7/21.
 //
 #include "mmread.hpp"
+#include "input.hpp"
 #include "GemmiWrapper.h"
+
 //#include "FileUtil.h"
 
 GemmiWrapper::GemmiWrapper(){
@@ -14,8 +16,18 @@ GemmiWrapper::GemmiWrapper(){
                      {"UNK",'X'}};
 }
 
+gemmi::Structure openStructure(std::string & filename){
+    gemmi::BasicInput infile(filename);
+    gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
+    if(format != gemmi::CoorFormat::Unknown && format != gemmi::CoorFormat::UnknownAny){
+        return gemmi::read_structure_file(filename, format);
+    }else{
+        return gemmi::read_structure_file(filename, gemmi::CoorFormat::Pdb);
+    }
+}
+
 bool GemmiWrapper::load(std::string & filename){
-    gemmi::Structure st = gemmi::read_structure_file(filename, gemmi::CoorFormat::Pdb);
+    gemmi::Structure st = openStructure(filename);
     if(st.models.size() == 0 || st.models[0].chains.size() == 0 ||
        st.models[0].chains[0].residues.size()  == 0 ){
         return false;
