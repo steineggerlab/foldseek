@@ -20,12 +20,6 @@ Software suite for searching and clustering protein structures
 
 Precompiled binaries for other architectures (ARM64, PPC64LE) and very old AMD/Intel CPUs (SSE2 only) are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
-## Input
-
-`foldseek` searches protein structures using ... 
- 
-
-
 ### Quick start
     
 `easy-search` can search single or multiple queries formated in pdb/mcif format against a target database (`example/`) of protein structures. It outputs a tab separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
