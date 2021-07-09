@@ -81,8 +81,8 @@ int createdb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < filenames.size(); i++) {
             progress.updateProgress();
             // clear memory
-            alphabet3di.clear();
-            camol.clear();
+
+
             if(readStructure.load(filenames[i]) == false){
                 incorrectFiles++;
                 continue;
@@ -122,9 +122,9 @@ int createdb(int argc, const char **argv, const Command& command) {
                     camol.push_back(readStructure.ca[chainStart+pos].z);
                 }
                 cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), i, thread_idx);
+                alphabet3di.clear();
+                camol.clear();
             }
-
-
         }
     }
 
