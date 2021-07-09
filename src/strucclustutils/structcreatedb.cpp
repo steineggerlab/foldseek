@@ -62,8 +62,9 @@ int createdb(int argc, const char **argv, const Command& command) {
     Debug::Progress progress(filenames.size());
 
     size_t incorrectFiles = 0;
+    size_t toShort = 0;
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress) reduction(+:incorrectFiles)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress) reduction(+:incorrectFiles, toShort)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -90,6 +91,10 @@ int createdb(int argc, const char **argv, const Command& command) {
                 size_t chainStart = readStructure.chain[ch].first;
                 size_t chainEnd = readStructure.chain[ch].second;
                 size_t chainLen = chainEnd - chainStart;
+                if(chainLen <= 3){
+                    toShort++;
+                    continue;
+                }
                 char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
                                                                 &readStructure.n[chainStart],
                                                                 &readStructure.c[chainStart],
@@ -191,7 +196,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     DBWriter::createRenumberedDB((outputName).c_str(), (outputName+".index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
 
 
-
-    Debug(Debug::INFO) << incorrectFiles << " out of " << filenames.size() << " entries are incorrect.\n";
+    Debug(Debug::INFO) << "Ignore " << toShort+incorrectFiles << " out of " << filenames.size() << ".\n";
+    Debug(Debug::INFO) << "Too short: " << toShort << ", incorrect  " << incorrectFiles << ".\n";
     return EXIT_SUCCESS;
 }
