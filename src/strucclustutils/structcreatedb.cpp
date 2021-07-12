@@ -60,11 +60,11 @@ int createdb(int argc, const char **argv, const Command& command) {
     aadbw.open();
     SubstitutionMatrix mat(par.scoringMatrixFile.aminoacids, 2.0, par.scoreBias);
     Debug::Progress progress(filenames.size());
-
+    size_t globalCnt = 0;
     size_t incorrectFiles = 0;
     size_t toShort = 0;
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress) reduction(+:incorrectFiles, toShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress, globalCnt) reduction(+:incorrectFiles, toShort)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -104,13 +104,15 @@ int createdb(int argc, const char **argv, const Command& command) {
                     alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
                 }
                 alphabet3di.push_back('\n');
-                torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), i, thread_idx);
+                size_t id = __sync_fetch_and_add(&globalCnt, 1);
+
+                torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), id, thread_idx);
                 aadbw.writeStart(thread_idx);
                 aadbw.writeAdd(&readStructure.ami[chainStart], chainLen, thread_idx);
                 char newline = '\n';
                 aadbw.writeAdd(&newline, 1, thread_idx);
-                aadbw.writeEnd(i, thread_idx);
-                hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), i, thread_idx);
+                aadbw.writeEnd(id, thread_idx);
+                hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), id, thread_idx);
                 name.clear();
                 for(size_t pos = 0; pos < chainLen; pos++){
                     camol.push_back(readStructure.ca[chainStart+pos].x);
@@ -121,7 +123,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 for(size_t pos = 0; pos < chainLen; pos++) {
                     camol.push_back(readStructure.ca[chainStart+pos].z);
                 }
-                cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), i, thread_idx);
+                cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), id, thread_idx);
                 alphabet3di.clear();
                 camol.clear();
             }
