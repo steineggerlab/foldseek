@@ -60,11 +60,12 @@ int createdb(int argc, const char **argv, const Command& command) {
     aadbw.open();
     SubstitutionMatrix mat(par.scoringMatrixFile.aminoacids, 2.0, par.scoreBias);
     Debug::Progress progress(filenames.size());
+    std::vector<std::pair<size_t, size_t>> fileIdLookup(filenames.size());
     size_t globalCnt = 0;
     size_t incorrectFiles = 0;
     size_t toShort = 0;
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress, globalCnt) reduction(+:incorrectFiles, toShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress, globalCnt, fileIdLookup) reduction(+:incorrectFiles, toShort)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -87,7 +88,12 @@ int createdb(int argc, const char **argv, const Command& command) {
                 incorrectFiles++;
                 continue;
             }
+            size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
+            fileIdLookup[i].first = id;
+            fileIdLookup[i].second = id + readStructure.chain.size();
+
             for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+                size_t dbKey = id + ch;
                 size_t chainStart = readStructure.chain[ch].first;
                 size_t chainEnd = readStructure.chain[ch].second;
                 size_t chainLen = chainEnd - chainStart;
@@ -95,6 +101,8 @@ int createdb(int argc, const char **argv, const Command& command) {
                     toShort++;
                     continue;
                 }
+
+
                 char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
                                                                 &readStructure.n[chainStart],
                                                                 &readStructure.c[chainStart],
@@ -104,15 +112,14 @@ int createdb(int argc, const char **argv, const Command& command) {
                     alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
                 }
                 alphabet3di.push_back('\n');
-                size_t id = __sync_fetch_and_add(&globalCnt, 1);
 
-                torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), id, thread_idx);
+                torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
                 aadbw.writeStart(thread_idx);
                 aadbw.writeAdd(&readStructure.ami[chainStart], chainLen, thread_idx);
                 char newline = '\n';
                 aadbw.writeAdd(&newline, 1, thread_idx);
-                aadbw.writeEnd(id, thread_idx);
-                hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), id, thread_idx);
+                aadbw.writeEnd(dbKey, thread_idx);
+                hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), dbKey, thread_idx);
                 name.clear();
                 for(size_t pos = 0; pos < chainLen; pos++){
                     camol.push_back(readStructure.ca[chainStart+pos].x);
@@ -123,7 +130,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 for(size_t pos = 0; pos < chainLen; pos++) {
                     camol.push_back(readStructure.ca[chainStart+pos].z);
                 }
-                cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), id, thread_idx);
+                cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), dbKey, thread_idx);
                 alphabet3di.clear();
                 camol.clear();
             }
@@ -148,6 +155,16 @@ int createdb(int argc, const char **argv, const Command& command) {
         std::string buffer;
         buffer.reserve(2048);
         DBReader<unsigned int>::LookupEntry entry;
+        size_t chainCount = 0;
+        for (size_t i = 0; i < filenames.size(); i++) {
+            chainCount = std::max(chainCount, fileIdLookup[i].second);
+        }
+        std::vector<size_t> idToFileIdLookup(chainCount);
+        for (size_t i = 0; i < filenames.size(); i++) {
+            for(size_t j = fileIdLookup[i].first; j < fileIdLookup[i].second; j++){
+                idToFileIdLookup[j] = i;
+            }
+        }
         size_t globalCounter = 0;
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             size_t fileKey = readerHeader.getDbKey(id);
@@ -170,8 +187,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             if(prevFileKey != fileKey){
 
                 char sourceBuffer[4096];
-
-                size_t len = snprintf(sourceBuffer, sizeof(sourceBuffer), "%zu\t%s\n", fileKey, FileUtil::baseName(filenames[fileKey].c_str()).c_str());
+                size_t len = snprintf(sourceBuffer, sizeof(sourceBuffer), "%zu\t%s\n", fileKey, FileUtil::baseName(filenames[idToFileIdLookup[fileKey]].c_str()).c_str());
                 written = fwrite(sourceBuffer, sizeof(char), len, sourceFile);
                 if (written != len) {
                     Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
