@@ -122,13 +122,19 @@ int createdb(int argc, const char **argv, const Command& command) {
                 hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), dbKey, thread_idx);
                 name.clear();
                 for(size_t pos = 0; pos < chainLen; pos++){
-                    camol.push_back(readStructure.ca[chainStart+pos].x);
+                    float val = (std::isnan(readStructure.ca[chainStart+pos].x))
+                            ? 0.0 : readStructure.ca[chainStart+pos].x;
+                    camol.push_back(val);
                 }
                 for(size_t pos = 0; pos < chainLen; pos++) {
-                    camol.push_back(readStructure.ca[chainStart+pos].y);
+                    float val = (std::isnan(readStructure.ca[chainStart+pos].y))
+                                ? 0.0 : readStructure.ca[chainStart+pos].y;
+                    camol.push_back(val);
                 }
                 for(size_t pos = 0; pos < chainLen; pos++) {
-                    camol.push_back(readStructure.ca[chainStart+pos].z);
+                    float val = (std::isnan(readStructure.ca[chainStart+pos].z))
+                                ? 0.0 : readStructure.ca[chainStart+pos].z;
+                    camol.push_back(val);
                 }
                 cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), dbKey, thread_idx);
                 alphabet3di.clear();
