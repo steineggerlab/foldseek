@@ -44,8 +44,8 @@ bool GemmiWrapper::load(std::string & filename){
         ami.clear();
         size_t currPos = 0;
         for (gemmi::Model& model : st.models){
-            size_t chainStartPos = currPos;
             for (gemmi::Chain& ch : model.chains) {
+                size_t chainStartPos = currPos;
                 size_t pos = filename.find_last_of("\\/");
                 std::string name = (std::string::npos == pos)
                                    ? filename
