@@ -1,7 +1,10 @@
-# foldseek
-Software suite for searching and clustering protein structures 
+# foldseek 
+Software suite for searching and clustering protein structures.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
+
+## Version release
+Alpha release: July 24, 2021
 
 ## Installation
 
