@@ -17,6 +17,7 @@ LocalParameters::LocalParameters() :
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
     // structurecreatedb
     structurecreatedb.push_back(&PARAM_THREADS);
+    structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
     structurecreatedb.push_back(&PARAM_V);
     // tmalign
     tmalign.push_back(&PARAM_MIN_SEQ_ID);
