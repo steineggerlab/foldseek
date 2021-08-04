@@ -10,7 +10,9 @@
 #include "easystructuresearch.sh.h"
 
 void setEasyStructureSearchDefaults(Parameters *p) {
-    p->sensitivity = 5.7;
+    p->sensitivity = 7.5;
+    p->gapOpen = 7;
+    p->gapExtend = 2;
     p->removeTmpFiles = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
 }
