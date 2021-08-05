@@ -589,9 +589,9 @@ int aln2TMscore(int argc, const char **argv, const Command& command) {
                 ss2 << targetId;
                 const char* strtargetID = ss2.str().c_str();
 
-                dbw.writeAdd(strtargetID, strlen(strtargetID), thread_idx);
+                dbw.writeAdd(strtargetID, 8, thread_idx);
                 dbw.writeAdd(&tab, 1, thread_idx);
-                dbw.writeAdd(strTMscore, 8, thread_idx);
+                dbw.writeAdd(strTMscore, 4, thread_idx);
                 dbw.writeAdd(&newline, 1, thread_idx);
 
             }

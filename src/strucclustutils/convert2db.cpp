@@ -76,6 +76,7 @@ int convert2db(int argc, const char **argv, const Command& command) {
                 incorrectFiles++;
                 continue;
             }
+            std::cout << filenames[i] << std::endl;
             for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
                 size_t chainStart = readStructure.chain[ch].first;
                 size_t chainEnd = readStructure.chain[ch].second;
@@ -107,6 +108,21 @@ int convert2db(int argc, const char **argv, const Command& command) {
                     camol.push_back(readStructure.ca[chainStart+pos].z);
                 }
                 cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), i, thread_idx);
+
+                //structure to 3Di profile
+                //StructureTo3DiProfileFeatureExtractor * extractor = new StructureTo3DiProfileFeatureExtractor();
+                //Domain * d;
+                std::vector<std::vector<double>> features;
+
+                //d = loadStructure(line);
+                //features = extractor->extractFeatures(d->ca, d->n, d->c, d->cb);
+                features = structureTo3Di.extractFeatures(  &readStructure.ca[chainStart],
+                                                            &readStructure.n[chainStart],
+                                                            &readStructure.c[chainStart],
+                                                            &readStructure.cb[chainStart],
+                                                            chainLen);
+                //delete d;
+
             }
 
 

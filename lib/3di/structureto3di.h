@@ -46,6 +46,17 @@ public:
                             Vec3 * c, Vec3 * cb,
                             size_t len);
 
+    // 3Di profile
+    static const int NEIGHBOUR_CNT = 3;
+    static const int PROFILE_FEATURE_CNT = 29;
+
+    //StructureTo3DiProfileFeatureExtractor (){};
+    //~StructureTo3DiProfileFeatureExtractor (){};
+    //std::vector<std::vector<double>> extractFeatures(std::vector<Vec3> & ca, std::vector<Vec3> & n,std::vector<Vec3> & c, std::vector<Vec3> & cb);
+    std::vector<std::vector<double>> extractFeatures(Vec3 * ca, Vec3 * n,
+                                                     Vec3 * c, Vec3 * cb,
+                                                     size_t len);
+
 private:
     struct Feature{
         double f[Alphabet3Di::FEATURE_CNT];
@@ -92,4 +103,8 @@ private:
 
     void createResidueMask(std::vector<bool> & validMask, Vec3 * ca, Vec3 * n, Vec3 * c, const size_t len);
 
+    void findResiduePartnersProf(std::vector<int> & partnerIdx, Vec3 * cb,
+                             std::vector<bool> & validMask, const size_t len);
+    void calcConformationDescriptorsProf(std::vector<Feature> & features, std::vector<int> & partnerIdx,
+                                     Vec3 * ca, std::vector<bool> & mask, const size_t len);
 };

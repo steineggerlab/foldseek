@@ -240,4 +240,125 @@ char * StructureTo3Di::structure2states(Vec3 * ca, Vec3 * n,
     return states.data();
 }
 
+// Profiles3DiFeatureExtractor
+
+void StructureTo3Di::findResiduePartnersProf(std::vector<std::vector<double>> & features,
+                                                                std::vector<std::vector<int>> & partnerIdx,
+                                                                std::vector<Vec3> & cb,
+                                                                std::vector<bool> & validMask, const size_t n){
+    // Find for each residue the three closest neighbours.
+    // (in terms of distances between their virtual centers/C_betas).
+    // Save indices of partners and distance differences.
+    //
+    // Ignore the first/last and invalid residues.
+    for(size_t i = 1; i < n - 1; i++){
+        double minDist1 = INFINITY, minDist2 = INFINITY, minDist3 = INFINITY;
+
+        for(size_t j = 1; j < n - 1; j++){
+            if (i != j && validMask[j]){
+                double dist = calcDistanceBetween(cb[i], cb[j]);
+                if (dist < minDist1){
+                    minDist3 = minDist2;
+                    minDist2 = minDist1;
+                    minDist1 = dist;
+                    partnerIdx[i][2] = partnerIdx[i][1];
+                    partnerIdx[i][1] = partnerIdx[i][0];
+                    partnerIdx[i][0] = static_cast<int>(j);
+                } else if (dist < minDist2){
+                    minDist3 = minDist2;
+                    minDist2 = dist;
+                    partnerIdx[i][2] = partnerIdx[i][1];
+                    partnerIdx[i][1] = static_cast<int>(j);
+                } else if (dist < minDist3){
+                    minDist3 = dist;
+                    partnerIdx[i][2] = static_cast<int>(j);
+                }
+            }
+        }
+
+        features[i][PROFILE_FEATURE_CNT - 2] = minDist2 - minDist1; // distance difference between first and second nearest neighbour
+        features[i][PROFILE_FEATURE_CNT - 1] = minDist3 - minDist2;
+    }
+}
+
+void StructureTo3Di::calcConformationDescriptorsProf(std::vector<std::vector<double>> & features,
+                                                                        std::vector<std::vector<int>> & partnerIdx,
+                                                                        std::vector<Vec3> & ca, std::vector<bool> & mask,
+                                                                        const size_t len){
+    // Calculate features for each residue describing its conformation to its three nearest neighbours/interaction partners.
+    //
+    // features: n_residues x PROFILE_FEATURE_CNT (3 x 9 confirmation descriptors + 2 distances)
+    // Note: The two distances (features[i][27], features[i][28]) are calculated in findResiduePartners.
+    Feature tmp;
+    std::vector<bool> maskCopy(mask);
+    for (size_t i = 0; i < len; i++){  // copy mask
+        maskCopy[i] = mask[i];
+    }
+
+    for (size_t i = 1; i < len - 1; i++){
+        // Ensure that every residue has three neighbours
+        if (partnerIdx[i][0] == -1 || partnerIdx[i][1] == -1 || partnerIdx[i][2] == -1){
+            mask[i] = 0;
+            // std::cerr << "Encountered -1 in partnerIdx " << i << "\n";
+            continue;
+        }
+        for (size_t neighbor_idx = 0; neighbor_idx < NEIGHBOUR_CNT; neighbor_idx++){
+            int j = partnerIdx[i][neighbor_idx];
+
+            if ( maskCopy[i - 1] && maskCopy[i] && maskCopy[i + 1] &&  // Check validity of atom coords
+                 maskCopy[j - 1] && maskCopy[j] && maskCopy[j + 1] ){
+                tmp = calcFeatures(ca, i, j);
+                for (size_t k = 0; k < Alphabet3Di::FEATURE_CNT; k++){
+                    features[i][k + neighbor_idx * Alphabet3Di::FEATURE_CNT] = tmp.f[k] * Alphabet3Di::feature_scaling[k];
+                }
+            } else {
+                mask[i] = 0;
+            }
+        }
+    }
+
+    // Resdiues without conformational descriptors are masked false.
+    // Before only residues with missing coordinaes were masked.
+    mask[0] = 0;
+    mask[len - 1] = 0;
+
+    // Set features for invalid residues NaN (redundant to mask)
+    for (size_t i = 0; i < len; i++){
+        if (mask[i] == 0){
+            for (size_t k = 0; k < PROFILE_FEATURE_CNT; k++){
+                features[i][k] = NAN;
+            }
+        }
+    }
+}
+
+std::vector<std::vector<double>> StructureTo3Di::extractFeatures(Vec3 * ca, Vec3 * n,Vec3 * c, Vec3 * cb, const size_t len)
+{
+    //const size_t len = ca.size();
+    features.clear();
+    partnerIdx.clear();
+    mask.clear();
+    //if(len > features.size()){
+    //    features.resize(len);
+    //    partnerIdx.resize(len);
+    //    mask.resize(len);
+    //}
+
+    //for (size_t i = 0; i < len; i++){
+        //features[i].resize(PROFILE_FEATURE_CNT);
+        //partnerIdx[i].resize(NEIGHBOUR_CNT);
+        //std::fill(partnerIdx[i].begin(), partnerIdx[i].begin() + NEIGHBOUR_CNT, -1);
+    //}
+
+    // resizing a 2d vector?
+    features.resize(len,std::vector<double>(PROFILE_FEATURE_CNT));
+    partnerIdx.resize(len,std::vector<double>(NEIGHBOUR_CNT, -1));
+
+    //replaceCBWithVirtualCenter(ca, n, c, cb, len);
+    //createResidueMask(mask, ca, n, c, len);
+    StructureTo3Di::findResiduePartners(partnerIdx, cb, mask, len);
+    StructureTo3Di::calcConformationDescriptors(features, partnerIdx, ca, mask, len);
+
+    return features;
+}
 
