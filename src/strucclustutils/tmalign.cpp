@@ -73,7 +73,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
     const bool a_opt = false; // flag for -a, normalized by average length
     const bool u_opt = false; // flag for -u, normalized by user specified length
     const bool d_opt = false; // flag for -d, user specified d0
-    const bool fast_opt = true; // flags for -fast, fTM-align algorithm
+    const bool fast_opt = false; // flags for -fast, fTM-align algorithm
     double Lnorm_ass = 0.0;
     double  d0_scale = 0.0;
 
@@ -189,19 +189,19 @@ int tmalign(int argc, const char **argv, const Command& command) {
                         continue;
                     }
                     TMalign_main(&affineNW,
-                            queryCaCords, targetCaCords, querySeq, targetSeq, querySecStruc, targetSecStruc,
+                            targetCaCords, queryCaCords, targetSeq, querySeq, targetSecStruc, querySecStruc,
                             t0, u0, TM1, TM2, TM3, TM4, TM5,
                             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                             seqM, seqxA, seqyA,
                             rmsd0, Liden,  n_ali, n_ali8,
-                            queryLen, targetLen, Lnorm_ass, d0_scale,
+                            targetLen, queryLen, Lnorm_ass, d0_scale,
                             I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
                     //std::cout << queryId << "\t" << targetId << "\t" <<  TM_0 << "\t" << TM1 << std::endl;
 
                     double seqId = Liden/(static_cast<double>(n_ali8));
                     //int rmsdScore = static_cast<int>(rmsd0*1000.0);
                     std::string backtrace = "";
-                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM1, std::max(queryLen,targetLen), 0, queryLen-1, queryLen, 0, targetLen-1, targetLen, backtrace);
+                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM_0, std::max(queryLen,targetLen), 0, queryLen-1, queryLen, 0, targetLen-1, targetLen, backtrace);
 
 
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);

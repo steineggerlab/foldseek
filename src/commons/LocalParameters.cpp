@@ -39,6 +39,8 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow = combineList(align, prefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
+    structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+
     // Setup DbValidation
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
 
