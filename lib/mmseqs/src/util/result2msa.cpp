@@ -22,6 +22,14 @@ int result2msa(int argc, const char **argv, const Command &command) {
     par.pca = 0.0;
     par.parseParameters(argc, argv, command, true, 0, 0);
 
+    std::vector<std::string> qid_str_vec = Util::split(par.qid, ",");
+    std::vector<int> qid_vec;
+    for (size_t qid_idx = 0; qid_idx < qid_str_vec.size(); qid_idx++) {
+        float qid_float = strtod(qid_str_vec[qid_idx].c_str(), NULL);
+        qid_vec.push_back(static_cast<int>(qid_float*100));
+    }
+    std::sort(qid_vec.begin(), qid_vec.end());
+
     const bool isCA3M = par.msaFormatMode == Parameters::FORMAT_MSA_CA3M || par.msaFormatMode == Parameters::FORMAT_MSA_CA3M_CONSENSUS;
     const bool shouldWriteNullByte = par.msaFormatMode != Parameters::FORMAT_MSA_STOCKHOLM_FLAT;
 
@@ -93,10 +101,10 @@ int result2msa(int argc, const char **argv, const Command &command) {
     std::pair<std::string, std::string> tmpOutput = std::make_pair(outDb, outIndex);
 #endif
 
-   int localThreads = par.threads;
-    if (static_cast<int>(resultReader.getSize()) <= par.threads) {
-        localThreads = static_cast<int>(resultReader.getSize());
-    }
+    size_t localThreads = 1;
+#ifdef OPENMP
+    localThreads = std::max(std::min((size_t)par.threads, resultReader.getSize()), (size_t)1);
+#endif
 
     size_t mode = par.compressed;
     int type = Parameters::DBTYPE_MSA_DB;
@@ -240,7 +248,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
 
             if (par.msaFormatMode == Parameters::FORMAT_MSA_FASTADB || par.msaFormatMode == Parameters::FORMAT_MSA_FASTADB_SUMMARY) {
                 if (isFiltering) {
-                    filter.filter(res.setSize, res.centerLength, static_cast<int>(par.covMSAThr * 100), static_cast<int>(par.qid * 100), par.qsc, static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff, (const char **) res.msaSequence, false);
+                    filter.filter(res.setSize, res.centerLength, static_cast<int>(par.covMSAThr * 100), qid_vec, par.qsc, static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff, par.filterMinEnable, (const char **) res.msaSequence, false);
                     filter.getKept(kept, res.setSize);
                 }
                 if (par.msaFormatMode == Parameters::FORMAT_MSA_FASTADB_SUMMARY) {
@@ -295,7 +303,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                 }
             } else if (par.msaFormatMode == Parameters::FORMAT_MSA_STOCKHOLM_FLAT) {
                 if (isFiltering) {
-                    filter.filter(res.setSize, res.centerLength, static_cast<int>(par.covMSAThr * 100), static_cast<int>(par.qid * 100), par.qsc, static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff, (const char **) res.msaSequence, false);
+                    filter.filter(res.setSize, res.centerLength, static_cast<int>(par.covMSAThr * 100), qid_vec, par.qsc, static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff, par.filterMinEnable, (const char **) res.msaSequence, false);
                     filter.getKept(kept, res.setSize);
                 }
 
@@ -331,10 +339,71 @@ int result2msa(int argc, const char **argv, const Command &command) {
                     result.append(1, '\n');
                 }
                 result.append("//\n");
+            } else if (par.msaFormatMode == Parameters::FORMAT_MSA_A3M) {
+                if (isFiltering) {
+                    filter.filter(res.setSize, res.centerLength, static_cast<int>(par.covMSAThr * 100), qid_vec, par.qsc, static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff, par.filterMinEnable, (const char **) res.msaSequence, false);
+                    filter.getKept(kept, res.setSize);
+                }
+
+                size_t start = (par.skipQuery == true) ? 1 : 0;
+                for (size_t i = start; i < res.setSize; i++) {
+                    if (kept[i] == false) {
+                        continue;
+                    }
+
+                    char *header;
+                    if (i == 0) {
+                        header = centerSequenceHeader;
+                    } else {
+                        size_t id = seqIds[i - 1];
+                        header = targetHeaderReader->getData(id, thread_idx);
+                    }
+                    accession = Util::parseFastaHeader(header);
+                    result.push_back('>');
+                    result.append(accession);
+                    result.push_back('\n');
+                    // need to allow insertion in the centerSequence
+
+                    if(i == 0){
+                        for (size_t pos = 0; pos < res.centerLength; pos++) {
+                            char aa = res.msaSequence[i][pos];
+                            result.append(1, ((aa < MultipleAlignment::NAA) ? subMat.num2aa[(int) aa] : '-'));
+                        }
+                        result.append(1, '\n');
+                    }else{
+                        const std::vector<unsigned char> & seq = seqSet[i-1];
+                        int seqStartPos = alnResults[i-1].dbStartPos;
+                        size_t seqPos = 0;
+                        const std::string & bt = alnResults[i-1].backtrace;
+                        size_t btPos = 0;
+
+                        for (size_t pos = 0; pos < res.centerLength; pos++) {
+                            char aa = res.msaSequence[i][pos];
+
+                            if(aa>=MultipleAlignment::GAP){
+                                result.push_back('-');
+                            }else if(aa<MultipleAlignment::GAP){
+                                result.push_back( subMat.num2aa[(int) aa]);
+                                btPos++;
+                                seqPos++;
+                            }
+                            // skip insert
+                            while(btPos < bt.size() && bt[btPos] == 'I') { btPos++;}
+
+                            // add lower case deletions
+                            while(btPos < bt.size() && bt[btPos] == 'D') {
+                                result.push_back(tolower(subMat.num2aa[seq[seqStartPos+seqPos]]));
+                                btPos++;
+                                seqPos++;
+                            }
+                        }
+                        result.append(1, '\n');
+                    }
+                }
             } else if (isCA3M == true) {
                 size_t filteredSetSize = res.setSize;
                 if (isFiltering) {
-                    filteredSetSize = filter.filter(res, alnResults, static_cast<int>(par.covMSAThr * 100), static_cast<int>(par.qid * 100), par.qsc, static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff);
+                    filteredSetSize = filter.filter(res, alnResults, static_cast<int>(par.covMSAThr * 100), qid_vec, par.qsc, static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff, par.filterMinEnable);
                 }
                 if (par.formatAlignmentMode == Parameters::FORMAT_MSA_CA3M_CONSENSUS) {
                     for (size_t pos = 0; pos < res.centerLength; pos++) {

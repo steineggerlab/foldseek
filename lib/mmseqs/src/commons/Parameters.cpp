@@ -102,7 +102,7 @@ Parameters::Parameters():
         PARAM_FILTER_HITS(PARAM_FILTER_HITS_ID, "--filter-hits", "Remove hits by seq. id. and coverage", "Filter hits by seq.id. and coverage", typeid(bool), (void *) &filterHits, "", MMseqsParameter::COMMAND_EXPERT),
         PARAM_SORT_RESULTS(PARAM_SORT_RESULTS_ID, "--sort-results", "Sort results", "Sort results: 0: no sorting, 1: sort by E-value (Alignment) or seq.id. (Hamming)", typeid(int), (void *) &sortResults, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         // result2msa
-        PARAM_MSA_FORMAT_MODE(PARAM_MSA_FORMAT_MODE_ID, "--msa-format-mode", "MSA format mode", "Format MSA as: 0: binary cA3M DB\n1: binary ca3m w. consensus DB\n2: aligned FASTA DB\n3: aligned FASTA w. header summary\n4: STOCKHOLM flat file", typeid(int), (void *) &msaFormatMode, "^[0-4]{1}$"),
+        PARAM_MSA_FORMAT_MODE(PARAM_MSA_FORMAT_MODE_ID, "--msa-format-mode", "MSA format mode", "Format MSA as: 0: binary cA3M DB\n1: binary ca3m w. consensus DB\n2: aligned FASTA DB\n3: aligned FASTA w. header summary\n4: STOCKHOLM flat file\n5: A3M format", typeid(int), (void *) &msaFormatMode, "^[0-5]{1}$"),
         PARAM_ALLOW_DELETION(PARAM_ALLOW_DELETION_ID, "--allow-deletion", "Allow deletions", "Allow deletions in a MSA", typeid(bool), (void *) &allowDeletion, ""),
         PARAM_SUMMARY_PREFIX(PARAM_SUMMARY_PREFIX_ID, "--summary-prefix", "Summary prefix", "Set the cluster summary prefix", typeid(std::string), (void *) &summaryPrefix, "", MMseqsParameter::COMMAND_EXPERT),
         PARAM_SKIP_QUERY(PARAM_SKIP_QUERY_ID, "--skip-query", "Skip query", "Skip the query sequence", typeid(bool), (void *) &skipQuery, "", MMseqsParameter::COMMAND_EXPERT),
@@ -117,9 +117,11 @@ Parameters::Parameters():
         PARAM_FILTER_MSA(PARAM_FILTER_MSA_ID, "--filter-msa", "Filter MSA", "Filter msa: 0: do not filter, 1: filter", typeid(int), (void *) &filterMsa, "^[0-1]{1}$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_MAX_SEQ_ID(PARAM_FILTER_MAX_SEQ_ID_ID, "--max-seq-id", "Maximum seq. id. threshold", "Reduce redundancy of output MSA using max. pairwise sequence identity [0.0,1.0]", typeid(float), (void *) &filterMaxSeqId, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_QSC(PARAM_FILTER_QSC_ID, "--qsc", "Minimum score per column", "Reduce diversity of output MSAs using min. score per aligned residue with query sequences [-50.0,100.0]", typeid(float), (void *) &qsc, "^\\-*[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
-        PARAM_FILTER_QID(PARAM_FILTER_QID_ID, "--qid", "Minimum seq. id.", "Reduce diversity of output MSAs using min.seq. identity with query sequences [0.0,1.0]", typeid(float), (void *) &qid, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FILTER_QID(PARAM_FILTER_QID_ID, "--qid", "Minimum seq. id.", "Reduce diversity of output MSAs using min.seq. identity with query sequences [0.0,1.0]\nAlternatively, can be a list of multiple thresholds:\nE.g.: 0.15,0.30,0.50 to defines filter buckets of ]0.15-0.30] and ]0.30-0.50]", typeid(std::string), (void *) &qid, "", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_COV(PARAM_FILTER_COV_ID, "--cov", "Minimum coverage", "Filter output MSAs using min. fraction of query residues covered by matched sequences [0.0,1.0]", typeid(float), (void *) &covMSAThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_NDIFF(PARAM_FILTER_NDIFF_ID, "--diff", "Select N most diverse seqs", "Filter MSAs by selecting most diverse set of sequences, keeping at least this many seqs in each MSA block of length 50", typeid(int), (void *) &Ndiff, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FILTER_MIN_ENABLE(PARAM_FILTER_MIN_ENABLE_ID, "--filter-min-enable", "Use filter only at N seqs", "Only filter MSAs with more than N sequences, 0 always filters", typeid(int), (void *) &filterMinEnable, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
+
         PARAM_WG(PARAM_WG_ID, "--wg", "Global sequence weighting", "Use global sequence weighting for profile calculation", typeid(bool), (void *) &wg, "", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_PCA(PARAM_PCA_ID, "--pca", "Pseudo count a", "Pseudo count admixture strength", typeid(float), (void *) &pca, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_PCB(PARAM_PCB_ID, "--pcb", "Pseudo count b", "Pseudo counts: Neff at half of maximum admixture (range 0.0-inf)", typeid(float), (void *) &pcb, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
@@ -484,6 +486,7 @@ Parameters::Parameters():
     result2profile.push_back(&PARAM_WG);
     result2profile.push_back(&PARAM_ALLOW_DELETION);
     result2profile.push_back(&PARAM_FILTER_MSA);
+    result2profile.push_back(&PARAM_FILTER_MIN_ENABLE);
     result2profile.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     result2profile.push_back(&PARAM_FILTER_QID);
     result2profile.push_back(&PARAM_FILTER_QSC);
@@ -547,6 +550,7 @@ Parameters::Parameters():
     result2msa.push_back(&PARAM_SUMMARY_PREFIX);
     result2msa.push_back(&PARAM_SKIP_QUERY);
     result2msa.push_back(&PARAM_FILTER_MSA);
+    result2msa.push_back(&PARAM_FILTER_MIN_ENABLE);
     result2msa.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     result2msa.push_back(&PARAM_FILTER_QID);
     result2msa.push_back(&PARAM_FILTER_QSC);
@@ -569,6 +573,7 @@ Parameters::Parameters():
     filterresult.push_back(&PARAM_GAP_EXTEND);
     filterresult.push_back(&PARAM_NO_COMP_BIAS_CORR);
     filterresult.push_back(&PARAM_ALLOW_DELETION);
+    filterresult.push_back(&PARAM_FILTER_MIN_ENABLE);
     filterresult.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     filterresult.push_back(&PARAM_FILTER_QID);
     filterresult.push_back(&PARAM_FILTER_QSC);
@@ -593,6 +598,7 @@ Parameters::Parameters():
     msa2profile.push_back(&PARAM_NO_COMP_BIAS_CORR);
     msa2profile.push_back(&PARAM_WG);
     msa2profile.push_back(&PARAM_FILTER_MSA);
+    msa2profile.push_back(&PARAM_FILTER_MIN_ENABLE);
     msa2profile.push_back(&PARAM_FILTER_COV);
     msa2profile.push_back(&PARAM_FILTER_QID);
     msa2profile.push_back(&PARAM_FILTER_QSC);
@@ -1106,6 +1112,7 @@ Parameters::Parameters():
     expand2profile.push_back(&PARAM_WG);
     expand2profile.push_back(&PARAM_ALLOW_DELETION);
     expand2profile.push_back(&PARAM_FILTER_MSA);
+    expand2profile.push_back(&PARAM_FILTER_MIN_ENABLE);
     expand2profile.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     expand2profile.push_back(&PARAM_FILTER_QID);
     expand2profile.push_back(&PARAM_FILTER_QSC);
@@ -1984,10 +1991,10 @@ void Parameters::checkIfDatabaseIsValid(const Command& command, int argc, const 
                 if (FileUtil::directoryExists(filenames[fileIdx].c_str()) == false) {
                     if (FileUtil::makeDir(filenames[fileIdx].c_str()) == false) {
                         printParameters(command.cmd, argc, argv, *command.params);
-                        Debug(Debug::ERROR) << "Cannot create temporary directory " << filenames[dbIdx] << "\n";
+                        Debug(Debug::ERROR) << "Cannot create temporary directory " << filenames[fileIdx] << "\n";
                         EXIT(EXIT_FAILURE);
                     } else {
-                        Debug(Debug::INFO) << "Create directory " << filenames[dbIdx] << "\n";
+                        Debug(Debug::INFO) << "Create directory " << filenames[fileIdx] << "\n";
                     }
                 }
                 fileIdx++;
@@ -2193,7 +2200,7 @@ void Parameters::setDefaults() {
     allowDeletion = false;
     summaryPrefix = "cl";
     skipQuery = false;
-
+    msaFormatMode = FORMAT_MSA_FASTADB;
     // convertmsa
     identifierField = 1;
 
@@ -2206,10 +2213,11 @@ void Parameters::setDefaults() {
     maskProfile = 1;
     filterMsa = 1;
     filterMaxSeqId = 0.9;
-    qid = 0.0;           // default for minimum sequence identity with query
+    qid = "0.0";           // default for minimum sequence identity with query
     qsc = -20.0f;        // default for minimum score per column with query
     covMSAThr = 0.0;           // default for minimum coverage threshold
     Ndiff = 1000;        // pick Ndiff most different sequences from alignment
+    filterMinEnable = 0;
     wg = false;
     pca = 1.0;
     pcb = 1.5;

@@ -129,7 +129,7 @@ public:
     static const int FORMAT_MSA_FASTADB = 2;
     static const int FORMAT_MSA_FASTADB_SUMMARY = 3;
     static const int FORMAT_MSA_STOCKHOLM_FLAT = 4;
-
+    static const int FORMAT_MSA_A3M = 5;
     // outfmt
     static const int OUTFMT_QUERY = 0;
     static const int OUTFMT_TARGET = 1;
@@ -479,9 +479,10 @@ public:
     double evalProfile;
     int filterMsa;
     float qsc;
-    float qid;
+    std::string qid;
     float covMSAThr;
     int Ndiff;
+    int filterMinEnable;
     bool wg;
     float pca;
     float pcb;
@@ -776,6 +777,7 @@ public:
     PARAMETER(PARAM_FILTER_QID)
     PARAMETER(PARAM_FILTER_COV)
     PARAMETER(PARAM_FILTER_NDIFF)
+    PARAMETER(PARAM_FILTER_MIN_ENABLE)
     PARAMETER(PARAM_WG)
     PARAMETER(PARAM_PCA)
     PARAMETER(PARAM_PCB)
