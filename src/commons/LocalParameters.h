@@ -34,6 +34,7 @@ public:
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
     std::vector<MMseqsParameter *> structuresearchworkflow;
+    std::vector<MMseqsParameter *> structureclusterworkflow;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)

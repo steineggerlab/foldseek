@@ -1,118 +1,205 @@
-#include "DBReader.h"
+#include "Parameters.h"
 #include "Util.h"
+#include "DBWriter.h"
 #include "CommandCaller.h"
 #include "Debug.h"
 #include "FileUtil.h"
-#include "LocalParameters.h"
 
 #include "structurecluster.sh.h"
 
-void setAssemblerWorkflowDefaults(LocalParameters *p) {
-    p->spacedKmer = false;
+#include <cassert>
+#include <LocalParameters.h>
+
+void setStructureClusterWorkflowDefaults(Parameters *p) {
+    p->spacedKmer = true;
+    p->covThr = 0.8;
+    p->evalThr = 0.001;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+    p->maxResListLen = 20;
+
     p->maskMode = 0;
-    p->covThr = 0.0;
-    p->evalThr = 0.00001;
-    p->seqIdThr = 0.9;
-    p->kmersPerSequence = 60;
-    p->alphabetSize = 13;
-    p->kmerSize = 14;
+    p->compBiasCorrection = 0;
+    p->sensitivity = 7.5;
+    p->gapOpen = 7;
+    p->gapExtend = 2;
+    p->removeTmpFiles = true;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+
 }
 
-int strucclust(int argc, const char **argv, const Command &command) {
-    LocalParameters &par = LocalParameters::getLocalInstance();
-    setAssemblerWorkflowDefaults(&par);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_COV_MODE.uniqid, NULL, NULL, par.PARAM_COV_MODE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_C.uniqid, NULL, NULL, par.PARAM_C.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_MIN_SEQ_ID.uniqid, "Overlap sequence identity threshold [0.0, 1.0]", NULL,  par.PARAM_MIN_SEQ_ID.category);
-////    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_MIN_LENGTH.uniqid, "Min codons in orf", "minimum codon number in open reading frames",  par.PARAM_ORF_MIN_LENGTH.category );
-//    par.overrideParameterDescription((Command &)command, par.PARAM_NUM_ITERATIONS.uniqid, "Number of assembly iterations [1, inf]", NULL,  par.PARAM_NUM_ITERATIONS.category);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_E.uniqid, "Extend sequences if the E-value is below [0.0, inf]", NULL,  par.PARAM_E.category);
-//
-//    par.overrideParameterDescription((Command &)command, par.PARAM_ID_OFFSET.uniqid, NULL, NULL,  par.PARAM_ID_OFFSET.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_CONTIG_END_MODE.uniqid, NULL, NULL,  par.PARAM_CONTIG_END_MODE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_CONTIG_START_MODE.uniqid, NULL, NULL,  par.PARAM_CONTIG_START_MODE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_MAX_GAP.uniqid, NULL, NULL,  par.PARAM_ORF_MAX_GAP.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_START_MODE.uniqid, NULL, NULL,  par.PARAM_ORF_START_MODE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_FORWARD_FRAMES.uniqid, NULL, NULL,  par.PARAM_ORF_FORWARD_FRAMES.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_REVERSE_FRAMES.uniqid, NULL, NULL,  par.PARAM_ORF_REVERSE_FRAMES.category | MMseqsParameter::COMMAND_EXPERT);
-//
-//    par.overrideParameterDescription((Command &)command, par.PARAM_SEQ_ID_MODE.uniqid, NULL, NULL,  par.PARAM_SEQ_ID_MODE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_RESCORE_MODE.uniqid, NULL, NULL,  par.PARAM_RESCORE_MODE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_INCLUDE_ONLY_EXTENDABLE.uniqid, NULL, NULL,  par.PARAM_INCLUDE_ONLY_EXTENDABLE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_KMER_PER_SEQ.uniqid, NULL, NULL,  par.PARAM_KMER_PER_SEQ.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_SORT_RESULTS.uniqid, NULL, NULL,  par.PARAM_SORT_RESULTS.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_TRANSLATION_TABLE.uniqid, NULL, NULL, par.PARAM_TRANSLATION_TABLE.category | MMseqsParameter::COMMAND_EXPERT);
-//    par.overrideParameterDescription((Command &)command, par.PARAM_USE_ALL_TABLE_STARTS.uniqid, NULL, NULL, par.PARAM_USE_ALL_TABLE_STARTS.category | MMseqsParameter::COMMAND_EXPERT);
+//TODO this makes no sense for structures
+float setAutomaticStructureClusterThreshold(float seqId) {
+    float sens;
+    if (seqId <= 0.3) {
+        sens = 6;
+    } else if (seqId > 0.8) {
+        sens = 1.0;
+    } else {
+        sens = 1.0 + (1.0 * (0.7 - seqId) * 10);
+    }
+    return sens;
+}
 
-    par.parseParameters(argc, argv, command, 3, true, Parameters::PARSE_VARIADIC);
+
+void setStructuralClusterAutomagicParameters(Parameters& par) {
+    if (par.PARAM_NO_COMP_BIAS_CORR.wasSet == false && par.seqIdThr >= 0.7) {
+        par.compBiasCorrection = 0;
+        par.PARAM_NO_COMP_BIAS_CORR.wasSet = true;
+    }
+
+    if (par.PARAM_MIN_DIAG_SCORE.wasSet == false && par.seqIdThr >= 0.7) {
+        par.minDiagScoreThr = 60;
+        par.PARAM_MIN_DIAG_SCORE.wasSet = true;
+    }
+
+    if (par.PARAM_S.wasSet == false) {
+        par.sensitivity = setAutomaticStructureClusterThreshold(par.seqIdThr);
+        par.PARAM_S.wasSet = true;
+        Debug(Debug::INFO) << "Set cluster sensitivity to -s " << par.sensitivity << "\n";
+    }
+
+    const bool nonsymetric = (par.covMode == Parameters::COV_MODE_TARGET || par.covMode == Parameters::COV_MODE_QUERY);
+    if (par.PARAM_CLUSTER_MODE.wasSet == false) {
+        if (nonsymetric) {
+            par.clusteringMode = Parameters::GREEDY_MEM;
+        } else {
+            par.clusteringMode = Parameters::SET_COVER;
+        }
+        par.PARAM_CLUSTER_MODE.wasSet = true;
+        Debug(Debug::INFO) << "Set cluster mode " << ((par.clusteringMode == Parameters::GREEDY_MEM) ? "GREEDY MEM" : "SET COVER") << "\n";
+    }
+    if (nonsymetric && par.clusteringMode != Parameters::GREEDY && par.clusteringMode != Parameters::GREEDY_MEM) {
+        Debug(Debug::WARNING) << "Combining cluster mode " << par.clusteringMode
+                              << " in combination with coverage mode " << par.covMode << " can produce wrong results.\n"
+                              << "Please use --cov-mode 2\n";
+    }
+    if (par.singleStepClustering == false && par.clusteringMode == Parameters::CONNECTED_COMPONENT) {
+        Debug(Debug::WARNING) << "Connected component clustering produces less clusters in a single step clustering.\n"
+                              << "Please use --single-step-cluster";
+    }
+    if (par.PARAM_CLUSTER_STEPS.wasSet == false) {
+        par.clusterSteps = 3;
+        par.PARAM_CLUSTER_STEPS.wasSet = true;
+        Debug(Debug::INFO) << "Set cluster iterations to " << par.clusterSteps << "\n";
+    }
+}
+
+int structurecluster(int argc, const char **argv, const Command& command) {
+    LocalParameters &par = LocalParameters::getLocalInstance();
+    setStructureClusterWorkflowDefaults(&par);
+    par.PARAM_MAX_SEQS.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MAX_ACCEPT.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_ZDROP.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_S.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_INCLUDE_ONLY_EXTENDABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.parseParameters(argc, argv, command, false, 0, 0);
+    par.printParameters(command.cmd, argc, argv, *command.params);
+
+    setStructuralClusterAutomagicParameters(par);
+
+    std::string tmpDir = par.db3;
+    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.clusterworkflow));
+    if (par.reuseLatest) {
+        hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
+    }
+    tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
+    par.filenames.pop_back();
+    par.filenames.push_back(tmpDir);
 
     CommandCaller cmd;
-    std::string tmpPath = par.filenames.back();
-    if (FileUtil::directoryExists(tmpPath.c_str()) == false) {
-        Debug(Debug::INFO) << "Temporary folder " << tmpPath << " does not exist or is not a directory.\n";
-        if (FileUtil::makeDir(tmpPath.c_str()) == false) {
-            Debug(Debug::ERROR) << "Could not crate tmp folder " << tmpPath << ".\n";
-            return EXIT_FAILURE;
-        } else {
-            Debug(Debug::INFO) << "Created directory " << tmpPath << "\n";
-        }
-    }
-    size_t hash = par.hashParameter(command.databases, par.filenames, par.strucclust);
-    std::string tmpDir = tmpPath + "/" + SSTR(hash);
-    if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
-        if (FileUtil::makeDir(tmpDir.c_str()) == false) {
-            Debug(Debug::ERROR) << "Could not create sub folder in temporary directory " << tmpDir << ".\n";
-            return EXIT_FAILURE;
-        }
-    }
-    par.filenames.pop_back();
-    FileUtil::symlinkAlias(tmpDir, "latest");
-    char *p = realpath(tmpDir.c_str(), NULL);
-    if (p == NULL) {
-        Debug(Debug::ERROR) << "Could not get real path of " << tmpDir << "!\n";
-        EXIT(EXIT_FAILURE);
-    }
-    cmd.addVariable("TMP_PATH", p);
-    free(p);
-
-    cmd.addVariable("OUT_FILE", par.filenames.back().c_str());
-    par.filenames.pop_back();
-
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    std::string alnParam;
+    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI) {
+        cmd.addVariable("ALIGNMENT_ALGO", "align");
+        cmd.addVariable("ALN_EXTENSION", "_ss");
+        alnParam = par.createParameterString(par.align);
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN) {
+        cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
+        alnParam = par.createParameterString(par.tmalign);
+    }
+
     cmd.addVariable("RUNNER", par.runner.c_str());
+    cmd.addVariable("MERGECLU_PAR", par.createParameterString(par.threadsandcompression).c_str());
+    cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+    cmd.addVariable("VERBOSITYANDCOMPRESS", par.createParameterString(par.threadsandcompression).c_str());
 
-    // save some values to restore them later
-    size_t alphabetSize = par.alphabetSize.aminoacids;
-    size_t kmerSize = par.kmerSize;
-    bool kmerSizeWasSet = false;
-    bool alphabetSizeWasSet = false;
-    for (size_t i = 0; i < par.strucclust.size(); i++) {
-        if (par.strucclust[i]->uniqid == par.PARAM_K.uniqid && par.strucclust[i]->wasSet) {
-            kmerSizeWasSet = true;
-        }
-        if (par.strucclust[i]->uniqid == par.PARAM_ALPH_SIZE.uniqid && par.strucclust[i]->wasSet) {
-            alphabetSizeWasSet = true;
-        }
-    }
-
-    if (kmerSizeWasSet == false) {
-        par.kmerSize = Parameters::CLUST_LINEAR_DEFAULT_K;
-    }
-    if (alphabetSizeWasSet == false) {
-        par.alphabetSize = Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE;
-    }
-
+    // Linclust parameter
+    // also coverage should not be under 0.5
+    float prevCov = par.covThr;
+    par.covThr = std::max(0.5f, par.covThr);
+    cmd.addVariable("HAMMING_PAR", par.createParameterString(par.rescorediagonal).c_str());
+    par.covThr = prevCov;
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
-    par.alphabetSize = alphabetSize;
-    par.kmerSize = kmerSize;
-
-    cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
+    cmd.addVariable("ALIGNMENT_PAR", alnParam.c_str());
+    cmd.addVariable("RUN_LINCLUST", "1");
 
+    if (par.singleStepClustering == false) {
+        // save some values to restore them later
+        float targetSensitivity = par.sensitivity;
+        MultiParam<int> alphabetSize = par.alphabetSize;
+        par.alphabetSize = MultiParam<int>(Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE, 5);
+        int kmerSize = par.kmerSize;
+        par.kmerSize = Parameters::CLUST_LINEAR_DEFAULT_K;
+        int maskMode = par.maskMode;
+        par.maskMode = 0;
+        cmd.addVariable("LINCLUST_PAR", par.createParameterString(par.linclustworkflow).c_str());
+        par.alphabetSize = alphabetSize;
+        par.kmerSize = kmerSize;
+        par.maskMode = maskMode;
+        // 1 is lowest sens
+        par.sensitivity = ((par.clusterSteps - 1) == 0) ? par.sensitivity : 1;
+        int minDiagScoreThr = par.minDiagScoreThr;
+        par.minDiagScoreThr = 0;
+        par.diagonalScoring = 0;
+        par.compBiasCorrection = 0;
+        cmd.addVariable("PREFILTER0_PAR", par.createParameterString(par.prefilter).c_str());
+        cmd.addVariable("ALIGNMENT0_PAR", alnParam.c_str());
+        cmd.addVariable("CLUSTER0_PAR", par.createParameterString(par.clust).c_str());
+        par.diagonalScoring = 1;
+        par.compBiasCorrection = 1;
+        par.minDiagScoreThr = minDiagScoreThr;
+        float sensStepSize = (targetSensitivity - 1) / (static_cast<float>(par.clusterSteps) - 1);
+        for (int step = 1; step < par.clusterSteps; step++) {
+            par.sensitivity = 1.0 + sensStepSize * step;
+            cmd.addVariable(std::string("PREFILTER" + SSTR(step) + "_PAR").c_str(), par.createParameterString(par.prefilter).c_str());
+            cmd.addVariable(std::string("ALIGNMENT" + SSTR(step) + "_PAR").c_str(), alnParam.c_str());
+            cmd.addVariable(std::string("CLUSTER" + SSTR(step) + "_PAR").c_str(), par.createParameterString(par.clust).c_str());
+        }
+        cmd.addVariable("RUN_ITERATIVE", "1");
+        cmd.addVariable("STEPS", SSTR(par.clusterSteps).c_str());
+        cmd.addVariable("THREADSANDCOMPRESS", par.createParameterString(par.threadsandcompression).c_str());
+        cmd.addVariable("VERBCOMPRESS", par.createParameterString(par.verbandcompression).c_str());
+        int swapedCovMode = Util::swapCoverageMode(par.covMode);
+        int tmpCovMode = par.covMode;
+        par.covMode = swapedCovMode;
+        cmd.addVariable("PREFILTER_REASSIGN_PAR", par.createParameterString(par.prefilter).c_str());
+        par.covMode = tmpCovMode;
+        cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.align).c_str());
+        cmd.addVariable("MERGEDBS_PAR", par.createParameterString(par.mergedbs).c_str());
 
-    FileUtil::writeFile(tmpDir + "/structurecluster.sh", structurecluster_sh, structurecluster_sh_len);
-    std::string program(tmpDir + "/structurecluster.sh");
-    cmd.execProgram(program.c_str(), par.filenames);
+        std::string program = tmpDir + "/clustering.sh";
+        FileUtil::writeFile(program, structurecluster_sh, structurecluster_sh_len);
+        cmd.execProgram(program.c_str(), par.filenames);
+    } else {
+        // same as above, clusthash needs a smaller alphabetsize
+        MultiParam<int> alphabetSize = par.alphabetSize;
+        par.alphabetSize = MultiParam<int>(Parameters::CLUST_HASH_DEFAULT_ALPH_SIZE, 5);
+        float seqIdThr = par.seqIdThr;
+        par.seqIdThr = (float) Parameters::CLUST_HASH_DEFAULT_MIN_SEQ_ID / 100.0f;
+        cmd.addVariable("DETECTREDUNDANCY_PAR", par.createParameterString(par.clusthash).c_str());
+        par.alphabetSize = alphabetSize;
+        par.seqIdThr = seqIdThr;
+        cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
+        std::string program = tmpDir + "/clustering.sh";
+        FileUtil::writeFile(program, structurecluster_sh, structurecluster_sh_len);
+        cmd.execProgram(program.c_str(), par.filenames);
+    }
 
-    return EXIT_SUCCESS;
+    // Unreachable
+    assert(false);
+    return EXIT_FAILURE;
 }

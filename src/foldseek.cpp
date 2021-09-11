@@ -54,6 +54,25 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"cluster",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_MAIN,
+                "Slower, sensitive clustering",
+                "# Cascaded clustering of FASTA file\n"
+                "mmseqs cluster sequenceDB clusterDB tmp\n\n"
+                "#                  --cov-mode \n"
+                "# Sequence         0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "# Cutoff -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n"
+                "# Cascaded clustering with reassignment\n"
+                "# - Corrects criteria-violoations of cascaded merging\n"
+                "# - Produces more clusters and is a bit slower\n"
+                "mmseqs cluster sequenceDB clusterDB tmp --cluster-reassign\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr> & Lars von den Driesch",
+                "<i:sequenceDB> <o:clusterDB> <tmpDir>",
+                CITATION_LINCLUST|CITATION_MMSEQS1|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                                             {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
+                                                                             {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"tmalign",      tmalign,      &localPar.tmalign,      COMMAND_ALIGNMENT,
                 "Compute tm-score ",
                 NULL,

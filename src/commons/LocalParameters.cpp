@@ -36,10 +36,19 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     // structuresearchworkflow
-    structuresearchworkflow = combineList(align, prefilter);
-    structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
-    structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
+
+    // clustering workflow
+    structuresearchworkflow = combineList(prefilter, align);
+    structuresearchworkflow = combineList(structuresearchworkflow, rescorediagonal);
+    structuresearchworkflow = combineList(structuresearchworkflow, tmalign);
+    structuresearchworkflow = combineList(structuresearchworkflow, clust);
+    structuresearchworkflow.push_back(&PARAM_CASCADED);
+    structuresearchworkflow.push_back(&PARAM_CLUSTER_STEPS);
+    //structuresearchworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structuresearchworkflow.push_back(&PARAM_REUSELATEST);
+    structuresearchworkflow.push_back(&PARAM_RUNNER);
+    structuresearchworkflow = combineList(clusterworkflow, linclustworkflow);
 
     // Setup DbValidation
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
