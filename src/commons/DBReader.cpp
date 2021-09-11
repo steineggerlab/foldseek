@@ -717,7 +717,7 @@ template <typename T> size_t DBReader<T>::maxCount(char c) {
     if (compression == COMPRESSED) {
         size_t entries = getSize();
 #ifdef OPENMP
-        size_t localThreads = std::min(entries, static_cast<size_t>(threads));
+        size_t localThreads = std::max(std::min(entries, static_cast<size_t>(threads)), (size_t)1);
 #endif
 #pragma omp parallel num_threads(localThreads)
         {
@@ -1132,6 +1132,7 @@ void copyLinkDb(const std::string &databaseName, const std::string &outDb, DBFil
         { DBFiles::TAX_NAMES,     "_names.dmp"        },
         { DBFiles::TAX_NODES,     "_nodes.dmp"        },
         { DBFiles::TAX_MERGED,    "_merged.dmp"       },
+        { DBFiles::TAX_MERGED,    "_taxonomy"         },
         { DBFiles::CA3M_DATA,     "_ca3m.ffdata"      },
         { DBFiles::CA3M_INDEX,    "_ca3m.ffindex"     },
         { DBFiles::CA3M_SEQ,      "_sequence.ffdata"  },
