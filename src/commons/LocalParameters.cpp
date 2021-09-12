@@ -36,22 +36,35 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     // structuresearchworkflow
-
-    // clustering workflow
-    structuresearchworkflow = combineList(prefilter, align);
-    structuresearchworkflow = combineList(structuresearchworkflow, rescorediagonal);
-    structuresearchworkflow = combineList(structuresearchworkflow, tmalign);
-    structuresearchworkflow = combineList(structuresearchworkflow, clust);
-    structuresearchworkflow.push_back(&PARAM_CASCADED);
-    structuresearchworkflow.push_back(&PARAM_CLUSTER_STEPS);
-    //structuresearchworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
+    // structuresearchworkflow
+    structuresearchworkflow = combineList(align, prefilter);
+    structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
+    structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-    structuresearchworkflow.push_back(&PARAM_REUSELATEST);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
-    structuresearchworkflow = combineList(clusterworkflow, linclustworkflow);
+    structuresearchworkflow.push_back(&PARAM_REUSELATEST);
 
     // Setup DbValidation
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
+
+    // Setup DbValidation
+    easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
+    structureclusterworkflow = combineList(prefilter, align);
+    structureclusterworkflow = combineList(structureclusterworkflow, rescorediagonal);
+    structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
+    structureclusterworkflow = combineList(structureclusterworkflow, clust);
+    structureclusterworkflow.push_back(&PARAM_CASCADED);
+    structureclusterworkflow.push_back(&PARAM_CLUSTER_STEPS);
+    //structuresearchworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
+    structureclusterworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structureclusterworkflow.push_back(&PARAM_REUSELATEST);
+    structureclusterworkflow.push_back(&PARAM_RUNNER);
+    structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
+
+    //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
 
     alignmentType = ALIGNMENT_TYPE_3DI;
     tmScoreThr = 0.5;
