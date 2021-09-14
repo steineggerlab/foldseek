@@ -16,6 +16,54 @@
 #include <omp.h>
 #endif
 
+#include <math.h>
+
+void findNearestNeighbour(char * nn, Coordinates & ca, int length, char *sseq){
+    // (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
+
+    // calculate pairwise matrix (euclidean distance)
+    std::vector<vector<float>> nnDist;
+    std::vector<vector<int>> nnPos;
+    float seqDist;
+
+    for(int i = 0; i < length; i++){
+        std::vector<std::pair<float, int>> seqDistList;
+        for(int j = 0; j < length; j++){
+            if(i != j) {
+                // calculate distance
+                seqDist = sqrt(
+                        ((ca.x[i] - ca.x[j]) * (ca.x[i] - ca.x[j])) + ((ca.y[i] - ca.y[j]) * (ca.y[i] - ca.y[j])) +
+                        ((ca.z[i] - ca.z[j]) * (ca.z[i] - ca.z[j])));
+                seqDistList.push_back(make_pair(seqDist, j));
+            }
+        }
+        // find the four nearest neighbours for each amino acid
+        std::sort(seqDistList.begin(), seqDistList.end());
+        int pos[4];
+        for(int m  = 0; m < 4; m++){
+            pos[m]  = seqDistList[m].second;
+        }
+        std::sort(begin(pos), end(pos));
+        for(int n = 0; n < 4; n++){
+//            cout << sseq[pos[n]] << endl;
+            nn[i + n]  = sseq[pos[n]];
+        }
+
+//        for(int k = 0;   k < seqDistList.size(); k++){
+//            cout << seqDistList[k].first << " : " << seqDistList[k].second << endl;
+//        }
+//        for(int l = 0; l < 4; l++){ cout << pos[l] <<  endl;}
+//        cout << "--------" << endl;
+    }
+
+}
+
+
+Matcher::result_t alignByNN(char * querynn, int queryLen, char * targetnn, int targetSeqLen, SubstitutionMatrix * subMat, EvalueComputation & evaluer){
+    return Matcher::result_t();
+}
+
+
 
 int pareunaligner(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -78,6 +126,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         Sequence qSeq(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat, 0, false, par.compBiasCorrection);
         Sequence tSeq(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat, 0, false, par.compBiasCorrection);
         int * ires = new int[par.maxSeqLen];
+        char * querynn  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
+        char * targetnn = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
 
         std::vector<Matcher::result_t> alignmentResult;
         PareunAlign paruenAlign(par.maxSeqLen, &subMat); // subMat called once, don't need to call it again?
@@ -108,6 +158,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                 queryCaCords.x = query_x;
                 queryCaCords.y = query_y;
                 queryCaCords.z = query_z;
+                findNearestNeighbour(querynn, queryCaCords, querySeqLen, querySeq);
+
                 int passedNum = 0;
                 int rejected = 0;
                 while (*data != '\0' && passedNum < par.maxAccept && rejected < par.maxRejected) {
@@ -150,8 +202,9 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                     targetCaCords.x = target_x;
                     targetCaCords.y = target_y;
                     targetCaCords.z = target_z;
-
-                    Matcher::result_t res = paruenAlign.align(qSeq, tSeq, &subMat, evaluer);
+                    findNearestNeighbour(targetnn, targetCaCords, targetSeqLen, targetSeq);
+                    Matcher::result_t res = alignByNN(querynn, queryLen, targetnn, targetSeqLen, &subMat, evaluer);
+                    //Matcher::result_t res = paruenAlign.align(qSeq, tSeq, &subMat, evaluer);
                     string cigar =  paruenAlign.backtrace2cigar(res.backtrace);
 
                     if (isIdentity) {
@@ -160,7 +213,6 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                         res.dbcov = 1.0f;
                         res.seqId = 1.0f;
                     }
-
 
                     //Add TM align score
                     Coordinates xtm(queryLen); Coordinates ytm(targetLen);
@@ -199,7 +251,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
             alignmentResult.clear();
         }
         delete [] ires;
-
+        free(querynn);
+        free(targetnn);
     }
 
     dbw.close();
