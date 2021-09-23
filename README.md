@@ -1,5 +1,6 @@
 # foldseek 
 Software suite for searching and clustering protein structures.
+Foldseek is a collaboration between the Söding and Steinegger Lab.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
