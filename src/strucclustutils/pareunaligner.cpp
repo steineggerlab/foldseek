@@ -18,12 +18,14 @@
 
 #include <math.h>
 
-void findNearestNeighbour(char * nn, Coordinates & ca, int length, char *sseq){
+// static two dimensional array instead of vectors
+vector<int> findNearestNeighbour(char * nn, Coordinates & ca, int length, char *sseq, Sequence & seqAll){
     // (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
 
     // calculate pairwise matrix (euclidean distance)
     std::vector<vector<float>> nnDist;
     std::vector<vector<int>> nnPos;
+    std::vector<int> nnInt;
     float seqDist;
 
     for(int i = 0; i < length; i++){
@@ -46,8 +48,10 @@ void findNearestNeighbour(char * nn, Coordinates & ca, int length, char *sseq){
         std::sort(begin(pos), end(pos));
         for(int n = 0; n < 4; n++){
 //            cout << sseq[pos[n]] << endl;
-            nn[i + n]  = sseq[pos[n]];
+//            nn[i*4 + n]  = sseq[pos[n]];
+            nnInt.push_back(seqAll.numSequence[pos[n]]);
         }
+        seqDistList.clear();
 
 //        for(int k = 0;   k < seqDistList.size(); k++){
 //            cout << seqDistList[k].first << " : " << seqDistList[k].second << endl;
@@ -56,13 +60,104 @@ void findNearestNeighbour(char * nn, Coordinates & ca, int length, char *sseq){
 //        cout << "--------" << endl;
     }
 
+//    for(int a = 0; a < 4*nnInt.size(); a++){
+//        cout << nnInt[a] << endl;
+//    }
+
+    return nnInt;
 }
 
+int needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *subMat){
 
-Matcher::result_t alignByNN(char * querynn, int queryLen, char * targetnn, int targetSeqLen, SubstitutionMatrix * subMat, EvalueComputation & evaluer){
-    return Matcher::result_t();
+    int nwGapPenalty = 2;
+
+    vector<int> revSeq, zeroVector;
+    vector<vector<int> > scoringMatrix;
+    int nextValue[3];
+
+    // initialize scoring matrix
+    for(int i = 0; i <= 4; i++) {
+        // vector of length seqLength + 1 with 0-entries
+        zeroVector.push_back(0);
+    }
+
+    for(int j = 0; j <= 4; j++){
+        scoringMatrix.push_back(zeroVector);
+    }
+
+    for(int i = 1; i < 5; i++){
+        for(int j = 1; j < 5; j++){
+            // calculate scores - bonus for base pairing and penalty for not
+            scoringMatrix[i][j] = std::max(scoringMatrix[i-1][j-1] + subMat->subMatrix[subQNNi[i - 1]][subTNNi[j - 1]], scoringMatrix[i-1][j] - nwGapPenalty);
+            scoringMatrix[i][j] = std::max(scoringMatrix[i][j-1] - nwGapPenalty, scoringMatrix[i][j]);
+        }
+    }
+
+    // for testing: print matrix
+//    cout << "Scoring Matrix" << endl;
+//    for (int a = 0; a < scoringMatrix.size(); a++) {
+//        for(int b = 0; b < scoringMatrix[0].size(); b++){
+//            cout << scoringMatrix[a][b] << " ";
+//        }
+//        cout << endl;
+//    }
+    int score = scoringMatrix[4][4] / 4;
+
+    return score;
 }
 
+Matcher::result_t alignByNN(char * querynn, vector<int> nnIntQuery, char *querySSeq, int queryLen, char * targetnn, vector<int> nnIntTarget, char *targetSSeq, int targetLen, SubstitutionMatrix *subMat, Sequence & qSeq, Sequence & tSeq, int gapOpen, int gapExtern, EvalueComputation & evaluer){
+
+    Matcher::result_t result;
+    // gotoh sw itself
+
+        struct scores{ short H, E, F; };
+        uint16_t max_score = 0;
+        char query[4], target[4];
+        scores *workspace = new scores[queryLen * 2 + 2];
+        scores *curr_sHEF_vec = &workspace[0];
+        scores *prev_sHEF_vec = &workspace[queryLen + 1];
+        char subQNN[4], subTNN[4];
+        int subTNNi[4], subQNNi[4];
+        // top row need to be set to a 0 score
+        memset(prev_sHEF_vec, 0, sizeof(scores) * (queryLen + 1));
+        for (int i = 0; i < targetLen; i++) {
+
+            for(int a=0; a <4; a++){ subTNNi[a]=nnIntTarget[4*i + a];};
+            // left outer column need to be set to a 0 score
+            prev_sHEF_vec[0].H = 0; prev_sHEF_vec[0].E = 0; prev_sHEF_vec[0].F = 0;
+            curr_sHEF_vec[0].H = 0; curr_sHEF_vec[0].E = 0; curr_sHEF_vec[0].E = 0;
+            for (int j = 1; j <= queryLen; j++) {
+                for(int a=0; a <4; a++){subQNNi[a]=nnIntQuery[4*(j-1) + a];}
+                curr_sHEF_vec[j].E = std::max(curr_sHEF_vec[j - 1].H - gapOpen, curr_sHEF_vec[j - 1].E - gapExtern); // j-1
+                curr_sHEF_vec[j].F = std::max(prev_sHEF_vec[j].H - gapOpen, prev_sHEF_vec[j].F - gapExtern); // i-1
+                int bla = needlemanWunschScore(subTNNi, subQNNi, subMat);
+                const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[tSeq.numSequence[i]][qSeq.numSequence[j - 1]] + bla; // i - 1, j - 1
+                curr_sHEF_vec[j].H = std::max(tempH, curr_sHEF_vec[j].E);
+                curr_sHEF_vec[j].H = std::max(curr_sHEF_vec[j].H, curr_sHEF_vec[j].F);
+                curr_sHEF_vec[j].H = std::max(curr_sHEF_vec[j].H, static_cast<short>(0));
+                max_score = static_cast<uint16_t>(std::max(static_cast<uint16_t>(curr_sHEF_vec[j].H), max_score));
+            }
+            std::swap(prev_sHEF_vec, curr_sHEF_vec);
+        }
+        delete [] workspace;
+
+//        cout << "max score: " << max_score << endl;
+//    result.backtrace = optAlnResult.cigar_string;
+    result.score = max_score;
+//    result.qStartPos = optAlnResult.query_start;
+//    result.qEndPos = optAlnResult.query_end;
+//    result.dbEndPos = optAlnResult.target_end;
+//    result.dbStartPos = optAlnResult.query_start;
+    //result.qCov = SmithWaterman::computeCov(result.qStartPos1, result.qEndPos1, querySeqObj->L);
+//    result.qcov = SmithWaterman::computeCov(result.qStartPos, result.qEndPos, qSeq.L);
+    //result.tCov = SmithWaterman::computeCov(result.dbStartPos1, result.dbEndPos1, targetSeqObj->L);
+//    result.dbcov = SmithWaterman::computeCov(result.dbStartPos, result.dbEndPos, tSeq.L);
+    result.eval = evaluer.computeEvalue(result.score, queryLen);
+
+
+    return result;
+}
 
 
 int pareunaligner(int argc, const char **argv, const Command& command) {
@@ -158,7 +253,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                 queryCaCords.x = query_x;
                 queryCaCords.y = query_y;
                 queryCaCords.z = query_z;
-                findNearestNeighbour(querynn, queryCaCords, querySeqLen, querySeq);
+                vector<int> nnIntQuery;
+                nnIntQuery = findNearestNeighbour(querynn, queryCaCords, querySeqLen, querySeq, qSeq);
 
                 int passedNum = 0;
                 int rejected = 0;
@@ -202,8 +298,10 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                     targetCaCords.x = target_x;
                     targetCaCords.y = target_y;
                     targetCaCords.z = target_z;
-                    findNearestNeighbour(targetnn, targetCaCords, targetSeqLen, targetSeq);
-                    Matcher::result_t res = alignByNN(querynn, queryLen, targetnn, targetSeqLen, &subMat, evaluer);
+                    vector<int> nnIntTarget = findNearestNeighbour(targetnn, targetCaCords, targetSeqLen, targetSeq, tSeq);
+                    Matcher::result_t res = alignByNN(querynn, nnIntQuery, querySeq, queryLen, targetnn, nnIntTarget, targetSeq, targetSeqLen, &subMat, qSeq, tSeq, par.gapOpen.aminoacids, par.gapExtend.aminoacids, evaluer);
+                    unsigned int targetKey = tdbr->getDbKey(targetId);
+                    res.dbKey = targetKey;
                     //Matcher::result_t res = paruenAlign.align(qSeq, tSeq, &subMat, evaluer);
                     string cigar =  paruenAlign.backtrace2cigar(res.backtrace);
 

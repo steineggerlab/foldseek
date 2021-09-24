@@ -31,6 +31,7 @@ public:
 
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
+    static const int ALIGNMENT_TYPE_PAREUNALIGN = 2;
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
     std::vector<MMseqsParameter *> structuresearchworkflow;

@@ -58,6 +58,11 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_PAREUNALIGN){
+        cmd.addVariable("ALIGNMENT_ALGO", "pareunalign");
+        cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
+        cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
     }
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());

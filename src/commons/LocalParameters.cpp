@@ -10,7 +10,7 @@ const int LocalParameters::DBTYPE_TMSCORE = 102;
 LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n",typeid(int), (void *) &alignmentType, "^[0-1]{1}$")
+        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: pareun alignment\n",typeid(int), (void *) &alignmentType, "^[0-2]{1}$")
 {
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
