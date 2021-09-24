@@ -71,19 +71,7 @@ int needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *sub
 
     int nwGapPenalty = 2;
 
-    vector<int> revSeq, zeroVector;
-    vector<vector<int> > scoringMatrix;
-    int nextValue[3];
-
-    // initialize scoring matrix
-    for(int i = 0; i <= 4; i++) {
-        // vector of length seqLength + 1 with 0-entries
-        zeroVector.push_back(0);
-    }
-
-    for(int j = 0; j <= 4; j++){
-        scoringMatrix.push_back(zeroVector);
-    }
+    int scoringMatrix[5][5] = {0};
 
     for(int i = 1; i < 5; i++){
         for(int j = 1; j < 5; j++){
