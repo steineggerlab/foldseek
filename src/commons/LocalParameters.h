@@ -39,8 +39,13 @@ public:
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
+
+    PARAMETER(PARAM_GAPNW)
+    PARAMETER(PARAM_NNWEIGHT)
     float tmScoreThr;
     int alignmentType;
+    int gapNW;
+    float nnWeight;
 private:
 
     LocalParameters(LocalParameters const&);

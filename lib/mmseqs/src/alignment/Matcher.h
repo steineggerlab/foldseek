@@ -154,9 +154,9 @@ public:
 
     // need for sorting the results
     static bool compareHits(const result_t &first, const result_t &second) {
-        if (first.eval != second.eval) {
-            return first.eval < second.eval;
-        }
+//        if (first.eval != second.eval) {
+//            return first.eval < second.eval;
+//        }
         if (first.score != second.score) {
             return first.score > second.score;
         }
