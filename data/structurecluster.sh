@@ -78,13 +78,13 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
   # 3. Local gapped sequence alignment.
   if notExists "${TMP_PATH}/aln.dbtype"; then
       # shellcheck disable=SC2086
-      $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${INPUT}${ALN_EXTENSION}" "${INPUT}${ALN_EXTENSION}" "${TMP_PATH}/pref" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+      $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${INPUT}${ALN_EXTENSION}" "${INPUT}${ALN_EXTENSION}" "${TMP_PATH}/pref_filter2" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
           || fail "Alignment step died"
   fi
   # 4. Clustering using greedy set cover.
   if notExists "${TMP_PATH}/clust.dbtype"; then
       # shellcheck disable=SC2086,SC2153
-      "$MMSEQS" clust "${INPUT}" "${TMP_PATH}/aln" "${TMP_PATH}/clust" ${CLUSTER_PAR} \
+      "$MMSEQS" clust "${TMP_PATH}/input_step_redundancy_ss" "${TMP_PATH}/aln" "${TMP_PATH}/clust" ${CLUSTER_PAR} \
           || fail "Clustering step died"
   fi
   if notExists "${TMP_PATH}/clu.dbtype"; then
