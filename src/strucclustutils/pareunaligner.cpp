@@ -95,7 +95,7 @@ int needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *sub
     return score;
 }
 
-Matcher::result_t alignByNN(char * querynn, vector<int> nnIntQuery, char *querySSeq, int queryLen, char * targetnn, vector<int> nnIntTarget, char *targetSSeq, int targetLen, SubstitutionMatrix *subMat, Sequence & qSeq, Sequence & tSeq, int gapOpen, int gapExtern, int gapNW, float nnWeight){
+Matcher::result_t alignByNN(char * querynn, vector<int> nnIntQuery, char *querySSeq, int queryLen, char * targetnn, vector<int> nnIntTarget, char *targetSSeq, int targetLen, SubstitutionMatrix *subMat, Sequence & qSeq, Sequence & tSeq, int gapOpen, int gapExtern, int gapNW, float nnWeight, EvalueComputation & evaluer){
 
     Matcher::result_t result;
     // gotoh sw itself
@@ -154,7 +154,7 @@ Matcher::result_t alignByNN(char * querynn, vector<int> nnIntQuery, char *queryS
 //    result.qcov = SmithWaterman::computeCov(result.qStartPos, result.qEndPos, qSeq.L);
     //result.tCov = SmithWaterman::computeCov(result.dbStartPos1, result.dbEndPos1, targetSeqObj->L);
 //    result.dbcov = SmithWaterman::computeCov(result.dbStartPos, result.dbEndPos, tSeq.L);
-//    result.eval = evaluer.computeEvalue(result.score, queryLen);
+    result.eval = evaluer.computeEvalue(result.score, queryLen);
 
 
     return result;
@@ -230,7 +230,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         char buffer[1024+32768];
         std::string resultBuffer;
         //int gapOpen = 15; int gapExtend = 3; // 3di gap optimization
-//        EvalueComputation evaluer(tdbr->getAminoAcidDBSize(), &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
+        EvalueComputation evaluer(tdbr->getAminoAcidDBSize(), &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
         // write output file
 
 #pragma omp for schedule(dynamic, 1)
@@ -254,8 +254,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                 queryCaCords.x = query_x;
                 queryCaCords.y = query_y;
                 queryCaCords.z = query_z;
-                vector<int> nnIntQuery;
-                nnIntQuery = findNearestNeighbour(querynn, queryCaCords, querySeqLen, querySeq, qSeq);
+                vector<int> nnIntQuery = findNearestNeighbour(querynn, queryCaCords, querySeqLen, querySeq, qSeq);
 
                 int passedNum = 0;
                 int rejected = 0;
@@ -299,9 +298,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                     targetCaCords.x = target_x;
                     targetCaCords.y = target_y;
                     targetCaCords.z = target_z;
-                    
                     vector<int> nnIntTarget = findNearestNeighbour(targetnn, targetCaCords, targetSeqLen, targetSeq, tSeq);
-                    Matcher::result_t res = alignByNN(querynn, nnIntQuery, querySeq, queryLen, targetnn, nnIntTarget, targetSeq, targetSeqLen, &subMat, qSeq, tSeq ,par.gapOpen.aminoacids, par.gapExtend.aminoacids, par.gapNW, par.nnWeight);
+                    Matcher::result_t res = alignByNN(querynn, nnIntQuery, querySeq, queryLen, targetnn, nnIntTarget, targetSeq, targetSeqLen, &subMat, qSeq, tSeq ,par.gapOpen.aminoacids, par.gapExtend.aminoacids, par.gapNW, par.nnWeight, evaluer);
                     unsigned int targetKey = tdbr->getDbKey(targetId);
                     res.dbKey = targetKey;
                     //Matcher::result_t res = paruenAlign.align(qSeq, tSeq, &subMat, evaluer);
