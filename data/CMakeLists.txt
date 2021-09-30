@@ -5,6 +5,7 @@ set(COMPILED_RESOURCES
         structurecluster.sh
         structuresearch.sh
         mat3di.out
+        3di_encoder_weights.kerasify
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

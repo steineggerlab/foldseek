@@ -1,24 +1,26 @@
 #include <string.h>
+
 #include <iostream>
 #include <vector>
 #include <math.h>
 #include "structureto3di.h"
+#include "3di_encoder_weights.kerasify.h"
 
-Vec3 StructureTo3Di::add(Vec3 a, Vec3 b){
+Vec3 StructureTo3DiBase::add(Vec3 a, Vec3 b){
     a.x = a.x + b.x;
     a.y = a.y + b.y;
     a.z = a.z + b.z;
     return a;
 }
 
-Vec3 StructureTo3Di::sub(Vec3 a, Vec3 b){
+Vec3 StructureTo3DiBase::sub(Vec3 a, Vec3 b){
     a.x = a.x - b.x;
     a.y = a.y - b.y;
     a.z = a.z - b.z;
     return a;
 }
 
-Vec3 StructureTo3Di::norm(Vec3 a){
+Vec3 StructureTo3DiBase::norm(Vec3 a){
     double len = sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
     a.x = a.x / len;
     a.y = a.y / len;
@@ -26,25 +28,25 @@ Vec3 StructureTo3Di::norm(Vec3 a){
     return a;
 }
 
-Vec3 StructureTo3Di::cross(Vec3 a, Vec3 b){
+Vec3 StructureTo3DiBase::cross(Vec3 a, Vec3 b){
     return {
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x};
 }
 
-Vec3 StructureTo3Di::scale(Vec3 a, double f){
+Vec3 StructureTo3DiBase::scale(Vec3 a, double f){
     a.x *= f;
     a.y *= f;
     a.z *= f;
     return a;
 }
 
-double StructureTo3Di::dot(Vec3 a, Vec3 b){
+double StructureTo3DiBase::dot(Vec3 a, Vec3 b){
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-Vec3 StructureTo3Di::approxCBetaPosition(Vec3 ca_atom, Vec3 n_atom, Vec3 c_atom){
+Vec3 StructureTo3DiBase::approxCBetaPosition(Vec3 ca_atom, Vec3 n_atom, Vec3 c_atom){
     // Assumption: CA forms with its four ligands a tetrahedral.
     Vec3 v1 = norm(sub(c_atom, ca_atom));
     Vec3 v2 = norm(sub(n_atom, ca_atom));
@@ -64,11 +66,11 @@ Vec3 StructureTo3Di::approxCBetaPosition(Vec3 ca_atom, Vec3 n_atom, Vec3 c_atom)
     return add(ca_atom, scale(v4, Alphabet3Di::DISTANCE_ALPHA_BETA));
 }
 
-double StructureTo3Di::degreeToRadians(double degree){
+double StructureTo3DiBase::degreeToRadians(double degree){
     return (degree / 180) * Alphabet3Di::PI;
 }
 
-Vec3 StructureTo3Di::calcVirtualCenter(Vec3 ca, Vec3 cb, Vec3 n,
+Vec3 StructureTo3DiBase::calcVirtualCenter(Vec3 ca, Vec3 cb, Vec3 n,
                                        double alpha, double beta, double d){
     /* Apply Rodrigues rotation formula two times to CB coordinates.
      * First rotate CB by alpha in the plane CA-N-CB around CA.
@@ -96,11 +98,69 @@ Vec3 StructureTo3Di::calcVirtualCenter(Vec3 ca, Vec3 cb, Vec3 n,
     return virtualCenter;
 }
 
-double StructureTo3Di::calcDistanceBetween(Vec3 & a, Vec3 & b){
+double StructureTo3DiBase::calcDistanceBetween(Vec3 & a, Vec3 & b){
     const double dx = a.x - b.x;
     const double dy = a.y - b.y;
     const double dz = a.z - b.z;
     return sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+void StructureTo3DiBase::replaceCBWithVirtualCenter(Vec3 * ca, Vec3 * n,
+                                Vec3 * c, Vec3 * cb, const size_t len){
+    // fix CB positions and create virtual center
+    for (size_t i = 0; i < len; i++){
+        if (isnan(cb[i].x)){
+            cb[i] = approxCBetaPosition(ca[i], n[i], c[i]);
+        }
+        Vec3 virtCenter = calcVirtualCenter(ca[i], cb[i], n[i],
+                Alphabet3Di::VIRTUAL_CENTER.alpha,
+                Alphabet3Di::VIRTUAL_CENTER.beta,
+                Alphabet3Di::VIRTUAL_CENTER.d);
+        // replace CB with virtual center
+        cb[i] = virtCenter;
+    }
+}
+
+// Describe interaction of residue i and j
+StructureTo3DiBase::Feature StructureTo3DiBase::calcFeatures(Vec3 * ca, int i, int j){
+    Vec3 u1 = norm(sub(ca[i],       ca[i - 1]));
+    Vec3 u2 = norm(sub(ca[i + 1],   ca[i]));
+    Vec3 u3 = norm(sub(ca[j],       ca[j - 1]));
+    Vec3 u4 = norm(sub(ca[j + 1],   ca[j]));
+    Vec3 u5 = norm(sub(ca[j],       ca[i]));
+
+    double features[Alphabet3Di::FEATURE_CNT];
+    features[0] = dot(u1, u2);
+    features[1] = dot(u3, u4);
+    features[2] = dot(u1, u5);
+    features[3] = dot(u3, u5);
+    features[4] = dot(u1, u4);
+    features[5] = dot(u2, u3);
+    features[6] = dot(u1, u3);
+    features[7] = calcDistanceBetween(ca[i], ca[j]);
+    features[8] = copysign(fmin(fabs(j - i), 4), j - i); // clip j-i to [-4, 4]
+    features[9] = copysign(log(fabs(j - i) + 1), j - i );
+    return Feature(features);
+}
+
+void StructureTo3DiBase::createResidueMask(std::vector<bool> & validMask,
+                                           Vec3 * ca, Vec3 * n, Vec3 * c,
+                                           const size_t len){
+    for (size_t i = 0; i < len; i++){
+        if (isnan(ca[i].x) || isnan(c[i].x) || isnan(n[i].x)){
+            validMask[i] = 0;
+        } else{
+            validMask[i] = 1;
+        }
+    }
+}
+
+// StructureTo3Di
+
+StructureTo3Di::StructureTo3Di(){
+    encoder.LoadModel(
+            std::string((const char *)__3di_encoder_weights_kerasify,
+                                      __3di_encoder_weights_kerasify_len));
 }
 
 void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
@@ -121,27 +181,6 @@ void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * c
             }
         }
     }
-}
-
-// Describe interaction of residue i and j
-StructureTo3Di::Feature StructureTo3Di::calcFeatures(Vec3 * ca, int i, int j){
-    Vec3 u1 = norm(sub(ca[i],       ca[i - 1]));
-    Vec3 u2 = norm(sub(ca[i + 1],   ca[i]));
-    Vec3 u3 = norm(sub(ca[j],       ca[j - 1]));
-    Vec3 u4 = norm(sub(ca[j + 1],   ca[j]));
-    Vec3 u5 = norm(sub(ca[j],       ca[i]));
-
-    double features[9];
-    features[0] = dot(u1, u2);
-    features[1] = dot(u3, u4);
-    features[2] = dot(u1, u5);
-    features[3] = dot(u3, u5);
-    features[4] = dot(u1, u4);
-    features[5] = dot(u2, u3);
-    features[6] = dot(u1, u3);
-    features[7] = calcDistanceBetween(ca[i], ca[j]);
-    features[8] = copysign(fmin(fabs(j - i), 4), j - i); // clip j-i to [-4, 4]
-    return Feature(features);
 }
 
 void StructureTo3Di::calcConformationDescriptors(std::vector<Feature> & features, std::vector<int> & partnerIdx,
@@ -172,7 +211,23 @@ void StructureTo3Di::calcConformationDescriptors(std::vector<Feature> & features
     mask[len - 1] = 0;
 }
 
-void StructureTo3Di::discretizeFeatures(std::vector<char> & states, std::vector<Feature> & features,
+void StructureTo3Di::encodeFeatures(std::vector<Embedding> & embeddings, std::vector<Feature> & features,
+                                        std::vector<bool> & mask, const size_t len)
+{
+    for (size_t i = 0; i < len; i++){
+        if (mask[i]){
+            for (size_t j = 0; j < Alphabet3Di::FEATURE_CNT; j++){
+                in.data_[j] = static_cast<float>(features[i].f[j]);
+            }
+            encoder.Apply(&in, &out);
+            for (size_t j = 0; j < Alphabet3Di::EMBEDDING_DIM; j++){
+                embeddings[i].f[j] = static_cast<double>(out.data_[j]);
+            }
+        }
+    }
+}
+
+void StructureTo3Di::discretizeEmbeddings(std::vector<char> & states, std::vector<Embedding> & embeddings,
                                         std::vector<bool> & mask, const size_t len){
     double minDistance;
     char closestState;
@@ -183,8 +238,8 @@ void StructureTo3Di::discretizeFeatures(std::vector<char> & states, std::vector<
             minDistance = INFINITY;
             for (size_t j = 0; j < Alphabet3Di::CENTROID_CNT; j++){ // measure squared distance to each centroid
                 double sum = 0.0;
-                for (size_t k = 0; k < Alphabet3Di::FEATURE_CNT; k++){
-                    sum += pow((features[i].f[k] * Alphabet3Di::feature_scaling[k]) - Alphabet3Di::centroids[j][k], 2);
+                for (size_t k = 0; k < Alphabet3Di::EMBEDDING_DIM; k++){
+                    sum += pow(embeddings[i].f[k] - Alphabet3Di::centroids[j][k], 2);
                 }
                 if (sum < minDistance){
                     closestState = j;
@@ -196,18 +251,6 @@ void StructureTo3Di::discretizeFeatures(std::vector<char> & states, std::vector<
     }
 }
 
-void StructureTo3Di::createResidueMask(std::vector<bool> & validMask,
-                                       Vec3 * ca, Vec3 * n, Vec3 * c,
-                                       const size_t len){
-    for (size_t i = 0; i < len; i++){
-        if (isnan(ca[i].x) || isnan(c[i].x) || isnan(n[i].x)){
-            validMask[i] = 0;
-        } else{
-            validMask[i] = 1;
-        }
-    }
-}
-
 char * StructureTo3Di::structure2states(Vec3 * ca, Vec3 * n,
                                         Vec3 * c, Vec3 * cb,
                                         size_t len){
@@ -215,27 +258,25 @@ char * StructureTo3Di::structure2states(Vec3 * ca, Vec3 * n,
     states.clear();
     partnerIdx.clear();
     mask.clear();
+    embeddings.clear();
+    in = Tensor(Alphabet3Di::FEATURE_CNT);
+    out = Tensor(Alphabet3Di::EMBEDDING_DIM);
+
     if(len > features.size()){
         features.resize(len);
         states.resize(len);
         partnerIdx.resize(len);
         mask.resize(len);
+        embeddings.resize(len);
     }
     std::fill(partnerIdx.begin(), partnerIdx.begin() + len, -1);
-    // fix CB positions and create virtual center
-    for (size_t i = 0; i < len; i++){
-        if (isnan(cb[i].x)){
-            cb[i] = approxCBetaPosition(ca[i], n[i], c[i]);
-        }
-        Vec3 virtCenter = calcVirtualCenter(ca[i], cb[i], n[i], 270, 0, 2);
-        // replace CB with virtual center
-        cb[i] = virtCenter;
-    }
 
+    replaceCBWithVirtualCenter(ca, n, c, cb, len);
     createResidueMask(mask, ca, n, c, len);
     findResiduePartners(partnerIdx, cb, mask, len);
     calcConformationDescriptors(features, partnerIdx, ca, mask, len);
-    discretizeFeatures(states, features,  mask, len);
+    encodeFeatures(embeddings, features, mask, len);
+    discretizeEmbeddings(states, embeddings,  mask, len);
 
     return states.data();
 }
