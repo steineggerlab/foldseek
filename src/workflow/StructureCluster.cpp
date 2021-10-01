@@ -183,7 +183,6 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         cmd.execProgram(program.c_str(), par.filenames);
     } else {
         // same as above, clusthash needs a smaller alphabetsize
-        MultiParam<NuclAA<int>> alphabetSize = par.alphabetSize;
         float seqIdThr = par.seqIdThr;
         par.seqIdThr = (float) Parameters::CLUST_HASH_DEFAULT_MIN_SEQ_ID / 100.0f;
         cmd.addVariable("DETECTREDUNDANCY_PAR", par.createParameterString(par.clusthash).c_str());
