@@ -1,6 +1,7 @@
 #include "Command.h"
 #include "Parameters.h"
 #include "CommandDeclarations.h"
+#include "DownloadDatabase.h"
 
 Parameters& par = Parameters::getInstance();
 std::vector<Command> baseCommands = {
@@ -382,6 +383,13 @@ std::vector<Command> baseCommands = {
                                    {"nodes.dmp", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                    {"merged.dmp", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                    {"taxonomyFile",   DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
+        {"createbintaxmapping",  createbintaxmapping,  &par.onlyverbosity,        COMMAND_TAXONOMY | COMMAND_EXPERT,
+                "Create binary taxonomy mapping from tabular taxonomy mapping",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:taxonomyMapping> <o:taxonomyMapping>",
+                CITATION_TAXONOMY, {{"taxonomyMapping", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile  },
+                                           {"taxonomyMapping", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile  }}},
         {"addtaxonomy",          addtaxonomy,          &par.addtaxonomy,          COMMAND_TAXONOMY | COMMAND_EXPERT,
                 "Add taxonomic labels to result DB",
                 NULL,
@@ -693,6 +701,13 @@ std::vector<Command> baseCommands = {
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"lndb",                 lndb,                 &par.onlyverbosity,        COMMAND_STORAGE,
                 "Symlink a DB",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:srcDB> <o:dstDB>",
+                CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+        {"aliasdb",              aliasdb,              &par.onlyverbosity,        COMMAND_STORAGE,
+                "Create relative symlink of DB to another name in the same folder",
                 NULL,
                 "Milot Mirdita <milot@mirdita.de>",
                 "<i:srcDB> <o:dstDB>",
@@ -1041,6 +1056,14 @@ std::vector<Command> baseCommands = {
                 "<i:msaDB> <o:profileDB>",
                 CITATION_SERVER |CITATION_MMSEQS2, {{"msaDB",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::msaDb },
                                                            {"profileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::profileDb }}},
+
+        {"sequence2profile",     sequence2profile,     &par.sequence2profile,     COMMAND_PROFILE,
+                "Turn sequence into profile by adding context specific pseudo counts",
+                NULL,
+                "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
+                "<i:sequenceDB> <o:profileDB>",
+                CITATION_SERVER | CITATION_MMSEQS2, {{"sequenceDB",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"profileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::profileDb }}},
         {"profile2pssm",         profile2pssm,         &par.profile2pssm,         COMMAND_PROFILE,
                 "Convert a profile DB to a tab-separated PSSM file",
                 NULL,
@@ -1069,9 +1092,14 @@ std::vector<Command> baseCommands = {
                 "<i:hhsuiteHHMDB> <o:profileDB>",
                 CITATION_MMSEQS2,{{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
 
-
-
-        {"enrich",                enrich,              &par.enrichworkflow,       COMMAND_PROFILE_PROFILE,
+        {"tsv2exprofiledb",      tsv2exprofiledb,      &par.onlyverbosity,        COMMAND_PROFILE_PROFILE,
+                "Create a expandable profile db from TSV files",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:tsvFilesBase> <o:exprofileDB>",
+                CITATION_MMSEQS2, {{"tsvFilesBase", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL },
+                                          {"exprofileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+        {"enrich",                enrich,              &par.enrichworkflow,       COMMAND_HIDDEN,
                 "Boost diversity of search result",
                 NULL,
                 "Milot Mirdita <milot@mirdita.de>",
@@ -1080,22 +1108,6 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"result2pp",            result2pp,            &par.result2pp,            COMMAND_PROFILE_PROFILE,
-                "Merge two profile DBs by shared hits",
-                NULL,
-                "Clovis Galiez & Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:queryDB> <i:targetDB> <i:resultDB> <o:profileDB>",
-                CITATION_MMSEQS2,{{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::profileDb },
-                                         {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::profileDb },
-                                         {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
-                                         {"profileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::profileDb }}},
-        {"profile2cs",         profile2cs,             &par.profile2cs,           COMMAND_PROFILE_PROFILE,
-                "Convert a profile DB into a column state sequence DB",
-                NULL,
-                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:profileDB> <o:csDB>",
-                CITATION_MMSEQS2, {{"profileDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::profileDb },
-                                         {"csDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::csDb }}},
         {"convertca3m",          convertca3m,          &par.threadsandcompression,COMMAND_PROFILE_PROFILE,
                 "Convert a cA3M DB to a result DB",
                 NULL,
@@ -1111,7 +1123,7 @@ std::vector<Command> baseCommands = {
                 CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
-                                          {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                          {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::ppResultDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
         {"expand2profile",      expand2profile,        &par.expand2profile,       COMMAND_PROFILE_PROFILE,
                 "Expand an alignment result based on another and create a profile",
@@ -1123,8 +1135,15 @@ std::vector<Command> baseCommands = {
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"profileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::profileDb }}},
-
-
+        {"pairaln",             pairaln,               &par.pairaln,              COMMAND_EXPERT,
+                "Pair sequences to match best protein A and B from a species",
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alnDB> <o:alnDB>",
+                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_TAXONOMY, &DbValidator::sequenceDb },
+                                          {"alnDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"alnDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
         {"diffseqdbs",           diffseqdbs,           &par.diff,                 COMMAND_SPECIAL,
                 "Compute diff of two sequence DBs",
 //                "It creates 3 filtering files, that can be used in conjunction with \"createsubdb\" tool.\nThe first file contains the keys that has been removed from DBold to DBnew.\nThe second file maps the keys of the kept sequences from DBold to DBnew.\nThe third file contains the keys of the sequences that have been added in DBnew.",
@@ -1217,4 +1236,156 @@ std::vector<Command> baseCommands = {
                 "",
                 "",
                 CITATION_MMSEQS2, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
+};
+
+#include "databases.sh.h"
+
+std::vector<DatabaseDownload> downloads = {{
+                                       "UniRef100",
+                                       "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
+                                       "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
+                                       "https://www.uniprot.org/help/uniref",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "UniRef90",
+                                       "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
+                                       "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
+                                       "https://www.uniprot.org/help/uniref",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "UniRef50",
+                                       "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
+                                       "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
+                                       "https://www.uniprot.org/help/uniref",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "UniProtKB",
+                                       "The UniProt Knowledgebase is the central hub for the collection of functional information on proteins, with accurate, consistent and rich annotation.",
+                                       "The UniProt Consortium: UniProt: a worldwide hub of protein knowledge. Nucleic Acids Res 47(D1), D506-515 (2019)",
+                                       "https://www.uniprot.org/help/uniprotkb",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "UniProtKB/TrEMBL",
+                                       "UniProtKB/TrEMBL (unreviewed) contains protein sequences associated with computationally generated annotation and large-scale functional characterization.",
+                                       "The UniProt Consortium: UniProt: a worldwide hub of protein knowledge. Nucleic Acids Res 47(D1), D506-515 (2019)",
+                                       "https://www.uniprot.org/help/uniprotkb",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "UniProtKB/Swiss-Prot",
+                                       "UniProtKB/Swiss-Prot (reviewed) is a high quality manually annotated and non-redundant protein sequence database, which brings together experimental results, computed features and scientific conclusions.",
+                                       "The UniProt Consortium: UniProt: a worldwide hub of protein knowledge. Nucleic Acids Res 47(D1), D506-515 (2019)",
+                                       "https://uniprot.org",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "NR",
+                                       "Non-redundant protein sequences from GenPept, Swissprot, PIR, PDF, PDB, and NCBI RefSeq.",
+                                       "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
+                                       "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "NT",
+                                       "Partially non-redundant nucleotide sequences from all traditional divisions of GenBank, EMBL, and DDBJ excluding GSS, STS, PAT, EST, HTG, and WGS.",
+                                       "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
+                                       "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA",
+                                       false, Parameters::DBTYPE_NUCLEOTIDES, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "GTDB",
+                                       "Genome Taxonomy Database is a phylogenetically consistent, genome-based taxonomy that provides rank-normalized classifications for ~150,000 bacterial and archaeal genomes from domain to genus.",
+                                       "Parks et al: A complete domain-to-species taxonomy for Bacteria and Archaea. Nat Biotechnol 38(9), 1079–1086 (2020)",
+                                       "https://gtdb.ecogenomic.org",
+                                       true, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "PDB",
+                                       "The Protein Data Bank is the single worldwide archive of structural data of biological macromolecules.",
+                                       "Berman et al: The Protein Data Bank. Nucleic Acids Res 28(1), 235-242 (2000)",
+                                       "https://www.rcsb.org",
+                                       false, Parameters::DBTYPE_AMINO_ACIDS, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "PDB70",
+                                       "PDB clustered to 70% sequence identity and enriched using HHblits with Uniclust sequences.",
+                                       "Steinegger et al: HH-suite3 for fast remote homology detection and deep protein annotation. BMC Bioinform 20(1), 473 (2019)",
+                                       "https://github.com/soedinglab/hh-suite",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "Pfam-A.full",
+                                       "The Pfam database is a large collection of protein families, each represented by multiple sequence alignments and hidden Markov models.",
+                                       "El-Gebali and Mistry et al: The Pfam protein families database in 2019. Nucleic Acids Res 47(D1), D427-D432 (2019)",
+                                       "https://pfam.xfam.org",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "Pfam-A.seed",
+                                       "The Pfam database is a large collection of protein families, each represented by multiple sequence alignments and hidden Markov models.",
+                                       "El-Gebali and Mistry et al: The Pfam protein families database in 2019. Nucleic Acids Res 47(D1), D427-D432 (2019)",
+                                       "https://pfam.xfam.org",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "Pfam-B",
+                                       "Pfam-B is a large automatically generated supplement to the Pfam database.",
+                                       "Sonnhammer et al: A new Pfam-B is released. Xfam Blog (2020)",
+                                       "https://xfam.wordpress.com/2020/06/30/a-new-pfam-b-is-released",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "CDD",
+                                       "Conserved Domain Database is a protein annotation resource consisting of well-annotated MSAs for ancient domains and full-length proteins.",
+                                       "Lu et al: CDD/SPARCLE: the conserved domain database in 2020. Nucleic Acids Res 48(D1), D265–D268 (2020)",
+                                       "https://www.ncbi.nlm.nih.gov/Structure/cdd/cdd.shtml",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "eggNOG",
+                                       "eggNOG is a hierarchical, functionally and phylogenetically annotated orthology resource",
+                                       "Huerta-Cepas et al: eggNOG 5.0: a hierarchical, functionally and phylogenetically annotated orthology resource based on 5090 organisms and 2502 viruses. Nucleic Acids Res 47(D1), D309–D314 (2019)",
+                                       "http://eggnog5.embl.de",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "VOGDB",
+                                       "VOGDB is a continously updated resource of Virus Orthologous Groups",
+                                       "Marz et al: Challenges in RNA virus bioinformatics. Bioinformatics 30, 1793–9 (2014)",
+                                       "https://vogdb.org",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "dbCAN2",
+                                       "dbCAN2 is a database of carbohydrate-active enzymes.",
+                                       "Zhang et al: dbCAN2: a meta server for automated carbohydrate-active enzyme annotation. Nucleic Acids Res 46(W1), W95-W101 (2018)",
+                                       "http://bcb.unl.edu/dbCAN2",
+                                       false, Parameters::DBTYPE_HMM_PROFILE, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "SILVA",
+                                       "SILVA provides datasets of aligned small and large subunit ribosomal RNA sequences for all three domains of life.",
+                                       "Yilmaz et al: The SILVA and \"All-species Living Tree Project (LTP)\" taxonomic frameworks. Nucleic Acids Res 42(D1), D643-D648 (2014)",
+                                       "https://www.arb-silva.de",
+                                       true, Parameters::DBTYPE_NUCLEOTIDES, databases_sh, databases_sh_len,
+                                       { { "SILVA_REL", "138" } }
+                               }, {
+                                       "Resfinder",
+                                       "ResFinder is a database that captures antimicrobial resistance genes from whole-genome data sets.",
+                                       "Zankari et al: Identification of acquired antimicrobial resistance genes. J Antimicrob Chemother 67(11), 2640-2644 (2012)",
+                                       "https://cge.cbs.dtu.dk/services/ResFinder",
+                                       false, Parameters::DBTYPE_NUCLEOTIDES, databases_sh, databases_sh_len,
+                                       { }
+                               }, {
+                                       "Kalamari",
+                                       "Kalamari contains over 250 genomes chosen to be representative of agents tracked by genome-based foodborne disease surveillance, common contaminants, and diverse phyla and bacterial genera.",
+                                       "Katz et al: Kraken with Kalamari: Contamination Detection. ASM Poster, 270 (2018)",
+                                       "https://github.com/lskatz/Kalamari",
+                                       true, Parameters::DBTYPE_NUCLEOTIDES, databases_sh, databases_sh_len,
+                                       { }
+                               },
 };
