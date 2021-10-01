@@ -1,3 +1,4 @@
+#include "DownloadDatabase.h"
 #include "CommandDeclarations.h"
 #include "LocalCommandDeclarations.h"
 #include "LocalParameters.h"
@@ -9,7 +10,7 @@ const char* main_author = "Martin Steinegger (martin.steinegger@snu.ac.kr)";
 const char* show_extended_help = NULL;
 const char* show_bash_info = NULL;
 bool hide_base_commands = true;
-
+bool hide_base_downloads = true;
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 
@@ -106,4 +107,22 @@ std::vector<struct Command> commands = {
                 "",
                 "",
                 CITATION_MMSEQS2, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
+};
+
+
+std::vector<DatabaseDownload> externalDownloads = {{
+                                                   "Alphafold2",
+                                                   "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
+                                                   "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
+                                                   "https://www.uniprot.org/help/uniref",
+                                                   true, Parameters::DBTYPE_AMINO_ACIDS, NULL, 0,
+                                                   {}
+                                           }, {
+                                                   "Bla",
+                                                   "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
+                                                   "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
+                                                   "https://www.uniprot.org/help/uniref",
+                                                   true, Parameters::DBTYPE_AMINO_ACIDS, NULL, 0,
+                                                   {}
+                                           }
 };

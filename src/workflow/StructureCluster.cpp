@@ -140,14 +140,11 @@ int structurecluster(int argc, const char **argv, const Command& command) {
     if (par.singleStepClustering == false) {
         // save some values to restore them later
         float targetSensitivity = par.sensitivity;
-        MultiParam<int> alphabetSize = par.alphabetSize;
-        par.alphabetSize = MultiParam<int>(Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE, 5);
         int kmerSize = par.kmerSize;
         par.kmerSize = Parameters::CLUST_LINEAR_DEFAULT_K;
         int maskMode = par.maskMode;
         par.maskMode = 0;
         cmd.addVariable("LINCLUST_PAR", par.createParameterString(par.linclustworkflow).c_str());
-        par.alphabetSize = alphabetSize;
         par.kmerSize = kmerSize;
         par.maskMode = maskMode;
         // 1 is lowest sens
@@ -186,12 +183,10 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         cmd.execProgram(program.c_str(), par.filenames);
     } else {
         // same as above, clusthash needs a smaller alphabetsize
-        MultiParam<int> alphabetSize = par.alphabetSize;
-        par.alphabetSize = MultiParam<int>(Parameters::CLUST_HASH_DEFAULT_ALPH_SIZE, 5);
+        MultiParam<NuclAA<int>> alphabetSize = par.alphabetSize;
         float seqIdThr = par.seqIdThr;
         par.seqIdThr = (float) Parameters::CLUST_HASH_DEFAULT_MIN_SEQ_ID / 100.0f;
         cmd.addVariable("DETECTREDUNDANCY_PAR", par.createParameterString(par.clusthash).c_str());
-        par.alphabetSize = alphabetSize;
         par.seqIdThr = seqIdThr;
         cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
         std::string program = tmpDir + "/clustering.sh";

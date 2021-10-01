@@ -28,7 +28,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
     DBReader<unsigned int> qcadbr((par.db1+"_ca").c_str(), (par.db1+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     qcadbr.open(DBReader<unsigned int>::NOSORT);
 
-    SubstitutionMatrix subMat(par.scoringMatrixFile.aminoacids, 2.0, par.scoreBias);
+    SubstitutionMatrix subMat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
 
     DBReader<unsigned int> *tdbr = NULL;
     DBReader<unsigned int> *tcadbr = NULL;
@@ -84,7 +84,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         char buffer[1024+32768];
         std::string resultBuffer;
         //int gapOpen = 15; int gapExtend = 3; // 3di gap optimization
-        EvalueComputation evaluer(tdbr->getAminoAcidDBSize(), &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
+        EvalueComputation evaluer(tdbr->getAminoAcidDBSize(), &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
         // write output file
 
 #pragma omp for schedule(dynamic, 1)
