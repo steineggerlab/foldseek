@@ -12,8 +12,7 @@
 #include "BaseMatrix.h"
 #include "ProfileStates.h"
 
-class SubstitutionMatrix: public BaseMatrix {
-
+class SubstitutionMatrix : public BaseMatrix {
 public:
     SubstitutionMatrix(const char *filename, float bitFactor, float scoreBias);
 
@@ -33,7 +32,7 @@ public:
                                                            size_t alphabetSize,
                                                            BaseMatrix *subMat);
     static void calcGlobalAaBiasCorrection(const BaseMatrix * m,
-                                           short *profileScores,
+                                           char *profileScores,
                                            float *pNullBuffer,
                                            const size_t profileAASize,
                                            const int N);
