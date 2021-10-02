@@ -31,10 +31,6 @@ gemmi::Structure openStructure(const std::string & filename){
 bool GemmiWrapper::load(std::string & filename){
     try {
         gemmi::Structure st = openStructure(filename);
-        if(st.models.size() == 0 || st.models[0].chains.size() == 0 ||
-           st.models[0].chains[0].residues.size()  == 0 ){
-            return false;
-        }
         chain.clear();
         names.clear();
         ca.clear();
