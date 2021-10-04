@@ -109,20 +109,21 @@ std::vector<struct Command> commands = {
                 CITATION_MMSEQS2, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
 };
 
+#include "structdatabases.sh.h"
 
 std::vector<DatabaseDownload> externalDownloads = {{
-                                                   "Alphafold2",
+                                                   "AlphafoldDb",
                                                    "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
                                                    "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
                                                    "https://www.uniprot.org/help/uniref",
-                                                   true, Parameters::DBTYPE_AMINO_ACIDS, NULL, 0,
+                                                   false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                                                    {}
                                            }, {
-                                                   "Bla",
+                                                   "PDB",
                                                    "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
                                                    "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
                                                    "https://www.uniprot.org/help/uniref",
-                                                   true, Parameters::DBTYPE_AMINO_ACIDS, NULL, 0,
+                                                   false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                                                    {}
                                            }
 };

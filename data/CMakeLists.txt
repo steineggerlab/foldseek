@@ -4,6 +4,7 @@ set(COMPILED_RESOURCES
         easystructuresearch.sh
         structurecluster.sh
         structuresearch.sh
+        structdatabases.sh
         mat3di.out
         3di_encoder_weights.kerasify
         )
