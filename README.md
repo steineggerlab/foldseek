@@ -38,23 +38,24 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     foldseek createdb example/ targetDB
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
     
-Search against the AlphaFold database
-
-    foldseek databases AlphafoldDb afdb tmp 
-    foldseek easy-search example/d1asha_ afdb aln.m8 tmpFolder
+Setup the PDB or AlphaFold using the `databases` module.
     
+    # pdb  
+    foldseek databases PDB pdb tmp 
+    # alphafold db
+    foldseek databases AlphafoldDb afdb tmp 
+
     
 ### Important parameters
 
-    -s                       adjusyesornot the sensitivity to speed trade-off (default: 7.5)
-    --alignment-type         0: 3Di Gotoh-Smith-Waterman, 1: TMalign 
+    -s                       adjusyesornot the sensitivity to speed trade-off (default: 7.5, high sensitivity: 9.0)
+    --alignment-type         0: 3Di Gotoh-Smith-Waterman (fast), 1: TMalign
     -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
     --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
 
 ### Main Modules
 
 * `easy-search`       fast protein structure search  
-* `easy-cluster`      cluster protein structures 
 * `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 
 ### Compile from source
