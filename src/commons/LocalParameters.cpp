@@ -63,6 +63,13 @@ LocalParameters::LocalParameters() :
     structureclusterworkflow.push_back(&PARAM_RUNNER);
     structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
 
+    databases.push_back(&PARAM_HELP);
+    databases.push_back(&PARAM_HELP_LONG);
+    databases.push_back(&PARAM_REUSELATEST);
+    databases.push_back(&PARAM_REMOVE_TMP_FILES);
+    databases.push_back(&PARAM_COMPRESSED);
+    databases.push_back(&PARAM_THREADS);
+    databases.push_back(&PARAM_V);
     //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
 
 

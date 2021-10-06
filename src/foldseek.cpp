@@ -101,6 +101,14 @@ std::vector<struct Command> commands = {
                                    {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::cadb },
                                    {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                    {"tmDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::tmscore }}},
+        {"databases",            databases,            &localPar.databases,            COMMAND_DATABASE_CREATION,
+                "List and download databases",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<name> <o:sequenceDB> <tmpDir>",
+                CITATION_TAXONOMY|CITATION_MMSEQS2, {{"selection", 0, DbType::ZERO_OR_ALL, &DbValidator::empty },
+                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                            {"tmpDir",     DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,
@@ -113,17 +121,18 @@ std::vector<struct Command> commands = {
 
 std::vector<DatabaseDownload> externalDownloads = {{
                                                    "AlphafoldDb",
-                                                   "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
-                                                   "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
-                                                   "https://www.uniprot.org/help/uniref",
-                                                   false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
-                                                   {}
-                                           }, {
-                                                   "PDB",
-                                                   "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
-                                                   "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
-                                                   "https://www.uniprot.org/help/uniref",
+                                                   "AlphaFold Protein Structure Database.",
+                                                   "Tunyasuvunakool et al. Highly accurate protein structure prediction for the human proteome. Nature, (2021)",
+                                                   "https://alphafold.ebi.ac.uk/",
                                                    false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                                                    {}
                                            }
+//                                           {
+//                                                   "PDB",
+//                                                   "The UniProt Reference Clusters provide clustered sets of sequences from the UniProt Knowledgebase.",
+//                                                   "Suzek et al: UniRef: comprehensive and non-redundant UniProt reference clusters. Bioinformatics 23(10), 1282–1288 (2007)",
+//                                                   "https://www.uniprot.org/help/uniref",
+//                                                   false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+//                                                   {}
+//                                           }
 };
