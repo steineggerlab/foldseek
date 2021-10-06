@@ -76,9 +76,10 @@ case "${SELECTION}" in
     "PDB")
         if notExists "${TMP_PATH}/pdb_seqres.txt.gz"; then
             date "+%s" > "${TMP_PATH}/version"
-            downloadFile "https://ftp.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt.gz" "${TMP_PATH}/pdb_seqres.txt.gz"
+            downloadFile "http://wwwuser.gwdg.de/~compbiol/foldseek/pdb.tar.gz" "${TMP_PATH}/pdb.tar.gz"
         fi
-        push_back "${TMP_PATH}/pdb_seqres.txt.gz"
+        tar xvfz "${TMP_PATH}/pdb.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/pdb"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
 esac
