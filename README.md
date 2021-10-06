@@ -38,6 +38,12 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     foldseek createdb example/ targetDB
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
     
+Search against the AlphaFold database
+
+    foldseek databases AlphafoldDb afdb tmp 
+    foldseek easy-search example/d1asha_ afdb aln.m8 tmpFolder
+    
+    
 ### Important parameters
 
     -s                       adjusyesornot the sensitivity to speed trade-off (default: 7.5)
