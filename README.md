@@ -57,6 +57,7 @@ Setup the PDB or AlphaFold using the `databases` module.
 
 * `easy-search`       fast protein structure search  
 * `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
+* `databases`         download pre-assembled databases
 
 ### Compile from source
 
