@@ -11,8 +11,6 @@ Alpha release: July 24, 2021
 
 `foldseek` can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system. We recommend using a system with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux).
 
-    # pull docker container
-    docker pull steineggerlab/foldseek
     # static Linux AVX2 build
     wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
     # static Linux SSE4.1 build
