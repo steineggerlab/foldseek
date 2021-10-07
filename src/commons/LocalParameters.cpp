@@ -11,7 +11,7 @@ LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: pareun alignment\n",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
-        PARAM_GAPNW(PARAM_GAPNW_ID,"--gap-nw", "Gap NW","blub" ,typeid(int), (void *) &gapNW, "^[1-5]{1}$"),
+        PARAM_GAPNW(PARAM_GAPNW_ID,"--gap-nw", "Gap NW","blub" ,typeid(int), (void *) &gapNW, "^[1-10]{1}$"),
         PARAM_NNWEIGHT(PARAM_NNWEIGHT_ID,"--nnweight", "Weight NN","blub" ,typeid(float), (void *) &nnWeight, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|([0-9]*(\\.[0-9]+)?)$")
 {
     scoringMatrixFile = "3di.out";
