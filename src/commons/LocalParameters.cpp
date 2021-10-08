@@ -42,13 +42,42 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     // structuresearchworkflow
+    // structuresearchworkflow
     structuresearchworkflow = combineList(align, prefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structuresearchworkflow.push_back(&PARAM_RUNNER);
+    structuresearchworkflow.push_back(&PARAM_REUSELATEST);
 
     // Setup DbValidation
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
+
+    // Setup DbValidation
+    easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
+    structureclusterworkflow = combineList(prefilter, align);
+    structureclusterworkflow = combineList(structureclusterworkflow, rescorediagonal);
+    structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
+    structureclusterworkflow = combineList(structureclusterworkflow, clust);
+    structureclusterworkflow.push_back(&PARAM_CASCADED);
+    structureclusterworkflow.push_back(&PARAM_CLUSTER_STEPS);
+    //structuresearchworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
+    structureclusterworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structureclusterworkflow.push_back(&PARAM_REUSELATEST);
+    structureclusterworkflow.push_back(&PARAM_RUNNER);
+    structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
+
+    databases.push_back(&PARAM_HELP);
+    databases.push_back(&PARAM_HELP_LONG);
+    databases.push_back(&PARAM_REUSELATEST);
+    databases.push_back(&PARAM_REMOVE_TMP_FILES);
+    databases.push_back(&PARAM_COMPRESSED);
+    databases.push_back(&PARAM_THREADS);
+    databases.push_back(&PARAM_V);
+    //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
 
     alignmentType = ALIGNMENT_TYPE_3DI;
     tmScoreThr = 0.5;

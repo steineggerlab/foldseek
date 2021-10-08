@@ -5,6 +5,7 @@
 #include "LocalParameters.h"
 #include "Debug.h"
 #include "DBWriter.h"
+#include "FastSort.h"
 
 #include "structureto3di.h"
 #include "SubstitutionMatrix.h"
@@ -49,7 +50,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
     }
     Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
-
+    SORT_PARALLEL(filenames.begin(), filenames.end());
     DBWriter torsiondbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     torsiondbw.open();
     DBWriter hdbw((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
@@ -58,7 +59,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
-    SubstitutionMatrix mat(par.scoringMatrixFile.aminoacids, 2.0, par.scoreBias);
+    SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
     Debug::Progress progress(filenames.size());
     std::vector<std::pair<size_t, size_t>> fileIdLookup(filenames.size());
     size_t globalCnt = 0;

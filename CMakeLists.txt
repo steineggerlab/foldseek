@@ -12,10 +12,12 @@ include(MMseqsSetupDerivedTarget)
 add_subdirectory(lib/mmseqs EXCLUDE_FROM_ALL)
 
 add_subdirectory(lib/3di)
+add_subdirectory(lib/kerasify)
 add_subdirectory(lib/tmalign)
 add_subdirectory(data)
 include_directories(lib)
 include_directories(lib/3di)
+include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
 add_subdirectory(src)

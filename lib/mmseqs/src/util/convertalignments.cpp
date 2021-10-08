@@ -11,6 +11,7 @@
 #include "Orf.h"
 #include "MemoryMapped.h"
 #include "NcbiTaxonomy.h"
+#include "MappingReader.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
 #include <zstd.h>
@@ -139,10 +140,6 @@ std::map<unsigned int, std::string> readSetToSource(const std::string& file) {
     return mapping;
 }
 
-static bool compareToFirstInt(const std::pair<unsigned int, unsigned int>& lhs, const std::pair<unsigned int, unsigned int>&  rhs){
-    return (lhs.first <= rhs.first);
-}
-
 int convertalignments(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
@@ -161,22 +158,15 @@ int convertalignments(int argc, const char **argv, const Command &command) {
     const std::vector<int> outcodes = Parameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
                                                                   needLookup, needSource, needTaxonomyMapping, needTaxonomy);
 
-    NcbiTaxonomy * t = NULL;
-    std::vector<std::pair<unsigned int, unsigned int>> mapping;
+    NcbiTaxonomy* t = NULL;
     if(needTaxonomy){
         std::string db2NoIndexName = PrefilteringIndexReader::dbPathWithoutIndex(par.db2);
         t = NcbiTaxonomy::openTaxonomy(db2NoIndexName);
     }
-    if(needTaxonomy || needTaxonomyMapping){
+    MappingReader* mapping = NULL;
+    if (needTaxonomy || needTaxonomyMapping) {
         std::string db2NoIndexName = PrefilteringIndexReader::dbPathWithoutIndex(par.db2);
-        if(FileUtil::fileExists(std::string(db2NoIndexName + "_mapping").c_str()) == false){
-            Debug(Debug::ERROR) << db2NoIndexName + "_mapping" << " does not exist. Please create the taxonomy mapping!\n";
-            EXIT(EXIT_FAILURE);
-        }
-        bool isSorted = Util::readMapping( db2NoIndexName + "_mapping", mapping);
-        if(isSorted == false){
-            std::stable_sort(mapping.begin(), mapping.end(), compareToFirstInt);
-        }
+        mapping = new MappingReader(db2NoIndexName);
     }
 
     bool isTranslatedSearch = false;
@@ -238,13 +228,13 @@ int convertalignments(int argc, const char **argv, const Command &command) {
     int gapOpen, gapExtend;
     SubstitutionMatrix * subMat= NULL;
     if (targetNucs == true && queryNucs == true && isTranslatedSearch == false) {
-        subMat = new NucleotideMatrix(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
-        gapOpen = par.gapOpen.nucleotides;
-        gapExtend = par.gapExtend.nucleotides;
+        subMat = new NucleotideMatrix(par.scoringMatrixFile.values.nucleotide().c_str(), 1.0, 0.0);
+        gapOpen = par.gapOpen.values.nucleotide();
+        gapExtend =  par.gapExtend.values.nucleotide();
     }else{
-        subMat = new SubstitutionMatrix(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
-        gapOpen = par.gapOpen.aminoacids;
-        gapExtend = par.gapExtend.aminoacids;
+        subMat = new SubstitutionMatrix(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, 0.0);
+        gapOpen = par.gapOpen.values.aminoacid();
+        gapExtend = par.gapExtend.values.aminoacid();
     }
     EvalueComputation *evaluer = NULL;
     bool queryProfile = false;
@@ -258,9 +248,9 @@ int convertalignments(int argc, const char **argv, const Command &command) {
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
-    unsigned int localThreads = 1;
+    size_t localThreads = 1;
 #ifdef OPENMP
-    localThreads = std::min((unsigned int)par.threads, (unsigned int)alnDbr.getSize());
+    localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
 #endif
 
     const bool shouldCompress = par.dbOut == true && par.compressed == true;
@@ -464,22 +454,13 @@ int convertalignments(int argc, const char **argv, const Command &command) {
                             char *targetSeqData = NULL;
                             targetProfData.clear();
                             unsigned int taxon = 0;
-
-                            if(needTaxonomy || needTaxonomyMapping) {
-                                std::pair<unsigned int, unsigned int> val;
-                                val.first = res.dbKey;
-                                std::vector<std::pair<unsigned int, unsigned int>>::iterator mappingIt;
-                                mappingIt = std::upper_bound(mapping.begin(), mapping.end(), val, compareToFirstInt);
-                                if (mappingIt == mapping.end() || mappingIt->first != val.first) {
-                                    taxon = 0;
+                            if (needTaxonomy || needTaxonomyMapping) {
+                                taxon = mapping->lookup(res.dbKey);
+                                if (taxon == 0) {
                                     taxonNode = NULL;
-                                }else{
-                                    taxon = mappingIt->second;
-                                    if(needTaxonomy){
-                                        taxonNode = t->taxonNode(taxon, false);
-                                    }
+                                } else if (needTaxonomy) {
+                                    taxonNode = t->taxonNode(taxon, false);
                                 }
-
                             }
 
                             if (needSequenceDB) {
@@ -788,8 +769,11 @@ int convertalignments(int argc, const char **argv, const Command &command) {
     if (isDb == false) {
         FileUtil::remove(par.db4Index.c_str());
     }
-    if(needTaxonomy){
+    if (needTaxonomy) {
         delete t;
+    }
+    if (mapping != NULL) {
+        delete mapping;
     }
     alnDbr.close();
     if (sameDB == false) {

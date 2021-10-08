@@ -38,11 +38,12 @@ struct DBFiles {
         CA3M_SEQ_IDX      = (1ull << 15),
         CA3M_HDR          = (1ull << 16),
         CA3M_HDR_IDX      = (1ull << 17),
+        TAX_BINARY        = (1ull << 18),
 
 
         GENERIC           = DATA | DATA_INDEX | DATA_DBTYPE,
         HEADERS           = HEADER | HEADER_INDEX | HEADER_DBTYPE,
-        TAXONOMY          = TAX_MAPPING | TAX_NAMES | TAX_NODES | TAX_MERGED,
+        TAXONOMY          = TAX_MAPPING | TAX_NAMES | TAX_NODES | TAX_MERGED | TAX_BINARY,
         SEQUENCE_DB       = GENERIC | HEADERS | TAXONOMY | LOOKUP | SOURCE,
         SEQUENCE_ANCILLARY= SEQUENCE_DB & (~GENERIC),
         SEQUENCE_NO_DATA_INDEX = SEQUENCE_DB & (~DATA_INDEX),
@@ -201,8 +202,7 @@ public:
             length=index[id].length;
         }
 
-        if(Parameters::isEqualDbtype(dbtype, Parameters::DBTYPE_HMM_PROFILE ) ||
-           Parameters::isEqualDbtype(dbtype, Parameters::DBTYPE_PROFILE_STATE_PROFILE ) ){
+        if(Parameters::isEqualDbtype(dbtype, Parameters::DBTYPE_HMM_PROFILE ) ){
             // -1 null byte
             return (std::max(length, 1u) - 1u) / Sequence::PROFILE_READIN_SIZE;
         }else{
@@ -293,6 +293,8 @@ public:
 
     static void removeDb(const std::string &databaseName);
 
+
+    static void aliasDb(const std::string &databaseName, const std::string &alias, DBFiles::Files dbFilesFlags = DBFiles::ALL);
     static void softlinkDb(const std::string &databaseName, const std::string &outDb, DBFiles::Files dbFilesFlags = DBFiles::ALL);
     static void copyDb(const std::string &databaseName, const std::string &outDb, DBFiles::Files dbFilesFlags = DBFiles::ALL);
 
@@ -340,8 +342,17 @@ public:
 
     static DBReader<unsigned int> *unserialize(const char* data, int threads);
 
-    int getDbtype(){
+    int getDbtype() const {
         return dbtype;
+    }
+
+    static inline uint16_t getExtendedDbtype(int dbtype) {
+        // remove first (compressed) and last bit (compatbility for compressed)
+        return (uint16_t)((uint32_t)dbtype >> 16) & 0x7FFE;
+    }
+
+    static inline int setExtendedDbtype(int dbtype, uint16_t extended) {
+        return dbtype | ((extended & 0x7FFE) << 16);
     }
 
     const char* getDbTypeName() const {

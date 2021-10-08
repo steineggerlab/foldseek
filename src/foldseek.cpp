@@ -1,3 +1,4 @@
+#include "DownloadDatabase.h"
 #include "CommandDeclarations.h"
 #include "LocalCommandDeclarations.h"
 #include "LocalParameters.h"
@@ -9,7 +10,7 @@ const char* main_author = "Martin Steinegger (martin.steinegger@snu.ac.kr)";
 const char* show_extended_help = NULL;
 const char* show_bash_info = NULL;
 bool hide_base_commands = true;
-
+bool hide_base_downloads = true;
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 
@@ -37,12 +38,12 @@ std::vector<struct Command> commands = {
                 "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n"
                 "# Search a set of PDB files against a set of PDB files\n"
                 "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n",
-                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:alignmentFile> <tmpDir>",
                 CITATION_SERVER | CITATION_MMSEQS2,{{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder },
-                                                    {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder },
-                                                    {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
-                                                    {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder },
+                                          {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"search",               structuresearch,               &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Sensitive homology search",
                 "# Search multiple FASTA against FASTA (like BLASTP, TBLASTN, BLASTX, BLASTN --search-type 3, TBLASTX --search-type 2)\n"
@@ -53,6 +54,25 @@ std::vector<struct Command> commands = {
                 CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"cluster",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_MAIN,
+                "Slower, sensitive clustering",
+                "# Cascaded clustering of FASTA file\n"
+                "mmseqs cluster sequenceDB clusterDB tmp\n\n"
+                "#                  --cov-mode \n"
+                "# Sequence         0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "# Cutoff -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n"
+                "# Cascaded clustering with reassignment\n"
+                "# - Corrects criteria-violoations of cascaded merging\n"
+                "# - Produces more clusters and is a bit slower\n"
+                "mmseqs cluster sequenceDB clusterDB tmp --cluster-reassign\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr> & Lars von den Driesch",
+                "<i:sequenceDB> <o:clusterDB> <tmpDir>",
+                CITATION_LINCLUST|CITATION_MMSEQS1|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"tmalign",      tmalign,      &localPar.tmalign,      COMMAND_ALIGNMENT,
                 "Compute tm-score ",
@@ -78,13 +98,42 @@ std::vector<struct Command> commands = {
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <i:alnDB> <o:resultDB>",
                 CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::cadb },
-                                   {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::cadb },
-                                   {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
-                                   {"tmDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::tmscore }}},
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::cadb },
+                                          {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"tmDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::tmscore }}},
+        {"databases",            databases,            &localPar.databases,            COMMAND_DATABASE_CREATION,
+                "List and download databases",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<name> <o:sequenceDB> <tmpDir>",
+                CITATION_TAXONOMY|CITATION_MMSEQS2, {{"selection", 0, DbType::ZERO_OR_ALL, &DbValidator::empty },
+                                          {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"tmpDir",     DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,
                 "",
                 "",
                 CITATION_MMSEQS2, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
+};
+
+#include "structdatabases.sh.h"
+
+std::vector<DatabaseDownload> externalDownloads = {
+        {
+                "AlphafoldDb",
+                "AlphaFold Protein Structure Database.",
+                "Tunyasuvunakool et al. Highly accurate protein structure prediction for the human proteome. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "PDB",
+                "The Protein Data Bank is the single worldwide archive of structural data of biological macromolecules.",
+                "Berman et al: The Protein Data Bank. Nucleic Acids Res 28(1), 235-242 (2000)",
+                "https://www.rcsb.org",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        }
 };

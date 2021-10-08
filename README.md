@@ -1,5 +1,6 @@
 # foldseek 
 Software suite for searching and clustering protein structures.
+Foldseek is a collaboration between the Söding and Steinegger Lab.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
@@ -10,10 +11,6 @@ Alpha release: July 24, 2021
 
 `foldseek` can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system. We recommend using a system with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux).
 
-    # install from bioconda
-    conda install -c conda-forge -c bioconda foldseek 
-    # pull docker container
-    docker pull steineggerlab/foldseek
     # static Linux AVX2 build
     wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
     # static Linux SSE4.1 build
@@ -37,18 +34,26 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     foldseek createdb example/ targetDB
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
     
+Setup the PDB or AlphaFold using the `databases` module.
+    
+    # pdb  
+    foldseek databases PDB pdb tmp 
+    # alphafold db
+    foldseek databases AlphafoldDb afdb tmp 
+
+    
 ### Important parameters
 
-    -s                       adjusyesornot the sensitivity to speed trade-off (default: 7.5)
-    --alignment-type         0: 3Di Gotoh-Smith-Waterman, 1: TMalign 
+    -s                       adjusyesornot the sensitivity to speed trade-off (default: 7.5, high sensitivity: 9.0)
+    --alignment-type         0: 3Di Gotoh-Smith-Waterman (fast), 1: TMalign
     -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
     --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
 
 ### Main Modules
 
 * `easy-search`       fast protein structure search  
-* `easy-cluster`      cluster protein structures 
 * `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
+* `databases`         download pre-assembled databases
 
 ### Compile from source
 
