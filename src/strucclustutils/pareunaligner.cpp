@@ -60,6 +60,7 @@ short needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *s
 
     int scoringMatrix[5][5] = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
 
+
     for(int i = 1; i < 5; i++){
         for(int j = 1; j < 5; j++){
 
@@ -71,6 +72,7 @@ short needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *s
 //            if(score2 < 0 or score2 > 15){cout << " NO " << score2;}
 
             scoreTest = subMat->subMatrix[score1][score2];
+            // ideas: multiply score with distance?
 
             // calculate scores - bonus for base pairing and penalty for not
             scoringMatrix[i][j] = std::max(scoringMatrix[i-1][j-1] + scoreTest, scoringMatrix[i-1][j] - nwGapPenalty);
