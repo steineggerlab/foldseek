@@ -44,10 +44,12 @@ public:
 
     PARAMETER(PARAM_GAPNW)
     PARAMETER(PARAM_NNWEIGHT)
+    PARAMETER(PARAM_NNN)
     float tmScoreThr;
     int alignmentType;
     int gapNW;
     float nnWeight;
+    int numberNN;
 private:
 
     LocalParameters(LocalParameters const&);
