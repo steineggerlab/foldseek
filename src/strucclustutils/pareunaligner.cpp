@@ -97,6 +97,7 @@ short needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *s
 Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * targetnn, unsigned char *targetSeqInt, int targetLen, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, float nnWeight){
 
     Matcher::result_t result;
+
     // gotoh sw itself
 
         struct scores{ short H, E, F; };
@@ -127,15 +128,19 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
 
                 curr_sHEF_vec[j].E = std::max(curr_sHEF_vec[j - 1].H - gapOpen, curr_sHEF_vec[j - 1].E - gapExtern); // j-1
                 curr_sHEF_vec[j].F = std::max(prev_sHEF_vec[j].H - gapOpen, prev_sHEF_vec[j].F - gapExtern); // i-1
-                short bla = needlemanWunschScore(subTNNi, subQNNi, subMat, gapNW);
-                bla = nnWeight * bla;
+                short nnScore = needlemanWunschScore(subTNNi, subQNNi, subMat, gapNW);
+
                 int subOne = static_cast<int>(targetSeqInt[i]);
                 int subTwo = static_cast<int>(querySeqInt[j - 1]);
-//                if(subOne < 0 or subOne > 15){cout << " NO " << subOne;}
-//                if(subTwo < 0 or subTwo > 15){cout << " NO " << subTwo;}
-                int test_shit = 0;
-                if(subOne == subTwo){test_shit = 2;}else{test_shit = -1;}
-                const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] + bla; // i - 1, j - 1
+
+//                const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] + nnWeight * bla; // i - 1, j - 1
+                float nnScoreWeighted = nnWeight * nnScore;
+                nnScoreWeighted += (nnScoreWeighted < 0) ? -0.5 : 0.5;
+
+                const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] +  static_cast<short>(nnScoreWeighted); // i - 1, j - 1
+//                if(tempH != tempH2){
+//                    std::cout << tempH << "\t" << tempH2 << std::endl;
+//                }
 //                const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo]  + bla; // i - 1, j - 1
 
                 curr_sHEF_vec[j].H = std::max(tempH, curr_sHEF_vec[j].E);
@@ -146,7 +151,6 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
             std::swap(prev_sHEF_vec, curr_sHEF_vec);
         }
         delete [] workspace;
-
 //        cout << max_score << " ";
 //    result.backtrace = optAlnResult.cigar_string;
     result.score = max_score;
