@@ -56,13 +56,14 @@ void findNearestNeighbour(char * nn, Coordinates & ca, int length, unsigned char
     }
 }
 
-short needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *subMat, int nwGapPenalty){
+template<const int T>
+short needlemanWunschScore(int subQNNi[T], int subTNNi[T], SubstitutionMatrix *subMat, int nwGapPenalty){
 
-    int scoringMatrix[5][5] = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
+    int scoringMatrix[(T+1)*(T+1)]; // = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
+    memset(scoringMatrix, 0, (T+1)*(T+1) * sizeof(int));
 
-
-    for(int i = 1; i < 5; i++){
-        for(int j = 1; j < 5; j++){
+    for(int i = 1; i < (T+1); i++){
+        for(int j = 1; j < (T+1); j++){
 
             int score1 = subQNNi[i - 1];
             int score2 = subTNNi[j - 1];
@@ -75,8 +76,10 @@ short needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *s
             // ideas: multiply score with distance?
 
             // calculate scores - bonus for base pairing and penalty for not
-            scoringMatrix[i][j] = std::max(scoringMatrix[i-1][j-1] + scoreTest, scoringMatrix[i-1][j] - nwGapPenalty);
-            scoringMatrix[i][j] = std::max(scoringMatrix[i][j-1] - nwGapPenalty, scoringMatrix[i][j]);
+            scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[(i - 1)*(T+1) + j - 1] + scoreTest, scoringMatrix[(i - 1)*(T+1) + j] - nwGapPenalty);
+            scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[i*(T+1) + j - 1] - nwGapPenalty, scoringMatrix[i*(T+1) + j]);
+//            scoringMatrix[i][j] = std::max(scoringMatrix[i-1][j-1] + scoreTest, scoringMatrix[i-1][j] - nwGapPenalty);
+//            scoringMatrix[i][j] = std::max(scoringMatrix[i][j-1] - nwGapPenalty, scoringMatrix[i][j]);
 
         }
     }
@@ -89,11 +92,12 @@ short needlemanWunschScore(int subQNNi[4], int subTNNi[4], SubstitutionMatrix *s
 //        }
 //        cout << endl;
 //    }
-    short score = scoringMatrix[4][4]; /// 4;
+    short score = scoringMatrix[(T+1)*(T+1)-1]; /// 4;
 
     return score;
 }
 
+template<const int T>
 Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * targetnn, unsigned char *targetSeqInt, int targetLen, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, float nnWeight){
 
     Matcher::result_t result;
@@ -128,20 +132,16 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
 
                 curr_sHEF_vec[j].E = std::max(curr_sHEF_vec[j - 1].H - gapOpen, curr_sHEF_vec[j - 1].E - gapExtern); // j-1
                 curr_sHEF_vec[j].F = std::max(prev_sHEF_vec[j].H - gapOpen, prev_sHEF_vec[j].F - gapExtern); // i-1
-                short nnScore = needlemanWunschScore(subTNNi, subQNNi, subMat, gapNW);
+                short nnScore = needlemanWunschScore<T>(subTNNi, subQNNi, subMat, gapNW);
 
                 int subOne = static_cast<int>(targetSeqInt[i]);
                 int subTwo = static_cast<int>(querySeqInt[j - 1]);
 
-//                const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] + nnWeight * bla; // i - 1, j - 1
                 float nnScoreWeighted = nnWeight * nnScore;
                 nnScoreWeighted += (nnScoreWeighted < 0) ? -0.5 : 0.5;
 
                 const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] +  static_cast<short>(nnScoreWeighted); // i - 1, j - 1
-//                if(tempH != tempH2){
-//                    std::cout << tempH << "\t" << tempH2 << std::endl;
-//                }
-//                const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo]  + bla; // i - 1, j - 1
+
 
                 curr_sHEF_vec[j].H = std::max(tempH, curr_sHEF_vec[j].E);
                 curr_sHEF_vec[j].H = std::max(curr_sHEF_vec[j].H, curr_sHEF_vec[j].F);
@@ -294,7 +294,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                     targetCaCords.z = target_z;
 
                     findNearestNeighbour(targetnn, targetCaCords, tSeq.L, tSeq.numSequence);
-                    Matcher::result_t res = alignByNN(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
+                    // switch case
+                    Matcher::result_t res = alignByNN<4>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
                     unsigned int targetKey = tdbr->getDbKey(targetId);
                     res.dbKey = targetKey;
                     //Matcher::result_t res = paruenAlign.align(qSeq, tSeq, &subMat, evaluer);
