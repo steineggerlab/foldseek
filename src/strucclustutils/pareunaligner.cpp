@@ -20,7 +20,7 @@
 
 // static two dimensional array instead of vectors
 template<const int T>
-void findNearestNeighbour(char * nn, Coordinates & ca, int length, unsigned char * seqInt){
+void findNearestNeighbour(char * nn, float * dist, Coordinates & ca, int length, unsigned char * seqInt){
     // (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
 
     // calculate pairwise matrix (euclidean distance)
@@ -43,25 +43,29 @@ void findNearestNeighbour(char * nn, Coordinates & ca, int length, unsigned char
         }
         // find the four nearest neighbours for each amino acid
         std::sort(seqDistList.begin(), seqDistList.end());
-        int pos[T];
+//        int pos[T];
+        std::vector<std::pair<int,float>> pos;
 
         for(int m  = 0; m < T; m++){
-            pos[m]  = seqDistList[m].second;
+            pos.push_back(make_pair(seqDistList[m].second,seqDistList[m].first));
         }
-        std::sort(begin(pos), end(pos));
+        std::sort(pos.begin(), pos.end());
         for(int n = 0; n < T; n++){
-            int neighbour = static_cast<int>(seqInt[pos[n]]);
+            int neighbour = static_cast<int>(seqInt[pos[n].first]);
             nn[i*T + n] = neighbour;
+            dist[i*T + n] = pos[n].second;
         }
         seqDistList.clear();
     }
 }
 
 template<const int T>
-short needlemanWunschScore(int subQNNi[T], int subTNNi[T], SubstitutionMatrix *subMat, int nwGapPenalty){
+short needlemanWunschScore(int subQNNi[T], int subTNNi[T], float subQNNdist[T], float subTNNdist[T], SubstitutionMatrix *subMat, int nwGapPenalty, float m){
 
     int scoringMatrix[(T+1)*(T+1)]; // = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
     memset(scoringMatrix, 0, (T+1)*(T+1) * sizeof(int));
+//    float m = -0.01;
+    float c = 1.0;
 
     for(int i = 1; i < (T+1); i++){
         for(int j = 1; j < (T+1); j++){
@@ -70,36 +74,49 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], SubstitutionMatrix *s
             int score2 = subTNNi[j - 1];
             short scoreTest;
 
-//            if(score1 < 0 or score1 > 15){cout << " NO " << score1;}
-//            if(score2 < 0 or score2 > 15){cout << " NO " << score2;}
-
             scoreTest = subMat->subMatrix[score1][score2];
-            // ideas: multiply score with distance?
+
+            //multiply score with distance
+            float dist_diff = std::abs(subQNNdist[i - 1] - subTNNdist[j - 1]);
+
+            float distScaling = (c - m * dist_diff);
+            short distScalingi = static_cast<int>(distScaling*scoreTest);
+
+            distScalingi = std::min(distScalingi, scoreTest);
+
+//            cout << dist_diff << ":" << distScaling << endl;
 
             // calculate scores - bonus for base pairing and penalty for not
-            scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[(i - 1)*(T+1) + j - 1] + scoreTest, scoringMatrix[(i - 1)*(T+1) + j] - nwGapPenalty);
+            scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[(i - 1)*(T+1) + j - 1] + distScalingi, scoringMatrix[(i - 1)*(T+1) + j] - nwGapPenalty);
             scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[i*(T+1) + j - 1] - nwGapPenalty, scoringMatrix[i*(T+1) + j]);
-//            scoringMatrix[i][j] = std::max(scoringMatrix[i-1][j-1] + scoreTest, scoringMatrix[i-1][j] - nwGapPenalty);
-//            scoringMatrix[i][j] = std::max(scoringMatrix[i][j-1] - nwGapPenalty, scoringMatrix[i][j]);
 
         }
     }
 
     // for testing: print matrix
+//    for(int c = 0; c < T; c++){
+//        cout << subQNNi[c] << " ";
+//    }
+//    cout << endl;
+//    for(int c = 0; c < T; c++){
+//        cout << subTNNi[c] << " ";
+//    }
+//    cout << endl;
 //    cout << "Scoring Matrix" << endl;
-//    for (int a = 0; a < 5; a++) {
-//        for(int b = 0; b < 5; b++){
-//            cout << scoringMatrix[a][b] << " ";
+//    for (int a = 0; a < T; a++) {
+//        for(int b = 0; b < T; b++){
+//            cout << scoringMatrix[a*(T+1) + b] << " ";
 //        }
 //        cout << endl;
 //    }
+
     short score = scoringMatrix[(T+1)*(T+1)-1]; /// 4;
 
     return score;
 }
 
 template<const int T>
-Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * targetnn, unsigned char *targetSeqInt, int targetLen, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, float nnWeight){
+Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, float * queryNNdist, char * targetnn, unsigned char *targetSeqInt, int targetLen, float * targetNNdist, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, float nnWeight, float m){
 
     Matcher::result_t result;
 
@@ -113,13 +130,15 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
         scores *prev_sHEF_vec = &workspace[queryLen + 1];
 
         int subTNNi[T], subQNNi[T];
+        float subTNNdist[T], subQNNdist[T];
         // top row need to be set to a 0 score
         memset(prev_sHEF_vec, 0, sizeof(scores) * (queryLen + 1));
         for (int i = 0; i < targetLen; i++) {
 
             for(int a = 0; a < T; a++){
                 int neighbour = static_cast<int>(targetnn[T*i + a]);
-                subTNNi[a] =  neighbour;
+                subTNNi[a] = neighbour;
+                subTNNdist[a] = targetNNdist[T*i + a];
             }
 
             // left outer column need to be set to a 0 score
@@ -129,11 +148,12 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
                 for(int a = 0; a < T; a++){
                     int neighbour = static_cast<int>(querynn[T*(j-1) + a]);
                     subQNNi[a] = neighbour;
+                    subQNNdist[a] = queryNNdist[T*(j-1) + a];
                 }
 
                 curr_sHEF_vec[j].E = std::max(curr_sHEF_vec[j - 1].H - gapOpen, curr_sHEF_vec[j - 1].E - gapExtern); // j-1
                 curr_sHEF_vec[j].F = std::max(prev_sHEF_vec[j].H - gapOpen, prev_sHEF_vec[j].F - gapExtern); // i-1
-                short nnScore = needlemanWunschScore<T>(subTNNi, subQNNi, subMat, gapNW);
+                short nnScore = needlemanWunschScore<T>(subTNNi, subQNNi, subTNNdist, subQNNdist, subMat, gapNW, m);
 
                 int subOne = static_cast<int>(targetSeqInt[i]);
                 int subTwo = static_cast<int>(querySeqInt[j - 1]);
@@ -232,6 +252,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         int * ires = new int[par.maxSeqLen];
         char * querynn  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
         char * targetnn = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
+        float * querynn_dist  = (float*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
+        float * targetnn_dist = (float*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
 
         std::vector<Matcher::result_t> alignmentResult;
         PareunAlign paruenAlign(par.maxSeqLen, &subMat); // subMat called once, don't need to call it again?
@@ -266,22 +288,22 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 
                 switch (par.numberNN) {
                     case 3:
-                        findNearestNeighbour<3>(querynn, queryCaCords, querySeqLen, qSeq.numSequence);
+                        findNearestNeighbour<3>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence);
                         break;
                     case 4:
-                        findNearestNeighbour<4>(querynn, queryCaCords, querySeqLen, qSeq.numSequence);
+                        findNearestNeighbour<4>(querynn, querynn_dist,  queryCaCords, querySeqLen, qSeq.numSequence);
                         break;
                     case 5:
-                        findNearestNeighbour<5>(querynn, queryCaCords, querySeqLen, qSeq.numSequence);
+                        findNearestNeighbour<5>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence);
                         break;
                     case 6:
-                        findNearestNeighbour<6>(querynn, queryCaCords, querySeqLen, qSeq.numSequence);
+                        findNearestNeighbour<6>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence);
                         break;
                     case 7:
-                        findNearestNeighbour<7>(querynn, queryCaCords, querySeqLen, qSeq.numSequence);
+                        findNearestNeighbour<7>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence);
                         break;
                     case 8:
-                        findNearestNeighbour<8>(querynn, queryCaCords, querySeqLen, qSeq.numSequence);
+                        findNearestNeighbour<8>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence);
                         break;
                 }
                 int passedNum = 0;
@@ -318,28 +340,28 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 
                     switch (par.numberNN) {
                         case 3:
-                            findNearestNeighbour<3>(targetnn, targetCaCords, tSeq.L, tSeq.numSequence);
-                            res = alignByNN<3>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
+                            findNearestNeighbour<3>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence);
+                            res = alignByNN<3>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.m);
                             break;
                         case 4:
-                            findNearestNeighbour<4>(targetnn, targetCaCords, tSeq.L, tSeq.numSequence);
-                            res = alignByNN<4>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
+                            findNearestNeighbour<4>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence);
+                            res = alignByNN<4>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.m);
                             break;
                         case 5:
-                            findNearestNeighbour<5>(targetnn, targetCaCords, tSeq.L, tSeq.numSequence);
-                            res = alignByNN<5>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
+                            findNearestNeighbour<5>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence);
+                            res = alignByNN<5>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.m);
                             break;
                         case 6:
-                            findNearestNeighbour<6>(targetnn, targetCaCords, tSeq.L, tSeq.numSequence);
-                            res = alignByNN<6>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
+                            findNearestNeighbour<6>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence);
+                            res = alignByNN<6>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.m);
                             break;
                         case 7:
-                            findNearestNeighbour<7>(targetnn, targetCaCords, tSeq.L, tSeq.numSequence);
-                            res = alignByNN<7>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
+                            findNearestNeighbour<7>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence);
+                            res = alignByNN<7>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.m);
                             break;
                         case 8:
-                            findNearestNeighbour<8>(targetnn, targetCaCords, tSeq.L, tSeq.numSequence);
-                            res = alignByNN<8>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
+                            findNearestNeighbour<8>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence);
+                            res = alignByNN<8>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.m);
                             break;
                     }
 //                    res = alignByNN<4>(querynn, qSeq.numSequence, qSeq.L, targetnn, tSeq.numSequence, tSeq.L, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight);
