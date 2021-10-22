@@ -208,9 +208,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
     bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
 
     bool sameDB = false;
-    cout << par.slope << endl;
-    cout << par.nnWeight << endl;
-    
+
     if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
         tdbr = &qdbr;
@@ -252,6 +250,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 //        float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
         Sequence qSeq(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat, 0, false, par.compBiasCorrection);
         Sequence tSeq(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat, 0, false, par.compBiasCorrection);
+
         int * ires = new int[par.maxSeqLen];
         char * querynn  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
         char * targetnn = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
@@ -276,6 +275,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
             if(*data != '\0') {
                 unsigned int queryId = qdbr.getId(queryKey);
                 char *querySeq = qdbr.getData(queryId, thread_idx);
+//                for(int i =0; i < qSeq.L; i++){ cout << querySeq[i];}
                 unsigned int querySeqLen = qdbr.getSeqLen(queryId);
                 qSeq.mapSequence(id, queryKey, querySeq, querySeqLen);
 
