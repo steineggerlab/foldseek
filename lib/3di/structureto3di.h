@@ -5,8 +5,8 @@
 #include "kerasify/keras_model.h"
 
 namespace Alphabet3Di{
-    static const size_t CENTROID_CNT = 16;
-    static const char INVALID_STATE = CENTROID_CNT; // 'X'
+    static const size_t CENTROID_CNT = 20;
+    static const char INVALID_STATE = 2; // assign invalid residues to coil state
     const double DISTANCE_ALPHA_BETA = 1.5336;
     const double PI = 3.14159265359;
     static const size_t FEATURE_CNT = 10;
@@ -16,22 +16,26 @@ namespace Alphabet3Di{
     } VIRTUAL_CENTER = { 270, 0, 2 };
 
     const double centroids[CENTROID_CNT][EMBEDDING_DIM] = {
-        { -3.1738,  -0.6845},
-        { -2.2047,  -0.6065},
-        { -2.2506,  -1.7851},
-        {  1.3359,   0.2059},
-        {  0.7572,  -0.0786},
-        { -0.2827,  -0.0022},
-        {  1.0574,   0.9981},
-        {  2.0778,   0.6344},
-        {  1.3023,  -0.8703},
-        {  2.7799,   1.0694},
-        { -2.3758,   0.1531},
-        {  0.1120,  -1.0275},
-        { -0.7017,   0.9251},
-        { -4.0351,  -1.0812},
-        { -1.1916,  -0.1608},
-        { -2.5749,   0.9265},
+        { -1.0729,  -0.3600},
+        { -0.1356,  -1.8914},
+        {  0.4948,  -0.4205},
+        { -0.9874,   0.8128},
+        { -1.6621,  -0.4259},
+        {  2.1394,   0.0486},
+        {  1.5558,  -0.1503},
+        {  2.9179,   1.1437},
+        { -2.8814,   0.9956},
+        { -1.1400,  -2.0068},
+        {  3.2025,   1.7356},
+        {  1.7769,  -1.3037},
+        {  0.6901,  -1.2554},
+        { -1.1061,  -1.3397},
+        {  2.1495,  -0.8030},
+        {  2.3060,  -1.4988},
+        {  2.5522,   0.6046},
+        {  0.7786,  -2.1660},
+        { -2.3030,   0.3813},
+        {  1.0290,   0.8772},
     };
 }
 
