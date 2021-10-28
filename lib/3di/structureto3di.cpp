@@ -180,6 +180,9 @@ void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * c
                 }
             }
         }
+        if (partnerIdx[i] == -1){  // no partner found
+            validMask[i] = 0;
+        }
     }
 }
 
