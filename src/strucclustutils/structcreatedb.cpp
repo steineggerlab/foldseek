@@ -7,6 +7,7 @@
 #include "DBWriter.h"
 #include "FastSort.h"
 
+#include "structureto3diseqdist.h"
 #include "structureto3di.h"
 #include "SubstitutionMatrix.h"
 #include "GemmiWrapper.h"
@@ -74,6 +75,7 @@ int createdb(int argc, const char **argv, const Command& command) {
 #endif
         //recon_related
         StructureTo3Di structureTo3Di;
+        //StructureTo3diSeqDist structureTo3Di;
         GemmiWrapper readStructure;
         std::vector<char> alphabet3di;
         std::vector<float> camol;
