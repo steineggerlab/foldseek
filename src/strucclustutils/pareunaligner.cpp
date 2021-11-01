@@ -37,9 +37,6 @@ simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * targ
             simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[j-1]);
             scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
             scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
-            // todo: have everything in byte
-            //score_vec_16bit = _mm_sub_epi16(score_vec_16bit,score_middle_vec);
-
             sMat_vec[j] = simdi16_max(simdi16_add(prev_sMat_vec[j-1],scoreLookup),
                                       simdi16_max(simdi16_add(prev_sMat_vec[j],nwGapPenalty),
                                                  simdi16_add(sMat_vec[j-1],nwGapPenalty)));
@@ -78,7 +75,7 @@ Matcher::result_t sw_sse2_word(const unsigned char *db_sequence, const int8_t re
     memset(pvHLoad,0, segLen*sizeof(simd_int));
     memset(pvE,0,     segLen*sizeof(simd_int));
     memset(pvHmax,0,  segLen*sizeof(simd_int));
-    memset(nnScoreVec, 0, segLen*sizeof(simd_int));
+    //memset(nnScoreVec, 0, segLen*sizeof(simd_int));
     int32_t i, j, k;
 
     /* 16 byte insertion begin vector */
@@ -93,7 +90,7 @@ Matcher::result_t sw_sse2_word(const unsigned char *db_sequence, const int8_t re
     simd_int vMaxScore = vZero; /* Trace the highest score of the whole SW matrix. */
     simd_int vMaxMark = vZero; /* Trace the highest score till the previous column. */
     simd_int vTemp;
-    int32_t edge, begin = 0, end = db_length, step = 1;
+    int32_t begin = 0, end = db_length, step = 1;
     simd_int nwGapCPenaltyVec = simdi16_set(-nwGapPenalty);
     //fprintf(stderr, "start alignment of length %d [%d]\n", query_length, segLen * SIMD_SIZE);
 
@@ -117,11 +114,6 @@ Matcher::result_t sw_sse2_word(const unsigned char *db_sequence, const int8_t re
         for(int x = 0; x < T; x++){
             targetSubMat[x] = simdi_load((simd_int*)&subMatBiased[dbNN[i*T+x] * 32]);
         }
-        //targetSubMat[1] = simdi_load((simd_int*)&subMatBiased[dbNN[i*6+1] * 32 ]);
-        //targetSubMat[2] = simdi_load((simd_int*)&subMatBiased[dbNN[i*6+2] * 32 ]);
-        //targetSubMat[3] = simdi_load((simd_int*)&subMatBiased[dbNN[i*6+3] * 32 ]);
-        //targetSubMat[4] = simdi_load((simd_int*)&subMatBiased[dbNN[i*6+4] * 32 ]);
-        //targetSubMat[5] = simdi_load((simd_int*)&subMatBiased[dbNN[i*6+5] * 32 ]);
 
         /* Swap the 2 H buffers. */
         simd_int* pv = pvHLoad;
@@ -300,25 +292,28 @@ void createNNQueryProfile(simd_int *profile, const char *nn_sequence, const int3
 template<const int T>
 void findNearestNeighbour(char * nn, float * dist, Coordinates & ca,
                           int length, unsigned char * seqInt,
-                          std::vector<std::pair<float, int>> & seqDistList){
+                          std::pair<float, int> * seqDistList){
     // (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
 
     // calculate pairwise matrix (euclidean distance)
     std::pair<int,float> pos[T];
 
     for(int i = 0; i < length; i++){
-        seqDistList.clear();
+        size_t seqDistListPos = 0;
         for(int j = 0; j < length; j++){
             if(i != j) {
+                float x = (ca.x[i] - ca.x[j]);
+                float y = (ca.y[i] - ca.y[j]);
+                float z = (ca.z[i] - ca.z[j]);
                 // calculate distance
-                const float seqDist = sqrt(
-                        ((ca.x[i] - ca.x[j]) * (ca.x[i] - ca.x[j])) + ((ca.y[i] - ca.y[j]) * (ca.y[i] - ca.y[j])) +
-                        ((ca.z[i] - ca.z[j]) * (ca.z[i] - ca.z[j])));
-                seqDistList.emplace_back(make_pair(seqDist, j));
+                const float seqDist = sqrt((x * x) + (y * y) + (z * z));
+                seqDistList[seqDistListPos].first = seqDist;
+                seqDistList[seqDistListPos].second = j;
+                seqDistListPos++;
             }
         }
         // find the four nearest neighbours for each amino acid
-        std::partial_sort(seqDistList.begin(), seqDistList.begin() + T, seqDistList.end());
+        std::partial_sort(seqDistList, seqDistList + T, seqDistList + seqDistListPos);
 //        std::sort(seqDistList.begin(), seqDistList.end());
 //        int pos[T];
         for(int m  = 0; m < T; m++){
@@ -559,8 +554,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         simd_int* vHmax   = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
         simd_int* nnScoreVec   = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
         uint8_t * maxColumn = new uint8_t[par.maxSeqLen*sizeof(uint16_t)];
-        std::vector<std::pair<float, int>> seqDistList;
-        seqDistList.reserve(par.maxSeqLen);
+        std::pair<float, int> * seqDistList = new std::pair<float, int>[par.maxSeqLen];
         std::vector<Matcher::result_t> alignmentResult;
         PareunAlign paruenAlign(par.maxSeqLen, &subMat); // subMat called once, don't need to call it again?
         char buffer[1024+32768];
@@ -751,6 +745,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         free(vHmax);
         free(query_profile_nn);
         delete [] maxColumn;
+        delete [] seqDistList;
     }
     delete [] tinySubMat;
     delete [] tinySubMatBias;
