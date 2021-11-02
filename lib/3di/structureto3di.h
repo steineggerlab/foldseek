@@ -56,14 +56,6 @@ protected:
         }
     };
 
-    struct Embedding{
-        double f[Alphabet3Di::EMBEDDING_DIM];
-        Embedding(){}
-        Embedding(double param_f[Alphabet3Di::EMBEDDING_DIM]){
-            memcpy(f, param_f, sizeof(double) * Alphabet3Di::EMBEDDING_DIM);
-        }
-    };
-
     Vec3 add(Vec3 a, Vec3 b);
     Vec3 sub(Vec3 a, Vec3 b);
     Vec3 norm(Vec3 a);
@@ -85,8 +77,9 @@ protected:
 
     void createResidueMask(std::vector<bool> & validMask, Vec3 * ca, Vec3 * n, Vec3 * c, const size_t len);
 
-    // Describe interaction of residue i and j
-    Feature calcFeatures(Vec3 * ca, int i, int j);
+    // find closest member for every c beta atom
+    void findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
+                             std::vector<bool> & validMask, const size_t len);
 
 };
 
@@ -98,6 +91,16 @@ public:
     char * structure2states(Vec3 * ca, Vec3 * n,
                             Vec3 * c, Vec3 * cb,
                             size_t len);
+
+protected:
+
+    struct Embedding{
+        double f[Alphabet3Di::EMBEDDING_DIM];
+        Embedding(){}
+        Embedding(double param_f[Alphabet3Di::EMBEDDING_DIM]){
+            memcpy(f, param_f, sizeof(double) * Alphabet3Di::EMBEDDING_DIM);
+        }
+    };
 
 private:
     // Encoding
@@ -112,9 +115,8 @@ private:
     std::vector<int> partnerIdx;
     std::vector<bool> mask;
 
-    // find closest member for every c beta atom
-    void findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
-                             std::vector<bool> & validMask, const size_t len);
+    // Describe interaction of residue i and j
+    Feature calcFeatures(Vec3 * ca, int i, int j);
 
     void calcConformationDescriptors(std::vector<Feature> & features, std::vector<int> & partnerIdx,
                                      Vec3 * ca, std::vector<bool> & mask, const size_t len);

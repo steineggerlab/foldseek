@@ -121,8 +121,51 @@ void StructureTo3DiBase::replaceCBWithVirtualCenter(Vec3 * ca, Vec3 * n,
     }
 }
 
+void StructureTo3DiBase::createResidueMask(std::vector<bool> & validMask,
+                                           Vec3 * ca, Vec3 * n, Vec3 * c,
+                                           const size_t len){
+    for (size_t i = 0; i < len; i++){
+        if (isnan(ca[i].x) || isnan(c[i].x) || isnan(n[i].x)){
+            validMask[i] = 0;
+        } else{
+            validMask[i] = 1;
+        }
+    }
+}
+
+void StructureTo3DiBase::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
+                                         std::vector<bool> & validMask, const size_t n){
+    // Pick for each residue the closest neighbour as partner
+    // (in terms of distances between their virtual centers/C_betas).
+    //
+    // Ignore the first/last and invalid residues.
+    for(size_t i = 1; i < n - 1; i++){
+        double minDistance = INFINITY;
+        for(size_t j = 1; j < n - 1; j++){
+            if (i != j && validMask[j]){
+                double dist = calcDistanceBetween(cb[i], cb[j]);
+                if (dist < minDistance){
+                    minDistance = dist;
+                    partnerIdx[i] = static_cast<int>(j);
+                }
+            }
+        }
+        if (partnerIdx[i] == -1){  // no partner found
+            validMask[i] = 0;
+        }
+    }
+}
+
+// StructureTo3Di
+
+StructureTo3Di::StructureTo3Di(){
+    encoder.LoadModel(
+            std::string((const char *)__3di_encoder_weights_kerasify,
+                                      __3di_encoder_weights_kerasify_len));
+}
+
 // Describe interaction of residue i and j
-StructureTo3DiBase::Feature StructureTo3DiBase::calcFeatures(Vec3 * ca, int i, int j){
+StructureTo3Di::Feature StructureTo3Di::calcFeatures(Vec3 * ca, int i, int j){
     Vec3 u1 = norm(sub(ca[i],       ca[i - 1]));
     Vec3 u2 = norm(sub(ca[i + 1],   ca[i]));
     Vec3 u3 = norm(sub(ca[j],       ca[j - 1]));
@@ -141,46 +184,6 @@ StructureTo3DiBase::Feature StructureTo3DiBase::calcFeatures(Vec3 * ca, int i, i
     features[8] = copysign(fmin(fabs(j - i), 4), j - i); // clip j-i to [-4, 4]
     features[9] = copysign(log(fabs(j - i) + 1), j - i );
     return Feature(features);
-}
-
-void StructureTo3DiBase::createResidueMask(std::vector<bool> & validMask,
-                                           Vec3 * ca, Vec3 * n, Vec3 * c,
-                                           const size_t len){
-    for (size_t i = 0; i < len; i++){
-        if (isnan(ca[i].x) || isnan(c[i].x) || isnan(n[i].x)){
-            validMask[i] = 0;
-        } else{
-            validMask[i] = 1;
-        }
-    }
-}
-
-// StructureTo3Di
-
-StructureTo3Di::StructureTo3Di(){
-    encoder.LoadModel(
-            std::string((const char *)__3di_encoder_weights_kerasify,
-                                      __3di_encoder_weights_kerasify_len));
-}
-
-void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
-                                         std::vector<bool> & validMask, const size_t n){
-    // Pick for each residue the closest neighbour as partner
-    // (in terms of distances between their virtual centers/C_betas).
-    //
-    // Ignore the first/last and invalid residues.
-    for(size_t i = 1; i < n - 1; i++){
-        double minDistance = INFINITY;
-        for(size_t j = 1; j < n - 1; j++){
-            if (i != j && validMask[j]){
-                double dist = calcDistanceBetween(cb[i], cb[j]);
-                if (dist < minDistance){
-                    minDistance = dist;
-                    partnerIdx[i] = static_cast<int>(j);
-                }
-            }
-        }
-    }
 }
 
 void StructureTo3Di::calcConformationDescriptors(std::vector<Feature> & features, std::vector<int> & partnerIdx,
