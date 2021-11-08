@@ -406,7 +406,7 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], in
 //    }
 
 template<const int T>
-Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * queryNNdist, char * targetnn, unsigned char *targetSeqInt, int targetLen, char * targetNNdist, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, float nnWeight, float m){
+Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * queryNNdist, char * targetnn, unsigned char *targetSeqInt, int targetLen, char * targetNNdist, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, int nnWeight, float m){
 
     Matcher::result_t result;
 
@@ -448,7 +448,7 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
             int subOne = static_cast<int>(targetSeqInt[i]);
             int subTwo = static_cast<int>(querySeqInt[j - 1]);
 
-            float nnScoreWeighted = nnWeight * nnScore;
+            float nnScoreWeighted = nnScore / nnWeight;
             nnScoreWeighted += (nnScoreWeighted < 0) ? -0.5 : 0.5;
 
             const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] +  static_cast<short>(nnScoreWeighted); // i - 1, j - 1

@@ -49,7 +49,7 @@ public:
     float tmScoreThr;
     int alignmentType;
     int gapNW;
-    float nnWeight;
+    int nnWeight;
     int numberNN;
     float slope;
 private:
