@@ -292,13 +292,16 @@ void createNNQueryProfile(simd_int *profile, simd_int *profile_dist, const char 
 
 // static two dimensional array instead of vectors
 template<const int T>
-void findNearestNeighbour(char * nn, float * dist, Coordinates & ca,
+void findNearestNeighbour(char * nn, char * dist, Coordinates & ca,
                           int length, unsigned char * seqInt,
                           std::pair<float, int> * seqDistList){
     // (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
 
     // calculate pairwise matrix (euclidean distance)
     std::pair<int,float> pos[T];
+    char closestStateI;
+    int minDistance;
+    int seqDistance;
 
     for(int i = 0; i < length; i++){
         size_t seqDistListPos = 0;
@@ -326,39 +329,11 @@ void findNearestNeighbour(char * nn, float * dist, Coordinates & ca,
         for(int n = 0; n < T; n++){
             int neighbour = static_cast<int>(seqInt[pos[n].first]);
             nn[i*T + n] = neighbour;
-            dist[i*T + n] = pos[n].second;
-        }
-    }
-}
+//            dist[i*T + n] = pos[n].second;
 
-template<const int T>
-short needlemanWunschScore(int subQNNi[T], int subTNNi[T], float subQNNdist[T], float subTNNdist[T], SubstitutionMatrix *subMat, int nwGapPenalty, float m){
+            // discretise the distance within the sequence position
+            seqDistance = pos[n].first - i;
 
-    int scoringMatrix[(T+1)*(T+1)]; // = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
-    memset(scoringMatrix, 0, (T+1)*(T+1) * sizeof(int));
-//    float m = -0.01;
-    float c = 1.0;
-    char closestStateI;
-    char closestStateJ;
-    int minDistance;
-    int seqDistance;
-
-    for(int i = 1; i < (T+1); i++){
-        for(int j = 1; j < (T+1); j++){
-
-            int score1 = subQNNi[i - 1];
-            int score2 = subTNNi[j - 1];
-            short scoreTest;
-
-            scoreTest = subMat->subMatrix[score1][score2];
-            // discretise distance 
-//            int distDiffI = static_cast<int>(subQNNdist[i - 1]);
-//            int distDiffJ = static_cast<int>(subTNNdist[j - 1]);
-//            short distDisI = Alphabet3diSeqDist::centroids[distDiffI];
-//            short distDisJ = Alphabet3diSeqDist::centroids[distDiffJ];
-//            // look  up value in dist matrix
-//            int distMatValue = distMat[distDisI][distDisJ];
-            seqDistance = subQNNi[i - 1] - i + 1;
             minDistance = INT_MAX;
             closestStateI = Alphabet3diSeqDist::INVALID_STATE;
             for (size_t a = 0; a < Alphabet3diSeqDist::CENTROID_CNT; a++){
@@ -369,26 +344,32 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], float subQNNdist[T], 
                     minDistance = distToCentroid;
                 }
             }
+            dist[i*T + n] = closestStateI;
+        }
+    }
+}
 
-            seqDistance = subTNNi[j - 1] - j + 1;
-            minDistance = INT_MAX;
-            closestStateJ = Alphabet3diSeqDist::INVALID_STATE;
-            for (size_t a = 0; a < Alphabet3diSeqDist::CENTROID_CNT; a++){
+template<const int T>
+short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], int subTNNdist[T], SubstitutionMatrix *subMat, int nwGapPenalty, float m){
 
-                int distToCentroid = abs(Alphabet3diSeqDist::centroids[a] - seqDistance);
-                if (distToCentroid < minDistance){
-                    closestStateJ = a;
-                    minDistance = distToCentroid;
-                }
-            }
-            int distMatValue = distMat[closestStateI][closestStateJ];
+    int scoringMatrix[(T+1)*(T+1)]; // = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
+    memset(scoringMatrix, 0, (T+1)*(T+1) * sizeof(int));
+//    float m = -0.01;
+//    float c = 1.0;
+    int distMatValue;
+
+    for(int i = 1; i < (T+1); i++){
+        for(int j = 1; j < (T+1); j++){
+
+            int score1 = subQNNi[i - 1];
+            int score2 = subTNNi[j - 1];
+            short scoreTest;
+
+            scoreTest = subMat->subMatrix[score1][score2];
+
+            distMatValue = distMat[subQNNdist[i - 1]][subTNNdist[j - 1]];
 
             //multiply score with distance
-//            float dist_diff = std::abs(subQNNdist[i - 1] - subTNNdist[j - 1]);
-//            float blaQNNdist = subQNNdist[i - 1];
-//            float blaTNNdist = subTNNdist[j - 1];
-//            cout << "dist diff: " << dist_diff << ", dist i: " << subQNNdist[i - 1] << ", dist j: " << subTNNdist[j - 1] << ", closest state i:" << closestStateI << ", closest state j:" << closestStateJ << ", dist Matrix value" << distMatValue << endl;
-
 //            float distScaling = (c - m * dist_diff);
 //            short distScalingi = static_cast<int>(distScaling*scoreTest);
             short distScalingi = distMatValue*scoreTest;
@@ -425,7 +406,7 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], float subQNNdist[T], 
 //    }
 
 template<const int T>
-Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, float * queryNNdist, char * targetnn, unsigned char *targetSeqInt, int targetLen, float * targetNNdist, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, float nnWeight, float m){
+Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * queryNNdist, char * targetnn, unsigned char *targetSeqInt, int targetLen, char * targetNNdist, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, float nnWeight, float m){
 
     Matcher::result_t result;
 
@@ -439,7 +420,7 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
     scores *prev_sHEF_vec = &workspace[queryLen + 1];
 
     int subTNNi[T], subQNNi[T];
-    float subTNNdist[T], subQNNdist[T];
+    int subTNNdist[T], subQNNdist[T];
     // top row need to be set to a 0 score
     memset(prev_sHEF_vec, 0, sizeof(scores) * (queryLen + 1));
     for (int i = 0; i < targetLen; i++) {
@@ -510,7 +491,6 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
     qcadbr.open(DBReader<unsigned int>::NOSORT);
 
     SubstitutionMatrix subMat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
-    const char distFile = '/Users/charlotte/CLion/foldseek/data/mat3diSeqDist.out';
 
     DBReader<unsigned int> *tdbr = NULL;
     DBReader<unsigned int> *tcadbr = NULL;
@@ -587,8 +567,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 
         char * querynn  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
         char * targetnn = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
-        float * querynn_dist  = (float*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
-        float * targetnn_dist = (float*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
+        char * querynn_dist  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
+        char * targetnn_dist = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
 
 
 //        simd_int* vHStore = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
