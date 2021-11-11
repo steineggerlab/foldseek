@@ -26,6 +26,7 @@
 
 template<const int T>
 simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
+                                 const  simd_int *subQ_dist, const  simd_int *subT_dist,
                                  const simd_int nwGapPenalty, const simd_int vSubMatBias){
 
     simd_int prev_sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
@@ -36,8 +37,19 @@ simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * targ
         sMat_vec[0]= simdi_setzero();
         for(int j = 1; j < T+1; j++){
 
+//            distMatValue = distMat[subQNNdist[i - 1]][subTNNdist[j - 1]];
+//            short distScalingi = distMatValue*scoreTest;
+//
+//            distScalingi = std::min(distScalingi, scoreTest);
+            // score
             simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[j-1]);
             scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
+            // distance
+            simd_int distLookup = UngappedAlignment::Shuffle(subT_dist[i-1], subQ_dist[j-1]);
+            distLookup = simdi_and(distLookup, simdi16_set(0x00FF));
+            // multiply
+            simd_int scaleScore = simdi32_mul(scoreLookup, distLookup);
+            scoreLookup = simdi16_min(scaleScore, scoreLookup);
             scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
             sMat_vec[j] = simdi16_max(simdi16_add(prev_sMat_vec[j-1],scoreLookup),
                                       simdi16_max(simdi16_add(prev_sMat_vec[j],nwGapPenalty),
@@ -46,13 +58,12 @@ simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * targ
         std::swap(prev_sMat_vec, sMat_vec);
     }
     return prev_sMat_vec[T]; /// 4;
-
 }
 
 template<const int T>
-Matcher::result_t sw_sse2_word(const unsigned char *db_sequence, const int8_t ref_dir, const int32_t db_length,
+Matcher::result_t sw_sse2_word(const unsigned char *db_sequence, const simd_int *targetnn_dist, const int8_t ref_dir, const int32_t db_length,
                                const int32_t query_length, const uint8_t gap_open, const uint8_t gap_extend,
-                               const simd_int *query_profile_word, const simd_int *query_profile_nn, simd_int *vHStore,
+                               const simd_int *query_profile_word, const simd_int *query_profile_nn, const simd_int *query_profile_dist, simd_int *vHStore,
                                simd_int *vHLoad, simd_int *vE, simd_int *vHmax, uint8_t *maxColumn, simd_int *nnScoreVec,
                                const int8_t *subMatBiased, const short subMatBias, const char *dbNN, const int nwGapPenalty, const uint16_t terminate) {
 
@@ -123,7 +134,9 @@ Matcher::result_t sw_sse2_word(const unsigned char *db_sequence, const int8_t re
         pvHStore = pv;
         for (j = 0; LIKELY(j < segLen); j ++) {
             const simd_int* vP_nn = query_profile_nn + j * T;
-            simd_int nn_score = needlemanWunschScoreVec<T>(vP_nn, &targetSubMat[0], nwGapCPenaltyVec, vSubMatBias);
+            const simd_int* subQ_dist = query_profile_dist + j * T;
+            const simd_int* subT_dist = targetnn_dist + j * T;
+            simd_int nn_score = needlemanWunschScoreVec<T>(vP_nn, &targetSubMat[0], subQ_dist, subT_dist, nwGapCPenaltyVec, vSubMatBias);
             simdi_store(nnScoreVec+j, nn_score);
         }
         /* inner loop to process the query sequence */
@@ -357,6 +370,7 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], in
 //    float m = -0.01;
 //    float c = 1.0;
     int distMatValue;
+    short combinedScore;
 
     for(int i = 1; i < (T+1); i++){
         for(int j = 1; j < (T+1); j++){
@@ -369,17 +383,19 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], in
 
             distMatValue = distMat[subQNNdist[i - 1]][subTNNdist[j - 1]];
 
+            combinedScore = scoreTest + distMatValue;
+
             //multiply score with distance
 //            float distScaling = (c - m * dist_diff);
 //            short distScalingi = static_cast<int>(distScaling*scoreTest);
-            short distScalingi = distMatValue*scoreTest;
+//            short distScalingi = distMatValue*scoreTest;
 
-            distScalingi = std::min(distScalingi, scoreTest);
+//            distScalingi = std::min(distScalingi, scoreTest);
 
 //            cout << dist_diff << ":" << distScaling << endl;
 
             // calculate scores - bonus for base pairing and penalty for not
-            scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[(i - 1)*(T+1) + j - 1] + distScalingi, scoringMatrix[(i - 1)*(T+1) + j] - nwGapPenalty);
+            scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[(i - 1)*(T+1) + j - 1] + combinedScore, scoringMatrix[(i - 1)*(T+1) + j] - nwGapPenalty);
             scoringMatrix[i*(T+1) + j] = std::max(scoringMatrix[i*(T+1) + j - 1] - nwGapPenalty, scoringMatrix[i*(T+1) + j]);
         }
     }
@@ -567,16 +583,16 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 
         char * querynn  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
         char * targetnn = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
-        char * querynn_dist  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
-        char * targetnn_dist = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(float) * 8 );
+        char * querynn_dist  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
+        char * targetnn_dist = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
 
 
-//        simd_int* vHStore = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
-//        simd_int* vHLoad  = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
-//        simd_int* vE      = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
-//        simd_int* vHmax   = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
-//        simd_int* nnScoreVec   = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
-//        uint8_t * maxColumn = new uint8_t[par.maxSeqLen*sizeof(uint16_t)];
+        simd_int* vHStore = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
+        simd_int* vHLoad  = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
+        simd_int* vE      = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
+        simd_int* vHmax   = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
+        simd_int* nnScoreVec   = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
+        uint8_t * maxColumn = new uint8_t[par.maxSeqLen*sizeof(uint16_t)];
         std::pair<float, int> * seqDistList = new std::pair<float, int>[par.maxSeqLen];
         std::vector<Matcher::result_t> alignmentResult;
         PareunAlign paruenAlign(par.maxSeqLen, &subMat); // subMat called once, don't need to call it again?
@@ -681,48 +697,48 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                         case 3:
                             findNearestNeighbour<3>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
                             res = alignByNN<3>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
-//                            res = sw_sse2_word<3>(tSeq.numSequence, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
-//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn,
+//                            res = sw_sse2_word<3>(tSeq.numSequence, targetnn_dist, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
+//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn, query_profile_dist,
 //                                                  vHStore, vHLoad, vE, vHmax, maxColumn, nnScoreVec, tinySubMatBias, subMatBias, targetnn,
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 4:
                             findNearestNeighbour<4>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
                             res = alignByNN<4>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
-//                            res = sw_sse2_word<4>(tSeq.numSequence, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
-//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn,
+//                            res = sw_sse2_word<4>(tSeq.numSequence, targetnn_dist, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
+//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn, query_profile_dist,
 //                                                  vHStore, vHLoad, vE, vHmax, maxColumn, nnScoreVec, tinySubMatBias, subMatBias, targetnn,
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 5:
                             findNearestNeighbour<5>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
                             res = alignByNN<5>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
-//                            res = sw_sse2_word<5>(tSeq.numSequence, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
-//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn,
+//                            res = sw_sse2_word<5>(tSeq.numSequence, targetnn_dist, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
+//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn, query_profile_dist,
 //                                                  vHStore, vHLoad, vE, vHmax, maxColumn, nnScoreVec, tinySubMatBias, subMatBias, targetnn,
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 6:
                             findNearestNeighbour<6>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
                             res = alignByNN<6>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
-//                            res = sw_sse2_word<6>(tSeq.numSequence, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
-//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn,
+//                            res = sw_sse2_word<6>(tSeq.numSequence, targetnn_dist, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
+//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn, query_profile_dist,
 //                                                  vHStore, vHLoad, vE, vHmax, maxColumn, nnScoreVec, tinySubMatBias, subMatBias, targetnn,
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 7:
                             findNearestNeighbour<7>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
                             res = alignByNN<7>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
-//                            res = sw_sse2_word<7>(tSeq.numSequence, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
-//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn,
+//                            res = sw_sse2_word<7>(tSeq.numSequence, targetnn_dist, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
+//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn, query_profile_dist,
 //                                                  vHStore, vHLoad, vE, vHmax, maxColumn, nnScoreVec, tinySubMatBias, subMatBias, targetnn,
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 8:
                             findNearestNeighbour<8>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
                             res = alignByNN<8>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
-//                            res = sw_sse2_word<8>(tSeq.numSequence, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
-//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn,
+//                            res = sw_sse2_word<8>(tSeq.numSequence, targetnn_dist, 0, tSeq.L, qSeq.L, par.gapOpen.values.aminoacid(),
+//                                                  par.gapExtend.values.aminoacid(), query_profile_word, query_profile_nn, query_profile_dist,
 //                                                  vHStore, vHLoad, vE, vHmax, maxColumn, nnScoreVec, tinySubMatBias, subMatBias, targetnn,
 //                                                  par.gapNW, SHRT_MAX);
                             break;
@@ -768,12 +784,12 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         free(querynn);
         free(targetnn);
         free(query_profile_word);
-//        free(vHStore);
-//        free(vHLoad);
-//        free(vE);
-//        free(vHmax);
+        free(vHStore);
+        free(vHLoad);
+        free(vE);
+        free(vHmax);
         free(query_profile_nn);
-//        delete [] maxColumn;
+        delete [] maxColumn;
         delete [] seqDistList;
     }
     delete [] tinySubMat;

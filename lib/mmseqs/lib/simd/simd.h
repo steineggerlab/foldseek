@@ -232,6 +232,7 @@ typedef __m256i simd_int;
 #define simdi32_mul(x,y)    _mm256_mullo_epi32(x,y)
 #define simdi32_max(x,y)    _mm256_max_epi32(x,y)
 #define simdi16_max(x,y)    _mm256_max_epi16(x,y)
+#define simdi16_min(x,y)    _mm256_min_epi16(x,y)
 #define simdi32_insert(x,y,z) _mm256_insert_epi32(x,y,z)
 #define simdi32_extract(x,y) _mm256_extract_epi32(x,y)
 #define simdi16_hmax(x)     simd_hmax16_avx(x)
@@ -438,6 +439,7 @@ typedef __m128i simd_int;
 #define simdi32_mul(x,y)    _mm_mullo_epi32(x,y) // SSE4.1
 #define simdi32_max(x,y)    _mm_max_epi32(x,y) // SSE4.1
 #define simdi16_max(x,y)    _mm_max_epi16(x,y)
+#define simdi16_min(x,y)    _mm_min_epi16(x,y)
 #define simdi32_insert(x,y,z) _mm_insert_epi32(x,y,z)
 #define simdi32_extract(x,y) _mm_extract_epi32(x,y)
 #define simdi16_hmax(x)     simd_hmax16_sse(x)
