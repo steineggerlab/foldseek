@@ -51,7 +51,7 @@ public:
     int gapNW;
     int nnWeight;
     int numberNN;
-    float slope;
+    int slope;
 private:
 
     LocalParameters(LocalParameters const&);

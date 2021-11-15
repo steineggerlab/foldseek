@@ -312,9 +312,31 @@ void findNearestNeighbour(char * nn, char * dist, Coordinates & ca,
 
     // calculate pairwise matrix (euclidean distance)
     std::pair<int,float> pos[T];
+    std::vector<int> nn_vec;
+    nn_vec.reserve(length);
+
     char closestStateI;
     int minDistance;
     int seqDistance;
+    float minDist = FLT_MAX;
+    int minNN = -1;
+//    for(int i = 0; i < length; i++) {
+//        size_t seqDistListPos = 0;
+//        for (int j = 0; j < length; j++) {
+//            if (i != j) {
+//                float x = (ca.x[i] - ca.x[j]);
+//                float y = (ca.y[i] - ca.y[j]);
+//                float z = (ca.z[i] - ca.z[j]);
+//                // calculate distance
+//                const float seqDist = sqrt((x * x) + (y * y) + (z * z));
+//                if(seqDist < minDist){
+//                    minNN = j;
+//                    minDistance = seqDistance;
+//                }
+//            }
+//        }
+//        nn_vec[i]= minNN;
+//    }
 
     for(int i = 0; i < length; i++){
         size_t seqDistListPos = 0;
@@ -346,6 +368,7 @@ void findNearestNeighbour(char * nn, char * dist, Coordinates & ca,
 
             // discretise the distance within the sequence position
             seqDistance = pos[n].first - i;
+//            seqDistance = nn_vec[pos[n].first] - pos[n].first;
 
             minDistance = INT_MAX;
             closestStateI = Alphabet3diSeqDist::INVALID_STATE;
@@ -363,7 +386,7 @@ void findNearestNeighbour(char * nn, char * dist, Coordinates & ca,
 }
 
 template<const int T>
-short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], int subTNNdist[T], SubstitutionMatrix *subMat, int nwGapPenalty, float m){
+short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], int subTNNdist[T], SubstitutionMatrix *subMat, int nwGapPenalty, int m){
 
     int scoringMatrix[(T+1)*(T+1)]; // = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
     memset(scoringMatrix, 0, (T+1)*(T+1) * sizeof(int));
@@ -383,7 +406,19 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], in
 
             distMatValue = distMat[subQNNdist[i - 1]][subTNNdist[j - 1]];
 
-            combinedScore = scoreTest + distMatValue;
+//            if(distMatValue == -50){cout << subQNNdist[i - 1] << ", " << subTNNdist[j - 1] << endl;}
+
+
+            float distMatF = distMatValue/m;
+            short distMatS = static_cast<int>(distMatF);
+
+            combinedScore = scoreTest + distMatS;
+//            if(scoreTest < 0 && distMatValue < 0){
+//                combinedScore = (-1)*( scoreTest * distMatValue);
+//            }else {
+//                combinedScore = (scoreTest * distMatValue);
+//            }
+//            cout << combinedScore << ", ";
 
             //multiply score with distance
 //            float distScaling = (c - m * dist_diff);
@@ -422,7 +457,7 @@ short needlemanWunschScore(int subQNNi[T], int subTNNi[T], int subQNNdist[T], in
 //    }
 
 template<const int T>
-Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * queryNNdist, char * targetnn, unsigned char *targetSeqInt, int targetLen, char * targetNNdist, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, int nnWeight, float m){
+Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int queryLen, char * queryNNdist, char * targetnn, unsigned char *targetSeqInt, int targetLen, char * targetNNdist, SubstitutionMatrix *subMat, int gapOpen, int gapExtern, int gapNW, int nnWeight, int m){
 
     Matcher::result_t result;
 
@@ -434,6 +469,8 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
     scores *workspace = new scores[queryLen * 2 + 2];
     scores *curr_sHEF_vec = &workspace[0];
     scores *prev_sHEF_vec = &workspace[queryLen + 1];
+
+    int max = 0; int min = 0;
 
     int subTNNi[T], subQNNi[T];
     int subTNNdist[T], subQNNdist[T];
@@ -464,10 +501,14 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
             int subOne = static_cast<int>(targetSeqInt[i]);
             int subTwo = static_cast<int>(querySeqInt[j - 1]);
 
-            float nnScoreWeighted = nnScore / nnWeight;
-            nnScoreWeighted += (nnScoreWeighted < 0) ? -0.5 : 0.5;
+//            float nnScoreWeighted = nnScore * nnWeight;
+//            nnScoreWeighted += (nnScoreWeighted < 0) ? -0.5 : 0.5;
+            if(nnScore > max){max = nnScore;}
+            if(nnScore < min){min = nnScore;}
+            short nnScoreWeighted = nnScore / nnWeight;
 
-            const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] +  static_cast<short>(nnScoreWeighted); // i - 1, j - 1
+            const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] + nnScoreWeighted;
+//            const short tempH = prev_sHEF_vec[j - 1].H + subMat->subMatrix[subOne][subTwo] +  static_cast<short>(nnScoreWeighted); // i - 1, j - 1
 
 
             curr_sHEF_vec[j].H = std::max(tempH, curr_sHEF_vec[j].E);
@@ -481,6 +522,7 @@ Matcher::result_t alignByNN(char * querynn, unsigned char *querySeqInt, int quer
 //        cout << max_score << " ";
 //    result.backtrace = optAlnResult.cigar_string;
     result.score = max_score;
+//    cout << "max: " << max << ", min: " << min << ", score: " << max_score << endl;
 //    result.qStartPos = optAlnResult.query_start;
 //    result.qEndPos = optAlnResult.query_end;
 //    result.dbEndPos = optAlnResult.target_end;

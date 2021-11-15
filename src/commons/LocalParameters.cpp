@@ -14,7 +14,8 @@ LocalParameters::LocalParameters() :
         PARAM_GAPNW(PARAM_GAPNW_ID,"--gap-nw", "Gap NW","blub" ,typeid(int), (void *) &gapNW, "^[1-9]{1}$"),
         PARAM_NNWEIGHT(PARAM_NNWEIGHT_ID,"--nnweight", "Weight NN","blub" ,typeid(int), (void *) &nnWeight, "^[1-9]{1}$"),
         PARAM_NNN(PARAM_NNN_ID,"--number-nn", "Number NN","number of nearest neighbours" ,typeid(int), (void *) &numberNN, "^[1-9]{1}$"),
-        PARAM_SLOPE(PARAM_SLOPE_ID,"--slope", "slope","slope for NN distance weighting" ,typeid(float), (void *) &slope, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|([0-9]*(\\.[0-9]+)?)$")
+        PARAM_SLOPE(PARAM_SLOPE_ID,"--slope", "slope","slope for NN distance weighting" ,typeid(int), (void *) &slope, "^[1-9]{1}$")
+//        PARAM_SLOPE(PARAM_SLOPE_ID,"--slope", "slope","slope for NN distance weighting" ,typeid(int), (void *) &slope, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|([0-9]*(\\.[0-9]+)?)$")
 {
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
@@ -88,7 +89,7 @@ LocalParameters::LocalParameters() :
     nnWeight = 5;
     gapNW = 2;
     numberNN = 4;
-    slope = 0.1;
+    slope = 1;
 
 }
 
