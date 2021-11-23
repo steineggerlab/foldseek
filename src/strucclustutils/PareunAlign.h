@@ -14,6 +14,7 @@
 #include "LocalParameters.h"
 #include <vector>
 #include <cstring>
+#include "structureto3diseqdist.h"
 using namespace std;
 
 class PareunAlign  {
@@ -41,9 +42,10 @@ public:
 
     string backtrace2cigar (string backtrace);
 };
-
+// todo: clean up
+const int DIST_MAT_SIZE = Alphabet3diSeqDist::CENTROID_CNT + 1;
 //    A   B   C   D   E   F   G   H   I   J   K   L   M   N   O   P   Q   R   S   T   X
-const int distMat[21][21] = { {14,5, -19, -50, -50, -50, -50,-50, -50 ,-50, -50, -50, -50, -50, -50, -50, -50, -50, -50,-50, 0},
+const short distMat[DIST_MAT_SIZE][DIST_MAT_SIZE] = { {14,5, -19, -50, -50, -50, -50,-50, -50 ,-50, -50, -50, -50, -50, -50, -50, -50, -50, -50,-50, 0},
                               {5, 11,  2, -11, -15, -18, -23, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, 0},
                               {-19,   2,   9,   2,  -7, -13, -16, -23, -50, -24, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50,   0},
                               {-50, -11,   2,   7,   2,  -6, -10, -14, -18, -22, -27, -50, -50, -50, -50, -50, -50, -50, -50, -50,   0},
