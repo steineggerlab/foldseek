@@ -67,7 +67,38 @@ const short distMat[DIST_MAT_SIZE][DIST_MAT_SIZE] = { {14,5, -19, -50, -50, -50,
                               {-50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50,   4,  12,   0},
                               { 0,   0,   0,   0,   0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  0,   0,   0,   0}};
 
+struct simdNNAlign{
+    // SW
+    uint8_t gap_open;
+    uint8_t gap_extend;
+    simd_int *vHStore;
+    simd_int *vHLoad;
+    simd_int *vE;
+    simd_int *vHmax;
+    uint8_t *maxColumn;
+    int nwGapPenalty;
+    simd_int *nnScoreVec;
+    uint16_t terminate;
+    int8_t ref_dir;
+
+    // target
+    unsigned char *db_sequence;
+    int32_t db_length;
+    char *dbNN;
+    char *dbDist;
+
+    // query
+    simd_int *query_profile_word;
+    simd_int *query_profile_nn;
+    simd_int *query_profile_dist;
+    int32_t query_length;
+
+    int8_t *subMatBiased;
+    short subMatBias;
+    int8_t *distMatBiased;
+    short distMatBias;
+
+
+};
+
 #endif //STRUCCLUST_PAREUNALIGN_H
-
-
-
