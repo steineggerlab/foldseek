@@ -66,24 +66,24 @@ INPUT_TYPE=""
 case "${SELECTION}" in
     "UniRef100")
         if notExists "${TMP_PATH}/uniref100.fasta.gz"; then
-            downloadFile "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.release_note" "${TMP_PATH}/version"
-            downloadFile "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.fasta.gz" "${TMP_PATH}/uniref100.fasta.gz"
+            downloadFile "https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.release_note" "${TMP_PATH}/version"
+            downloadFile "https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.fasta.gz" "${TMP_PATH}/uniref100.fasta.gz"
         fi
         push_back "${TMP_PATH}/uniref100.fasta.gz"
         INPUT_TYPE="FASTA_LIST"
     ;;
     "UniRef90")
         if notExists "${TMP_PATH}/uniref90.fasta.gz"; then
-            downloadFile "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref90/uniref90.release_note" "${TMP_PATH}/version"
-            downloadFile "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref90/uniref90.fasta.gz" "${TMP_PATH}/uniref90.fasta.gz"
+            downloadFile "https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref90/uniref90.release_note" "${TMP_PATH}/version"
+            downloadFile "https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref90/uniref90.fasta.gz" "${TMP_PATH}/uniref90.fasta.gz"
         fi
         push_back "${TMP_PATH}/uniref90.fasta.gz"
         INPUT_TYPE="FASTA_LIST"
     ;;
     "UniRef50")
         if notExists "${TMP_PATH}/uniref50.fasta.gz"; then
-            downloadFile "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.release_note" "${TMP_PATH}/version"
-            downloadFile "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz" "${TMP_PATH}/uniref50.fasta.gz"
+            downloadFile "https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.release_note" "${TMP_PATH}/version"
+            downloadFile "https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz" "${TMP_PATH}/uniref50.fasta.gz"
         fi
         push_back "${TMP_PATH}/uniref50.fasta.gz"
         INPUT_TYPE="FASTA_LIST"
@@ -223,8 +223,11 @@ case "${SELECTION}" in
         if notExists "${TMP_PATH}/download.done"; then
             downloadFile "https://api.bitbucket.org/2.0/repositories/genomicepidemiology/resfinder_db/commit/master?fields=hash,date" "${TMP_PATH}/version"
             downloadFile "https://bitbucket.org/genomicepidemiology/resfinder_db/get/master.tar.gz" "${TMP_PATH}/master.tar.gz"
-            tar -C "${TMP_PATH}" --strip-components=1 -xzvf "${TMP_PATH}/master.tar.gz" "*.fsa"
-            rm -f "${TMP_PATH}/master.tar.gz"
+            # avoid tar wildcard extraction as it's not available in busybox tar (windows, biocontainer)
+            mkdir -p "${TMP_PATH}/fsa"
+            tar -C "${TMP_PATH}/fsa" --strip-components=1 -xzvf "${TMP_PATH}/master.tar.gz"
+            mv -f -- "${TMP_PATH}/fsa/"*.fsa "${TMP_PATH}"
+            rm -rf -- "${TMP_PATH}/master.tar.gz" "${TMP_PATH}/fsa"
             touch "${TMP_PATH}/download.done"
         fi
         INPUT_TYPE="FSA"

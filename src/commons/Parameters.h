@@ -129,6 +129,7 @@ public:
     static const int FORMAT_ALIGNMENT_SAM = 1;
     static const int FORMAT_ALIGNMENT_BLAST_WITH_LEN = 2;
     static const int FORMAT_ALIGNMENT_HTML = 3;
+    static const int FORMAT_ALIGNMENT_BLAST_TAB_WITH_HEADERS = 4;
 
     // result2msa
     static const int FORMAT_MSA_CA3M = 0;
@@ -372,12 +373,13 @@ public:
     // PREFILTER
     float  sensitivity;                  // target sens
     int    kmerSize;                     // kmer size for the prefilter
-    int    kmerScore;                    // kmer score for the prefilter
-    MultiParam<NuclAA<int>> alphabetSize;                 // alphabet size for the prefilter
+    MultiParam<SeqProf<int>> kmerScore;   // kmer score for the prefilter
+    MultiParam<NuclAA<int>> alphabetSize; // alphabet size for the prefilter
     int    compBiasCorrection;           // Aminoacid composiont correction
     bool   diagonalScoring;              // switch diagonal scoring
     int    exactKmerMatching;            // only exact k-mer matching
     int    maskMode;                     // mask low complex areas
+    float  maskProb;                     // mask probability
     int    maskLowerCaseMode;            // mask lowercase letters in prefilter and kmermatchers
 
     int    minDiagScoreThr;              // min diagonal score
@@ -699,6 +701,7 @@ public:
     PARAMETER(PARAM_DIAGONAL_SCORING)
     PARAMETER(PARAM_EXACT_KMER_MATCHING)
     PARAMETER(PARAM_MASK_RESIDUES)
+    PARAMETER(PARAM_MASK_PROBABILTY)
     PARAMETER(PARAM_MASK_LOWER_CASE)
 
     PARAMETER(PARAM_MIN_DIAG_SCORE)
