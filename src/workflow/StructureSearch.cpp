@@ -9,7 +9,8 @@
 #include "structuresearch.sh.h"
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
-    p->maskMode = 0;
+    p->maskMode = 1;
+    p->maskProb = 0.99995;
     p->compBiasCorrection = 0;
     p->sensitivity = 7.5;
     p->gapOpen = 7;
