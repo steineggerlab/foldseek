@@ -46,10 +46,9 @@ LocalParameters::LocalParameters() :
 
     // Setup DbValidation
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
-
+    easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
 
     // Setup DbValidation
-    easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
 
     structureclusterworkflow = combineList(prefilter, align);
     structureclusterworkflow = combineList(structureclusterworkflow, rescorediagonal);
