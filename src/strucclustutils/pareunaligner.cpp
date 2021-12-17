@@ -573,67 +573,70 @@ void createNNQueryProfile(simd_int *profile, simd_int *profile_dist, const char 
 template<const int T>
 void findNearestNeighbour(char * nn, char * dist, Coordinates & ca,
                           int length, unsigned char * seqInt,
-                          std::pair<float, int> * seqDistList){
+                          std::pair<float, int> * seqDistList, float * seqDistSIMD){
     // (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 4 );
 
     // calculate pairwise matrix (euclidean distance)
     std::pair<int,float> pos[T];
-    std::vector<int> nn_vec;
-    nn_vec.reserve(length);
-
+    std::pair<int,float> pos2[T];
     char closestStateI;
     int minDistance;
     int seqDistance;
-//    float minDist = FLT_MAX;
-//    int minNN = -1;
-//    for(int i = 0; i < length; i++) {
-//        size_t seqDistListPos = 0;
-//        for (int j = 0; j < length; j++) {
-//            if (i != j) {
-//                float x = (ca.x[i] - ca.x[j]);
-//                float y = (ca.y[i] - ca.y[j]);
-//                float z = (ca.z[i] - ca.z[j]);
-//                // calculate distance
-//                const float seqDist = sqrt((x * x) + (y * y) + (z * z));
-//                if(seqDist < minDist){
-//                    minNN = j;
-//                    minDistance = seqDistance;
-//                }
-//            }
-//        }
-//        nn_vec[i]= minNN;
-//    }
 
     for(int i = 0; i < length; i++){
         size_t seqDistListPos = 0;
-        for(int j = 0; j < length; j++){
-            if(i != j) {
-                float x = (ca.x[i] - ca.x[j]);
-                float y = (ca.y[i] - ca.y[j]);
-                float z = (ca.z[i] - ca.z[j]);
-                // calculate distance
-                const float seqDist = sqrt((x * x) + (y * y) + (z * z));
-                seqDistList[seqDistListPos].first = seqDist;
-                seqDistList[seqDistListPos].second = j;
-                seqDistListPos++;
+        size_t seqDistListPos2 = 0;
+
+//        //SIMD implementation of calculating distance
+
+
+        simd_float coords_x_i = simdf32_set(ca.x[i]);
+        simd_float coords_y_i = simdf32_set(ca.y[i]);
+        simd_float coords_z_i = simdf32_set(ca.z[i]);
+
+        for (int j = 0; j < length; j+=8){
+            simd_float loaded_x_j = simdf32_load(&ca.x[j]);
+            simd_float loaded_y_j = simdf32_load(&ca.y[j]);
+            simd_float loaded_z_j = simdf32_load(&ca.z[j]);
+
+            simd_float dist_simd = simdf32_mul(simdf32_sub(coords_x_i, loaded_x_j), simdf32_sub(coords_x_i, loaded_x_j));
+            dist_simd = simdf32_add(dist_simd, simdf32_mul(simdf32_sub(coords_y_i, loaded_y_j), simdf32_sub(coords_y_i, loaded_y_j)));
+            dist_simd = simdf32_add(dist_simd, simdf32_mul(simdf32_sub(coords_z_i, loaded_z_j), simdf32_sub(coords_z_i, loaded_z_j)));
+            dist_simd = simdf32_sqrt(dist_simd);
+            simdf32_store(&seqDistSIMD[j], dist_simd);
+        }
+
+//        std::cout << "bla" << std::endl;
+
+        for(int a = 0; a < length; a++){
+            if(i != a) {
+                seqDistList[seqDistListPos2].first = seqDistSIMD[a];
+                seqDistList[seqDistListPos2].second = a;
+                seqDistListPos2++;
+//                std::cout << seqDistList[a].first << ", ";
             }
         }
-        // find the four nearest neighbours for each amino acid
-        std::partial_sort(seqDistList, seqDistList + T, seqDistList + seqDistListPos);
+//        std::cout << std::endl;
+        // find the T nearest neighbours for each amino acid
+        std::partial_sort(seqDistList, seqDistList + T, seqDistList + length - 1);
 //        std::sort(seqDistList.begin(), seqDistList.end());
 //        int pos[T];
         for(int m  = 0; m < T; m++){
-            pos[m].first = seqDistList[m].second;
-            pos[m].second = seqDistList[m].first;
+            pos2[m].first = seqDistList[m].second;
+            pos2[m].second = seqDistList[m].first;
+//            std::cout << seqDistList[m].second <<  ", ";
         }
-        std::sort(pos, pos+T);
+////        std::cout << std::endl;
+        std::sort(pos2, pos2+T);
+//        std::cout << "simd" << std::endl;
         for(int n = 0; n < T; n++){
-            int neighbour = static_cast<int>(seqInt[pos[n].first]);
+            int neighbour = static_cast<int>(seqInt[pos2[n].first]);
             nn[i*T + n] = neighbour;
-//            dist[i*T + n] = pos[n].second;
+//            std::cout << neighbour << ", ";
 
             // discretise the distance within the sequence position
-            seqDistance = pos[n].first - i;
+            seqDistance = pos2[n].first - i;
+//            std::cout << seqDistance << ", ";
 //            seqDistance = nn_vec[pos[n].first] - pos[n].first;
 
             minDistance = INT_MAX;
@@ -647,7 +650,65 @@ void findNearestNeighbour(char * nn, char * dist, Coordinates & ca,
                 }
             }
             dist[i*T + n] = closestStateI;
+//            std::cout << static_cast<int>(closestStateI) << ", ";
         }
+//        std::cout << std::endl;
+// simd end
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//        std::cout << "scalar" << std::endl;
+//        for(int j = 0; j < length; j++){
+//            if(i != j) {
+//                float x = (ca.x[i] - ca.x[j]);
+//                float y = (ca.y[i] - ca.y[j]);
+//                float z = (ca.z[i] - ca.z[j]);
+//                // calculate distance
+//                const float seqDist = sqrt((x * x) + (y * y) + (z * z));
+//                seqDistList[seqDistListPos].first = seqDist;
+//                seqDistList[seqDistListPos].second = j;
+//                seqDistListPos++;
+//            }
+//        }
+////        for(int c = 0; c < length; c++){
+////            std::cout << seqDistList[c].first << ", ";
+////        }
+////        std::cout << std::endl;
+//        // find the T nearest neighbours for each amino acid
+//        std::partial_sort(seqDistList, seqDistList + T, seqDistList + seqDistListPos);
+////        std::sort(seqDistList.begin(), seqDistList.end());
+////        int pos[T];
+//        for(int m  = 0; m < T; m++){
+//            pos[m].first = seqDistList[m].second;
+//            pos[m].second = seqDistList[m].first;
+////            std::cout << seqDistList[m].second <<  ", ";
+//        }
+////        std::cout << std::endl;
+//        std::sort(pos, pos+T);
+//        for(int n = 0; n < T; n++){
+//            int neighbour = static_cast<int>(seqInt[pos[n].first]);
+//            nn[i*T + n] = neighbour;
+////            std::cout << neighbour << ", ";
+////            dist[i*T + n] = pos[n].second;
+//
+//            // discretise the distance within the sequence position
+//            seqDistance = pos[n].first - i;
+//            std::cout << seqDistance << ", ";
+////            seqDistance = nn_vec[pos[n].first] - pos[n].first;
+//
+//            minDistance = INT_MAX;
+//            closestStateI = Alphabet3diSeqDist::INVALID_STATE;
+//            for (size_t a = 0; a < Alphabet3diSeqDist::CENTROID_CNT; a++){
+//
+//                int distToCentroid = abs(Alphabet3diSeqDist::centroids[a] - seqDistance);
+//                if (distToCentroid < minDistance){
+//                    closestStateI = a;
+//                    minDistance = distToCentroid;
+//                }
+//            }
+////            std::cout << static_cast<int>(closestStateI) << ", ";
+//            dist[i*T + n] = closestStateI;
+//
+//        }
+//        std::cout << std::endl;
     }
 }
 
@@ -930,7 +991,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         Sequence qSeq(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat, 0, false, par.compBiasCorrection);
         Sequence tSeq(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat, 0, false, par.compBiasCorrection);
 
-        char * querynn  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
+        char * querynn  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 ); // 8 to number of neighbours
         char * targetnn = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
         char * querynn_dist  = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
         char * targetnn_dist = (char*)mem_align(ALIGN_INT, par.maxSeqLen * sizeof(char) * 8 );
@@ -943,6 +1004,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         simd_int* nnScoreVec   = (simd_int*) mem_align(ALIGN_INT, segmentSize * sizeof(simd_int));
         uint8_t * maxColumn = new uint8_t[par.maxSeqLen*sizeof(uint16_t)];
         std::pair<float, int> * seqDistList = new std::pair<float, int>[par.maxSeqLen];
+        float * seqDistSimd = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float));
         std::vector<Matcher::result_t> alignmentResult;
         PareunAlign paruenAlign(par.maxSeqLen, &subMat); // subMat called once, don't need to call it again?
         char buffer[1024+32768];
@@ -987,32 +1049,32 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 //
                 switch (par.numberNN) {
                     case 3:
-                        findNearestNeighbour<3>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList);
+                        findNearestNeighbour<3>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList, seqDistSimd);
 //                        createNNQueryProfile<int16_t, VECSIZE_INT * 2, 3>(query_profile_nn, (const char*) querynn, qSeq.L);
                         createNNQueryProfile<int16_t, VECSIZE_INT * 2, 3>(query_profile_nn, query_profile_dist, (const char*) querynn,(const char*) querynn_dist,  qSeq.L);
                         break;
                     case 4:
-                        findNearestNeighbour<4>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList);
+                        findNearestNeighbour<4>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList, seqDistSimd);
                         createNNQueryProfile<int16_t, VECSIZE_INT * 2, 4>(query_profile_nn, query_profile_dist, (const char*) querynn,(const char*) querynn_dist,  qSeq.L);
 //                        createNNQueryProfile<int16_t, VECSIZE_INT * 2, 4>(query_profile_nn, (const char*) querynn, qSeq.L);
                         break;
                     case 5:
-                        findNearestNeighbour<5>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList);
+                        findNearestNeighbour<5>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList, seqDistSimd);
                         createNNQueryProfile<int16_t, VECSIZE_INT * 2, 5>(query_profile_nn, query_profile_dist, (const char*) querynn,(const char*) querynn_dist,  qSeq.L);
 //                        createNNQueryProfile<int16_t, VECSIZE_INT * 2, 5>(query_profile_nn, (const char*) querynn, qSeq.L);
                         break;
                     case 6:
-                        findNearestNeighbour<6>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList);
+                        findNearestNeighbour<6>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList, seqDistSimd);
                         createNNQueryProfile<int16_t, VECSIZE_INT * 2, 6>(query_profile_nn, query_profile_dist, (const char*) querynn,(const char*) querynn_dist,  qSeq.L);
 //                        createNNQueryProfile<int16_t, VECSIZE_INT * 2, 6>(query_profile_nn, (const char*) querynn, qSeq.L);
                         break;
                     case 7:
-                        findNearestNeighbour<7>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList);
+                        findNearestNeighbour<7>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList, seqDistSimd);
                         createNNQueryProfile<int16_t, VECSIZE_INT * 2, 7>(query_profile_nn, query_profile_dist, (const char*) querynn,(const char*) querynn_dist,  qSeq.L);
 //                        createNNQueryProfile<int16_t, VECSIZE_INT * 2, 7>(query_profile_nn, (const char*) querynn, qSeq.L);
                         break;
                     case 8:
-                        findNearestNeighbour<8>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList);
+                        findNearestNeighbour<8>(querynn, querynn_dist, queryCaCords, querySeqLen, qSeq.numSequence, seqDistList, seqDistSimd);
                         createNNQueryProfile<int16_t, VECSIZE_INT * 2, 8>(query_profile_nn, query_profile_dist, (const char*) querynn,(const char*) querynn_dist,  qSeq.L);
 //                        createNNQueryProfile<int16_t, VECSIZE_INT * 2, 8>(query_profile_nn, (const char*) querynn, qSeq.L);
                         break;
@@ -1066,7 +1128,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 
                     switch (par.numberNN) {
                         case 3:
-                            findNearestNeighbour<3>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
+                            findNearestNeighbour<3>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList, seqDistSimd);
                             alignNNSIMD.dbNN = targetnn;
                             alignNNSIMD.dbDist = targetnn_dist;
 //                            res = alignByNN<3>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
@@ -1081,7 +1143,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 4:
-                            findNearestNeighbour<4>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
+                            findNearestNeighbour<4>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList, seqDistSimd);
                             alignNNSIMD.dbNN = targetnn;
                             alignNNSIMD.dbDist = targetnn_dist;
 //                            res = alignByNN<4>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
@@ -1096,7 +1158,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 5:
-                            findNearestNeighbour<5>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
+                            findNearestNeighbour<5>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList, seqDistSimd);
                             alignNNSIMD.dbNN = targetnn;
                             alignNNSIMD.dbDist = targetnn_dist;
 //                            res = alignByNN<5>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
@@ -1111,7 +1173,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 6:
-                            findNearestNeighbour<6>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
+                            findNearestNeighbour<6>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList, seqDistSimd);
                             alignNNSIMD.dbNN = targetnn;
                             alignNNSIMD.dbDist = targetnn_dist;
 //                            res = alignByNN<6>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
@@ -1126,7 +1188,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 7:
-                            findNearestNeighbour<7>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
+                            findNearestNeighbour<7>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList, seqDistSimd);
                             alignNNSIMD.dbNN = targetnn;
                             alignNNSIMD.dbDist = targetnn_dist;
 //                            res = alignByNN<7>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
@@ -1141,7 +1203,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 //                                                  par.gapNW, SHRT_MAX);
                             break;
                         case 8:
-                            findNearestNeighbour<8>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList);
+                            findNearestNeighbour<8>(targetnn, targetnn_dist, targetCaCords, tSeq.L, tSeq.numSequence, seqDistList, seqDistSimd);
                             alignNNSIMD.dbNN = targetnn;
                             alignNNSIMD.dbDist = targetnn_dist;
 //                            res = alignByNN<8>(querynn, qSeq.numSequence, qSeq.L, querynn_dist, targetnn, tSeq.numSequence, tSeq.L, targetnn_dist, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), par.gapNW, par.nnWeight, par.slope);
@@ -1163,6 +1225,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                     unsigned int targetKey = tdbr->getDbKey(targetId);
 //                    cout << targetKey << endl;
                     res.dbKey = targetKey;
+                    res.eval = 0;
                     //Matcher::result_t res = paruenAlign.align(qSeq, tSeq, &subMat, evaluer);
                     string cigar =  paruenAlign.backtrace2cigar(res.backtrace);
 
@@ -1202,6 +1265,7 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         free(vE);
         free(vHmax);
         free(query_profile_nn);
+        free(seqDistSimd);
         delete [] maxColumn;
         delete [] seqDistList;
     }
