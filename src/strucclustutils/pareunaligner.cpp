@@ -48,6 +48,43 @@
 //
 //}
 
+//template<const int T>
+//simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
+//                                 const  simd_int *subQ_dist, const  simd_int *subT_dist,
+//                                 const simd_int nwGapPenalty, const simd_int vSubMatBias, const simd_int vDistMatBias){
+//
+//    simd_int prev_sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
+//    simd_int sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
+//    memset(prev_sMat_vec, 0, sizeof(simd_int) * (T+1));
+//
+//    for(int i = 1; i < T+1; i++){
+//        sMat_vec[0]= simdi_setzero();
+//        for(int j = 1; j < T+1; j++){
+//            // score
+//            simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[j-1]);
+//            scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
+//            scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
+////            for(int a = 0; a < 9; a++){
+////                cout << ((short *)&scoreLookup)[a] << " ";
+////            }
+////            cout << endl;
+//            // distance
+//            simd_int distLookup = UngappedAlignment::Shuffle(subT_dist[i-1], subQ_dist[j-1]);
+//            distLookup = simdi_and(distLookup, simdi16_set(0x00FF));
+//            distLookup = simdi16_sub(distLookup, vDistMatBias);
+//
+//            // add
+//            scoreLookup = simdi16_add(scoreLookup, distLookup);
+//            sMat_vec[j] = simdi16_max(simdi16_add(prev_sMat_vec[j-1],scoreLookup),
+//                                      simdi16_max(simdi16_add(prev_sMat_vec[j],nwGapPenalty),
+//                                                 simdi16_add(sMat_vec[j-1],nwGapPenalty)));
+//        }
+//        std::swap(prev_sMat_vec, sMat_vec);
+//    }
+//
+//    return prev_sMat_vec[T]; /// 4;
+//}
+
 template<const int T>
 simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
                                  const  simd_int *subQ_dist, const  simd_int *subT_dist,
@@ -56,34 +93,67 @@ simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * targ
     simd_int prev_sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
     simd_int sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
     memset(prev_sMat_vec, 0, sizeof(simd_int) * (T+1));
-
+    simd_int value = simdi_setzero();
     for(int i = 1; i < T+1; i++){
         sMat_vec[0]= simdi_setzero();
-        for(int j = 1; j < T+1; j++){
-            // score
-            simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[j-1]);
-            scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
-            scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
+
+        // score
+        simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[i-1]);
+        scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
+        scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
 //            for(int a = 0; a < 9; a++){
 //                cout << ((short *)&scoreLookup)[a] << " ";
 //            }
 //            cout << endl;
-            // distance
-            simd_int distLookup = UngappedAlignment::Shuffle(subT_dist[i-1], subQ_dist[j-1]);
-            distLookup = simdi_and(distLookup, simdi16_set(0x00FF));
-            distLookup = simdi16_sub(distLookup, vDistMatBias);
+        // distance
+        simd_int distLookup = UngappedAlignment::Shuffle(subT_dist[i-1], subQ_dist[i-1]);
+        distLookup = simdi_and(distLookup, simdi16_set(0x00FF));
+        distLookup = simdi16_sub(distLookup, vDistMatBias);
 
-            // add
-            scoreLookup = simdi16_add(scoreLookup, distLookup);
-            sMat_vec[j] = simdi16_max(simdi16_add(prev_sMat_vec[j-1],scoreLookup),
-                                      simdi16_max(simdi16_add(prev_sMat_vec[j],nwGapPenalty),
-                                                 simdi16_add(sMat_vec[j-1],nwGapPenalty)));
-        }
-        std::swap(prev_sMat_vec, sMat_vec);
+        // add
+        scoreLookup = simdi16_add(scoreLookup, distLookup);
+        value = simdi16_add(value,scoreLookup);
     }
 
-    return prev_sMat_vec[T]; /// 4;
+    return value; /// 4;
 }
+
+//template<const int T>
+//simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
+//                                 const  simd_int *subQ_dist, const  simd_int *subT_dist,
+//                                 const simd_int nwGapPenalty, const simd_int vSubMatBias, const simd_int vDistMatBias){
+//
+//    simd_int prev_sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
+//    simd_int sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
+//    memset(prev_sMat_vec, 0, sizeof(simd_int) * (T+1));
+//
+//    for(int i = 1; i < T+1; i++){
+//        sMat_vec[0]= simdi_setzero();
+//        for(int j = 1; j < T+1; j++){
+//            // score
+//            simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[j-1]);
+//            scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
+//            scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
+////            for(int a = 0; a < 9; a++){
+////                cout << ((short *)&scoreLookup)[a] << " ";
+////            }
+////            cout << endl;
+//            // distance
+//            simd_int distLookup = UngappedAlignment::Shuffle(subT_dist[i-1], subQ_dist[j-1]);
+//            distLookup = simdi_and(distLookup, simdi16_set(0x00FF));
+//            distLookup = simdi16_sub(distLookup, vDistMatBias);
+//
+//            // add
+//            scoreLookup = simdi16_add(scoreLookup, distLookup);
+//            sMat_vec[j] = simdi16_max(simdi16_add(prev_sMat_vec[j-1],scoreLookup),
+//                                      simdi16_max(simdi16_add(prev_sMat_vec[j],nwGapPenalty),
+//                                                  simdi16_add(sMat_vec[j-1],nwGapPenalty)));
+//        }
+//        std::swap(prev_sMat_vec, sMat_vec);
+//    }
+//
+//    return prev_sMat_vec[T]; /// 4;
+//}
 
 //template<const int T>
 //Matcher::result_t sw_sse2_word(const unsigned char *db_sequence, const int8_t ref_dir, const int32_t db_length,
