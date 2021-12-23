@@ -382,7 +382,7 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
     simd_int vGapE = simdi8_set(gap_extend);
 
     /* 16 byte bias vector */
-    simd_int vBias = simdi8_set(bias);
+    simd_int vBias = simdi8_set(2*bias);
 
     simd_int vMaxScore = vZero; /* Trace the highest score of the whole SW matrix. */
     simd_int vMaxMark = vZero; /* Trace the highest score till the previous column. */
@@ -528,7 +528,7 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
 
     /* Find the most possible 2nd best alignment. */
     alignment_end best0;
-    best0.score = max + bias >= 255 ? 255 : max;
+    best0.score = max + (2 * bias) >= 255 ? 255 : max;
     best0.ref = end_db;
     best0.read = end_query;
 
