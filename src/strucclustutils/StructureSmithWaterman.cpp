@@ -156,6 +156,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
         const uint8_t gap_open,
         const uint8_t gap_extend,
         const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
+        std::string & backtrace,
         const double  evalueThr,
         EvalueComputation * evaluer,
         const int covMode, const float covThr,
@@ -269,7 +270,42 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
         r.cigarLen = path->length;
     }	delete path;
 
+    uint32_t aaIds = 0;
+    size_t mStateCnt = 0;
+    computerBacktrace<SUBSTITUTIONMATRIX>(profile, db_aa_sequence, r, backtrace, aaIds,  mStateCnt);
+    r.identicalAACnt = aaIds;
+
     return r;
+}
+
+template <const unsigned int type>
+void StructureSmithWaterman::computerBacktrace(s_profile * query, const unsigned char * db_aa_sequence,
+                                      s_align & alignment, std::string & backtrace,
+                                      uint32_t & aaIds, size_t & mStatesCnt){
+    int32_t targetPos = alignment.dbStartPos1, queryPos = alignment.qStartPos1;
+    for (int32_t c = 0; c < alignment.cigarLen; ++c) {
+        char letter = StructureSmithWaterman::cigar_int_to_op(alignment.cigar[c]);
+        uint32_t length = StructureSmithWaterman::cigar_int_to_len(alignment.cigar[c]);
+        backtrace.reserve(length);
+        for (uint32_t i = 0; i < length; ++i){
+            if (letter == 'M') {
+                aaIds += (db_aa_sequence[targetPos] == query->query_aa_sequence[queryPos]);
+                ++mStatesCnt;
+                ++queryPos;
+                ++targetPos;
+                backtrace.append("M");
+            } else {
+                if (letter == 'I') {
+                    ++queryPos;
+                    backtrace.append("I");
+                }
+                else{
+                    ++targetPos;
+                    backtrace.append("D");
+                }
+            }
+        }
+    }
 }
 
 
@@ -1045,35 +1081,36 @@ inline F simd_hmax(const F * in, unsigned int n) {
     return current;
 }
 
-template<const int T>
-simd_int StructureSmithWaterman::needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
-                                 const  simd_int *subQ_dist, const  simd_int *subT_dist,
-                                 const simd_int nwGapPenalty, const simd_int vSubMatBias, const simd_int vDistMatBias){
-
-    simd_int prev_sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
-    simd_int sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
-    memset(prev_sMat_vec, 0, sizeof(simd_int) * (T+1));
-
-    for(int i = 1; i < T+1; i++){
-        sMat_vec[0]= simdi_setzero();
-        for(int j = 1; j < T+1; j++){
-            // score
-            simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[j-1]);
-            scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
-            scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
-
-            simd_int distLookup = UngappedAlignment::Shuffle(subT_dist[i-1], subQ_dist[j-1]);
-            distLookup = simdi_and(distLookup, simdi16_set(0x00FF));
-            distLookup = simdi16_sub(distLookup, vDistMatBias);
-
-            // add
-            scoreLookup = simdi16_add(scoreLookup, distLookup);
-            sMat_vec[j] = simdi16_max(simdi16_add(prev_sMat_vec[j-1],scoreLookup),
-                                      simdi16_max(simdi16_add(prev_sMat_vec[j],nwGapPenalty),
-                                                  simdi16_add(sMat_vec[j-1],nwGapPenalty)));
-        }
-        std::swap(prev_sMat_vec, sMat_vec);
-    }
-
-    return prev_sMat_vec[T]; /// 4;
-}
+//template<const int T>
+//simd_int StructureSmithWaterman::needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
+//                                 const  simd_int *subQ_dist, const  simd_int *subT_dist,
+//                                 const simd_int nwGapPenalty, const simd_int vSubMatBias, const simd_int vDistMatBias){
+//
+//    simd_int prev_sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
+//    simd_int sMat_vec[T+1] __attribute__((aligned(ALIGN_INT)));
+//    memset(prev_sMat_vec, 0, sizeof(simd_int) * (T+1));
+//
+//    for(int i = 1; i < T+1; i++){
+//        sMat_vec[0]= simdi_setzero();
+//        for(int j = 1; j < T+1; j++){
+//            // score
+//
+//            simd_int scoreLookup = UngappedAlignment::Shuffle(target_sub_vec[i-1], subQNNi[j-1]);
+//            scoreLookup = simdi_and(scoreLookup, simdi16_set(0x00FF));
+//            scoreLookup = simdi16_sub(scoreLookup, vSubMatBias);
+//
+//            simd_int distLookup = UngappedAlignment::Shuffle(subT_dist[i-1], subQ_dist[j-1]);
+//            distLookup = simdi_and(distLookup, simdi16_set(0x00FF));
+//            distLookup = simdi16_sub(distLookup, vDistMatBias);
+//
+//            // add
+//            scoreLookup = simdi16_add(scoreLookup, distLookup);
+//            sMat_vec[j] = simdi16_max(simdi16_add(prev_sMat_vec[j-1],scoreLookup),
+//                                      simdi16_max(simdi16_add(prev_sMat_vec[j],nwGapPenalty),
+//                                                  simdi16_add(sMat_vec[j-1],nwGapPenalty)));
+//        }
+//        std::swap(prev_sMat_vec, sMat_vec);
+//    }
+//
+//    return prev_sMat_vec[T]; /// 4;
+//}

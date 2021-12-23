@@ -6,7 +6,7 @@
 const char* binary_name = "foldseek";
 const char* tool_name = "foldseek";
 const char* tool_introduction = "Protein Structure Search and Clustering.";
-const char* main_author = "Martin Steinegger (martin.steinegger@snu.ac.kr)";
+const char* main_author = "Michel van Kempen, Stephanie Kim, Charlotte Tumescheit, Martin Steinegger";
 const char* show_extended_help = NULL;
 const char* show_bash_info = NULL;
 bool hide_base_commands = true;
@@ -83,10 +83,10 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alnDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::alignmentDb }}},
-        {"pareunalign",      pareunaligner,      &localPar.tmalign,      COMMAND_ALIGNMENT,
-                "Compute tm-score ",
+        {"structurealign",      structurealign,      &localPar.align,      COMMAND_ALIGNMENT,
+                "Compute structural alignment using 3Di alphabet, amino acids and neighborhood information",
                 NULL,
-                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "Charlotte Tumescheit <ch.tumescheit@gmail.com> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <i:prefilterDB> <o:resultDB>",
                 CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },

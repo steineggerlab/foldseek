@@ -89,6 +89,7 @@ public:
         float qCov;
         float tCov;
         uint32_t* cigar;
+        int identicalAACnt;
         int32_t cigarLen;
         double evalue;
     } s_align;
@@ -141,6 +142,7 @@ public:
                         const uint8_t gap_open,
                         const uint8_t gap_extend,
                         const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
+                        std::string &backtrace,
                         const double filters,
                         EvalueComputation * filterd,
                         const int covMode, const float covThr,
@@ -286,10 +288,15 @@ private:
                                              const uint32_t gap_extend, int32_t band_width,
                                              const int8_t *mat_aa, const int8_t *mat_3di, int32_t n);
 
-    template<const int T>
-    simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
-                                            const  simd_int *subQ_dist, const  simd_int *subT_dist,
-                                            const simd_int nwGapPenalty, const simd_int vSubMatBias, const simd_int vDistMatBias);
+    template <const unsigned int type>
+    void computerBacktrace(s_profile * query, const unsigned char * db_sequence,
+                           s_align & alignment, std::string & backtrace, uint32_t & aaIds, size_t & mStatesCnt);
+
+
+//    template<const int T>
+//    simd_int needlemanWunschScoreVec(const simd_int * subQNNi, const simd_int * target_sub_vec,
+//                                            const  simd_int *subQ_dist, const  simd_int *subT_dist,
+//                                            const simd_int nwGapPenalty, const simd_int vSubMatBias, const simd_int vDistMatBias);
 
     /*!	@function		Produce CIGAR 32-bit unsigned integer from CIGAR operation and CIGAR length
      @param	length		length of CIGAR
