@@ -3,8 +3,8 @@ set(strucclustutils_source_files
         strucclustutils/aln2tmscore.cpp
         strucclustutils/structcreatedb.cpp
         strucclustutils/pareunaligner.cpp
-        strucclustutils/PareunAlign.cpp
-        strucclustutils/PareunAlign.h
+        strucclustutils/StructureSmithWaterman.cpp
+        strucclustutils/StructureSmithWaterman.h
         PARENT_SCOPE
         )
 
