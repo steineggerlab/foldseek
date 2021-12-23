@@ -10,7 +10,7 @@ add_executable(foldseek
         ${workflow_source_files}
         LocalCommandDeclarations.h
         foldseek.cpp
-        )
+        strucclustutils/NearestNeighbourSW.cpp strucclustutils/NearestNeighbourSW.h)
 
 mmseqs_setup_derived_target(foldseek)
 target_link_libraries(foldseek version gemmiwrapper 3di kerasify tmalign)

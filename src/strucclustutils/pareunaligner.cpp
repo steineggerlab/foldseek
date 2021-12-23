@@ -799,6 +799,10 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         free(vHmax);
         free(query_profile_nn);
         free(seqDistSimd);
+        free(nnScoreVec);
+        free(query_profile_dist);
+        free(querynn_dist);
+        free(targetnn_dist);
         delete [] maxColumn;
         delete [] seqDistList;
     }
