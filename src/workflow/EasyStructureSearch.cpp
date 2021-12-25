@@ -77,6 +77,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
     std::string target = par.filenames.back().c_str();
     cmd.addVariable("TARGET", target.c_str());
+    cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
     par.filenames.pop_back();
 
     if (needTaxonomy || needTaxonomyMapping) {
