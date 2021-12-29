@@ -11,8 +11,6 @@ struct FoldSeekDbValidator : public DbValidator {
 
 };
 
-
-
 class LocalParameters : public Parameters {
 public:
     static void initInstance() {
@@ -31,6 +29,9 @@ public:
 
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
+
+    static const unsigned int INDEX_DB_CA_KEY = 500;
+
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
     std::vector<MMseqsParameter *> structuresearchworkflow;
