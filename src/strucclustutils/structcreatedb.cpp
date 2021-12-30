@@ -128,18 +128,18 @@ int createdb(int argc, const char **argv, const Command& command) {
                 name.clear();
                 // TODO change it back eventually (from cb to ca) also cb is actually the virtual center
                 for(size_t pos = 0; pos < chainLen; pos++){
-                    float val = (std::isnan(readStructure.cb[chainStart+pos].x))
-                            ? 0.0 : readStructure.cb[chainStart+pos].x;
+                    float val = (std::isnan(readStructure.ca[chainStart+pos].x))
+                            ? 0.0 : readStructure.ca[chainStart+pos].x;
                     camol.push_back(val);
                 }
                 for(size_t pos = 0; pos < chainLen; pos++) {
-                    float val = (std::isnan(readStructure.cb[chainStart+pos].y))
-                                ? 0.0 : readStructure.cb[chainStart+pos].y;
+                    float val = (std::isnan(readStructure.ca[chainStart+pos].y))
+                                ? 0.0 : readStructure.ca[chainStart+pos].y;
                     camol.push_back(val);
                 }
                 for(size_t pos = 0; pos < chainLen; pos++) {
-                    float val = (std::isnan(readStructure.cb[chainStart+pos].z))
-                                ? 0.0 : readStructure.cb[chainStart+pos].z;
+                    float val = (std::isnan(readStructure.ca[chainStart+pos].z))
+                                ? 0.0 : readStructure.ca[chainStart+pos].z;
                     camol.push_back(val);
                 }
                 cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), dbKey, thread_idx);
