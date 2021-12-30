@@ -10,18 +10,21 @@
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->maskMode = 1;
-    p->PARAM_MASK_RESIDUES.wasSet = true;
     p->maskProb = 0.99995;
-    p->PARAM_MASK_PROBABILTY.wasSet = true;
     p->compBiasCorrection = 0;
-    p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
     p->sensitivity = 7.5;
-    p->PARAM_S.wasSet = true;
     p->gapOpen = 7;
-    p->PARAM_GAP_OPEN.wasSet = true;
     p->gapExtend = 2;
-    p->PARAM_GAP_EXTEND.wasSet = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+}
+
+void setStructureSearchMustPassAlong(LocalParameters *p) {
+    p->PARAM_MASK_RESIDUES.wasSet = true;
+    p->PARAM_MASK_PROBABILTY.wasSet = true;
+    p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
+    p->PARAM_S.wasSet = true;
+    p->PARAM_GAP_OPEN.wasSet = true;
+    p->PARAM_GAP_EXTEND.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->removeTmpFiles = true;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
@@ -31,8 +34,8 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
 
     setStructureSearchWorkflowDefaults(&par);
-
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    setStructureSearchMustPassAlong(&par);
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));

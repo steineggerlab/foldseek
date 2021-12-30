@@ -6,11 +6,12 @@
 #include "structureindex.sh.h"
 
 extern void setStructureSearchWorkflowDefaults(LocalParameters *p);
+extern void setStructureSearchMustPassAlong(LocalParameters *p);
 
 int structureindex(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    setStructureSearchWorkflowDefaults(&par);
 
+    setStructureSearchWorkflowDefaults(&par);
     par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MIN_SEQ_ID.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -33,6 +34,7 @@ int structureindex(int argc, const char **argv, const Command& command) {
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
     par.parseParameters(argc, argv, command, true, 0, 0);
+    setStructureSearchMustPassAlong(&par);
 
     std::string tmpDir = par.db2;
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.createindex));

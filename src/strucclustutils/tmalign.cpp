@@ -55,7 +55,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         tcadbr = new IndexReader(
                 par.db2,
                 par.threads,
-                IndexReader::makeUserDatabaseType(50),
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
                 touch ? IndexReader::PRELOAD_INDEX : 0,
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                 "_ca"
