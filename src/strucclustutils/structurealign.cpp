@@ -182,9 +182,11 @@ int structurealign(int argc, const char **argv, const Command& command) {
     dbw.close();
     resultReader.close();
     qdbr.close();
+    qdbrAA.close();
     if(sameDB == false){
         t3DiDbr->close();
         delete t3DiDbr;
+        tAADbr->close();
         delete tAADbr;
     }
     return EXIT_SUCCESS;
