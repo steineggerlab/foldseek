@@ -94,7 +94,6 @@ int createdb(int argc, const char **argv, const Command& command) {
             size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
             fileIdLookup[i].first = id;
             fileIdLookup[i].second = id + readStructure.chain.size();
-//            std::cout << filenames[i] << std::endl;
 
             for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
                 size_t dbKey = id + ch;
@@ -114,11 +113,9 @@ int createdb(int argc, const char **argv, const Command& command) {
                                                                 chainLen);
                 for(size_t pos = 0; pos < chainLen; pos++){
                     alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
-//                    std::cout << mat.num2aa[static_cast<int>(states[pos])];
                 }
                 alphabet3di.push_back('\n');
-//                std::cout << std::endl;
-                 torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
+                torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
                 aadbw.writeStart(thread_idx);
                 aadbw.writeAdd(&readStructure.ami[chainStart], chainLen, thread_idx);
                 char newline = '\n';
@@ -129,7 +126,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 // TODO change it back eventually (from cb to ca) also cb is actually the virtual center
                 for(size_t pos = 0; pos < chainLen; pos++){
                     float val = (std::isnan(readStructure.ca[chainStart+pos].x))
-                            ? 0.0 : readStructure.ca[chainStart+pos].x;
+                                ? 0.0 : readStructure.ca[chainStart+pos].x;
                     camol.push_back(val);
                 }
                 for(size_t pos = 0; pos < chainLen; pos++) {
