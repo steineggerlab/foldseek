@@ -176,8 +176,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
         }
     }
 
-    delete [] tinySubMatAA;
-    delete [] tinySubMat3Di;
+    free(tinySubMatAA);
+    free(tinySubMat3Di);
 
     dbw.close();
     resultReader.close();
