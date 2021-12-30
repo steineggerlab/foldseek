@@ -61,8 +61,10 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
           || fail "createsubdb step died"
+      # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
           || fail "createsubdb step died"
+      # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
           || fail "createsubdb step died"
   fi
@@ -109,8 +111,10 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
           || fail "createsubdb died"
+      # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
                 || fail "createsubdb died"
+      # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
               || fail "createsubdb died"
       INPUT="${TMP_PATH}/input_step_redundancy"
@@ -161,8 +165,10 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
               # shellcheck disable=SC2086
               "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ss" "${NEXTINPUT}_ss" ${VERBOSITY} --subdb-mode 1 \
                   || fail "Order step $STEP died"
+              # shellcheck disable=SC2086
               "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ca" "${NEXTINPUT}_ca" ${VERBOSITY} --subdb-mode 1 \
                                 || fail "Order step $STEP died"
+              # shellcheck disable=SC2086
               "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}" "${NEXTINPUT}" ${VERBOSITY} --subdb-mode 1 \
                                 || fail "Order step $STEP died"
           fi
