@@ -34,7 +34,9 @@ int structurealign(int argc, const char **argv, const Command& command) {
         if(par.substitutionMatrices[i].name == "blosum62.out"){
             std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
             std::string matrixName = par.substitutionMatrices[i].name;
-            blosum.assign(BaseMatrix::serialize(matrixName, matrixData));
+            char * serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
+            blosum.assign(serializedMatrix);
+            free(serializedMatrix);
             break;
         }
     }
