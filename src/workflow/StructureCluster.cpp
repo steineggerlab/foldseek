@@ -4,27 +4,20 @@
 #include "CommandCaller.h"
 #include "Debug.h"
 #include "FileUtil.h"
-
 #include "structurecluster.sh.h"
-
 #include <cassert>
 #include <LocalParameters.h>
 
 void setStructureClusterWorkflowDefaults(Parameters *p) {
     p->spacedKmer = true;
     p->covThr = 0.8;
-    p->evalThr = 0.001;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+    p->evalThr = 10;
     p->maxResListLen = 20;
-
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->maskMode = 0;
     p->compBiasCorrection = 0;
-    p->sensitivity = 7.5;
-    p->gapOpen = 7;
-    p->gapExtend = 2;
-    p->removeTmpFiles = true;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
-
+    p->gapOpen = 10;
+    p->gapExtend = 1;
 }
 
 //TODO this makes no sense for structures
@@ -116,9 +109,12 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         cmd.addVariable("ALIGNMENT_ALGO", "align");
         cmd.addVariable("ALN_EXTENSION", "_ss");
         alnParam = par.createParameterString(par.align);
-    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN) {
+    } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN) {
         cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
         alnParam = par.createParameterString(par.tmalign);
+    } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA) {
+        cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
+        alnParam = par.createParameterString(par.align);
     }
 
     cmd.addVariable("RUNNER", par.runner.c_str());

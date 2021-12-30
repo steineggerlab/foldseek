@@ -60,7 +60,11 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
   if notExists "${TMP_PATH}/input_step_redundancy.dbtype"; then
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
-          || fail "Createsubdb step died"
+          || fail "createsubdb step died"
+      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
+          || fail "createsubdb step died"
+      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
+          || fail "createsubdb step died"
   fi
 
   if notExists "${TMP_PATH}/pref_filter1.dbtype"; then
@@ -78,8 +82,9 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
   # 3. Local gapped sequence alignment.
   if notExists "${TMP_PATH}/aln.dbtype"; then
       # shellcheck disable=SC2086
-      $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${INPUT}${ALN_EXTENSION}" "${INPUT}${ALN_EXTENSION}" "${TMP_PATH}/pref_filter2" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
-          || fail "Alignment step died"
+      $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${TMP_PATH}/input_step_redundancy${ALN_EXTENSION}" \
+              "${TMP_PATH}/input_step_redundancy${ALN_EXTENSION}" "${TMP_PATH}/pref_filter2" \
+              "${TMP_PATH}/aln" ${ALIGNMENT_PAR} || fail "Alignment step died"
   fi
   # 4. Clustering using greedy set cover.
   if notExists "${TMP_PATH}/clust.dbtype"; then
@@ -103,8 +108,12 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
   if [ "${RUN_LINCLUST}" = "1" ]; then
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
-          || faill "createsubdb died"
-      INPUT="${TMP_PATH}/input_step_redundancy_ss"
+          || fail "createsubdb died"
+      "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
+                || fail "createsubdb died"
+      "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
+              || fail "createsubdb died"
+      INPUT="${TMP_PATH}/input_step_redundancy"
   fi
   STEP=0
   STEPS=${STEPS:-1}
@@ -150,8 +159,12 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       else
           if notExists "$NEXTINPUT.dbtype"; then
               # shellcheck disable=SC2086
-              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "$INPUT" "$NEXTINPUT" ${VERBOSITY} --subdb-mode 1 \
+              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ss" "${NEXTINPUT}_ss" ${VERBOSITY} --subdb-mode 1 \
                   || fail "Order step $STEP died"
+              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ca" "${NEXTINPUT}_ca" ${VERBOSITY} --subdb-mode 1 \
+                                || fail "Order step $STEP died"
+              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}" "${NEXTINPUT}" ${VERBOSITY} --subdb-mode 1 \
+                                || fail "Order step $STEP died"
           fi
       fi
 
