@@ -9,12 +9,12 @@
 #include "structuresearch.sh.h"
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
-    p->maskMode = 1;
+    p->maskMode = 0;
     p->maskProb = 0.99995;
     p->compBiasCorrection = 0;
     p->sensitivity = 7.5;
-    p->gapOpen = 7;
-    p->gapExtend = 2;
+    p->gapOpen = 10;
+    p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
 }
 
@@ -27,7 +27,6 @@ void setStructureSearchMustPassAlong(LocalParameters *p) {
     p->PARAM_GAP_EXTEND.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->removeTmpFiles = true;
-    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
 
 int structuresearch(int argc, const char **argv, const Command &command) {
@@ -68,6 +67,11 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA){
+        cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
+        cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
+        cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
     }
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());

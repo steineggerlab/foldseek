@@ -7,6 +7,7 @@
 #include "DBWriter.h"
 #include "FastSort.h"
 
+#include "structureto3diseqdist.h"
 #include "structureto3di.h"
 #include "SubstitutionMatrix.h"
 #include "GemmiWrapper.h"
@@ -74,6 +75,7 @@ int createdb(int argc, const char **argv, const Command& command) {
 #endif
         //recon_related
         StructureTo3Di structureTo3Di;
+        //StructureTo3diSeqDist structureTo3Di;
         GemmiWrapper readStructure;
         std::vector<char> alphabet3di;
         std::vector<float> camol;
@@ -113,7 +115,6 @@ int createdb(int argc, const char **argv, const Command& command) {
                     alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
                 }
                 alphabet3di.push_back('\n');
-
                 torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
                 aadbw.writeStart(thread_idx);
                 aadbw.writeAdd(&readStructure.ami[chainStart], chainLen, thread_idx);
@@ -122,9 +123,10 @@ int createdb(int argc, const char **argv, const Command& command) {
                 aadbw.writeEnd(dbKey, thread_idx);
                 hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), dbKey, thread_idx);
                 name.clear();
+                // TODO change it back eventually (from cb to ca) also cb is actually the virtual center
                 for(size_t pos = 0; pos < chainLen; pos++){
                     float val = (std::isnan(readStructure.ca[chainStart+pos].x))
-                            ? 0.0 : readStructure.ca[chainStart+pos].x;
+                                ? 0.0 : readStructure.ca[chainStart+pos].x;
                     camol.push_back(val);
                 }
                 for(size_t pos = 0; pos < chainLen; pos++) {

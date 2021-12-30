@@ -121,28 +121,6 @@ void StructureTo3DiBase::replaceCBWithVirtualCenter(Vec3 * ca, Vec3 * n,
     }
 }
 
-// Describe interaction of residue i and j
-StructureTo3DiBase::Feature StructureTo3DiBase::calcFeatures(Vec3 * ca, int i, int j){
-    Vec3 u1 = norm(sub(ca[i],       ca[i - 1]));
-    Vec3 u2 = norm(sub(ca[i + 1],   ca[i]));
-    Vec3 u3 = norm(sub(ca[j],       ca[j - 1]));
-    Vec3 u4 = norm(sub(ca[j + 1],   ca[j]));
-    Vec3 u5 = norm(sub(ca[j],       ca[i]));
-
-    double features[Alphabet3Di::FEATURE_CNT];
-    features[0] = dot(u1, u2);
-    features[1] = dot(u3, u4);
-    features[2] = dot(u1, u5);
-    features[3] = dot(u3, u5);
-    features[4] = dot(u1, u4);
-    features[5] = dot(u2, u3);
-    features[6] = dot(u1, u3);
-    features[7] = calcDistanceBetween(ca[i], ca[j]);
-    features[8] = copysign(fmin(fabs(j - i), 4), j - i); // clip j-i to [-4, 4]
-    features[9] = copysign(log(fabs(j - i) + 1), j - i );
-    return Feature(features);
-}
-
 void StructureTo3DiBase::createResidueMask(std::vector<bool> & validMask,
                                            Vec3 * ca, Vec3 * n, Vec3 * c,
                                            const size_t len){
@@ -155,15 +133,7 @@ void StructureTo3DiBase::createResidueMask(std::vector<bool> & validMask,
     }
 }
 
-// StructureTo3Di
-
-StructureTo3Di::StructureTo3Di(){
-    encoder.LoadModel(
-            std::string((const char *)__3di_encoder_weights_kerasify,
-                                      __3di_encoder_weights_kerasify_len));
-}
-
-void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
+void StructureTo3DiBase::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
                                          std::vector<bool> & validMask, const size_t n){
     // Pick for each residue the closest neighbour as partner
     // (in terms of distances between their virtual centers/C_betas).
@@ -184,6 +154,36 @@ void StructureTo3Di::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * c
             validMask[i] = 0;
         }
     }
+}
+
+// StructureTo3Di
+
+StructureTo3Di::StructureTo3Di(){
+    encoder.LoadModel(
+            std::string((const char *)__3di_encoder_weights_kerasify,
+                                      __3di_encoder_weights_kerasify_len));
+}
+
+// Describe interaction of residue i and j
+StructureTo3Di::Feature StructureTo3Di::calcFeatures(Vec3 * ca, int i, int j){
+    Vec3 u1 = norm(sub(ca[i],       ca[i - 1]));
+    Vec3 u2 = norm(sub(ca[i + 1],   ca[i]));
+    Vec3 u3 = norm(sub(ca[j],       ca[j - 1]));
+    Vec3 u4 = norm(sub(ca[j + 1],   ca[j]));
+    Vec3 u5 = norm(sub(ca[j],       ca[i]));
+
+    double features[Alphabet3Di::FEATURE_CNT];
+    features[0] = dot(u1, u2);
+    features[1] = dot(u3, u4);
+    features[2] = dot(u1, u5);
+    features[3] = dot(u3, u5);
+    features[4] = dot(u1, u4);
+    features[5] = dot(u2, u3);
+    features[6] = dot(u1, u3);
+    features[7] = calcDistanceBetween(ca[i], ca[j]);
+    features[8] = copysign(fmin(fabs(j - i), 4), j - i); // clip j-i to [-4, 4]
+    features[9] = copysign(log(fabs(j - i) + 1), j - i );
+    return Feature(features);
 }
 
 void StructureTo3Di::calcConformationDescriptors(std::vector<Feature> & features, std::vector<int> & partnerIdx,

@@ -186,13 +186,13 @@ int tmalign(int argc, const char **argv, const Command& command) {
                         continue;
                     }
                     TMalign_main(&affineNW,
-                            targetCaCords, queryCaCords, targetSeq, querySeq, targetSecStruc, querySecStruc,
-                            t0, u0, TM1, TM2, TM3, TM4, TM5,
-                            d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                            seqM, seqxA, seqyA,
-                            rmsd0, Liden,  n_ali, n_ali8,
-                            targetLen, queryLen, Lnorm_ass, d0_scale,
-                            I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
+                                 targetCaCords, queryCaCords, targetSeq, querySeq, targetSecStruc, querySecStruc,
+                                 t0, u0, TM1, TM2, TM3, TM4, TM5,
+                                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                                 seqM, seqxA, seqyA,
+                                 rmsd0, Liden,  n_ali, n_ali8,
+                                 targetLen, queryLen, Lnorm_ass, d0_scale,
+                                 I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
                     //std::cout << queryId << "\t" << targetId << "\t" <<  TM_0 << "\t" << TM1 << std::endl;
 
                     double seqId = Liden/(static_cast<double>(n_ali8));

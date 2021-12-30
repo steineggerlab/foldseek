@@ -10,7 +10,8 @@ const int LocalParameters::DBTYPE_TMSCORE = 102;
 LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n",typeid(int), (void *) &alignmentType, "^[0-1]{1}$")
+        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA\n",typeid(int), (void *) &alignmentType, "^[0-2]{1}$")
+//        PARAM_SLOPE(PARAM_SLOPE_ID,"--slope", "slope","slope for NN distance weighting" ,typeid(int), (void *) &slope, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|([0-9]*(\\.[0-9]+)?)$")
 {
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
@@ -30,6 +31,8 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
+    tmalign.push_back(&PARAM_GAP_OPEN);
+    tmalign.push_back(&PARAM_GAP_EXTEND);
     // strucclust
     strucclust = combineList(clust, align);
     strucclust = combineList(strucclust, kmermatcher);
@@ -71,10 +74,8 @@ LocalParameters::LocalParameters() :
     databases.push_back(&PARAM_V);
     //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
 
-
-    alignmentType = ALIGNMENT_TYPE_3DI;
+    alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.5;
-
 }
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
