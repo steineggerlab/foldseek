@@ -74,7 +74,7 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "PDB")
-        if notExists "${TMP_PATH}/pdb_seqres.txt.gz"; then
+        if notExists "${TMP_PATH}/pdb.tar.gz"; then
             date "+%s" > "${TMP_PATH}/version"
             downloadFile "http://wwwuser.gwdg.de/~compbiol/foldseek/pdb.tar.gz" "${TMP_PATH}/pdb.tar.gz"
         fi

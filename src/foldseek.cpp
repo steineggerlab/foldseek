@@ -9,6 +9,7 @@ const char* tool_introduction = "Protein Structure Search and Clustering.";
 const char* main_author = "Michel van Kempen, Stephanie Kim, Charlotte Tumescheit, Martin Steinegger";
 const char* show_extended_help = NULL;
 const char* show_bash_info = NULL;
+const char* index_version_compatible = "fs1";
 bool hide_base_commands = true;
 bool hide_base_downloads = true;
 LocalParameters& localPar = LocalParameters::getLocalInstance();
@@ -109,6 +110,21 @@ std::vector<struct Command> commands = {
                 CITATION_TAXONOMY|CITATION_MMSEQS2, {{"selection", 0, DbType::ZERO_OR_ALL, &DbValidator::empty },
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"tmpDir",     DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"createindex",          structureindex,       &localPar.createindex,          COMMAND_DATABASE_CREATION,
+                "Store precomputed index on disk to reduce search overhead",
+                "# Create protein sequence index\n"
+                "mmseqs createindex sequenceDB tmp\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:sequenceDB> <tmpDir>",
+                CITATION_SERVER | CITATION_MMSEQS2,{{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"mmcreateindex",        createindex,          &localPar.createindex,          COMMAND_HIDDEN,
+                NULL,
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:sequenceDB> <tmpDir>",
+                CITATION_SERVER | CITATION_MMSEQS2,{{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,

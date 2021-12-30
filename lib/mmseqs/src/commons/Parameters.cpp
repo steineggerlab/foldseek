@@ -44,9 +44,10 @@ Parameters::Parameters():
         PARAM_DIAGONAL_SCORING(PARAM_DIAGONAL_SCORING_ID, "--diag-score", "Diagonal scoring", "Use ungapped diagonal scoring during prefilter", typeid(bool), (void *) &diagonalScoring, "", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_EXACT_KMER_MATCHING(PARAM_EXACT_KMER_MATCHING_ID, "--exact-kmer-matching", "Exact k-mer matching", "Extract only exact k-mers for matching (range 0-1)", typeid(int), (void *) &exactKmerMatching, "^[0-1]{1}$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_MASK_RESIDUES(PARAM_MASK_RESIDUES_ID, "--mask", "Mask residues", "Mask sequences in k-mer stage: 0: w/o low complexity masking, 1: with low complexity masking", typeid(int), (void *) &maskMode, "^[0-1]{1}", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_MASK_PROBABILTY(PARAM_MASK_PROBABILTY_ID, "--mask-prob", "Mask residues probability", "Mask sequences is probablity is above threshold", typeid(float), (void *) &maskProb, "^0(\\.[0-9]+)?|^1(\\.0+)?$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_MASK_LOWER_CASE(PARAM_MASK_LOWER_CASE_ID, "--mask-lower-case", "Mask lower case residues", "Lowercase letters will be excluded from k-mer search 0: include region, 1: exclude region", typeid(int), (void *) &maskLowerCaseMode, "^[0-1]{1}", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_MIN_DIAG_SCORE(PARAM_MIN_DIAG_SCORE_ID, "--min-ungapped-score", "Minimum diagonal score", "Accept only matches with ungapped alignment score above threshold", typeid(int), (void *) &minDiagScoreThr, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
-        PARAM_K_SCORE(PARAM_K_SCORE_ID, "--k-score", "k-score", "k-mer threshold for generating similar k-mer lists", typeid(int), (void *) &kmerScore, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_K_SCORE(PARAM_K_SCORE_ID, "--k-score", "k-score", "k-mer threshold for generating similar k-mer lists", typeid(MultiParam<SeqProf<int>>), (void *) &kmerScore, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_MAX_SEQS(PARAM_MAX_SEQS_ID, "--max-seqs", "Max results per query", "Maximum results per query sequence allowed to pass the prefilter (affects sensitivity)", typeid(size_t), (void *) &maxResListLen, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER),
         PARAM_SPLIT(PARAM_SPLIT_ID, "--split", "Split database", "Split input into N equally distributed chunks. 0: set the best split automatically", typeid(int), (void *) &split, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_SPLIT_MODE(PARAM_SPLIT_MODE_ID, "--split-mode", "Split mode", "0: split target db; 1: split query db; 2: auto, depending on main memory", typeid(int), (void *) &splitMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
@@ -95,7 +96,7 @@ Parameters::Parameters():
         // logging
         PARAM_V(PARAM_V_ID, "-v", "Verbosity", "Verbosity level: 0: quiet, 1: +errors, 2: +warnings, 3: +info", typeid(int), (void *) &verbosity, "^[0-3]{1}$", MMseqsParameter::COMMAND_COMMON),
         // convertalignments
-        PARAM_FORMAT_MODE(PARAM_FORMAT_MODE_ID, "--format-mode", "Alignment format", "Output format: 0: BLAST-TAB, 1: SAM, 2: BLAST-TAB + query/db length, 3: Pretty HTML", typeid(int), (void *) &formatAlignmentMode, "^[0-3]{1}$"),
+        PARAM_FORMAT_MODE(PARAM_FORMAT_MODE_ID, "--format-mode", "Alignment format", "Output format:\n0: BLAST-TAB\n1: SAM\n2: BLAST-TAB + query/db length\n3: Pretty HTML\n4: BLAST-TAB + column headers\nBLAST-TAB (0) and BLAST-TAB + column headers (4) support custom output formats (--format-output)", typeid(int), (void *) &formatAlignmentMode, "^[0-4]{1}$"),
         PARAM_FORMAT_OUTPUT(PARAM_FORMAT_OUTPUT_ID, "--format-output", "Format alignment output", "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,qframe,tframe,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,qorfstart,qorfend,torfstart,torfend", typeid(std::string), (void *) &outfmt, ""),
         PARAM_DB_OUTPUT(PARAM_DB_OUTPUT_ID, "--db-output", "Database output", "Return a result DB instead of a text file", typeid(bool), (void *) &dbOut, "", MMseqsParameter::COMMAND_EXPERT),
         // --include-only-extendablediagonal
@@ -391,6 +392,7 @@ Parameters::Parameters():
     prefilter.push_back(&PARAM_DIAGONAL_SCORING);
     prefilter.push_back(&PARAM_EXACT_KMER_MATCHING);
     prefilter.push_back(&PARAM_MASK_RESIDUES);
+    prefilter.push_back(&PARAM_MASK_PROBABILTY);
     prefilter.push_back(&PARAM_MASK_LOWER_CASE);
     prefilter.push_back(&PARAM_MIN_DIAG_SCORE);
     prefilter.push_back(&PARAM_INCLUDE_IDENTITY);
@@ -678,6 +680,12 @@ Parameters::Parameters():
     splitsequence.push_back(&PARAM_COMPRESSED);
     splitsequence.push_back(&PARAM_V);
 
+    // mask sequence
+    masksequence.push_back(&PARAM_MASK_PROBABILTY);
+    masksequence.push_back(&PARAM_THREADS);
+    masksequence.push_back(&PARAM_COMPRESSED);
+    masksequence.push_back(&PARAM_V);
+    
     // splitdb
     splitdb.push_back(&PARAM_SPLIT);
     splitdb.push_back(&PARAM_SPLIT_AMINOACID);
@@ -692,6 +700,7 @@ Parameters::Parameters():
     indexdb.push_back(&PARAM_MAX_SEQ_LEN);
     indexdb.push_back(&PARAM_MAX_SEQS);
     indexdb.push_back(&PARAM_MASK_RESIDUES);
+    indexdb.push_back(&PARAM_MASK_PROBABILTY);
     indexdb.push_back(&PARAM_MASK_LOWER_CASE);
     indexdb.push_back(&PARAM_SPACED_KMER_MODE);
     indexdb.push_back(&PARAM_SPACED_KMER_PATTERN);
@@ -717,6 +726,7 @@ Parameters::Parameters():
     kmerindexdb.push_back(&PARAM_ALPH_SIZE);
     kmerindexdb.push_back(&PARAM_MAX_SEQ_LEN);
     kmerindexdb.push_back(&PARAM_MASK_RESIDUES);
+    kmerindexdb.push_back(&PARAM_MASK_PROBABILTY);
     kmerindexdb.push_back(&PARAM_MASK_LOWER_CASE);
     kmerindexdb.push_back(&PARAM_CHECK_COMPATIBLE);
     kmerindexdb.push_back(&PARAM_SEARCH_TYPE);
@@ -874,6 +884,7 @@ Parameters::Parameters():
     kmermatcher.push_back(&PARAM_KMER_PER_SEQ_SCALE);
     kmermatcher.push_back(&PARAM_ADJUST_KMER_LEN);
     kmermatcher.push_back(&PARAM_MASK_RESIDUES);
+    kmermatcher.push_back(&PARAM_MASK_PROBABILTY);
     kmermatcher.push_back(&PARAM_MASK_LOWER_CASE);
     kmermatcher.push_back(&PARAM_COV_MODE);
     kmermatcher.push_back(&PARAM_K);
@@ -892,6 +903,7 @@ Parameters::Parameters():
     kmersearch.push_back(&PARAM_KMER_PER_SEQ);
     kmersearch.push_back(&PARAM_KMER_PER_SEQ_SCALE);
     kmersearch.push_back(&PARAM_MASK_RESIDUES);
+    kmersearch.push_back(&PARAM_MASK_PROBABILTY);
     kmersearch.push_back(&PARAM_MASK_LOWER_CASE);
     kmersearch.push_back(&PARAM_COV_MODE);
     kmersearch.push_back(&PARAM_C);
@@ -1289,6 +1301,10 @@ Parameters::Parameters():
     tar2db.push_back(&PARAM_THREADS);
     tar2db.push_back(&PARAM_V);
 
+    // appenddbtoindex
+    appenddbtoindex.push_back(&PARAM_ID_LIST);
+    appenddbtoindex.push_back(&PARAM_V);
+
     //checkSaneEnvironment();
     setDefaults();
 }
@@ -1408,6 +1424,9 @@ void Parameters::printUsageMessage(const Command& command, const unsigned int ou
                     } else if (par->type == typeid(MultiParam<NuclAA<float>>)) {
                         paramString.append(" TWIN"); //nucl:VAL,aa:VAL"
                         valueString = MultiParam<NuclAA<float>>::format(*((MultiParam<NuclAA<float>> *) par->value));
+                    } else if (par->type == typeid(MultiParam<SeqProf<int>>)) {
+                        paramString.append(" TWIN"); //seq:VAL,prof:VAL"
+                        valueString = MultiParam<SeqProf<int>>::format(*((MultiParam<SeqProf<int>> *) par->value));
                     }
 
                     ss << " " << paramString << std::string(maxParamWidth < paramString.size()? 1 : maxParamWidth - paramString.size(), ' ');
@@ -1638,6 +1657,11 @@ void Parameters::parseParameters(int argc, const char *pargv[], const Command &c
                             *((MultiParam<NuclAA<float>> *) par[parIdx]->value) = value;
                             par[parIdx]->wasSet = true;
                         }
+                        argIdx++;
+                    }else if (typeid(MultiParam<SeqProf<int>>) == par[parIdx]->type) {
+                        SeqProf<int> value = MultiParam<SeqProf<int>>(pargv[argIdx+1]).values;
+                        *((MultiParam<SeqProf<int>> *) par[parIdx]->value) = value;
+                        par[parIdx]->wasSet = true;
                         argIdx++;
                     }else if (typeid(MultiParam<PseudoCounts>) == par[parIdx]->type) {
                         PseudoCounts value = MultiParam<PseudoCounts>(pargv[argIdx + 1]).values;
@@ -2088,6 +2112,8 @@ void Parameters::printParameters(const std::string &module, int argc, const char
             ss << MultiParam<NuclAA<int>>::format(*((MultiParam<NuclAA<int>> *)par[i]->value));
         } else if(typeid(MultiParam<NuclAA<float>>) == par[i]->type) {
             ss << MultiParam<NuclAA<float>>::format(*((MultiParam<NuclAA<float>> *)par[i]->value));
+        } else if(typeid(MultiParam<SeqProf<int>>) == par[i]->type) {
+            ss << MultiParam<SeqProf<int>>::format(*((MultiParam<SeqProf<int>> *)par[i]->value));
         } else if(typeid(MultiParam<PseudoCounts>) == par[i]->type) {
             ss << MultiParam<PseudoCounts>::format(*((MultiParam<PseudoCounts> *)par[i]->value));
         } else if(typeid(float) == par[i]->type) {
@@ -2115,7 +2141,7 @@ void Parameters::setDefaults() {
     seedScoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("VTML80.out", "nucleotide.out"));
 
     kmerSize =  0;
-    kmerScore = INT_MAX;
+    kmerScore.values = INT_MAX;
     alphabetSize = MultiParam<NuclAA<int>>(NuclAA<int>(21,5));
     maxSeqLen = MAX_SEQ_LEN; // 2^16
     maxResListLen = 300;
@@ -2162,6 +2188,7 @@ void Parameters::setDefaults() {
     diagonalScoring = true;
     exactKmerMatching = 0;
     maskMode = 1;
+    maskProb = 0.9;
     maskLowerCaseMode = 0;
     minDiagScoreThr = 15;
     spacedKmer = true;
@@ -2595,6 +2622,9 @@ std::string Parameters::createParameterString(const std::vector<MMseqsParameter*
         } else if (typeid(MultiParam<NuclAA<float>>) == par[i]->type) {
             ss << par[i]->name << " ";
             ss << MultiParam<NuclAA<float>>::format(*((MultiParam<NuclAA<float>> *) par[i]->value)) << " ";
+        } else if (typeid(MultiParam<SeqProf<int>>) == par[i]->type) {
+            ss << par[i]->name << " ";
+            ss << MultiParam<SeqProf<int>>::format(*((MultiParam<SeqProf<int>> *) par[i]->value)) << " ";
         } else if (typeid(MultiParam<PseudoCounts>) == par[i]->type) {
             ss << par[i]->name << " ";
             ss << MultiParam<PseudoCounts>::format(*((MultiParam<PseudoCounts> *) par[i]->value)) << " ";

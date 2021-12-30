@@ -3,6 +3,8 @@
 #include "CommandDeclarations.h"
 #include "DownloadDatabase.h"
 
+const char* MMSEQS_CURRENT_INDEX_VERSION = "16";
+
 Parameters& par = Parameters::getInstance();
 std::vector<Command> baseCommands = {
         {"easy-search",          easysearch,           &par.easysearchworkflow,   COMMAND_EASY,
@@ -128,7 +130,14 @@ std::vector<Command> baseCommands = {
                 "<i:fastaFile1[.gz|.bz2]> ... <i:fastaFileN[.gz|.bz2]>|<i:stdin> <o:sequenceDB>",
                 CITATION_MMSEQS2, {{"fast[a|q]File[.gz|bz2]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
-        {"indexdb",              indexdb,              &par.indexdb,              COMMAND_HIDDEN,
+        {"appenddbtoindex",      appenddbtoindex,      &par.appenddbtoindex,      COMMAND_HIDDEN,
+                NULL,
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:DB1> ... <i:DBN> <o:DB>",
+                CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::allDb },
+                                   {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+       {"indexdb",               indexdb,              &par.indexdb,              COMMAND_HIDDEN,
                 NULL,
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
@@ -900,7 +909,7 @@ std::vector<Command> baseCommands = {
                 "<i:sequenceDB> <o:sequenceDB>",
                 CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
-        {"masksequence",        masksequence,          &par.threadsandcompression,COMMAND_SEQUENCE,
+        {"masksequence",        masksequence,          &par.masksequence,COMMAND_SEQUENCE,
                 "Soft mask sequence DB using tantan",
 //                "Low. complex regions are masked as lower case characters. The remaining regions are printed as upper case characters.",
                 NULL,

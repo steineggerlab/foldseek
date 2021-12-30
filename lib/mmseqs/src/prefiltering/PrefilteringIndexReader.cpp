@@ -6,7 +6,8 @@
 #include "IndexBuilder.h"
 #include "Parameters.h"
 
-const char*  PrefilteringIndexReader::CURRENT_VERSION = "16";
+extern const char* index_version_compatible;
+const char*  PrefilteringIndexReader::CURRENT_VERSION = index_version_compatible;
 unsigned int PrefilteringIndexReader::VERSION = 0;
 unsigned int PrefilteringIndexReader::META = 1;
 unsigned int PrefilteringIndexReader::SCOREMATRIXNAME = 2;
@@ -56,7 +57,7 @@ void PrefilteringIndexReader::createIndexFile(const std::string &outDB,
                                               BaseMatrix *subMat, int maxSeqLen,
                                               bool hasSpacedKmer, const std::string &spacedKmerPattern,
                                               bool compBiasCorrection, int alphabetSize, int kmerSize,
-                                              int maskMode, int maskLowerCase, int kmerThr, int splits) {
+                                              int maskMode, int maskLowerCase, float maskProb, int kmerThr, int splits) {
 
     const int SPLIT_META = splits > 1 ? 0 : 0;
     const int SPLIT_SEQS = splits > 1 ? 1 : 0;
@@ -223,7 +224,7 @@ void PrefilteringIndexReader::createIndexFile(const std::string &outDB,
         IndexBuilder::fillDatabase(&indexTable,
                                    (maskMode == 1 || maskLowerCase == 1) ? &sequenceLookup : NULL,
                                    (maskMode == 0 ) ? &sequenceLookup : NULL,
-                                   *subMat, &seq, dbr1, dbFrom, dbFrom + dbSize, kmerThr, maskMode, maskLowerCase);
+                                   *subMat, &seq, dbr1, dbFrom, dbFrom + dbSize, kmerThr, maskMode, maskLowerCase, maskProb);
         indexTable.printStatistics(subMat->num2aa);
 
         if (sequenceLookup == NULL) {
@@ -564,6 +565,11 @@ ScoreMatrix PrefilteringIndexReader::get3MerScoreMatrix(DBReader<unsigned int> *
 std::string PrefilteringIndexReader::searchForIndex(const std::string &pathToDB) {
     std::string outIndexName = pathToDB + ".idx";
     if (FileUtil::fileExists((outIndexName + ".dbtype").c_str()) == true) {
+        const bool ignore = getenv("MMSEQS_IGNORE_INDEX") != NULL;
+        if (ignore) {
+            Debug(Debug::WARNING) << "Ignoring precomputed index, since environment variable MMSEQS_IGNORE_INDEX is set\n";
+            return "";
+        }
         return outIndexName;
     }
     return "";

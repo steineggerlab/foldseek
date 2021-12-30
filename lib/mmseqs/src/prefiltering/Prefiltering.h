@@ -45,7 +45,7 @@ public:
                            size_t& maxResListLen, int& kmerSize, int& split, int& splitMode);
 
     static int getKmerThreshold(const float sensitivity, const bool isProfile, const bool hasContextPseudoCnts,
-                                const int kmerScore, const int kmerSize);
+                                const SeqProf<int> kmerScore, const int kmerSize);
 
     static void mergeTargetSplits(const std::string &outDB, const std::string &outDBIndex,
                                   const std::vector<std::pair<std::string, std::string>> &fileNames, unsigned int threads);
@@ -77,6 +77,7 @@ private:
     bool templateDBIsIndex;
     int maskMode;
     int maskLowerCaseMode;
+    float maskProb;
     int splitMode;
     int kmerThr;
     MultiParam<NuclAA<std::string>> scoringMatrixFile;
@@ -85,7 +86,6 @@ private:
     bool takeOnlyBestKmer;
     size_t maxResListLen;
 
-    const int kmerScore;
     const float sensitivity;
     size_t maxSeqLen;
     int querySeqType;
