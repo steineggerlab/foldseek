@@ -1,14 +1,13 @@
-
-#include <string>
-#include <vector>
-#include <tmalign/TMalign.h>
 #include "DBReader.h"
 #include "DBWriter.h"
+#include "IndexReader.h"
 #include "Debug.h"
 #include "Util.h"
 #include "QueryMatcher.h"
 #include "LocalParameters.h"
 #include "Matcher.h"
+
+#include <tmalign/TMalign.h>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -33,39 +32,39 @@ int tmalign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
+    const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
+    IndexReader qdbr(par.db1 + "_ss", par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    IndexReader qcadbr(
+            par.db1,
+            par.threads,
+            IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            "_ca"
+    );
 
-    //Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
-    DBReader<unsigned int> qdbr((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    qdbr.open(DBReader<unsigned int>::NOSORT);
-
-    DBReader<unsigned int> qcadbr((par.db1+"_ca").c_str(), (par.db1+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    qcadbr.open(DBReader<unsigned int>::NOSORT);
-
-    DBReader<unsigned int> *tdbr = NULL;
-    DBReader<unsigned int> *tcadbr = NULL;
-
-    bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
-
+    IndexReader *tdbr = NULL;
+    IndexReader *tcadbr = NULL;
     bool sameDB = false;
     if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
         tdbr = &qdbr;
         tcadbr = &qcadbr;
     } else {
-        tdbr = new DBReader<unsigned int>((par.db2).c_str(), (par.db2 + ".index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-        tdbr->open(DBReader<unsigned int>::NOSORT);
-        tcadbr = new DBReader<unsigned int>((par.db2+"_ca").c_str(), (par.db2+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-        tcadbr->open(DBReader<unsigned int>::NOSORT);
-        if (touch) {
-            tdbr->readMmapedDataInMemory();
-            tcadbr->readMmapedDataInMemory();
-        }
+        tdbr = new IndexReader(par.db2 + "_ss", par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+        tcadbr = new IndexReader(
+                par.db2,
+                par.threads,
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                "_ca"
+        );
     }
 
-    //Debug(Debug::INFO) << "Result database: " << par.db3 << "\n";
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
-    //Debug(Debug::INFO) << "Output file: " << par.db4 << "\n";
+
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
     dbw.open();
 
@@ -77,18 +76,16 @@ int tmalign(int argc, const char **argv, const Command& command) {
     double Lnorm_ass = 0.0;
     double  d0_scale = 0.0;
 
-
     // parsing code
     std::string atom_opt = "auto";// use C alpha atom for protein and C3' for RNA
     std::string suffix_opt = "";    // set -suffix to empty
     std::string dir_opt = "";    // set -dir to empty
     std::string dir1_opt = "";    // set -dir1 to empty
     std::string dir2_opt = "";    // set -dir2 to empty
-    Debug::Progress progress(resultReader.getSize());
 
+    Debug::Progress progress(resultReader.getSize());
 #pragma omp parallel
     {
-
         unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
@@ -107,7 +104,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         float * target_y = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
-        AffineNeedlemanWunsch affineNW(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), 20);
+        AffineNeedlemanWunsch affineNW(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,tdbr->sequenceReader->getMaxSeqLen() + 1), 20);
         std::vector<Matcher::result_t> swResults;
         char buffer[1024+32768];
         std::string resultBuffer;
@@ -117,10 +114,10 @@ int tmalign(int argc, const char **argv, const Command& command) {
             char *data = resultReader.getData(id, thread_idx);
             if(*data != '\0') {
                 size_t queryKey = resultReader.getDbKey(id);
-                unsigned int queryId = qdbr.getId(queryKey);
-                char *querySeq = qdbr.getData(queryId, thread_idx);
-                int queryLen = static_cast<int>(qdbr.getSeqLen(queryId));
-                float *qdata = (float *) qcadbr.getData(queryId, thread_idx);
+                unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
+                char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
+                int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
+                float *qdata = (float *) qcadbr.sequenceReader->getData(queryId, thread_idx);
                 memset(querySecStruc, 0, sizeof(int) * queryLen);
                 Coordinates queryCaCords;
                 memcpy(query_x, qdata, sizeof(float) * queryLen);
@@ -138,7 +135,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     Util::parseKey(data, dbKeyBuffer);
                     data = Util::skipLine(data);
                     const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-                    unsigned int targetId = tdbr->getId(dbKey);
+                    unsigned int targetId = tdbr->sequenceReader->getId(dbKey);
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB))? true : false;
                     if(isIdentity == true){
                         std::string backtrace = "";
@@ -158,9 +155,9 @@ int tmalign(int argc, const char **argv, const Command& command) {
                         resultBuffer.append(buffer, len);
                         continue;
                     }
-                    char * targetSeq = tdbr->getData(targetId, thread_idx);
-                    int targetLen = static_cast<int>(tdbr->getSeqLen(targetId));
-                    float * tdata = (float*) tcadbr->getData(targetId, thread_idx);
+                    char * targetSeq = tdbr->sequenceReader->getData(targetId, thread_idx);
+                    int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
+                    float * tdata = (float*) tcadbr->sequenceReader->getData(targetId, thread_idx);
                     if(Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)==false){
                         continue;
                     }
@@ -237,14 +234,9 @@ int tmalign(int argc, const char **argv, const Command& command) {
 
     dbw.close();
     resultReader.close();
-    qdbr.close();
-    qcadbr.close();
     if(sameDB == false){
-        tdbr->close();
-        tcadbr->close();
         delete tdbr;
         delete tcadbr;
     }
     return EXIT_SUCCESS;
 }
-
