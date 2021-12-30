@@ -35,7 +35,7 @@ std::vector<struct Command> commands = {
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"easy-search",          easystructuresearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
                 "Sensitive homology search",
-                "# Search a single PDB file against a set of PDB files\n"
+                "# Search a single/multiple PDB file against a set of PDB files\n"
                 "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n"
                 "# Search a set of PDB files against a set of PDB files\n"
                 "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n",
@@ -47,7 +47,7 @@ std::vector<struct Command> commands = {
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"search",               structuresearch,               &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Sensitive homology search",
-                "# Search multiple FASTA against FASTA (like BLASTP, TBLASTN, BLASTX, BLASTN --search-type 3, TBLASTX --search-type 2)\n"
+                "# Search multiple structures (cif,PDB) against structures.\n"
                 "foldseek search queryDB targetDB resultDB tmp\n"
                 "foldseek convertalis queryDB targetDB resultDB result.m8\n\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",

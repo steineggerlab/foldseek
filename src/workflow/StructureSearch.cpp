@@ -10,21 +10,13 @@
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->maskMode = 0;
-    p->PARAM_MASK_RESIDUES.wasSet = true;
     p->maskProb = 0.99995;
-    p->PARAM_MASK_PROBABILTY.wasSet = true;
     p->compBiasCorrection = 0;
-    p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
     p->sensitivity = 7.5;
-    p->PARAM_S.wasSet = true;
-    p->gapOpen = 7;
-    p->PARAM_GAP_OPEN.wasSet = true;
-    p->gapExtend = 2;
-    p->PARAM_GAP_EXTEND.wasSet = true;
+    p->gapOpen = 10;
+    p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
-    p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->removeTmpFiles = true;
-    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
 
 int structuresearch(int argc, const char **argv, const Command &command) {

@@ -261,7 +261,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
                                          profile->query_aa_sequence + r.qStartPos1,
                                          profile->query_3di_sequence + r.qStartPos1,
                                          profile->composition_bias + r.qStartPos1,
-                                         db_length, query_length, r.qStartPos1, r.score1,
+                                         db_length, query_length, r.score1,
                                          gap_open, gap_extend, band_width,
                                          profile->mat_aa, profile->mat_3di, profile->alphabetSize);
 
@@ -797,8 +797,7 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
 template <const unsigned int type>
 StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                                                   const int8_t *query_aa_sequence, const int8_t *query_3di_sequence, const int8_t * compositionBias,
-                                                                  int32_t db_length, int32_t query_length, int32_t queryStart,
-                                                                  int32_t score, const uint32_t gap_open,
+                                                                  int32_t db_length, int32_t query_length, int32_t score, const uint32_t gap_open,
                                                                   const uint32_t gap_extend, int32_t band_width, const int8_t *mat_aa, const int8_t *mat_3di, int32_t n) {
     /*! @function
      @abstract  Round an integer to the next closest power-2 integer.

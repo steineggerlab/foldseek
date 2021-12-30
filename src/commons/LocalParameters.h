@@ -43,16 +43,8 @@ public:
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
 
-    PARAMETER(PARAM_GAPNW)
-    PARAMETER(PARAM_NNWEIGHT)
-    PARAMETER(PARAM_NNN)
-    PARAMETER(PARAM_SLOPE)
     float tmScoreThr;
     int alignmentType;
-    int gapNW;
-    int nnWeight;
-    int numberNN;
-    int slope;
 private:
 
     LocalParameters(LocalParameters const&);
