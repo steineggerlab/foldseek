@@ -268,13 +268,16 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
     if (path != NULL) {
         r.cigar = path->seq;
         r.cigarLen = path->length;
-    }	delete path;
+    }
 
     uint32_t aaIds = 0;
     size_t mStateCnt = 0;
     computerBacktrace<SUBSTITUTIONMATRIX>(profile, db_aa_sequence, r, backtrace, aaIds,  mStateCnt);
     r.identicalAACnt = aaIds;
-
+    if(path != NULL) {
+        delete[] path->seq;
+        delete path;
+    }
     return r;
 }
 
