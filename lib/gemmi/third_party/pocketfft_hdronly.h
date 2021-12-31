@@ -156,8 +156,10 @@ template<typename T> class arr
       }
     static void dealloc(T *ptr)
       { free(ptr); }
+  // aligned_alloc is missing in many C++17 compilers
 #elif __cplusplus >= 201703L && !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) && \
   !defined(__APPLE__) && \
+  (!defined(__GLIBC_MINOR__) || __GLIBC__-0 != 2 || __GLIBC_MINOR__ >= 16) && \
   (!defined(__MINGW32__) || defined(_GLIBCXX_HAVE_ALIGNED_ALLOC))
     static T *ralloc(size_t num)
       {

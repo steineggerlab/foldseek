@@ -10,7 +10,7 @@
 
 #include <cstdint>
 #include <cstdlib>    // for strtol
-#include <cstring>    // for memchr, strchr, strlen
+#include <cstring>    // for memchr, strchr
 #include <array>
 #include <algorithm>  // for count, sort, remove
 #include <functional> // for hash
@@ -89,7 +89,13 @@ struct Op {
              -rot[2][0], -rot[2][1], -rot[2][2] };
   }
 
-  Op negated() { return { negated_rot(), { -tran[0], -tran[1], -tran[2] } }; }
+  Op negated() const { return { negated_rot(), { -tran[0], -tran[1], -tran[2] } }; }
+
+  Rot transposed_rot() const {
+    return { rot[0][0], rot[1][0], rot[2][0],
+             rot[0][1], rot[1][1], rot[2][1],
+             rot[0][2], rot[1][2], rot[2][2] };
+  }
 
   // DEN^3 for rotation, -DEN^3 for rotoinversion
   int det_rot() const {
@@ -200,6 +206,16 @@ inline Op Op::inverse() const {
 
 // TRIPLET -> OP
 
+inline int interpret_miller_character(char c, const std::string& s) {
+  static const signed char values[] =
+    //a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  p  q  r  s  t  u  v  w  x  y  z
+    { 1, 2, 3, 0, 0, 0, 0, 1, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3 };
+  size_t idx = size_t((c | 0x20) - 'a');  // "|0x20" = to lower
+  if (idx >= sizeof(values) || values[idx] == 0)
+    fail("unexpected character '", c, "' in: ", s);
+  return values[idx] - 1;
+}
+
 inline std::array<int, 4> parse_triplet_part(const std::string& s) {
   std::array<int, 4> r = { 0, 0, 0, 0 };
   int num = Op::DEN;
@@ -211,30 +227,38 @@ inline std::array<int, 4> parse_triplet_part(const std::string& s) {
     }
     if (num == 0)
       fail("wrong or unsupported triplet format: " + s);
-    bool is_shift = false;
+    int r_idx;
+    int den = 1;
     if (*c >= '0' && *c <= '9') {
+      // syntax examples in this branch: "1", "-1/2", "+2*x", "1/2 * b"
       char* endptr;
       num *= std::strtol(c, &endptr, 10);
-      if (*endptr == '/') {
-        int den = std::strtol(endptr + 1, &endptr, 10);
-        if (den < 1 || Op::DEN % den != 0)
-          fail("Wrong denominator " + std::to_string(den) + " in: " + s);
-        num /= den;
+      if (*endptr == '/')
+        den = std::strtol(endptr + 1, &endptr, 10);
+      if (*endptr == '*') {
+        c = impl::skip_blank(endptr + 1);
+        r_idx = interpret_miller_character(*c, s);
+        ++c;
+      } else {
+        c = endptr;
+        r_idx = 3;
       }
-      is_shift = (*endptr != '*');
-      c = (is_shift ? endptr - 1 : impl::skip_blank(endptr + 1));
+    } else {
+      // syntax examples in this branch: "x", "+a", "-k/3"
+      r_idx = interpret_miller_character(*c, s);
+      c = impl::skip_blank(++c);
+      if (*c == '/') {
+        char* endptr;
+        den = std::strtol(c + 1, &endptr, 10);
+        c = endptr;
+      }
     }
-    if (is_shift)
-      r[3] += num;
-    else if (std::memchr("xXhHaA", *c, 6))
-      r[0] += num;
-    else if (std::memchr("yYkKbB", *c, 6))
-      r[1] += num;
-    else if (std::memchr("zZlLcC", *c, 6))
-      r[2] += num;
-    else
-      fail(std::string("unexpected character '") + *c + "' in: " + s);
-    ++c;
+    if (den != 1) {
+      if (den <= 0 || Op::DEN % den != 0)
+        fail("Wrong denominator " + std::to_string(den) + " in: " + s);
+      num /= den;
+    }
+    r[r_idx] += num;
     num = 0;
   }
   if (num != 0)
@@ -281,7 +305,7 @@ inline void append_sign_of(std::string& s, int n) {
 }
 
 // append w/DEN fraction reduced to the lowest terms
-inline void append_op_fraction(std::string& s, int w) {
+inline std::pair<int,int> get_op_fraction(int w) {
   // Op::DEN == 24 == 2 * 2 * 2 * 3
   int denom = 1;
   for (int i = 0; i != 3; ++i)
@@ -293,52 +317,65 @@ inline void append_op_fraction(std::string& s, int w) {
     w /= 3;
   else
     denom *= 3;
-  impl::append_small_number(s, w);
-  if (denom != 1) {
-    s += '/';
-    impl::append_small_number(s, denom);
-  }
+  return {w, denom};
 }
 
 } // namespace impl
 
-inline std::string make_triplet_part(int x, int y, int z, int w,
+inline std::string make_triplet_part(const std::array<int, 3>& xyz, int w,
                                      char style='x') {
   std::string s;
-  int xyz[] = { x, y, z };
   for (int i = 0; i != 3; ++i)
     if (xyz[i] != 0) {
       impl::append_sign_of(s, xyz[i]);
       int a = std::abs(xyz[i]);
       if (a != Op::DEN) {
-        impl::append_op_fraction(s, a);
-        s += '*';
+        std::pair<int,int> frac = impl::get_op_fraction(a);
+        if (frac.first == 1) {  // e.g. "x/3"
+          s += char(style + i);
+          s += '/';
+          impl::append_small_number(s, frac.second);
+        } else {  // e.g. "2/3*x"
+          impl::append_small_number(s, frac.first);
+          if (frac.second != 1) {
+            s += '/';
+            impl::append_small_number(s, frac.second);
+          }
+          s += '*';
+          s += char(style + i);
+        }
+      } else {
+        s += char(style + i);
       }
-      s += char(style + i);
     }
   if (w != 0) {
     impl::append_sign_of(s, w);
-    impl::append_op_fraction(s, std::abs(w));
+    std::pair<int,int> frac = impl::get_op_fraction(std::abs(w));
+    impl::append_small_number(s, frac.first);
+    if (frac.second != 1) {
+      s += '/';
+      impl::append_small_number(s, frac.second);
+    }
   }
   return s;
 }
 
 inline std::string Op::triplet() const {
-  return make_triplet_part(rot[0][0], rot[0][1], rot[0][2], tran[0]) +
-   "," + make_triplet_part(rot[1][0], rot[1][1], rot[1][2], tran[1]) +
-   "," + make_triplet_part(rot[2][0], rot[2][1], rot[2][2], tran[2]);
+  return make_triplet_part(rot[0], tran[0]) +
+   "," + make_triplet_part(rot[1], tran[1]) +
+   "," + make_triplet_part(rot[2], tran[2]);
 }
 
 
 // GROUPS OF OPERATIONS
 
 // corresponds to Table A1.4.2.2 in ITfC vol.B (edition 2010)
-inline std::vector<Op::Tran> centring_vectors(char lattice_symbol) {
+inline std::vector<Op::Tran> centring_vectors(char centring_type) {
   constexpr int h = Op::DEN / 2;
   constexpr int t = Op::DEN / 3;
   constexpr int d = 2 * t;
   // note: find_centering() depends on the order of operations in vector
-  switch (lattice_symbol & ~0x20) {
+  switch (centring_type & ~0x20) {
     case 'P': return {{0, 0, 0}};
     case 'A': return {{0, 0, 0}, {0, h, h}};
     case 'B': return {{0, 0, 0}, {h, 0, h}};
@@ -350,7 +387,7 @@ inline std::vector<Op::Tran> centring_vectors(char lattice_symbol) {
     case 'S': return {{0, 0, 0}, {t, t, d}, {d, t, d}};
     case 'T': return {{0, 0, 0}, {t, d, t}, {d, t, d}};
     case 'F': return {{0, 0, 0}, {0, h, h}, {h, 0, h}, {h, h, 0}};
-    default: fail(std::string("not a lattice symbol: ") + lattice_symbol);
+    default: fail("not a centring type: ", centring_type);
   }
 }
 
@@ -433,10 +470,9 @@ struct GroupOps {
     return false;
   }
 
-  void change_basis(const Op& cob) {
+  void change_basis_impl(const Op& cob, const Op& inv) {
     if (sym_ops.empty() || cen_ops.empty())
       return;
-    Op inv = cob.inverse();
 
     // Apply change-of-basis to sym_ops.
     // Ignore the first item in sym_ops -- it's identity.
@@ -476,6 +512,9 @@ struct GroupOps {
         }
   }
 
+  void change_basis_forward(const Op& cob) { change_basis_impl(cob, cob.inverse()); }
+  void change_basis_backward(const Op& inv) { change_basis_impl(inv.inverse(), inv); }
+
   std::vector<Op> all_ops_sorted() const {
     std::vector<Op> ops;
     ops.reserve(sym_ops.size() * cen_ops.size());
@@ -499,12 +538,38 @@ struct GroupOps {
     return all_ops_sorted() == other.all_ops_sorted();
   }
 
+  bool has_same_centring(const GroupOps& other) const {
+    if (cen_ops.size() != other.cen_ops.size())
+      return false;
+    if (std::is_sorted(cen_ops.begin(), cen_ops.end()) &&
+        std::is_sorted(other.cen_ops.begin(), other.cen_ops.end()))
+      return cen_ops == other.cen_ops;
+    std::vector<Op::Tran> v1 = cen_ops;
+    std::vector<Op::Tran> v2 = other.cen_ops;
+    std::sort(v1.begin(), v1.end());
+    std::sort(v2.begin(), v2.end());
+    return v1 == v2;
+  }
+
+  bool has_same_rotations(const GroupOps& other) const {
+    if (sym_ops.size() != other.sym_ops.size())
+      return false;
+    auto sorted_rotations = [](const GroupOps& g) {
+      std::vector<Op::Rot> r(g.sym_ops.size());
+      for (size_t i = 0; i != r.size(); ++i)
+        r[i] = g.sym_ops[i].rot;
+      std::sort(r.begin(), r.end());
+      return r;
+    };
+    return sorted_rotations(*this) == sorted_rotations(other);
+  }
+
   // minimal multiplicity for real-space grid in each direction
   // examples: 1,2,1 for P21, 1,1,6 for P61
   std::array<int, 3> find_grid_factors() const {
     const int T = Op::DEN;
     int r[3] = {T, T, T};
-    for (const Op& op : *this)
+    for (Op op : *this)
       for (int i = 0; i != 3; ++i)
         if (op.tran[i] != 0 && op.tran[i] < r[i])
           r[i] = op.tran[i];
@@ -698,7 +763,7 @@ inline Op hall_matrix_symbol(const char* start, const char* end,
 // Parses either short (0 0 1) or long notation (x,y,z+1/12)
 // but without multpliers (such as 1/2x) to keep things simple for now.
 inline Op parse_hall_change_of_basis(const char* start, const char* end) {
-  if (memchr(start, ',', end - start) != nullptr) // long symbol
+  if (std::memchr(start, ',', end - start) != nullptr) // long symbol
     return parse_triplet(std::string(start, end));
   // short symbol (0 0 1)
   Op cob = Op::identity();
@@ -748,7 +813,7 @@ inline GroupOps generators_from_hall(const char* hall) {
       fail("missing ')': " + std::string(hall));
     if (ops.sym_ops.empty())
       fail("misplaced translation: " + std::string(hall));
-    ops.change_basis(parse_hall_change_of_basis(part + 1, rb));
+    ops.change_basis_forward(parse_hall_change_of_basis(part + 1, rb));
 
     if (*impl::skip_blank(find_blank(rb + 1)) != '\0')
       fail("unexpected characters after ')': " + std::string(hall));
@@ -845,31 +910,32 @@ inline CrystalSystem crystal_system(PointGroup pg) {
 }
 
 inline unsigned char point_group_index_and_category(int space_group_number) {
-  enum : unsigned char { S=0x20, E=(0x20|0x40) };  // Sohncke, enantiomorphic
+  // 0x20=Sohncke, 0x40=enantiomorphic, 0x80=symmorphic
+  enum : unsigned char { S=0x20, E=(0x20|0x40), Y=0x80, Z=(0x20|0x80) };
   static unsigned char indices[230] = {
-     0|S,  1,    2|S,  2|S,  2|S,   3,   3,    3,    3,    4,    // 1-10
-     4,    4,    4,    4,    4,    5|S,  5|S,  5|S,  5|S,  5|S,  // 11-20
-     5|S,  5|S,  5|S,  5|S,  6,    6,    6,    6,    6,    6,    // 21-30
-     6,    6,    6,    6,    6,    6,    6,    6,    6,    6,    // 31-40
-     6,    6,    6,    6,    6,    6,    7,    7,    7,    7,    // 41-50
+     0|Z,  1|Y,  2|Z,  2|S,  2|Z,  3|Y,  3,    3|Y,  3,    4|Y,  // 1-10
+     4,    4|Y,  4,    4,    4,    5|Z,  5|S,  5|S,  5|S,  5|S,  // 11-20
+     5|Z,  5|Z,  5|Z,  5|S,  6|Y,  6,    6,    6,    6,    6,    // 21-30
+     6,    6,    6,    6,    6|Y,  6,    6,    6|Y,  6,    6,    // 31-40
+     6,    6|Y,  6,    6|Y,  6,    6,    7|Y,  7,    7,    7,    // 41-50
      7,    7,    7,    7,    7,    7,    7,    7,    7,    7,    // 51-60
-     7,    7,    7,    7,    7,    7,    7,    7,    7,    7,    // 61-70
-     7,    7,    7,    7,    8|S,  8|E,  8|S,  8|E,  8|S,  8|S,  // 71-80
-     9,    9,   10,   10,   10,   10,   10,   10,   11|S, 11|S,  // 81-90
-    11|E, 11|E, 11|S, 11|S, 11|E, 11|E, 11|S, 11|S, 12,   12,    // 91-100
-    12,   12,   12,   12,   12,   12,   12,   12,   12,   12,    // 101-110
-    13,   13,   13,   13,   13,   13,   13,   13,   13,   13,    // 111-120
-    13,   13,   14,   14,   14,   14,   14,   14,   14,   14,    // 121-130
-    14,   14,   14,   14,   14,   14,   14,   14,   14,   14,    // 131-140
-    14,   14,   15|S, 15|E, 15|E, 15|S, 16,   16,   17|S, 17|S,  // 141-150
-    17|E, 17|E, 17|E, 17|E, 17|S, 18,   18,   18,   18,   18,    // 151-160
-    18,   19,   19,   19,   19,   19,   19,   20|S, 20|E, 20|E,  // 161-170
-    20|E, 20|E, 20|S, 21,   22,   22,   23|S, 23|E, 23|E, 23|E,  // 171-180
-    23|E, 23|S, 24,   24,   24,   24,   25,   25,   25,   25,    // 181-190
-    26,   26,   26,   26,   27|S, 27|S, 27|S, 27|S, 27|S, 28,    // 191-200
-    28,   28,   28,   28,   28,   28,   29|S, 29|S, 29|S, 29|S,  // 201-210
-    29|S, 29|E, 29|E, 29|S, 30,   30,   30,   30,   30,   30,    // 211-220
-    31,   31,   31,   31,   31,   31,   31,   31,   31,   31     // 221-230
+     7,    7,    7,    7,    7|Y,  7,    7,    7,    7|Y,  7,    // 61-70
+     7|Y,  7,    7,    7,    8|Z,  8|E,  8|S,  8|E,  8|Z,  8|S,  // 71-80
+     9|Y,  9|Y, 10|Y, 10,   10,   10,   10|Y, 10,   11|Z, 11|S,  // 81-90
+    11|E, 11|E, 11|S, 11|S, 11|E, 11|E, 11|Z, 11|S, 12|Y, 12,    // 91-100
+    12,   12,   12,   12,   12,   12,   12|Y, 12,   12,   12,    // 101-110
+    13|Y, 13,   13,   13,   13|Y, 13,   13,   13,   13|Y, 13,    // 111-120
+    13|Y, 13,   14|Y, 14,   14,   14,   14,   14,   14,   14,    // 121-130
+    14,   14,   14,   14,   14,   14,   14,   14,   14|Y, 14,    // 131-140
+    14,   14,   15|Z, 15|E, 15|E, 15|Z, 16|Y, 16|Y, 17|Z, 17|Z,  // 141-150
+    17|E, 17|E, 17|E, 17|E, 17|Z, 18|Y, 18|Y, 18,   18,   18|Y,  // 151-160
+    18,   19|Y, 19,   19|Y, 19,   19|Y, 19,   20|Z, 20|E, 20|E,  // 161-170
+    20|E, 20|E, 20|S, 21|Y, 22|Y, 22,   23|Z, 23|E, 23|E, 23|E,  // 171-180
+    23|E, 23|S, 24|Y, 24,   24,   24,   25|Y, 25,   25|Y, 25,    // 181-190
+    26|Y, 26,   26,   26,   27|Z, 27|Z, 27|Z, 27|S, 27|S, 28|Y,  // 191-200
+    28,   28|Y, 28,   28|Y, 28,   28,   29|Z, 29|S, 29|Z, 29|S,  // 201-210
+    29|Z, 29|E, 29|E, 29|S, 30|Y, 30|Y, 30|Y, 30,   30,   30,    // 211-220
+    31|Y, 31,   31,   31,   31|Y, 31,   31,   31,   31|Y, 31     // 221-230
   };
   return indices[space_group_number-1];
 }
@@ -889,6 +955,10 @@ inline bool is_enantiomorphic(int space_group_number) {
   return (point_group_index_and_category(space_group_number) & 0x40) != 0;
 }
 
+// true for 73 space groups
+inline bool is_symmorphic(int space_group_number) {
+  return (point_group_index_and_category(space_group_number) & 0x80) != 0;
+}
 
 // Generated by tools/gen_sg_table.py.
 inline const char* get_basisop(int basisop_idx) {
@@ -934,16 +1004,35 @@ inline const char* get_basisop(int basisop_idx) {
     "x+1/4,y+1/4,-x+z-1/4",
     "x+1/4,y,z",
     "x,y,z+1/4",
-    "-x,-1/2*y+1/2*z,1/2*y+1/2*z",
-    "-1/2*x+1/2*z,-y,1/2*x+1/2*z",
-    "1/2*x+1/2*y,1/2*x-1/2*y,-z",
-    "1/2*y+1/2*z,1/2*x+1/2*z,1/2*x+1/2*y",
-    "-1/2*x+1/2*y+1/2*z,1/2*x-1/2*y+1/2*z,1/2*x+1/2*y-1/2*z",
-    "-1/2*x+z,1/2*x,y",
-    "x-1/2*z,y,1/2*z",
-    "1/2*x+1/2*y,-1/2*x+1/2*y,z",
+    "-x,-y/2+z/2,y/2+z/2",
+    "-x/2+z/2,-y,x/2+z/2",
+    "x/2+y/2,x/2-y/2,-z",
+    "y/2+z/2,x/2+z/2,x/2+y/2",
+    "-x/2+y/2+z/2,x/2-y/2+z/2,x/2+y/2-z/2",
+    "-x/2+z,x/2,y",
+    "x-z/2,y,z/2",
+    "x/2+y/2,-x/2+y/2,z",
   };
   return basisops[basisop_idx];
+}
+
+// Returns a change-of-basis operator for centred -> primitive transformation.
+// The same operator as inverse of z2p_op in sgtbx.
+inline Op::Rot centred_to_primitive(char centring_type) {
+  constexpr int D = Op::DEN;
+  constexpr int H = Op::DEN / 2;
+  constexpr int T = Op::DEN / 3;
+  switch (centring_type) {
+    case 'P': return {D,0,0, 0,D,0, 0,0,D};
+    case 'A': return {-D,0,0, 0,-H,H, 0,H,H};
+    case 'B': return {-H,0,H, 0,-D,0, H,0,H};
+    case 'C': return {H,H,0, H,-H,0, 0,0,-D};
+    case 'I': return {-H,H,H, H,-H,H, H,H,-H};
+    case 'R': return {2*T,-T,-T, T,T,-2*T, T,T,T};
+    case 'H': return {2*T,-T,0, T,T,0, 0,0,D};  // not used normally
+    case 'F': return {0,H,H, H,0,H, H,H,0};
+    default: fail("not a centring type: ", centring_type);
+  }
 }
 
 
@@ -967,6 +1056,8 @@ struct SpaceGroup { // typically 44 bytes
     return ret;
   }
 
+  char centring_type() const { return ext == 'R' ? 'P' : hm[0]; }
+
   // (old) CCP4 spacegroup names start with H for hexagonal setting
   char ccp4_lattice_type() const { return ext == 'H' ? 'H' : hm[0]; }
 
@@ -984,6 +1075,7 @@ struct SpaceGroup { // typically 44 bytes
 
   bool is_sohncke() const { return gemmi::is_sohncke(number); }
   bool is_enantiomorphic() const { return gemmi::is_enantiomorphic(number); }
+  bool is_symmorphic() const { return gemmi::is_symmorphic(number); }
   PointGroup point_group() const { return gemmi::point_group(number); }
   const char* point_group_hm() const {
     return gemmi::point_group_hm(point_group());
@@ -1001,6 +1093,10 @@ struct SpaceGroup { // typically 44 bytes
   Op basisop() const { return parse_triplet(basisop_str()); }
   bool is_reference_setting() const { return basisop_idx == 0; }
 
+  Op centred_to_primitive() const {
+    return {gemmi::centred_to_primitive(centring_type()), {0,0,0}};
+  }
+
   GroupOps operations() const { return symops_from_hall(hall); }
 };
 
@@ -1017,13 +1113,13 @@ namespace impl {
 template<class Dummy>
 struct Tables_
 {
-  static const SpaceGroup main[555];
+  static const SpaceGroup main[557];
   static const SpaceGroupAltName alt_names[28];
-  static const char ccp4_hkl_asu[230];
+  static const unsigned char ccp4_hkl_asu[230];
 };
 
 template<class Dummy>
-const SpaceGroup Tables_<Dummy>::main[555] = {
+const SpaceGroup Tables_<Dummy>::main[557] = {
   // This table was generated by tools/gen_sg_table.py.
   // First 530 entries in the same order as in SgInfo, sgtbx and ITB.
   // Note: spacegroup 68 has three duplicates with different H-M names.
@@ -1588,6 +1684,8 @@ const SpaceGroup Tables_<Dummy>::main[555] = {
   {117,    0, "C -4 2 b"  ,   0,     "", "C -4 2ya"      , 48}, // 552
   { 97,    0, "F 4 2 2" ,     0,     "", "F 4 2"         , 48}, // 553
   {139,    0, "F 4/m m m" ,   0,     "", "-F 4 2"        , 48}, // 554
+  { 89,    0, "C 4 2 2" ,     0,     "", "C 4 2"         , 48}, // 555
+  { 90,    0, "C 4 2 21" ,    0,     "", "C 4a 2"        , 48}, // 556
 };
 
 template<class Dummy>
@@ -1629,7 +1727,7 @@ const SpaceGroupAltName Tables_<Dummy>::alt_names[28] = {
 
 // This table was generated by tools/gen_reciprocal_asu.py.
 template<class Dummy>
-const char Tables_<Dummy>::ccp4_hkl_asu[230] = {
+const unsigned char Tables_<Dummy>::ccp4_hkl_asu[230] = {
   0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
   2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
   2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3,
@@ -1674,8 +1772,6 @@ inline const SpaceGroup& get_spacegroup_reference_setting(int number) {
 // to distinguish hexagonal and rhombohedral settings (e.g. for "R 3").
 inline const SpaceGroup* find_spacegroup_by_name(std::string name,
                                   double alpha=0., double gamma=0.) noexcept {
-  if (name[0] == 'H')
-    name[0] = 'R';
   const char* p = impl::skip_blank(name.c_str());
   if (*p >= '0' && *p <= '9') { // handle numbers
     char *endptr;
@@ -1685,9 +1781,12 @@ inline const SpaceGroup* find_spacegroup_by_name(std::string name,
   char first = *p & ~0x20; // to uppercase
   if (first == '\0')
     return nullptr;
+  if (first == 'H')
+    first = 'R';
   p = impl::skip_blank(p+1);
+  size_t start = p - name.c_str();
   // change letters to lower case, except the letter after :
-  for (size_t i = p - name.c_str(); i < name.size(); ++i) {
+  for (size_t i = start; i < name.size(); ++i) {
     if (name[i] >= 'A' && name[i] <= 'Z')
       name[i] |= 0x20;  // to lowercase
     else if (name[i] == ':')
@@ -1695,6 +1794,10 @@ inline const SpaceGroup* find_spacegroup_by_name(std::string name,
         if (name[i] >= 'a' && name[i] <= 'z')
           name[i] &= ~0x20;  // to uppercase
   }
+  // The string that const char* p points to was just modified.
+  // This confuses some compilers (GCC 4.8), so let's re-assign p.
+  p = name.c_str() + start;
+
   for (const SpaceGroup& sg : spacegroup_tables::main)
     if (sg.hm[0] == first) {
       if (sg.hm[2] == *p) {
@@ -1766,18 +1869,6 @@ inline const SpaceGroup* find_spacegroup_by_ops(const GroupOps& gops) {
     if ((c == sg.hall[0] || c == sg.hall[1]) &&
         gops.is_same_as(sg.operations()))
       return &sg;
-  return nullptr;
-}
-
-inline
-const SpaceGroup* find_spacegroup_by_change_of_basis(const SpaceGroup* sg,
-                                                     const Op& cob) {
-  if (sg) {
-    GroupOps gops = sg->operations();
-    gops.change_basis(cob);
-    if (const SpaceGroup* new_sg = find_spacegroup_by_ops(gops))
-      return new_sg;
-  }
   return nullptr;
 }
 

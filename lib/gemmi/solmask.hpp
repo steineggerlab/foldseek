@@ -159,7 +159,7 @@ void set_margin_around(Grid<T>& mask, double r, T value, T margin_value) {
         }
       }
   if (stencil2.empty()) {
-    for (const typename Grid<T>::Point& p : mask)
+    for (typename Grid<T>::Point p : mask)
       if (*p.value != value) {
         for (const auto& wvu : stencil1) {
           size_t idx = mask.index_near_zero(p.u + wvu[2], p.v + wvu[1], p.w + wvu[0]);
@@ -170,7 +170,7 @@ void set_margin_around(Grid<T>& mask, double r, T value, T margin_value) {
         }
       }
   } else {
-    for (const typename Grid<T>::Point& p : mask) {
+    for (typename Grid<T>::Point p : mask) {
       if (*p.value == value) {
         bool found = false;
         for (const auto& wvu : stencil1) {
@@ -246,8 +246,10 @@ struct SolventMasker {
   }
 
   template<typename T> void shrink(Grid<T>& grid) const {
-    set_margin_around(grid, rshrink, (T)1, (T)-1);
-    grid.change_values((T)-1, (T)1);
+    if (rshrink > 0) {
+      set_margin_around(grid, rshrink, (T)1, (T)-1);
+      grid.change_values((T)-1, (T)1);
+    }
   }
 
   template<typename T> void invert(Grid<T>& grid) const {

@@ -141,6 +141,9 @@ namespace rules {
   struct file : pegtl::seq<pegtl::opt<whitespace>,
                            pegtl::if_must<pegtl::not_at<pegtl::eof>,
                                           content, pegtl::eof>> {};
+  struct one_block : pegtl::seq<pegtl::opt<whitespace>,
+                                pegtl::if_must<pegtl::not_at<pegtl::eof>, datablock>> {};
+
 
 } // namespace rules
 
@@ -260,6 +263,12 @@ template<typename Input> Document read_input(Input&& in) {
   return doc;
 }
 
+template<typename Input>
+size_t parse_one_block(Document& d, Input&& in) {
+  pegtl::parse<rules::one_block, Action, Errors>(in, d);
+  return in.byte();
+}
+
 // pegtl::read_input may use mmap and be faster, but does not work
 // on Windows with Unicode filenames.
 #if defined(_WIN32)
@@ -334,6 +343,19 @@ bool check_syntax_any(T&& input, std::string* msg) {
   }
   GEMMI_CIF_FILE_INPUT(in, input.path());
   return check_syntax(in, msg);
+}
+
+template<typename T>
+size_t read_one_block(Document& d, T&& input, size_t limit) {
+  if (input.is_stdin())
+    return parse_one_block(d, pegtl::cstream_input<>(stdin, 16*1024, "stdin"));
+  if (input.is_compressed()) {
+    CharArray mem = input.uncompress_into_buffer(limit);
+    return parse_one_block(d, pegtl::memory_input<>(mem.data(), mem.size(),
+                                                    input.path().c_str()));
+  }
+  GEMMI_CIF_FILE_INPUT(in, input.path());
+  return parse_one_block(d, std::move(in));
 }
 
 #if defined(_MSC_VER)

@@ -151,7 +151,7 @@ struct ChemMod {
   std::vector<AtomMod> atom_mods;
   Restraints rt;
 
-  void apply_to(ChemComp& cc) const;
+  void apply_to(ChemComp& chemcomp) const;
 };
 
 
@@ -543,17 +543,23 @@ struct MonLib {
     auto modif = modifications.find(name);
     return modif != modifications.end() ? &modif->second : nullptr;
   }
+  const ResidueInfo* find_residue_info(const std::string& name) const {
+    auto resinfo = residue_infos.find(name);
+    return resinfo != residue_infos.end() ? &resinfo->second : nullptr;
+  }
   const ChemLink* match_link(
       const std::string& comp1, const std::string& atom1,
       const std::string& comp2, const std::string& atom2) const {
     for (auto& ml : links) {
       const ChemLink& link = ml.second;
-      if (link.rt.bonds.empty())
-        continue;
-      const Restraints::Bond& bond = link.rt.bonds[0];
-      if (link.side1.comp == comp1 && link.side2.comp == comp2 &&
-          bond.id1.atom == atom1 && bond.id2.atom == atom2)
-        return &link;
+      // for now we don't have link definitions with >1 bonds
+      if (link.rt.bonds.size() == 1) {
+        const Restraints::Bond& bond = link.rt.bonds[0];
+        if (bond.id1.atom == atom1 && bond.id2.atom == atom2 &&
+            link_side_matches_residue(link.side1, comp1) &&
+            link_side_matches_residue(link.side2, comp2))
+          return &link;
+      }
     }
     return nullptr;
   }
@@ -576,6 +582,46 @@ struct MonLib {
     for (const cif::Block& block : doc.blocks)
       add_monomer_if_present(block);
   }
+
+  bool link_side_matches_residue(const ChemLink::Side& side,
+                                 const std::string& res_name) const {
+    if (side.comp == res_name)
+      return true;
+    const ResidueInfo* resinfo = find_residue_info(res_name);
+    return resinfo && side.matches_group(ChemLink::group_from_residue_info(*resinfo));
+  }
+
+  std::string path(const char* code=nullptr) const {
+    size_t len = mon_lib_list.source.length();
+    // "list/mon_lib_list.cif" has 21 characters
+    if (len < 21)
+      return {};
+    std::string dir = mon_lib_list.source.substr(0, len-21);
+    if (code)
+      dir += relative_monomer_path(code);
+    return dir;
+  }
+
+  static std::string relative_monomer_path(const std::string& code) {
+    std::string path(1, std::tolower(code[0]));
+    path += '/';  // works also on Windows
+    path += code;
+    // On Windows several names are reserved (CON, PRN, AUX, ...), see
+    // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+    // The workaround in CCP4 monomer libary is to use CON_CON.cif, etc.
+    if (code.size() == 3)
+      switch (ialpha3_id(code.c_str())) {
+        case ialpha3_id("AUX"):
+        case ialpha3_id("COM"):
+        case ialpha3_id("CON"):
+        case ialpha3_id("LPT"):
+        case ialpha3_id("PRN"):
+          path += '_';
+          path += code;
+      }
+    path += ".cif";
+    return path;
+  }
 };
 
 typedef cif::Document (*read_cif_func)(const std::string&);
@@ -594,7 +640,8 @@ inline MonLib read_monomer_cif(const std::string& path,
 
 inline MonLib read_monomer_lib(std::string monomer_dir,
                                const std::vector<std::string>& resnames,
-                               read_cif_func read_cif) {
+                               read_cif_func read_cif,
+                               bool ignore_missing=false) {
   if (monomer_dir.empty())
     fail("read_monomer_lib: monomer_dir not specified.");
   if (monomer_dir.back() != '/' && monomer_dir.back() != '\\')
@@ -603,18 +650,13 @@ inline MonLib read_monomer_lib(std::string monomer_dir,
                                    read_cif);
   std::string error;
   for (const std::string& name : resnames) {
-    std::string path = monomer_dir;
-    path += std::tolower(name[0]);
-    path += '/';
-    path += name + ".cif";
     try {
-      cif::Document doc = (*read_cif)(path);
+      cif::Document doc = (*read_cif)(monomer_dir + MonLib::relative_monomer_path(name));
       auto cc = make_chemcomp_from_cif(name, doc);
       monlib.monomers.emplace(name, cc);
     } catch(std::runtime_error& err) {
-      error += "The monomer " + name + " could not be read: ";
-      error += err.what();
-      error += ".\n";
+      if (!ignore_missing)
+        error += "The monomer " + name + " could not be read: " + err.what() + ".\n";
     }
   }
   if (!error.empty())
@@ -636,7 +678,7 @@ struct BondIndex {
   std::map<int, std::vector<AtomImage>> index;
 
   BondIndex(const Model& model_) : model(model_) {
-    for (const_CRA& cra : model.all())
+    for (const_CRA cra : model.all())
       if (!index.emplace(cra.atom->serial, std::vector<AtomImage>()).second)
         fail("duplicated serial numbers");
   }

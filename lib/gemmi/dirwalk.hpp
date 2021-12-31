@@ -87,7 +87,7 @@ inline bool is_rxsf_ent_filename(const std::string& filename) {
 
 struct IsMmCifFile { // actually we don't know what kind of cif file it is
   static bool check(const std::string& filename) {
-    return giends_with(filename, ".cif");
+    return giends_with(filename, ".cif") || giends_with(filename, ".mmcif");
   }
 };
 

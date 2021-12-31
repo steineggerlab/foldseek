@@ -55,12 +55,12 @@ struct CifToMtz {
       nullptr
     };
     static const char* unmerged[] = {
-      "intensity_meas I J 1",  // for unmerged data is category refln
-      "intensity_net I J 1",
-      "intensity_sigma SIGI Q 1",
-      "pdbx_detector_x XDET R 1",
-      "pdbx_detector_y YDET R 1",
-      "pdbx_scan_angle ROT R 1",
+      "intensity_meas I J 0",  // for unmerged data is category refln
+      "intensity_net I J 0",
+      "intensity_sigma SIGI Q 0",
+      "pdbx_detector_x XDET R 0",
+      "pdbx_detector_y YDET R 0",
+      "pdbx_scan_angle ROT R 0",
       nullptr
     };
     return for_merged ? merged : unmerged;
@@ -105,7 +105,6 @@ struct CifToMtz {
     mtz.cell = rb.cell;
     mtz.spacegroup = rb.spacegroup;
     mtz.add_dataset("HKL_base");
-    mtz.add_dataset("unknown").wavelength = rb.wavelength;
     const cif::Loop* loop = rb.refln_loop ? rb.refln_loop : rb.diffrn_refln_loop;
     if (!loop)
       fail("_refln category not found in mmCIF block: " + rb.block.name);
@@ -114,7 +113,7 @@ struct CifToMtz {
     bool uses_status = false;
     std::vector<int> indices;
     std::string tag = loop->tags[0];
-    const size_t len = tag.find('.') + 1;
+    const size_t tag_offset = rb.tag_offset();
 
     bool unmerged = force_unmerged || !rb.refln_loop;
 
@@ -130,7 +129,7 @@ struct CifToMtz {
     }
 
     // always start with H, K, L
-    tag.replace(len, std::string::npos, "index_h");
+    tag.replace(tag_offset, std::string::npos, "index_h");
     for (char c : {'h', 'k', 'l'}) {
       tag.back() = c;
       int index = loop->find_tag(tag);
@@ -156,10 +155,13 @@ struct CifToMtz {
       col->label = "BATCH";
     }
 
+    if (!unmerged)
+      mtz.add_dataset("unknown").wavelength = rb.wavelength;
+
     // other columns according to the spec
     bool column_added = false;
     for (const Entry& entry : spec_entries) {
-      tag.replace(len, std::string::npos, entry.refln_tag);
+      tag.replace(tag_offset, std::string::npos, entry.refln_tag);
       int index = loop->find_tag(tag);
       if (index == -1)
         continue;
@@ -168,7 +170,8 @@ struct CifToMtz {
       column_added = true;
       indices.push_back(index);
       auto col = mtz.columns.emplace(mtz.columns.end());
-      col->dataset_id = entry.dataset_id;
+      // dataset_id is meaningless in unmerged MTZ files
+      col->dataset_id = unmerged ? 0 : entry.dataset_id;
       col->type = entry.col_type;
       if (col->type == 's') {
         col->type = 'I';
@@ -188,12 +191,16 @@ struct CifToMtz {
     mtz.nreflections = (int) loop->length();
 
     std::unique_ptr<UnmergedHklMover> hkl_mover;
-    std::vector<std::pair<int,int>> batch_nums;
+    struct BatchInfo {
+      int sweep_id;
+      int frame_id;
+    };
+    std::vector<BatchInfo> batch_nums;
     if (unmerged) {
       hkl_mover.reset(new UnmergedHklMover(mtz.spacegroup));
-      tag.replace(len, std::string::npos, "diffrn_id");
+      tag.replace(tag_offset, std::string::npos, "diffrn_id");
       int sweep_id_index = loop->find_tag(tag);
-      tag.replace(len, std::string::npos, "pdbx_image_id");
+      tag.replace(tag_offset, std::string::npos, "pdbx_image_id");
       int image_id_index = loop->find_tag(tag);
       if (sweep_id_index == -1 || image_id_index == -1) {
         if (verbose)
@@ -206,48 +213,91 @@ struct CifToMtz {
       } else {
         if (verbose)
           out << "  " << tag << " & diffrn_id -> BATCH\n";
+        struct SweepInfo {
+          std::set<int> frame_ids;
+          int offset;
+          float wavelength = 0.f;
+          std::string crystal_id;
+          int dataset_id;
+        };
+        std::map<int, SweepInfo> sweeps;
+        cif::Block& block = const_cast<cif::Block&>(rb.block);
+        cif::Table tab_w0 = block.find("_diffrn.", {"id", "crystal_id"});
+        cif::Table tab_w1 = block.find("_diffrn_radiation.",
+                                       {"diffrn_id", "wavelength_id"});
+        cif::Table tab_w2 = block.find("_diffrn_radiation_wavelength.",
+                                       {"id", "wavelength"});
         // store sweep and frame numbers corresponding to reflections
         batch_nums.reserve(loop->length());
         for (size_t i = 0; i < loop->values.size(); i += loop->tags.size()) {
-          int sweep_id = cif::as_int(loop->values[i + sweep_id_index], 0);
+          const std::string& sweep_str = loop->values[i + sweep_id_index];
+          int sweep_id = cif::as_int(sweep_str, 0);
           const std::string& frame_str = loop->values[i + image_id_index];
           int frame = 1;
           if (!cif::is_null(frame_str))
             frame = (int) std::ceil(cif::as_number(frame_str));
-          batch_nums.emplace_back(sweep_id, frame);
+          batch_nums.push_back({sweep_id, frame});
+          if (frame >= 0) {
+            SweepInfo& sweep = sweeps[sweep_id];
+            if (sweep.frame_ids.empty()) {
+              // new sweep was added - set crystal_id and wavelength
+              try {
+                sweep.crystal_id = tab_w0.find_row(sweep_str).str(1);
+              } catch(std::exception&) {
+                sweep.crystal_id = "unknown";
+              }
+              try {
+                const std::string& wave_id = tab_w1.find_row(sweep_str)[1];
+                const std::string& wavelen = tab_w2.find_row(wave_id)[1];
+                sweep.wavelength = (float) cif::as_number(wavelen, 0.);
+              } catch(std::exception&) {}
+            }
+            sweep.frame_ids.insert(frame);
+          }
         }
-        // store unique frame numbers
-        std::map<int, std::set<int>> sets;
-        for (const std::pair<int,int>& p : batch_nums)
-          if (p.second >= 0)
-            sets[p.first].insert(p.second);
-        // add offset to frame numbers to make them unique
-        std::map<int, int> offsets;
+
+        // add datasets and set SweepInfo::dataset_id
+        for (auto& sweep_pair : sweeps) {
+          SweepInfo& si = sweep_pair.second;
+          Mtz::Dataset* ds = mtz.dataset_with_name(si.crystal_id);
+          if (ds == nullptr) {
+            ds = &mtz.add_dataset(si.crystal_id);
+            // both crystal name and dataset name are set to crystal_id
+            ds->project_name = "unknown";
+            ds->wavelength = si.wavelength;
+          }
+          si.dataset_id = ds->id;
+        }
+
+        // determine offset that makes frame numbers unique
         int cap = 0;
-        for (const auto& it : sets) {
-          offsets.emplace(it.first, cap);
-          cap += *--it.second.end() + 1100;
+        for (auto& it : sweeps) {
+          it.second.offset = cap;
+          cap += *--it.second.frame_ids.end() + 1100;
           cap -= cap % 1000;
         }
-        for (std::pair<int,int>& p : batch_nums)
-          if (p.first >= 0 && p.second >= 0)
-            p.second += offsets.at(p.first);
-        for (const auto& sweep_frames : sets) {
+        // add offset to BatchInfo::frame_id
+        for (BatchInfo& p : batch_nums)
+          if (p.sweep_id >= 0 && p.frame_id >= 0)
+            p.frame_id += sweeps.at(p.sweep_id).offset;
+
+        for (const auto& sweep_pair : sweeps) {
+          const SweepInfo& sweep_info = sweep_pair.second;
           Mtz::Batch batch;
-          batch.set_dataset_id(sweep_frames.first);
+          batch.set_dataset_id(sweep_info.dataset_id);
           batch.set_cell(mtz.cell);
-          int min_frame = *sweep_frames.second.begin();
-          int max_frame = *--sweep_frames.second.end();
-          int offset = offsets.at(sweep_frames.first);
-          if (2 * sweep_frames.second.size() > size_t(max_frame - min_frame)) {
+          batch.set_wavelength(sweep_info.wavelength);
+          int min_frame = *sweep_info.frame_ids.begin();
+          int max_frame = *--sweep_info.frame_ids.end();
+          if (2 * sweep_info.frame_ids.size() > size_t(max_frame - min_frame)) {
             // probably consecutive range, even if some frames are missing
             for (int n = min_frame; n <= max_frame; ++n) {
-              batch.number = n + offset;
+              batch.number = n + sweep_info.offset;
               mtz.batches.push_back(batch);
             }
           } else {
-            for (int n : sweep_frames.second) {
-              batch.number = n + offset;
+            for (int n : sweep_info.frame_ids) {
+              batch.number = n + sweep_info.offset;
               mtz.batches.push_back(batch);
             }
           }
@@ -267,7 +317,7 @@ struct CifToMtz {
         for (int j = 0; j != 3; ++j)
           mtz.data[k++] = (float) hkl[j];
         mtz.data[k++] = (float) isym;
-        mtz.data[k++] = batch_nums.empty() ? 1.f : (float) batch_nums[row++].second;
+        mtz.data[k++] = batch_nums.empty() ? 1.f : (float) batch_nums[row++].frame_id;
       } else {
         for (int j = 0; j != 3; ++j)
           mtz.data[k++] = (float) cif::as_int(loop->values[i + indices[j]]);

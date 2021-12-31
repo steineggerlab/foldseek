@@ -81,6 +81,10 @@ template<typename Item> struct Span {
     return const_cast<Span*>(this)->subspan<F, V>(std::forward<F>(func));
   }
 
+  // we use children() to iterate over Model, Chain, etc
+  Span& children() { return *this; }
+  const Span& children() const { return *this; }
+
 private:
   iterator begin_;
   std::size_t size_ = 0;

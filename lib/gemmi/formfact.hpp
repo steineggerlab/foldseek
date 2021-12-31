@@ -9,6 +9,7 @@
 #include <cmath>     // for exp, sqrt
 #include <utility>   // for pair
 #include "math.hpp"  // for pi()
+#include "elem.hpp"  // for El
 
 namespace gemmi {
 
@@ -134,6 +135,12 @@ struct GaussianCoef {
     return precalculate_density_aniso_b(U.scaled(UtoB), addend);
   }
 };
+
+inline unsigned char it92_pos(El el) {
+  auto n = static_cast<unsigned char>(el);
+  // ordinal for X, H, ... Cf; H=1 for D; X=0 for Es, ... Og
+  return n < 99 ? n : (unsigned char)(el == El::D);
+}
 
 } // namespace gemmi
 #endif

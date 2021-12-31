@@ -6,9 +6,8 @@
 #define GEMMI_TO_MMDB_HPP_
 
 #include <cstdlib>           // for atoi
-#include <cstring>           // for strcpy
+#include <cstring>           // for memcpy
 #include <gemmi/model.hpp>
-#include <gemmi/to_pdb.hpp>  // for padded_atom_name
 #include <gemmi/util.hpp>    // for rtrim_str
 #include <mmdb2/mmdb_manager.h>
 
@@ -25,9 +24,9 @@ inline void copy_transform_to_mmdb(const Transform& tr,
 
 template<int N>
 void strcpy_to_mmdb(char (&dest)[N], const std::string& src) {
-  if (src.size() >= N+1)
+  if (src.size() >= N)
     fail("This string is too long: " + src);
-  std::strcpy(dest, src.c_str());
+  std::memcpy(dest, src.c_str(), src.size() + 1);
 }
 
 inline void set_seqid_in_mmdb(int* seqnum, mmdb::InsCode& icode, SeqId seqid) {
@@ -72,9 +71,8 @@ inline mmdb::Manager* copy_to_mmdb(const Structure& st, mmdb::Manager* manager) 
         for (const Atom& atom : res.atoms) {
           mmdb::PAtom atom2 = mmdb::newAtom();
           const char altloc[2] = {atom.altloc, '\0'};
-          std::string padded_name = padded_atom_name(atom);
-          atom2->SetAtomName(0, atom.serial, padded_name.c_str(), altloc,
-                             res.segment.c_str(), atom.element.uname());
+          atom2->SetAtomName(0, atom.serial, atom.padded_name().c_str(),
+                             altloc, res.segment.c_str(), atom.element.uname());
           atom2->Het = res.het_flag == 'H';
           atom2->SetCharge(atom.charge);
           atom2->SetCoordinates(atom.pos.x, atom.pos.y, atom.pos.z,

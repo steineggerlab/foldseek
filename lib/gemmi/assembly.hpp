@@ -9,6 +9,7 @@
 
 #include <ostream>      // std::ostream
 #include "model.hpp"
+#include "modify.hpp"   // transform_pos_and_adp
 #include "util.hpp"
 
 namespace gemmi {
@@ -35,8 +36,13 @@ struct ChainNameGenerator {
   }
 
   std::string make_short_name(const std::string& preferred) {
-    static const char symbols[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                  "abcdefghijklmnopqrstuvwxyz0123456789";
+    static const char symbols[] = {
+      'A','B','C','D','E','F','G','H','I','J','K','L','M',
+      'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+      'a','b','c','d','e','f','g','h','i','j','k','l','m',
+      'n','o','p','q','r','s','t','u','v','w','x','y','z',
+      '0','1','2','3','4','5','6','7','8','9'
+    };
     if (!has(preferred))
       return added(preferred);
     std::string name(1, 'A');
@@ -76,12 +82,6 @@ struct ChainNameGenerator {
     unreachable();
   }
 };
-
-inline void transform_atom(Atom& atom, const Transform& tr) {
-  atom.pos = Position(tr.apply(atom.pos));
-  if (atom.aniso.nonzero())
-    atom.aniso = atom.aniso.transformed_by<float>(tr.mat);
-}
 
 inline void ensure_unique_chain_name(const Model& model, Chain& chain) {
   ChainNameGenerator namegen(HowToNameCopiedChain::Short);
@@ -129,8 +129,7 @@ inline Model make_assembly(const Assembly& assembly, const Model& model,
               new_chain.name = name_iter->second;
             }
             for (Residue& res : new_chain.residues) {
-              for (Atom& a : res.atoms)
-                transform_atom(a, oper.transform);
+              transform_pos_and_adp(res, oper.transform);
               if (!res.subchain.empty())
                 res.subchain = new_chain.name + ":" + res.subchain;
             }
@@ -156,8 +155,7 @@ inline Model make_assembly(const Assembly& assembly, const Model& model,
             new_chain->residues.push_back(res);
             Residue& new_res = new_chain->residues.back();
             new_res.subchain = new_chain->name + ":" + res.subchain;
-            for (Atom& a : new_res.atoms)
-              transform_atom(a, oper.transform);
+            transform_pos_and_adp(new_res, oper.transform);
           }
         }
       }
@@ -226,41 +224,69 @@ inline void shorten_chain_names(Structure& st) {
 }
 
 
-inline void expand_ncs(Structure& st, HowToNameCopiedChain how,
-                       bool copy_connections=false) {
+inline void expand_ncs(Structure& st, HowToNameCopiedChain how) {
+  size_t orig_conn_size = st.connections.size();
   for (Model& model : st.models) {
+    if (how == HowToNameCopiedChain::Dup) {
+      // change segment of original chains to "0" - is this a good idea?
+      for (Chain& chain : model.chains)
+        for (Residue& res : chain.residues)
+          res.segment = "0";
+    }
     size_t orig_size = model.chains.size();
     ChainNameGenerator namegen(model, how);
     for (const NcsOp& op : st.ncs)
       if (!op.given) {
+        std::map<std::string, std::string> chain_mapping;
         for (size_t i = 0; i != orig_size; ++i) {
           model.chains.push_back(model.chains[i]);
           Chain& new_chain = model.chains.back();
-          new_chain.name = namegen.make_new_name(new_chain.name, (int)i+1);
+          const std::string& old_name = model.chains[i].name;
+          auto it = chain_mapping.find(old_name);
+          if (it == chain_mapping.end()) {
+            new_chain.name = namegen.make_new_name(old_name, (int)i+1);
+            chain_mapping.emplace(old_name, new_chain.name);
+          } else {
+            new_chain.name = it->second;
+          }
 
           for (Residue& res : new_chain.residues) {
-            for (Atom& a : res.atoms)
-              transform_atom(a, op.tr);
+            transform_pos_and_adp(res, op.tr);
             if (!res.subchain.empty())
               res.subchain = new_chain.name + ":" + res.subchain;
             if (how == HowToNameCopiedChain::Dup)
               res.segment = op.id;
           }
         }
-      }
-  }
-  if (copy_connections) {
-    size_t orig_conn_size = st.connections.size();
-    for (const NcsOp& op : st.ncs)
-      if (!op.given) {
-        for (size_t i = 0; i != orig_conn_size; ++i) {
-          if (how == HowToNameCopiedChain::Dup) { // for now we handle only this case
-            auto c = st.connections.emplace(st.connections.end(), st.connections[i]);
-            c->partner1.res_id.segment = op.id;
-            c->partner2.res_id.segment = op.id;
+        // add connections when processing the first model
+        if (&model == &st.models[0]) {
+          for (size_t i = 0; i != orig_conn_size; ++i) {
+            st.connections.push_back(st.connections[i]);
+            Connection& c = st.connections.back();
+            c.name += '-';
+            c.name += op.id;
+            for (int j = 0; j < 2; ++j) {
+              AtomAddress& aa = j == 0 ? c.partner1 : c.partner2;
+              if (how == HowToNameCopiedChain::Dup) {
+                aa.res_id.segment = op.id;
+              } else {
+                auto it = chain_mapping.find(aa.chain_name);
+                if (it != chain_mapping.end())
+                  aa.chain_name = it->second;
+                else
+                  st.connections.pop_back();
+              }
+            }
           }
         }
       }
+  }
+  // adjust connections after changing segment of original chains to "0"
+  if (how == HowToNameCopiedChain::Dup) {
+    for (size_t i = 0; i != orig_conn_size; ++i) {
+      st.connections[i].partner1.res_id.segment = "0";
+      st.connections[i].partner2.res_id.segment = "0";
+    }
   }
   for (NcsOp& op : st.ncs)
     op.given = true;

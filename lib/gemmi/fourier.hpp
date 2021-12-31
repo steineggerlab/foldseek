@@ -78,14 +78,6 @@ bool data_fits_into(const DataProxy& data, std::array<int, 3> size) {
   return true;
 }
 
-inline float friedel_mate_value(float v) { return v; }
-inline double friedel_mate_value(double v) { return v; }
-
-template<typename T>
-std::complex<T> friedel_mate_value(const std::complex<T>& v) {
-  return std::conj(v);
-}
-
 template<typename T>
 void add_friedel_mates(ReciprocalGrid<T>& grid) {
   const T default_val = T(); // initialized to 0 or 0+0i
@@ -177,20 +169,21 @@ FPhiGrid<T> get_f_phi_on_grid(const FPhi& fphi,
   for (size_t i = 0; i < fphi.size(); i += fphi.stride()) {
     Miller hkl = fphi.get_hkl(i);
     T f = (T) fphi.get_f(i);
-    if (f > 0.f) {
-      double phi = fphi.get_phi(i);
-      for (const Op& op : ops.sym_ops) {
-        auto hklp = op.apply_to_hkl(hkl);
-        double shifted_phi = phi + op.phase_shift(hkl);
-        int lp = hklp[2];
-        if (axis_order == AxisOrder::ZYX)
-          std::swap(hklp[0], hklp[2]);
-        if (!grid.has_index(hklp[0], hklp[1], hklp[2]))
-          continue;
-        int sign = (!half_l || lp >= 0 ? 1 : -1);
-        size_t idx = grid.index_n(sign * hklp[0], sign * hklp[1], sign * hklp[2]);
-        if (grid.data[idx] == default_val)
-          grid.data[idx] = std::polar(f, (T) (sign * shifted_phi));
+    if (f == 0.f)  // is there enough of F=0 to justify this 'if'?
+      continue;
+    double phi = fphi.get_phi(i);
+    for (const Op& op : ops.sym_ops) {
+      auto hklp = op.apply_to_hkl(hkl);
+      int lp = hklp[2];
+      if (axis_order == AxisOrder::ZYX)
+        std::swap(hklp[0], hklp[2]);
+      if (!grid.has_index(hklp[0], hklp[1], hklp[2]))
+        continue;
+      int sign = (!half_l || lp >= 0 ? 1 : -1);
+      size_t idx = grid.index_n(sign * hklp[0], sign * hklp[1], sign * hklp[2]);
+      if (grid.data[idx] == default_val) {
+        T theta = sign * T(phi + op.phase_shift(hkl));
+        grid.data[idx] = std::complex<T>(f * std::cos(theta), f * std::sin(theta));
       }
     }
   }
@@ -235,9 +228,13 @@ ReciprocalGrid<T> get_value_on_grid(const DataProxy& data, size_t column,
 
 template<typename T>
 void transform_f_phi_grid_to_map_(FPhiGrid<T>&& hkl, Grid<T>& map) {
-  // x -> conj(x) is equivalent to changing axis direction before FFT
+  // NaNs are not good for FFT, so we change them to 0.
+  // x -> conj(x) is equivalent to changing axis direction before FFT.
   for (std::complex<T>& x : hkl.data)
-    x.imag(-x.imag());
+    if (std::isnan(x.imag()))
+      x = 0;
+    else
+      x.imag(-x.imag());
   map.spacegroup = hkl.spacegroup;
   map.unit_cell = hkl.unit_cell;
   map.axis_order = hkl.axis_order;

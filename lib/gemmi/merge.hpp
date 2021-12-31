@@ -8,6 +8,7 @@
 #define GEMMI_MERGE_HPP_
 
 #include <cassert>
+#include "atof.hpp"     // for fast_from_chars
 #include "symmetry.hpp"
 #include "unitcell.hpp"
 #include "util.hpp"     // for vector_remove_if
@@ -27,12 +28,81 @@ inline std::string miller_str(const Miller& hkl) {
   return s;
 }
 
+inline bool parse_voigt_notation(const char* start, const char* end, SMat33<double>& b) {
+  bool first = true;
+  for (double* u : {&b.u11, &b.u22, &b.u33, &b.u23, &b.u13, &b.u12}) {
+    if (*start != (first ? '(' : ','))
+      return false;
+    first = false;
+    auto result = fast_from_chars(++start, end, *u);
+    if (result.ec != std::errc())
+      return false;
+    start = skip_blank(result.ptr);
+  }
+  return *start == ')';
+}
+
+inline bool read_staraniso_b_from_mmcif(const cif::Block& block, SMat33<double>& output) {
+  // read what is written by MtzToCif::write_staraniso_b()
+  cif::Table table = const_cast<cif::Block*>(&block)->find(
+      "_reflns.pdbx_aniso_B_tensor_eigen",
+      {"value_1", "value_2", "value_3",
+       "vector_1_ortho[1]", "vector_1_ortho[2]", "vector_1_ortho[3]",
+       "vector_2_ortho[1]", "vector_2_ortho[2]", "vector_2_ortho[3]",
+       "vector_3_ortho[1]", "vector_3_ortho[2]", "vector_3_ortho[3]"});
+  if (!table.ok())
+    return false;
+  cif::Table::Row row = table.one();
+  using cif::as_number;
+  double eigval[3] = {as_number(row[0]), as_number(row[1]), as_number(row[2])};
+  double min_val = std::min(std::min(eigval[0], eigval[1]), eigval[2]);
+  Mat33 mat(as_number(row[3]), as_number(row[6]), as_number(row[9]),
+            as_number(row[4]), as_number(row[7]), as_number(row[10]),
+            as_number(row[5]), as_number(row[8]), as_number(row[11]));
+  Vec3 diag(eigval[0] - min_val, eigval[1] - min_val, eigval[2] - min_val);
+  // If the columns of mat are an orthonomal basis, mat^−1==mat^T.
+  // But just in case it isn't, we use mat^-1 here.
+  Mat33 t = mat.multiply_by_diagonal(diag).multiply(mat.inverse());
+  // t is a symmetric tensor, so we return only 6 numbers
+  output = {t[0][0], t[1][1], t[2][2], t[0][1], t[0][2], t[1][2]};
+  return true;
+}
+
+// returns STARANISO version or empty string
+inline std::string read_staraniso_b_from_mtz(const Mtz& mtz, SMat33<double>& output) {
+  std::string version;
+  size_t hlen = mtz.history.size();
+  for (size_t i = 0; i != hlen; ++i)
+    if (mtz.history[i].find("STARANISO") != std::string::npos) {
+      size_t version_pos = mtz.history[i].find("version:");
+      if (version_pos != std::string::npos)
+        version = read_word(mtz.history[i].c_str() + version_pos + 8);
+      else
+        version = "?";
+      // StarAniso 2.3.74 (24-Apr-2021) and later write B tensor in history
+      for (size_t j = i+1; j < std::min(i+4, hlen); ++j) {
+        const std::string& line = mtz.history[j];
+        if (starts_with(line, "B=(")) {
+          if (!parse_voigt_notation(line.c_str() + 2,
+                                    line.c_str() + line.size(),
+                                    output))
+            fail("failed to parse tensor Voigt notation: " + line);
+          break;
+        }
+      }
+      break;
+    }
+  return version;
+}
+
+
 struct Intensities {
-  enum class Type { None, Unmerged, Mean, Anomalous };
+  enum class Type { Unknown, Unmerged, Mean, Anomalous };
 
   struct Refl {
     Miller hkl;
-    int isign;  // 1 for I(+), -1 for I(-), 0 for mean
+    short isign;  // 1 for I(+), -1 for I(-), 0 for mean
+    short nobs;
     double value;
     double sigma;
 
@@ -40,17 +110,42 @@ struct Intensities {
       return std::tie(hkl[0], hkl[1], hkl[2], isign) <
              std::tie(o.hkl[0], o.hkl[1], o.hkl[2], o.isign);
     }
+    const char* intensity_label() const {
+      if (isign == 0) return "<I>";
+      if (isign > 0) return "I(+)";
+      return "I(-)";
+    }
+
+    std::string hkl_label() const {
+      std::string s = intensity_label();
+      s += ' ';
+      s += miller_str(hkl);
+      return s;
+    };
+  };
+
+  struct AnisoScaling {
+    SMat33<double> b = {0., 0., 0., 0., 0., 0.};
+
+    bool ok() const { return !b.all_zero(); }
+    double scale(const Miller& hkl, const UnitCell& cell) const {
+      Vec3 s = cell.frac.mat.left_multiply(Vec3(hkl[0], hkl[1], hkl[2]));
+      return std::exp(0.5 * b.r_u_r(s));
+    }
   };
 
   std::vector<Refl> data;
   const SpaceGroup* spacegroup = nullptr;
   UnitCell unit_cell;
+  double unit_cell_rmsd[6] = {0., 0., 0., 0., 0., 0.};
   double wavelength;
-  Type type = Type::None;
+  Type type = Type::Unknown;
+  AnisoScaling staraniso_b;
+
 
   static const char* type_str(Type itype) {
     switch (itype) {
-      case Type::None: return "n/a";
+      case Type::Unknown: return "n/a";
       case Type::Unmerged: return "I";
       case Type::Mean: return "<I>";
       case Type::Anomalous: return "I+/I-";
@@ -76,6 +171,7 @@ struct Intensities {
   }
 
   // pre: both are sorted
+  // cf. calculate_hkl_value_correlation()
   Correlation calculate_correlation(const Intensities& other) const {
     Correlation corr;
     auto r1 = data.begin();
@@ -117,11 +213,14 @@ struct Intensities {
     std::vector<Refl>::iterator out = data.begin();
     double sum_wI = 0.;
     double sum_w = 0.;
+    int nobs = 0;
     for (auto in = data.begin(); in != data.end(); ++in) {
       if (out->hkl != in->hkl || out->isign != in->isign) {
         out->value = sum_wI / sum_w;
         out->sigma = 1.0 / std::sqrt(sum_w);
+        out->nobs = nobs;
         sum_wI = sum_w = 0.;
+        nobs = 0;
         ++out;
         out->hkl = in->hkl;
         out->isign = in->isign;
@@ -129,9 +228,11 @@ struct Intensities {
       double w = 1. / (in->sigma * in->sigma);
       sum_wI += w * in->value;
       sum_w += w;
+      ++nobs;
     }
     out->value = sum_wI / sum_w;
     out->sigma = 1.0 / std::sqrt(sum_w);
+    out->nobs = nobs;
     data.erase(++out, data.end());
   }
 
@@ -141,8 +242,14 @@ struct Intensities {
     ReciprocalAsu asu(spacegroup);
     for (Refl& refl : data) {
       if (asu.is_in(refl.hkl)) {
-        if (!merged && refl.isign == -1 && gops.is_reflection_centric(refl.hkl))
-          refl.isign = 1;
+        if (!merged) {
+          // isign is 0 for original hkl (e.g. from XDS file)
+          if (refl.isign == 0)
+            refl.isign = 1;  // since it's in asu - I+ or centric
+          // when reading asu hkl from MTZ file - count centrics always as I+
+          else if (refl.isign == -1 && gops.is_reflection_centric(refl.hkl))
+            refl.isign = 1;
+        }
         continue;
       }
       auto hkl_isym = asu.to_asu(refl.hkl, gops);
@@ -165,13 +272,13 @@ struct Intensities {
     const Mtz::Column& col = mtz.get_column_with_label("I");
     size_t value_idx = col.idx;
     size_t sigma_idx = mtz.get_column_with_label("SIGI").idx;
-    unit_cell = mtz.get_average_cell_from_batch_headers(nullptr);
+    unit_cell = mtz.get_average_cell_from_batch_headers(unit_cell_rmsd);
     spacegroup = mtz.spacegroup;
     if (!spacegroup)
       fail("unknown space group");
     wavelength = mtz.dataset(col.dataset_id).wavelength;
     for (size_t i = 0; i < mtz.data.size(); i += mtz.columns.size()) {
-      int isign = ((int)mtz.data[i + 3] % 2 == 0 ? -1 : 1);
+      short isign = ((int)mtz.data[i + 3] % 2 == 0 ? -1 : 1);
       add_if_valid(mtz.get_hkl(i), isign, mtz.data[i + value_idx], mtz.data[i + sigma_idx]);
     }
     // Aimless >=0.7.6 (from 2021) has an option to output unmerged file
@@ -198,6 +305,8 @@ struct Intensities {
       fail("expected merged file");
     const Mtz::Column* colp = mtz.iplus_column();
     const Mtz::Column* colm = mtz.iminus_column();
+    if (!colp || !colm)
+      fail("anomalous intensities not found");
     size_t value_idx[2] = {colp->idx, colm->idx};
     size_t sigma_idx[2] = {mtz.get_column_with_label("SIG" + colp->label).idx,
                            mtz.get_column_with_label("SIG" + colm->label).idx};
@@ -229,7 +338,7 @@ struct Intensities {
       case Type::Anomalous:
         read_anomalous_intensities_from_mtz(mtz);
         break;
-      case Type::None:
+      case Type::Unknown:
         assert(0);
         break;
     }
@@ -311,7 +420,7 @@ struct Intensities {
       case Type::Anomalous:
         read_anomalous_intensities_from_mmcif(rb);
         break;
-      case Type::None:
+      case Type::Unknown:
         break;
     }
   }
@@ -327,6 +436,15 @@ struct Intensities {
     type = Type::Unmerged;
   }
 
+  // returns STARANISO version or empty string
+  std::string take_staraniso_b_from_mtz(const Mtz& mtz) {
+    return read_staraniso_b_from_mtz(mtz, staraniso_b.b);
+  }
+
+  bool take_staraniso_b_from_mmcif(const cif::Block& block) {
+    return read_staraniso_b_from_mmcif(block, staraniso_b.b);
+  }
+
 private:
   template<typename Source>
   void copy_metadata(const Source& source) {
@@ -336,11 +454,11 @@ private:
       fail("unknown space group");
   }
 
-  void add_if_valid(const Miller& hkl, int isign, double value, double sigma) {
+  void add_if_valid(const Miller& hkl, short isign, double value, double sigma) {
     // XDS marks rejected reflections with negative sigma.
     // Sigma 0.0 is also problematic - it rarely happens (e.g. 5tkn).
     if (!std::isnan(value) && sigma > 0)
-      data.push_back({hkl, isign, value, sigma});
+      data.push_back({hkl, isign, /*nobs=*/0, value, sigma});
   }
 
   template<typename DataProxy>
@@ -358,11 +476,14 @@ private:
     for (size_t i = 0; i < proxy.size(); i += proxy.stride()) {
       Miller hkl = proxy.get_hkl(i);
       bool centric = gops.is_reflection_centric(hkl);
+
+      // sanity check
       if (mean_idx >= 0 && !std::isnan(proxy.get_num(i + mean_idx)) && !centric) {
         if (std::isnan(proxy.get_num(i + value_idx[0])) &&
             std::isnan(proxy.get_num(i + value_idx[1])))
           fail(miller_str(hkl), " has <I>, but I(+) and I(-) are both null");
       }
+
       add_if_valid(hkl, 1, proxy.get_num(i + value_idx[0]),
                            proxy.get_num(i + sigma_idx[0]));
       if (!centric)  // ignore I(-) of centric reflections

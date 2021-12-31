@@ -20,6 +20,8 @@ namespace gemmi {
 // Throws if the size is not found or if it is suspicious.
 // Anything outside of the arbitrary limits from 1 to 10x of the compressed
 // size looks suspicious to us.
+// **This function should not be relied upon.**
+// In particular, if the return values is >= 4GiB - it's only a guess.
 inline size_t estimate_uncompressed_size(const std::string& path) {
   fileptr_t f = file_open(path.c_str(), "rb");
   if (std::fseek(f.get(), -4, SEEK_END) != 0)
@@ -32,10 +34,15 @@ inline size_t estimate_uncompressed_size(const std::string& path) {
   if (std::fread(buf, 1, 4, f.get()) != 4)
     sys_fail("Failed to read last 4 bytes of: " + path);
   unsigned orig_size = (buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | buf[0];
-  if (orig_size + 100 < gzipped_size || orig_size > 100 * gzipped_size)
+  if (orig_size + 100 < gzipped_size || orig_size > 100 * gzipped_size) {
+    // The size is stored as 32-bit number. If the original size exceeds 4GiB,
+    // the stored number is modulo 4 GiB. So we just guess...
+    if (gzipped_size > 1073741824)
+      return 4294967295U + (sizeof(size_t) > 4 ? orig_size : 0);
     fail("Cannot determine uncompressed size of " + path +
          "\nWould it be " + std::to_string(gzipped_size) + " -> " +
          std::to_string(orig_size) + " bytes?");
+  }
   return orig_size;
 }
 
@@ -95,20 +102,21 @@ public:
     return is_compressed() ? path().substr(0, path().size() - 3) : path();
   }
 
-  CharArray uncompress_into_buffer() {
+  CharArray uncompress_into_buffer(size_t limit=0) {
     if (!is_compressed())
       return BasicInput::uncompress_into_buffer();
-    size_t size = estimate_uncompressed_size(path());
+    size_t size = (limit == 0 ? estimate_uncompressed_size(path()) : limit);
     open();
     if (size > 3221225471)
+      // if this exception is changed adjust src/cif2mtz.cpp
       fail("For now gz files above 3 GiB uncompressed are not supported.\n"
            "To read " + path() + " first uncompress it.");
     CharArray mem(size);
     size_t read_bytes = gzread_checked(mem.data(), size);
     // if the file is shorter than the size from header, adjust size
     if (read_bytes < size) {
-      mem.set_size(read_bytes);
-    } else { // read_bytes == size
+      mem.set_size(read_bytes);  // should we call resize() here
+    } else if (limit == 0) { // read_bytes == size
     // if the file is longer than the size from header, read in the rest
       int next_char;
       while (!gzeof(file_) && (next_char = gzgetc(file_)) != -1) {

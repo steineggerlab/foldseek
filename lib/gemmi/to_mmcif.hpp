@@ -55,8 +55,12 @@ struct MmcifOutputGroups {
       software(all), group_pdb(false) {}
 };
 
-void update_mmcif_block(const Structure& st, cif::Block& block, MmcifOutputGroups groups);
-cif::Document make_mmcif_document(const Structure& st);
+void update_mmcif_block(const Structure& st, cif::Block& block,
+                        MmcifOutputGroups groups=MmcifOutputGroups(true));
+cif::Document make_mmcif_document(const Structure& st,
+                                  MmcifOutputGroups groups=MmcifOutputGroups(true));
+cif::Block make_mmcif_block(const Structure& st,
+                            MmcifOutputGroups groups=MmcifOutputGroups(true));
 cif::Block make_mmcif_headers(const Structure& st);
 void add_minimal_mmcif_data(const Structure& st, cif::Block& block);
 
@@ -164,7 +168,7 @@ inline std::string qchain(const std::string& s) {
 }
 
 
-inline void add_cif_atoms(const Structure& st, cif::Block& block, bool use_group_pdb) {
+void add_cif_atoms(const Structure& st, cif::Block& block, bool use_group_pdb) {
   // atom list
   cif::Loop& atom_loop = block.init_mmcif_loop("_atom_site.", {
       "id",
@@ -212,9 +216,11 @@ inline void add_cif_atoms(const Structure& st, cif::Block& block, bool use_group
       for (const Residue& res : chain.residues) {
         std::string label_seq_id = res.label_seq.str('.');
         std::string auth_seq_id = res.seqid.num.str();
-        std::string entity_id(1, '.');
-        if (const Entity* ent = gemmi::find_entity(res.subchain, st.entities))
+        std::string entity_id;
+        if (const Entity* ent = gemmi::find_entity_of_subchain(res.subchain, st.entities))
           entity_id = cif::quote(ent->name);
+        else
+          entity_id = string_or_dot(res.entity_id);
         for (const Atom& atom : res.atoms) {
           if (use_group_pdb)
             vv.emplace_back(res.het_flag != 'H' ? "ATOM" : "HETATM");
@@ -235,7 +241,7 @@ inline void add_cif_atoms(const Structure& st, cif::Block& block, bool use_group
           vv.emplace_back(atom.charge == 0 ? "?" : std::to_string(atom.charge));
           vv.emplace_back(auth_seq_id);
           vv.emplace_back(impl::qchain(chain.name));
-          vv.emplace_back(model.name);
+          vv.emplace_back(string_or_qmark(model.name));
           if (has_calc_flag)
             vv.emplace_back(&".\0d\0c\0dum"[2 * (int) atom.calc_flag]);
           if (has_tls_group_id)
@@ -400,8 +406,8 @@ void write_struct_conn(const Structure& st, cif::Block& block) {
     const Atom* at2 = cra2.atom;
     std::string im_pdb_symbol = "?", im_dist_str = "?";
     if (at1 && at2) {
-      SymImage im = st.cell.find_nearest_image(at1->pos, at2->pos, con.asu);
-      im_pdb_symbol = im.pdb_symbol(true);
+      NearestImage im = st.cell.find_nearest_image(at1->pos, at2->pos, con.asu);
+      im_pdb_symbol = im.symmetry_code(true);
       im_dist_str = to_str_prec<4>(im.dist());
     }
     auto& v = conn_loop.values;
@@ -1078,9 +1084,11 @@ void update_mmcif_block(const Structure& st, cif::Block& block, MmcifOutputGroup
     for (int i = 0; i < 3; ++i) {
       std::string idx = "[" + std::to_string(i + 1) + "]";
       const auto& frac = st.cell.frac;
-      span.set_pair(prefix + "matrix" + idx + "[1]", to_str(frac.mat[i][0]));
-      span.set_pair(prefix + "matrix" + idx + "[2]", to_str(frac.mat[i][1]));
-      span.set_pair(prefix + "matrix" + idx + "[3]", to_str(frac.mat[i][2]));
+      std::string matrix_idx = prefix + "matrix";
+      matrix_idx += idx;
+      span.set_pair(matrix_idx + "[1]", to_str(frac.mat[i][0]));
+      span.set_pair(matrix_idx + "[2]", to_str(frac.mat[i][1]));
+      span.set_pair(matrix_idx + "[3]", to_str(frac.mat[i][2]));
       span.set_pair(prefix + "vector" + idx, to_str(frac.vec.at(i)));
     }
   }
@@ -1176,19 +1184,23 @@ void update_mmcif_block(const Structure& st, cif::Block& block, MmcifOutputGroup
   }
 }
 
-cif::Document make_mmcif_document(const Structure& st) {
+cif::Document make_mmcif_document(const Structure& st, MmcifOutputGroups groups) {
   cif::Document doc;
   doc.blocks.resize(1);
-  update_mmcif_block(st, doc.blocks[0], MmcifOutputGroups(true));
+  update_mmcif_block(st, doc.blocks[0], groups);
   return doc;
 }
 
-cif::Block make_mmcif_headers(const Structure& st) {
+cif::Block make_mmcif_block(const Structure& st, MmcifOutputGroups groups) {
   cif::Block block;
-  MmcifOutputGroups groups(true);
-  groups.atoms = false;
   update_mmcif_block(st, block, groups);
   return block;
+}
+
+cif::Block make_mmcif_headers(const Structure& st) {
+  MmcifOutputGroups groups(true);
+  groups.atoms = false;
+  return make_mmcif_block(st, groups);
 }
 
 void add_minimal_mmcif_data(const Structure& st, cif::Block& block) {

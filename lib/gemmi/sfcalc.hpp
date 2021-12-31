@@ -77,14 +77,13 @@ public:
       for (const FTransform& image : cell_.images)
         sum += calculate_sf_part(image.apply(fract), hkl);
       return oc_sf * dwf_iso(site) * sum;
-    } else {
-      Vec3 vhkl(hkl[0], hkl[1], hkl[2]);
-      sum *= dwf_aniso(site, vhkl);
-      for (const FTransform& image : cell_.images)
-        sum += calculate_sf_part(image.apply(fract), hkl) *
-               dwf_aniso(site, image.mat.left_multiply(vhkl));
-      return oc_sf * sum;
     }
+    Vec3 vhkl(hkl[0], hkl[1], hkl[2]);
+    sum *= dwf_aniso(site, vhkl);
+    for (const FTransform& image : cell_.images)
+      sum += calculate_sf_part(image.apply(fract), hkl) *
+             dwf_aniso(site, image.mat.left_multiply(vhkl));
+    return oc_sf * sum;
   }
 
   template<typename Site>

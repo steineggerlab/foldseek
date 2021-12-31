@@ -13,16 +13,43 @@
 
 namespace gemmi {
 
+struct ComplexCorrelation {
+  int n = 0;
+  double sum_xx = 0.;
+  double sum_yy = 0.;
+  std::complex<double> sum_xy = 0.;
+  std::complex<double> mean_x = 0.;
+  std::complex<double> mean_y = 0.;
+  void add_point(std::complex<double> x, std::complex<double> y) {
+    ++n;
+    double inv_n = 1.0 / n;
+    double weight = (n - 1.0) * inv_n;
+    std::complex<double> dx = x - mean_x;
+    std::complex<double> dy = y - mean_y;
+    sum_xx += weight * std::norm(dx);
+    sum_yy += weight * std::norm(dy);
+    sum_xy += weight * (dx * std::conj(dy));
+    mean_x += dx * inv_n;
+    mean_y += dy * inv_n;
+  }
+  void add_point(std::complex<float> x, std::complex<float> y) {
+    add_point(std::complex<double>(x), std::complex<double>(y));
+  }
+  std::complex<double> coefficient() const { return sum_xy / std::sqrt(sum_xx * sum_yy); }
+  double mean_ratio() const { return std::abs(mean_y) / std::abs(mean_x); }
+};
+
+
 // pre: both are sorted
-template<typename T>
-Correlation calculate_hkl_value_correlation(const std::vector<T>& a,
-                                            const std::vector<T>& b) {
-  Correlation corr;
+template<typename Func, typename T>
+void for_matching_reflections(const std::vector<T>& a,
+                              const std::vector<T>& b,
+                              const Func& func) {
   auto r1 = a.begin();
   auto r2 = b.begin();
   while (r1 != a.end() && r2 != b.end()) {
     if (r1->hkl == r2->hkl) {
-      corr.add_point(r1->value, r2->value);
+      func(*r1, *r2);
       ++r1;
       ++r2;
     } else if (std::tie(r1->hkl[0], r1->hkl[1], r1->hkl[2]) <
@@ -32,7 +59,39 @@ Correlation calculate_hkl_value_correlation(const std::vector<T>& a,
       ++r2;
     }
   }
-  return corr;
+}
+
+// pre: both are sorted
+template<typename T>
+Correlation calculate_hkl_value_correlation(const std::vector<T>& a,
+                                            const std::vector<T>& b) {
+  Correlation cor;
+  for_matching_reflections(a, b, [&cor](const T& x, const T& y) {
+      cor.add_point(x.value, y.value);
+  });
+  return cor;
+}
+
+// pre: both are sorted
+template<typename T>
+ComplexCorrelation calculate_hkl_complex_correlation(const std::vector<T>& a,
+                                                     const std::vector<T>& b) {
+  ComplexCorrelation cor;
+  for_matching_reflections(a, b, [&cor](const T& x, const T& y) {
+      cor.add_point(x.value, y.value);
+  });
+  return cor;
+}
+
+// pre: both are sorted
+template<typename T>
+int count_equal_values(const std::vector<T>& a, const std::vector<T>& b) {
+  int count = 0;
+  for_matching_reflections(a, b, [&count](const T& x, const T& y) {
+      if (x.value == y.value)
+        ++count;
+  });
+  return count;
 }
 
 template<typename T>
@@ -50,6 +109,10 @@ template<typename T>
 struct ValueSigma {
   using value_type = T;
   T value, sigma;
+
+  bool operator==(const ValueSigma& o) const {
+    return value == o.value && sigma == o.sigma;
+  }
 };
 
 namespace impl {
@@ -62,6 +125,7 @@ template<typename R>
 void move_to_asu(const GroupOps& gops, const Miller& hkl, int isym,
                  HklValue<std::complex<R>>& hkl_value) {
   hkl_value.hkl = hkl;
+  // cf. Mtz::ensure_asu()
   const Op& op = gops.sym_ops[(isym - 1) / 2];
   double shift = op.phase_shift(hkl);
   if (shift != 0) {
@@ -113,9 +177,9 @@ struct AsuData {
     unit_cell_ = proxy.unit_cell();
     spacegroup_ = proxy.spacegroup();
     for (size_t i = 0; i < proxy.size(); i += proxy.stride()) {
-      T num = (T) proxy.get_num(i + col);
+      auto num = proxy.get_num(i + col);
       if (!std::isnan(num))
-        v.push_back({proxy.get_hkl(i), num});
+        v.push_back({proxy.get_hkl(i), (T)num});
     }
     if (!as_is) {
       ensure_asu();
@@ -155,7 +219,8 @@ private:
   static void set_value_from_array(T& val, const T& nums) { val = nums; }
   template<typename R>
   static void set_value_from_array(std::complex<R>& val, const std::array<R,2>& nums) {
-    val = std::polar(nums[0], (R)gemmi::rad(nums[1]));
+    R theta = (R)rad(nums[1]);
+    val = {nums[0] * std::cos(theta), nums[0] * std::sin(theta)};
   }
   template<typename R>
   static void set_value_from_array(ValueSigma<R>& val, const std::array<R,2>& nums) {

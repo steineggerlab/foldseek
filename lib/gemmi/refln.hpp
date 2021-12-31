@@ -60,7 +60,7 @@ struct ReflnBlock {
   void check_ok() const { if (!ok()) fail("Invalid ReflnBlock"); }
 
   // position after "_refln." or "_diffrn_refln."
-  int tag_offset() const { return refln_loop ? 7 : 14; }
+  size_t tag_offset() const { return refln_loop ? 7 : 14; }
 
   void use_unmerged(bool unmerged) {
     default_loop = unmerged ? diffrn_refln_loop : refln_loop;
@@ -78,7 +78,7 @@ struct ReflnBlock {
   int find_column_index(const std::string& tag) const {
     if (!ok())
       return -1;
-    int name_pos = tag_offset();
+    size_t name_pos = tag_offset();
     for (int i = 0; i != (int) default_loop->tags.size(); ++i)
       if (default_loop->tags[i].compare(name_pos, std::string::npos, tag) == 0)
         return i;

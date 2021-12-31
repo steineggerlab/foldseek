@@ -1,4 +1,4 @@
-// C++ implementation of Cromer-Libermann calculation of anomalous scattering
+// C++ implementation of Cromer-Liberman calculation of anomalous scattering
 // factors, with corrections from Kissel & Pratt, Acta Cryst. A46, 170 (1990).
 // Single header. No dependencies.
 //
@@ -2931,7 +2931,7 @@ inline OrbitalCoef* get_orbital_coefficients(int z, int* n_orb) {
 } // namespace impl_fprim
 
 
-// Cromer-Libermann calculation of anomalous scattering factors.
+// Cromer-Liberman calculation of anomalous scattering factors.
 // input:
 //   z      - atomic number
 //   npts   - array length
@@ -2940,7 +2940,7 @@ inline OrbitalCoef* get_orbital_coefficients(int z, int* n_orb) {
 //   fp     - f' (real part of anomalous scattering)
 //   fpp    - f" (imaginary part of anomalous scattering)
 inline
-void cromer_libermann_for_array(int z, int npts, const double* energy,
+void cromer_liberman_for_array(int z, int npts, const double* energy,
                                 double* fp, double* fpp) {
   using namespace impl_fprim;
   if (z < 3 || z > 92)
@@ -2956,9 +2956,9 @@ void cromer_libermann_for_array(int z, int npts, const double* energy,
 }
 
 // returns fp, fpp is returned through the last argument.
-inline double cromer_libermann(int z, double energy, double* fpp) {
+inline double cromer_liberman(int z, double energy, double* fpp) {
   double fp = 0., fpp_ = 0.;
-  cromer_libermann_for_array(z, 1, &energy, &fp, &fpp_);
+  cromer_liberman_for_array(z, 1, &energy, &fp, &fpp_);
   if (fpp)
     *fpp = fpp_;
   return fp;
@@ -2969,7 +2969,7 @@ template <typename Iter>
 void add_cl_fprime_for_all_elements(Iter out, double energy) {
   using Real = decltype(*out+0.f);  // used to avoid conversion warning
   for (int z = 1; z <= 92; ++z, ++out)
-    *out += (Real) cromer_libermann(z, energy, nullptr);
+    *out += (Real) cromer_liberman(z, energy, nullptr);
 }
 
 } // namespace gemmi

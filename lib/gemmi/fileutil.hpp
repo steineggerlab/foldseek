@@ -14,6 +14,7 @@
 #include <string>
 #include "fail.hpp"  // for fail, sys_fail
 #include "util.hpp"  // for to_lower
+#include "input.hpp"  // for CharArray
 
 #if defined(_WIN32) && !defined(GEMMI_USE_FOPEN)
 #include "utf.hpp"
@@ -120,6 +121,47 @@ inline void swap_four_bytes(void* start) {
   char* bytes = static_cast<char*>(start);
   std::swap(bytes[0], bytes[3]);
   std::swap(bytes[1], bytes[2]);
+}
+
+inline void swap_eight_bytes(void* start) {
+  char* bytes = static_cast<char*>(start);
+  std::swap(bytes[0], bytes[7]);
+  std::swap(bytes[1], bytes[6]);
+  std::swap(bytes[2], bytes[5]);
+  std::swap(bytes[3], bytes[4]);
+}
+
+// reading file into a memory buffer
+inline CharArray read_file_into_buffer(const std::string& path) {
+  fileptr_t f = file_open(path.c_str(), "rb");
+  size_t size = file_size(f.get(), path);
+  CharArray buffer(size);
+  if (std::fread(buffer.data(), size, 1, f.get()) != 1)
+    sys_fail(path + ": fread failed");
+  return buffer;
+}
+
+inline CharArray read_stdin_into_buffer() {
+  size_t n = 0;
+  CharArray buffer(16 * 1024);
+  for (;;) {
+    n += std::fread(buffer.data() + n, 1, buffer.size() - n, stdin);
+    if (n != buffer.size()) {
+      buffer.set_size(n);
+      break;
+    }
+    buffer.resize(2*n);
+  }
+  return buffer;
+}
+
+template<typename T>
+inline CharArray read_into_buffer(T&& input) {
+  if (input.is_stdin())
+    return read_stdin_into_buffer();
+  if (input.is_compressed())
+    return input.uncompress_into_buffer();
+  return read_file_into_buffer(input.path());
 }
 
 } // namespace gemmi

@@ -410,8 +410,8 @@ struct Block {
     if (!t.ok()) {
       for (int i = 0; i != (int) tags.size(); ++i)
         t.positions.push_back(i);
-      t.loop_item = &setup_loop_item(find_any(prefix, tags), prefix,
-                                     std::move(tags));
+      Table tab = find_any(prefix, tags);
+      t.loop_item = &setup_loop_item(std::move(tab), prefix, std::move(tags));
     }
     return t;
   }
@@ -424,7 +424,8 @@ struct Block {
   void set_pair(const std::string& tag, const std::string& value);
 
   Loop& init_loop(const std::string& prefix, std::vector<std::string> tags) {
-    return setup_loop(find_any(prefix, tags), prefix, std::move(tags));
+    Table tab = find_any(prefix, tags);
+    return setup_loop(std::move(tab), prefix, std::move(tags));
   }
 
   void move_item(int old_pos, int new_pos);
@@ -907,7 +908,7 @@ inline Table Block::find_mmcif_category(std::string cat) {
           indices[j] = j;
           const std::string& tag = i.loop.tags[j];
           if (!starts_with(tag, cat))
-            fail("Tag " + tag + " in loop with " + cat);
+            fail("Tag ", tag, " in loop with ", cat);
         }
         return Table{&i, *this, indices, cat.length()};
       } else {

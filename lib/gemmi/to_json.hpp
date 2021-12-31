@@ -50,7 +50,7 @@ private:
   void change_indent(int n) { linesep_.resize(linesep_.size() + n, ' '); }
 
   // returns category with trailing dot
-  std::string get_tag_category(const std::string& tag) {
+  std::string get_tag_category(const std::string& tag) const {
     if (!group_ddl2_categories)
       return std::string{};
     size_t pos = tag.find('.');
@@ -59,7 +59,7 @@ private:
     return tag.substr(0, pos + 1);
   }
 
-  std::string get_loop_category(const Loop& loop) {
+  std::string get_loop_category(const Loop& loop) const {
     if (loop.tags.empty())
       return std::string{};
     std::string cat = get_tag_category(loop.tags[0]);
@@ -280,7 +280,9 @@ inline void JsonWriter::write_json(const Document& d) {
   for (const Block& block : d.blocks) {
     if (&block != &d.blocks[0])
       os_.put(',');
-    os_ << linesep_;
+    // start mmJSON with {"data_ so it can be easily recognized
+    if (&block != &d.blocks[0] || comcifs || !with_data_keyword)
+      os_ << linesep_;
     write_map((with_data_keyword ? "data_" : "") + block.name, block.items);
   }
   if (comcifs)

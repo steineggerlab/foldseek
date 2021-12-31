@@ -56,8 +56,7 @@ struct NeighborSearch {
     }
   };
 
-  using item_type = std::vector<Mark>;
-  Grid<item_type> grid;
+  Grid<std::vector<Mark>> grid;
   double radius_specified = 0.;
   Model* model = nullptr;
   SmallStructure* small_structure = nullptr;
@@ -76,16 +75,20 @@ struct NeighborSearch {
   }
   void initialize(Model& model, const UnitCell& cell, double max_radius);
   NeighborSearch& populate(bool include_h_=true);
+  void add_chain(const Chain& chain, bool include_h_=true);
+  void add_chain_n(const Chain& chain, int n_ch);
   void add_atom(const Atom& atom, int n_ch, int n_res, int n_atom);
   void add_site(const SmallStructure::Site& site, int n);
 
   // assumes data in [0, 1), but uses index_n to handle numeric deviations
-  item_type& get_subcell(const Fractional& fr) {
+  std::vector<Mark>& get_subcell(const Fractional& fr) {
     return grid.data[grid.index_n(int(fr.x * grid.nu),
                                   int(fr.y * grid.nv),
                                   int(fr.z * grid.nw))];
   }
 
+  template<typename Func>
+  void for_each_cell(const Position& pos, const Func& func);
   template<typename Func>
   void for_each(const Position& pos, char alt, float radius, const Func& func);
 
@@ -123,10 +126,14 @@ struct NeighborSearch {
   Mark* find_nearest_atom(const Position& pos) {
     Mark* mark = nullptr;
     float nearest_dist_sq = float(radius_specified * radius_specified);
-    for_each(pos, '\0', nearest_dist_sq, [&](Mark& a, float dist_sq) {
-        if (dist_sq < nearest_dist_sq) {
-          mark = &a;
-          nearest_dist_sq = dist_sq;
+    for_each_cell(pos, [&](std::vector<Mark>& marks, const Fractional& fr) {
+        Position p = grid.unit_cell.orthogonalize(fr);
+        for (Mark& m : marks) {
+          float dist_sq = m.dist_sq(p);
+          if (dist_sq < nearest_dist_sq) {
+            mark = &m;
+            nearest_dist_sq = dist_sq;
+          }
         }
     });
     return mark;
@@ -137,6 +144,15 @@ struct NeighborSearch {
   }
   float dist(const Position& pos1, const Position& pos2) const {
     return std::sqrt(dist_sq(pos1, pos2));
+  }
+
+  FTransform get_image_transformation(int image_idx) const {
+    // 0 is for identity, other indices are shifted by one.
+    if (image_idx == 0)
+      return Transform{};
+    if ((size_t)image_idx <= grid.unit_cell.images.size())
+      return grid.unit_cell.images[image_idx-1];
+    fail("No such image index: " + std::to_string(image_idx));
   }
 
 private:
@@ -165,14 +181,14 @@ inline void NeighborSearch::initialize(Model& model_, const UnitCell& cell,
     // We need to take into account strict NCS from MTRIXn.
     // To avoid additional function parameter that would pass Structure::ncs,
     // here we reconstruct ncs transforms from cell.images.
-    // images store fractional ttransforms, but for non-crystal it should be
+    // images store fractional transforms, but for non-crystal it should be
     // the same as Cartesian transform.
     std::vector<Transform> ncs;
     for (size_t n = cell.cs_count; n < cell.images.size(); n += cell.cs_count + 1)
       ncs.push_back(cell.images[n]);
     // The box needs include all NCS images as well.
     if (!ncs.empty()) {
-      for (const CRA& cra : model->all())
+      for (CRA cra : model->all())
         for (const Transform& tr : ncs)
           box.extend(Position(tr.apply(cra.atom->pos)));
     }
@@ -191,17 +207,8 @@ inline void NeighborSearch::initialize(Model& model_, const UnitCell& cell,
 inline NeighborSearch& NeighborSearch::populate(bool include_h_) {
   include_h = include_h_;
   if (model) {
-    for (int n_ch = 0; n_ch != (int) model->chains.size(); ++n_ch) {
-      const Chain& chain = model->chains[n_ch];
-      for (int n_res = 0; n_res != (int) chain.residues.size(); ++n_res) {
-        const Residue& res = chain.residues[n_res];
-        for (int n_atom = 0; n_atom != (int) res.atoms.size(); ++n_atom) {
-          const Atom& atom = res.atoms[n_atom];
-          if (include_h || !atom.is_hydrogen())
-            add_atom(atom, n_ch, n_res, n_atom);
-        }
-      }
-    }
+    for (int n_ch = 0; n_ch != (int) model->chains.size(); ++n_ch)
+      add_chain_n(model->chains[n_ch], n_ch);
   } else if (small_structure) {
     for (int n = 0; n != (int) small_structure->sites.size(); ++n) {
       SmallStructure::Site& site = small_structure->sites[n];
@@ -212,6 +219,30 @@ inline NeighborSearch& NeighborSearch::populate(bool include_h_) {
     fail("NeighborSearch not initialized");
   }
   return *this;
+}
+
+inline void NeighborSearch::add_chain(const Chain& chain, bool include_h_) {
+  if (!model)
+    fail("NeighborSearch.add_chain(): model not initialized yet");
+  // to be safe avoid (&chain - model.chains[0]) which could be UB
+  for (int n_ch = 0; n_ch != (int) model->chains.size(); ++n_ch)
+    if (&model->chains[n_ch] == &chain) {
+      include_h = include_h_;
+      add_chain_n(chain, n_ch);
+      return;
+    }
+  fail("NeighborSearch.add_chain(): chain not in this model");
+}
+
+inline void NeighborSearch::add_chain_n(const Chain& chain, int n_ch) {
+  for (int n_res = 0; n_res != (int) chain.residues.size(); ++n_res) {
+    const Residue& res = chain.residues[n_res];
+    for (int n_atom = 0; n_atom != (int) res.atoms.size(); ++n_atom) {
+      const Atom& atom = res.atoms[n_atom];
+      if (include_h || !atom.is_hydrogen())
+        add_atom(atom, n_ch, n_res, n_atom);
+    }
+  }
 }
 
 inline void NeighborSearch::add_atom(const Atom& atom,
@@ -261,10 +292,7 @@ inline void NeighborSearch::add_site(const SmallStructure::Site& site, int n) {
 }
 
 template<typename Func>
-void NeighborSearch::for_each(const Position& pos, char alt, float radius,
-                              const Func& func) {
-  if (radius <= 0.f)
-    return;
+void NeighborSearch::for_each_cell(const Position& pos, const Func& func) {
   Fractional fr = grid.unit_cell.fractionalize(pos).wrap_to_unit();
   const int u0 = int(fr.x * grid.nu);
   const int v0 = int(fr.y * grid.nv);
@@ -281,19 +309,149 @@ void NeighborSearch::for_each(const Position& pos, char alt, float radius,
         size_t idx = grid.index_q(u + du * grid.nu,
                                   v + dv * grid.nv,
                                   w + dw * grid.nw);
-        Position p = grid.unit_cell.orthogonalize(Fractional(fr.x + du,
-                                                             fr.y + dv,
-                                                             fr.z + dw));
-        for (Mark& a : grid.data[idx]) {
-          float dist_sq = a.dist_sq(p);
-          if (a.dist_sq(p) < sq(radius) && is_same_conformer(alt, a.altloc))
-            func(a, dist_sq);
-        }
+        func(grid.data[idx], Fractional(fr.x + du, fr.y + dv, fr.z + dw));
       }
     }
   }
 }
 
+template<typename Func>
+void NeighborSearch::for_each(const Position& pos, char alt, float radius,
+                              const Func& func) {
+  if (radius <= 0.f)
+    return;
+  for_each_cell(pos, [&](std::vector<Mark>& marks, const Fractional& fr) {
+      Position p = grid.unit_cell.orthogonalize(fr);
+      for (Mark& m : marks) {
+        float dist_sq = m.dist_sq(p);
+        if (m.dist_sq(p) < sq(radius) && is_same_conformer(alt, m.altloc))
+          func(m, dist_sq);
+      }
+  });
+}
+
+
+inline void remove_cras(Model& model, std::vector<CRA>& vec) {
+  // sort in reverse order, so items can be erased without invalidating pointers
+  std::sort(vec.begin(), vec.end(), [](const CRA& a, const CRA& b) {
+      return std::tie(a.chain, a.residue, a.atom) > std::tie(b.chain, b.residue, b.atom);
+  });
+  const Atom* prev_a = nullptr;
+  for (CRA& cra : vec) {
+    if (cra.atom == prev_a)
+      continue;
+    prev_a = cra.atom;
+    auto atom_idx = cra.atom - cra.residue->atoms.data();
+    cra.residue->atoms.erase(cra.residue->atoms.begin() + atom_idx);
+    if (cra.residue->atoms.empty()) {
+      auto res_idx = cra.residue - cra.chain->residues.data();
+      cra.chain->residues.erase(cra.chain->residues.begin() + res_idx);
+      if (cra.chain->residues.empty()) {
+        auto chain_idx = cra.chain - model.chains.data();
+        model.chains.erase(model.chains.begin() + chain_idx);
+      }
+    }
+  }
+}
+
+// To be used after expand_ncs() and make_assembly().
+// Searches and merges overlapping equivalent atoms from different chains.
+inline void merge_atoms_in_expanded_model(Model& model, const UnitCell& cell,
+                                          double max_dist=0.2) {
+  using Mark = NeighborSearch::Mark;
+  NeighborSearch ns(model, cell, 4.0);
+  ns.populate(true);
+  std::vector<CRA> to_be_deleted;
+  for (int n_ch = 0; n_ch != (int) model.chains.size(); ++n_ch) {
+    Chain& chain = model.chains[n_ch];
+    for (int n_res = 0; n_res != (int) chain.residues.size(); ++n_res) {
+      Residue& res = chain.residues[n_res];
+      for (int n_atom = 0; n_atom != (int) res.atoms.size(); ++n_atom) {
+        Atom& atom = res.atoms[n_atom];
+        std::vector<CRA> equiv;
+        ns.for_each_cell(atom.pos, [&](std::vector<Mark>& marks, const Fractional& fr) {
+            for (Mark& m : marks) {
+              // We look for the same atoms, but copied to a different chain.
+              // First quick check that filters out most of non-matching pairs.
+              if (m.altloc != atom.altloc || m.element != atom.element ||
+                  m.chain_idx == n_ch || m.atom_idx != n_atom)
+                continue;
+              // Now check if everything else matches.
+              CRA cra = m.to_cra(model);
+              if (cra.atom &&
+                  cra.atom->serial == atom.serial &&
+                  cra.atom->name == atom.name &&
+                  cra.atom->b_iso == atom.b_iso &&
+                  cra.residue->matches_noseg(res) &&
+                  m.dist_sq(ns.grid.unit_cell.orthogonalize(fr)) < sq(max_dist))
+              equiv.push_back(cra);
+            }
+        });
+        if (!equiv.empty()) {
+          // calculate new occupancy and position for the first atom
+          int n = 1;
+          if (cell.is_crystal())
+            n += cell.is_special_position(atom.pos, max_dist);
+          double occ_sum = n * atom.occ;
+          if (occ_sum > 0) {
+            atom.pos *= occ_sum;
+            for (CRA& cra : equiv) {
+              atom.pos += cra.atom->occ * cra.atom->pos;
+              occ_sum += cra.atom->occ;
+            }
+            atom.pos /= occ_sum;
+            atom.occ = float(occ_sum / n);
+          }
+          // discard overlapping equivalent atoms
+          for (CRA& cra : equiv) {
+            // change atoms to avoid processing them again
+            cra.atom->serial = -1;
+            cra.atom->name.clear();
+            // deleting now would invalidate indices in NeighborSearch
+            to_be_deleted.push_back(cra);
+          }
+        }
+      }
+    }
+  }
+  remove_cras(model, to_be_deleted);
+}
+
+
+// simple map alignment - this function may change in the future
+template<typename T>
+void interpolate_grid_of_aligned_model(Grid<T>& dest, const Grid<T>& src,
+                                       const Transform& tr, NeighborSearch& ns,
+                                       double radius=0.) {
+  if (radius <= 0.)
+    radius = ns.radius_specified;
+  else if (radius > ns.radius_specified)
+    fail("set_grid_values_interpolated_from(): radius exceeds NeighborSearch radius");
+  // mask model or its part that was used for NeighborSearch
+  std::vector<bool> mask(dest.data.size(), false);
+  for (const std::vector<NeighborSearch::Mark>& marks : ns.grid.data)
+    for (const NeighborSearch::Mark& mark : marks)
+      if (mark.image_idx == 0)  // leave out symmetry mates
+        dest.template use_points_around<true>(
+            ns.grid.unit_cell.fractionalize(mark.pos()),
+            radius,
+            [&](T& point, double) { mask[&point - dest.data.data()] = true; });
+  size_t idx = 0;
+  for (int w = 0; w != dest.nw; ++w)
+    for (int v = 0; v != dest.nv; ++v)
+      for (int u = 0; u != dest.nu; ++u, ++idx) {
+        if (!mask[idx])
+          continue;
+        Position pos2 = dest.get_position(u, v, w);
+        // in contacts use only nodes that are nearer to the original molecule
+        NeighborSearch::Mark* mark = ns.find_nearest_atom(pos2);
+        if (mark && mark->image_idx == 0) {
+          Position delta = mark->to_cra(*ns.model).atom->pos - mark->pos();
+          Position pos1 = Position(tr.apply(pos2 + delta));
+          dest.data[idx] = src.interpolate_value(pos1);
+        }
+      }
+}
 
 } // namespace gemmi
 #endif

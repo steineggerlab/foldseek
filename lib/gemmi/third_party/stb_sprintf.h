@@ -1,15 +1,13 @@
-// stb_sprintf - v1.08 - public domain snprintf() implementation
+// stb_sprintf - v1.10 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb
-// Modified to avoid UB and warnings at the cost of dependency on string.h.
-// These modifications were carried over from an older version and may not
-// be needed now.
 //
 // allowed types:  sc uidBboXx p AaGgEef n
 // lengths      :  hh h ll j z t I64 I32 I
 //
 // Contributors:
 //    Fabian "ryg" Giesen (reformatting)
+//    github:aganm (attribute format)
 //
 // Contributors (bugfixes):
 //    github:d26435
@@ -144,6 +142,24 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 "...512 char string..." ( 35.0x/32.5x faster!)
 */
 
+#if defined(__clang__)
+ #if defined(__has_feature) && defined(__has_attribute)
+  #if __has_feature(address_sanitizer)
+   #if __has_attribute(__no_sanitize__)
+    #define STBSP__ASAN __attribute__((__no_sanitize__("address")))
+   #elif __has_attribute(__no_sanitize_address__)
+    #define STBSP__ASAN __attribute__((__no_sanitize_address__))
+   #elif __has_attribute(__no_address_safety_analysis__)
+    #define STBSP__ASAN __attribute__((__no_address_safety_analysis__))
+   #endif
+  #endif
+ #endif
+#elif defined(__GNUC__) && (__GNUC__ >= 5 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))
+ #if defined(__SANITIZE_ADDRESS__) && __SANITIZE_ADDRESS__
+  #define STBSP__ASAN __attribute__((__no_sanitize_address__))
+ #endif
+#endif
+
 #ifndef STBSP__ASAN
 #define STBSP__ASAN
 #endif
@@ -161,7 +177,23 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #endif
 #endif
 
-#include <stdarg.h> // for va_list()
+#if defined(__has_attribute)
+ #if __has_attribute(format)
+   #define STBSP__ATTRIBUTE_FORMAT(fmt,va) __attribute__((format(printf,fmt,va)))
+ #endif
+#endif
+
+#ifndef STBSP__ATTRIBUTE_FORMAT
+#define STBSP__ATTRIBUTE_FORMAT(fmt,va)
+#endif
+
+#ifdef _MSC_VER
+#define STBSP__NOTUSED(v)  (void)(v)
+#else
+#define STBSP__NOTUSED(v)  (void)sizeof(v)
+#endif
+
+#include <stdarg.h> // for va_arg(), va_list()
 #include <stddef.h> // size_t, ptrdiff_t
 
 #ifndef STB_SPRINTF_MIN
@@ -173,20 +205,17 @@ typedef char *STBSP_SPRINTFCB(const char *buf, void *user, int len);
 #define STB_SPRINTF_DECORATE(name) stbsp_##name // define this before including if you want to change the names
 #endif
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintf)(char *buf, char const *fmt, va_list va);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char const *fmt, va_list va);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, ...);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char const *fmt, ...);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(vsprintf)(char *buf, char const *fmt, va_list va);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char const *fmt, va_list va);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(2,3);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(3,4);
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va);
-STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char comma, char period);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va);
+STBSP__PUBLICDEC void STB_SPRINTF_DECORATE(set_separators)(char comma, char period);
 
 #endif // STB_SPRINTF_H_INCLUDE
 
 #ifdef STB_SPRINTF_IMPLEMENTATION
-
-#include <stdlib.h> // for va_arg()
-#include <string.h> // for memcpy(), strlen()
 
 #define stbsp__uint32 unsigned int
 #define stbsp__int32 signed int
@@ -201,7 +230,7 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char comma, char peri
 #define stbsp__uint16 unsigned short
 
 #ifndef stbsp__uintptr
-#if defined(__ppc64__) || defined(__powerpc64__) || defined(__aarch64__) || defined(_M_X64) || defined(__x86_64__) || defined(__x86_64)
+#if defined(__ppc64__) || defined(__powerpc64__) || defined(__aarch64__) || defined(_M_X64) || defined(__x86_64__) || defined(__x86_64) || defined(__s390x__)
 #define stbsp__uintptr stbsp__uint64
 #else
 #define stbsp__uintptr stbsp__uint32
@@ -277,6 +306,46 @@ static void stbsp__lead_sign(stbsp__uint32 fl, char *sign)
    }
 }
 
+static STBSP__ASAN stbsp__uint32 stbsp__strlen_limited(char const *s, stbsp__uint32 limit)
+{
+   char const * sn = s;
+
+   // get up to 4-byte alignment
+   for (;;) {
+      if (((stbsp__uintptr)sn & 3) == 0)
+         break;
+
+      if (!limit || *sn == 0)
+         return (stbsp__uint32)(sn - s);
+
+      ++sn;
+      --limit;
+   }
+
+   // scan over 4 bytes at a time to find terminating 0
+   // this will intentionally scan up to 3 bytes past the end of buffers,
+   // but becase it works 4B aligned, it will never cross page boundaries
+   // (hence the STBSP__ASAN markup; the over-read here is intentional
+   // and harmless)
+   while (limit >= 4) {
+      stbsp__uint32 v = *(stbsp__uint32 *)sn;
+      // bit hack to find if there's a 0 byte in there
+      if ((v - 0x01010101) & (~v) & 0x80808080UL)
+         break;
+
+      sn += 4;
+      limit -= 4;
+   }
+
+   // handle the last few characters to find actual size
+   while (limit && *sn) {
+      ++sn;
+      --limit;
+   }
+
+   return (stbsp__uint32)(sn - s);
+}
+
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va)
 {
    static char hex[] = "0123456789abcdefxp";
@@ -320,7 +389,6 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          }
 
       // fast copy everything up to the next % (or end of string)
-#if 0
       for (;;) {
          while (((stbsp__uintptr)f) & 3) {
          schk1:
@@ -338,7 +406,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             // Using the 'hasless' trick:
             // https://graphics.stanford.edu/~seander/bithacks.html#HasLessInWord
             stbsp__uint32 v, c;
-            v = *(stbsp__uint32 *)f;  // f is aligned
+            v = *(stbsp__uint32 *)f;
             c = (~v) & 0x80808080;
             if (((v ^ 0x25252525) - 0x01010101) & c)
                goto schk1;
@@ -363,14 +431,6 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          }
       }
    scandd:
-#else
-      while (f[0] != '%') {
-         if (f[0] == '\0')
-            goto endfmt;
-         stbsp__chk_cb_buf(1);
-         *bf++ = *f++;
-      }
-#endif
 
       ++f;
 
@@ -529,41 +589,9 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          s = va_arg(va, char *);
          if (s == 0)
             s = (char *)"null";
-         // get the length
-#if 0
-         sn = s;
-         for (;;) {
-            if ((((stbsp__uintptr)sn) & 3) == 0)
-               break;
-         lchk:
-            if (sn[0] == 0)
-               goto ld;
-            ++sn;
-         }
-         n = 0xffffffff;
-         if (pr >= 0) {
-            n = (stbsp__uint32)(sn - s);
-            if (n >= (stbsp__uint32)pr)
-               goto ld;
-            n = ((stbsp__uint32)(pr - n)) >> 2;
-         }
-         while (n) {
-            stbsp__uint32 v = *(stbsp__uint32 *)sn;  // sn is aligned
-            if ((v - 0x01010101) & (~v) & 0x80808080UL)
-               goto lchk;
-            sn += 4;
-            --n;
-         }
-         goto lchk;
-      ld:
-
-         l = (stbsp__uint32)(sn - s);
-#else
-         l = (stbsp__uint32)strlen(s);
-#endif
-         // clamp to precision
-         if (l > (stbsp__uint32)pr)
-            l = pr;
+         // get the length, limited to desired precision
+         // always limit to ~0u chars since our counts are 32b
+         l = stbsp__strlen_limited(s, (pr >= 0) ? pr : ~0u);
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
@@ -604,8 +632,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
-         dp = 0;
          cs = 0;
+         STBSP__NOTUSED(dp);
          goto scopy;
 #else
       case 'A': // hex float
@@ -1000,7 +1028,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             lead[0] = 0;
             if (pr == 0) {
                l = 0;
-               cs = (((l >> 4) & 15)) << 24;
+               cs = 0;
                goto scopy;
             }
          }
@@ -1228,7 +1256,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             stbsp__cb_buf_clamp(i, n);
             n -= i;
             STBSP__UNALIGNED(while (i >= 4) {
-               memcpy(bf, s, 4);
+               *(stbsp__uint32 volatile *)bf = *(stbsp__uint32 volatile *)s;
                bf += 4;
                s += 4;
                i -= 4;
@@ -1587,7 +1615,7 @@ static stbsp__uint64 const stbsp__powten[20] = {
 #define stbsp__ddtoS64(ob, xh, xl)          \
    {                                        \
       double ahi = 0, alo, vh, t;           \
-      ob = (stbsp__int64)ph;                \
+      ob = (stbsp__int64)xh;                \
       vh = (double)ob;                      \
       ahi = (xh - vh);                      \
       t = (ahi - xh);                       \

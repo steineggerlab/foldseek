@@ -73,8 +73,8 @@ inline Blob make_blob_of_points(const std::vector<GridConstPoint>& points,
 
 } // namespace impl
 
-std::vector<Blob> find_blobs_by_flood_fill(const gemmi::Grid<float>& grid,
-                                           const BlobCriteria& criteria) {
+inline std::vector<Blob> find_blobs_by_flood_fill(const gemmi::Grid<float>& grid,
+                                                  const BlobCriteria& criteria) {
   std::vector<Blob> blobs;
   std::array<std::array<int, 3>, 6> moves = {{{{-1, 0, 0}}, {{1, 0, 0}},
                                               {{0 ,-1, 0}}, {{0, 1, 0}},

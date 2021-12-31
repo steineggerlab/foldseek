@@ -15,6 +15,10 @@
 // warning #2196: routine is both "inline" and "noinline"
 # pragma warning disable 2196
 #endif
+#if defined(__GNUG__) && !defined(__clang__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wattributes"
+#endif
 
 #if defined(_MSC_VER)
 # define GEMMI_NOINLINE __declspec(noinline)
@@ -53,6 +57,10 @@ inline GEMMI_NOINLINE void sys_fail(const char* msg) {
   __assume(0);
 #endif
 }
+
+#if defined(__GNUG__) && !defined(__clang__)
+# pragma GCC diagnostic pop
+#endif
 
 } // namespace gemmi
 #endif

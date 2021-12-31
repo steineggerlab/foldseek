@@ -72,14 +72,14 @@ inline void jordan_solve(std::vector<double>& a, std::vector<double>& b) {
 
 
 #ifdef GEMMI_DEBUG_LEVMAR
-void debug_print(const std::string& name, std::vector<double> &a) {
+inline void debug_print(const std::string& name, std::vector<double> &a) {
   fprintf(stderr, " %s:", name.c_str());
   for (double& x : a)
     fprintf(stderr, " %g", x);
   fprintf(stderr, "\n");
 }
 #else
-void debug_print(const std::string&, std::vector<double>&) {}
+inline void debug_print(const std::string&, std::vector<double>&) {}
 #endif
 
 struct LevMar {

@@ -51,7 +51,7 @@ get_anisotropic_u(cif::Block& block) {
 }
 
 inline
-std::vector<std::string> transform_tags(std::string mstr, std::string vstr) {
+std::vector<std::string> transform_tags(const std::string& mstr, const std::string& vstr) {
   return {mstr + "[1][1]", mstr + "[1][2]", mstr + "[1][3]", vstr + "[1]",
           mstr + "[2][1]", mstr + "[2][2]", mstr + "[2][3]", vstr + "[2]",
           mstr + "[3][1]", mstr + "[3][2]", mstr + "[3][3]", vstr + "[3]"};
@@ -376,7 +376,7 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
   set_cell_from_mmcif(block, st.cell);
   st.spacegroup_hm = cif::as_string(impl::find_spacegroup_hm_value(block));
 
-  auto add_info = [&](std::string tag) {
+  auto add_info = [&](const std::string& tag) {
     bool first = true;
     for (const std::string& v : block.find_values(tag))
       if (!cif::is_null(v)) {
@@ -558,7 +558,8 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
 
   // atom list
   enum { kId=0, kGroupPdb, kSymbol, kLabelAtomId, kAltId, kLabelCompId,
-         kLabelAsymId, kLabelSeqId, kInsCode, kX, kY, kZ, kOcc, kBiso, kCharge,
+         kLabelAsymId, kLabelEntityId, kLabelSeqId, kInsCode,
+         kX, kY, kZ, kOcc, kBiso, kCharge,
          kAuthSeqId, kAuthCompId, kAuthAsymId, kAuthAtomId, kModelNum,
          kCalcFlag, kTlsGroupId };
   cif::Table atom_table = block.find("_atom_site.",
@@ -569,6 +570,7 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
                                       "label_alt_id",
                                       "?label_comp_id",
                                       "label_asym_id",
+                                      "?label_entity_id",
                                       "?label_seq_id",
                                       "?pdbx_PDB_ins_code",
                                       "Cartn_x",
@@ -621,6 +623,8 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
           if (row.has2(kLabelSeqId))
             resi->label_seq = cif::as_int(row[kLabelSeqId]);
           resi->subchain = row.str(kLabelAsymId);
+          if (row.has2(kLabelEntityId))
+            resi->entity_id = row.str(kLabelEntityId);
           // don't check if group_PDB is consistent, it's not that important
           if (row.has2(kGroupPdb))
             for (int i = 0; i < 2; ++i) { // first character could be " or '
@@ -726,7 +730,7 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
       if (row.has(4))
         dbref.accession_code = row.str(4);
       if (row.has(5))
-      dbref.isoform = row.str(5);
+        dbref.isoform = row.str(5);
       constexpr int None = SeqId::OptionalNum::None;
       dbref.label_seq_begin = cif::as_int(seq[1], None);
       dbref.label_seq_end = cif::as_int(seq[2], None);
@@ -739,9 +743,20 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
     }
   }
 
-  for (auto row : block.find("_struct_asym.", {"id", "entity_id"}))
-    if (Entity* ent = st.get_entity(row.str(1)))
-      ent->subchains.push_back(row.str(0));
+  cif::Table s_asym_table = block.find("_struct_asym.", {"id", "entity_id"});
+  if (s_asym_table.ok()) {
+    for (auto row : s_asym_table)
+      if (Entity* ent = st.get_entity(row.str(1)))
+        ent->subchains.push_back(row.str(0));
+  } else if (!st.models.empty()) {
+    for (const Chain& chain : st.models[0].chains)
+      for (const ConstResidueSpan& sub : chain.subchains()) {
+        const Residue& r = sub.front();
+        if (Entity* ent = st.get_entity(r.entity_id))
+          if (!in_vector(r.subchain, ent->subchains))
+            ent->subchains.push_back(r.subchain);
+      }
+  }
 
   fill_residue_entity_type(st);
 

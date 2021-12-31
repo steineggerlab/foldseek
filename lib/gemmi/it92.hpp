@@ -26,26 +26,37 @@ namespace gemmi {
 template<class Real>
 struct IT92 {
   using Coef = GaussianCoef<4, 1, Real>;
-  static Coef data[98];
+  static Coef data[99];
 
   static bool has(El el) {
-    return el != El::X && (el <= El::Cf || el == El::D);
+    return (unsigned char)el < 99 || el == El::D;
   }
 
   static Coef& get(El el) {
-    if (el == El::D)
-      el = El::H;
-    return data[(int)el - 1];
+    return data[it92_pos(el)];
   }
 
   static Coef* get_ptr(El el) {
     return has(el) ? &get(el) : nullptr;
   }
+
+  // Make a1+a2+a3+a4+c equal exactly to Z (number of electrons).
+  // It changes the values from ITC only slightly (by not more than 0.12%).
+  static void normalize() {
+    for (int i = 1; i < 99; ++i) {
+      Coef& f = data[i];
+      double factor = i / (f.a(0) + f.a(1) + f.a(2) + f.a(3) + f.c());
+      for (int j = 0; j < 4; ++j)
+        f.coefs[j] *= factor;
+      f.coefs[8] *= factor;
+    }
+  }
 };
 
 template<class Real>
-typename IT92<Real>::Coef IT92<Real>::data[98] = {
+typename IT92<Real>::Coef IT92<Real>::data[99] = {
   // a1, a2, a3, a4, b1, b2, b3, b4, c
+  {0., 0., 0., 0., 0., 0., 0., 0., 0.}, // X
   {0.493002, 0.322912, 0.140191, 0.04081, 10.5109, 26.1257, 3.14236, 57.7997, 0.003038}, // H
   {0.8734, 0.6309, 0.3112, 0.178, 9.1037, 3.3568, 22.9276, 0.9821, 0.0064}, // He
   {1.1282, 0.7508, 0.6175, 0.4653, 3.9546, 1.0524, 85.3905, 168.261, 0.0377}, // Li

@@ -21,7 +21,7 @@ GemmiWrapper::GemmiWrapper(){
 gemmi::Structure openStructure(const std::string & filename){
     gemmi::MaybeGzipped infile(filename);
     gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
-    if(format != gemmi::CoorFormat::Unknown && format != gemmi::CoorFormat::UnknownAny){
+    if(format != gemmi::CoorFormat::Unknown && format != gemmi::CoorFormat::Unknown){
         return gemmi::read_structure(infile, format);
     }else{
         return gemmi::read_structure(infile, gemmi::CoorFormat::Pdb);

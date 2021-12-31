@@ -542,7 +542,8 @@ int tinydir_readfile(const tinydir_dir *dir, tinydir_file *file)
 	if (_tstat(
 #elif (defined _BSD_SOURCE) || (defined _DEFAULT_SOURCE)	\
 	|| ((defined _XOPEN_SOURCE) && (_XOPEN_SOURCE >= 500))	\
-	|| ((defined _POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L))
+	|| ((defined _POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) \
+  || (defined __APPLE__)  // local addition
 	if (lstat(
 #else
 	if (stat(

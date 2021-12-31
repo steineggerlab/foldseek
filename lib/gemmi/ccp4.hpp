@@ -6,8 +6,8 @@
 #define GEMMI_CCP4_HPP_
 
 #include <cassert>
-#include <cmath>     // for NAN, sqrt
-#include <cstdint>   // for uint16_t, uint32_t
+#include <cmath>     // for ceil, fabs, floor, round
+#include <cstdint>   // for uint16_t, int32_t
 #include <cstdio>    // for FILE
 #include <cstring>   // for memcpy
 #include <array>
@@ -29,7 +29,7 @@ enum class GridSetup {
   ReorderOnly,  // reorder axes to X, Y, Z
   ResizeOnly,   // reorder and resize to the whole cell, but no symmetry ops
   Full,         // reorder and expand to the whole unit cell
-  FullCheck     // additionally consistency of redundant data
+  FullCheck     // additionally, check consistency of redundant data
 };
 
 struct Ccp4Base {
@@ -114,6 +114,25 @@ struct Ccp4Base {
     }
     return box;
   }
+
+  // Skew transformation (words 25-37) is supported by CCP4 maplib and PyMOL,
+  // but it's not in the MRC format and is not supported by most programs.
+  // From maplib.html: Skew transformation is from standard orthogonal
+  // coordinate frame (as used for atoms) to orthogonal map frame, as
+  //                            Xo(map) = S * (Xo(atoms) - t)
+  bool has_skew_transformation() const {
+    return header_i32(25) != 0;  // LSKFLG should be 0 or 1
+  }
+  Transform get_skew_transformation() const {
+    return {
+      // 26-34 SKWMAT
+      { header_float(26), header_float(27), header_float(28),
+        header_float(29), header_float(30), header_float(31),
+        header_float(32), header_float(33), header_float(34) },
+      // 35-37 SKWTRN
+      { header_float(35), header_float(36), header_float(37) }
+    };
+  }
 };
 
 template<typename T=float>
@@ -153,7 +172,7 @@ struct Ccp4 : public Ccp4Base {
     std::memset(header_word(57), ' ', 800 + ops.order() * 80);
     set_header_str(57, "written by GEMMI");
     int n = 257;
-    for (const Op& op : ops) {
+    for (Op op : ops) {
       set_header_str(n, op.triplet());
       n += 20;
     }
@@ -162,6 +181,8 @@ struct Ccp4 : public Ccp4Base {
   void update_ccp4_header(int mode=-1, bool update_stats=true) {
     if (mode > 2 && mode != 6)
       fail("Only modes 0, 1, 2 and 6 are supported.");
+    if (grid.point_count() == 0)
+      fail("update_ccp4_header(): set the grid first (it has size 0)");
     if (update_stats)
       hstats = calculate_data_statistics(grid.data);
     if (ccp4_header.empty())
@@ -351,18 +372,6 @@ void Ccp4<T>::read_ccp4_stream(Stream f, const std::string& path) {
   }
 }
 
-namespace impl {
-
-template<typename T> bool is_same(T a, T b) { return a == b; }
-template<> inline bool is_same(float a, float b) {
-  return std::isnan(b) ? std::isnan(a) : a == b;
-}
-template<> inline bool is_same(double a, double b) {
-  return std::isnan(b) ? std::isnan(a) : a == b;
-}
-
-}
-
 template<typename T>
 double Ccp4<T>::setup(GridSetup mode, T default_value) {
   double max_error = 0.0;
@@ -413,13 +422,11 @@ double Ccp4<T>::setup(GridSetup mode, T default_value) {
   } else if (mode == GridSetup::FullCheck) {
     grid.axis_order = AxisOrder::XYZ;
     grid.symmetrize([&max_error, &default_value](T a, T b) {
-        if (impl::is_same(a, default_value)) {
+        if (impl::is_same(a, default_value))
           return b;
-        } else {
-          if (!impl::is_same(b, default_value))
-            max_error = std::max(max_error, std::fabs(double(a - b)));
-          return a;
-        }
+        if (!impl::is_same(b, default_value))
+          max_error = std::max(max_error, std::fabs(double(a - b)));
+        return a;
     });
   } else {
     grid.axis_order = AxisOrder::Unknown;

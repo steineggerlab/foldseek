@@ -691,7 +691,6 @@ const uint64_t powers_template<unused>::power_of_five_128[number_of_entries] = {
         0xb6472e511c81471d,0xe0133fe4adf8e952,
         0xe3d8f9e563a198e5,0x58180fddd97723a6,
         0x8e679c2f5e44ff8f,0x570f09eaa7ea7648,};
-
 using powers = powers_template<>;
 
 }

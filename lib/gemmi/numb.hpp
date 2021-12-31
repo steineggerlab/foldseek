@@ -10,6 +10,7 @@
 #define GEMMI_NUMB_HPP_
 
 #include <cmath>   // for NAN
+#include <string>
 #include "third_party/fast_float/fast_float.h"
 
 namespace gemmi {
@@ -22,7 +23,7 @@ inline double as_number(const std::string& s, double nan=NAN) {
     ++start;
   // NaN, Inf and -Inf are not allowed in CIF
   char f = start[int(*start == '-')] | 0x20;
-  if (f == 'i' && f == 'n')
+  if (f == 'i' || f == 'n')
     return nan;
 
   double d;

@@ -28,16 +28,6 @@ void write_minimal_pdb(const Structure& st, std::ostream& os,
                        PdbWriteOptions opt=PdbWriteOptions());
 std::string make_pdb_headers(const Structure& st);
 
-// Name as a string left-padded like in the PDB format:
-// the first two characters make the element name.
-inline std::string padded_atom_name(const Atom& atom) {
-  std::string s;
-  if (atom.element.uname()[1] == '\0' && atom.name.size() < 4)
-    s += ' ';
-  s += atom.name;
-  return s;
-}
-
 } // namespace gemmi
 
 #ifdef GEMMI_WRITE_IMPLEMENTATION
@@ -274,6 +264,7 @@ inline void write_chain_atoms(const Chain& chain, std::ostream& os,
   char buf[88];
   char buf8[8];
   char buf8a[8];
+  buf[0] = '\0';
   if (chain.name.length() > 2)
     fail("long chain name: " + chain.name);
   for (const Residue& res : chain.residues) {
@@ -304,7 +295,7 @@ inline void write_chain_atoms(const Chain& chain, std::ostream& os,
             "%6.2f%6.2f      %-4.4s%2s%c%c",
             as_het ? "HETATM" : "ATOM",
             impl::encode_serial_in_hybrid36(buf8, ++serial),
-            padded_atom_name(a).c_str(),
+            a.padded_name().c_str(),
             a.altloc ? std::toupper(a.altloc) : ' ',
             res.name.c_str(),
             chain.name.c_str(),
@@ -336,10 +327,11 @@ inline void write_chain_atoms(const Chain& chain, std::ostream& os,
                     a.aniso.u33*1e4 + eps, a.aniso.u12*1e4 + eps,
                     a.aniso.u13*1e4 + eps, a.aniso.u23*1e4 + eps);
         buf[28+42] = ' ';
+        buf[80] = '\n';
         os.write(buf, 81);
       }
     }
-    if (opt.ter_records &&
+    if (opt.ter_records && buf[0] != '\0' &&
         (opt.ter_ignores_type ? &res == &chain.residues.back()
                               : (res.entity_type == EntityType::Polymer &&
                                 (&res == &chain.residues.back() ||
@@ -351,6 +343,7 @@ inline void write_chain_atoms(const Chain& chain, std::ostream& os,
                     impl::encode_serial_in_hybrid36(buf8, ++serial));
         std::memset(buf+11, ' ', 6);
         std::memset(buf+28, ' ', 52);
+        buf[80] = '\n';
         os.write(buf, 81);
       } else {
         WRITE("%-80s", "TER");
@@ -444,6 +437,7 @@ inline void write_header(const Structure& st, std::ostream& os,
     for (size_t i = 0; i != entity_list.size(); ++i)
       if (const Entity* entity = entity_list[i]) {
         const Chain& ch = st.models[0].chains[i];
+        const char* dbref_entry_id = entry_id.size() <= 4 ? entry_id.c_str() : "";
         for (const Entity::DbRef& dbref : entity->dbrefs) {
           bool short_record = *dbref.db_end.num < 100000 &&
                               dbref.accession_code.size() < 9 &&
@@ -458,11 +452,14 @@ inline void write_header(const Structure& st, std::ostream& os,
           char buf8[8];
           char buf8a[8];
           gf_snprintf(buf, 82, "DBREF  %4s%2s %5s %5s %-6s  ",
-                      entry_id.c_str(), ch.name.c_str(),
+                      dbref_entry_id, ch.name.c_str(),
                       impl::write_seq_id(buf8, begin),
                       impl::write_seq_id(buf8a, end),
                       dbref.db_name.c_str());
-          if (!(dbref.db_name == "PDB" && dbref.id_code == entry_id)) {
+          if (dbref.db_name == "PDB" && dbref.id_code == entry_id) {
+            // PDB uses self-reference for fragments that don't have real
+            // reference. No idea why. In such case the same begin/end is used.
+          } else {
             begin = dbref.db_begin;
             end = dbref.db_end;
           }
@@ -471,14 +468,15 @@ inline void write_header(const Structure& st, std::ostream& os,
                         dbref.accession_code.c_str(), dbref.id_code.c_str(),
                         *begin.num, begin.icode, *end.num, end.icode);
           } else {
-            buf[5] = '1';
+            buf[5] = '1';  // -> DBREF1
             gf_snprintf(buf+33, 82-33, "              %-33s\n",
                         dbref.id_code.c_str());
           }
+          buf[80] = '\n';
           os.write(buf, 81);
           if (!short_record)
             WRITE("DBREF2 %4s%2s     %-22s     %10d  %10d             ",
-                  entry_id.c_str(), ch.name.c_str(),
+                  dbref_entry_id, ch.name.c_str(),
                   dbref.accession_code.c_str(), *begin.num, *end.num);
         }
       }
@@ -502,8 +500,10 @@ inline void write_header(const Structure& st, std::ostream& os,
             col = 0;
           }
         }
-        if (col != 0)
+        if (col != 0) {
+          buf[80] = '\n';
           os.write(buf, 81);
+        }
       }
   }
 
@@ -525,6 +525,7 @@ inline void write_header(const Structure& st, std::ostream& os,
             (int) helix.pdb_helix_class, helix.length);
       if (helix.length < 0) // make 72-76 blank if the length is not given
         std::memset(buf+71, ' ', 5);
+      buf[80] = '\n';
       os.write(buf, 81);
     }
   }
@@ -566,8 +567,8 @@ inline void write_header(const Structure& st, std::ostream& os,
           const_CRA cra2 = st.models[0].find_cra(con.partner2, true);
           if (!cra1.atom || !cra2.atom)
             continue;
-          SymImage im = st.cell.find_nearest_image(cra1.atom->pos,
-                                                   cra2.atom->pos, con.asu);
+          NearestImage im = st.cell.find_nearest_image(cra1.atom->pos,
+                                                       cra2.atom->pos, con.asu);
           if (++counter == 10000)
             counter = 0;
           WRITE("SSBOND%4d %3s%2s %5s %5s%2s %5s %28s %6s %5.2f  ",
@@ -576,7 +577,7 @@ inline void write_header(const Structure& st, std::ostream& os,
              write_seq_id(buf8, cra1.residue->seqid),
              cra2.residue->name.c_str(), cra2.chain->name.c_str(),
              write_seq_id(buf8a, cra2.residue->seqid),
-             "1555", im.pdb_symbol(false).c_str(), im.dist());
+             "1555", im.symmetry_code(false).c_str(), im.dist());
         }
     }
 
@@ -590,12 +591,12 @@ inline void write_header(const Structure& st, std::ostream& os,
           // In special cases (LINKR gap) atoms are not there.
           if (!cra1.residue || !cra2.residue)
             continue;
-          std::string im_pdb_symbol = "", im_dist_str = "";
+          std::string im_pdb_symbol, im_dist_str;
           bool im_same_asu = true;
           if (cra1.atom && cra2.atom) {
-            SymImage im = st.cell.find_nearest_image(cra1.atom->pos,
-                                                     cra2.atom->pos, con.asu);
-            im_pdb_symbol = im.pdb_symbol(false);
+            NearestImage im = st.cell.find_nearest_image(cra1.atom->pos,
+                                                         cra2.atom->pos, con.asu);
+            im_pdb_symbol = im.symmetry_code(false);
             im_dist_str = to_str_prec<2>(im.dist());
             im_same_asu = im.same_asu();
           }
@@ -606,12 +607,12 @@ inline void write_header(const Structure& st, std::ostream& os,
           // except for LINKR (Refmac variant of LINK).
           gf_snprintf(buf, 82, "LINK        %-4s%c%3s%2s%5s   "
                 "            %-4s%c%3s%2s%5s  %6s %6s %5s  \n",
-                cra1.atom ? padded_atom_name(*cra1.atom).c_str() : "",
+                cra1.atom ? cra1.atom->padded_name().c_str() : "",
                 cra1.atom && cra1.atom->altloc ? std::toupper(cra1.atom->altloc) : ' ',
                 cra1.residue->name.c_str(),
                 con.partner1.chain_name.c_str(),
                 write_seq_id(buf8, cra1.residue->seqid),
-                cra2.atom ? padded_atom_name(*cra2.atom).c_str() : "",
+                cra2.atom ? cra2.atom->padded_name().c_str() : "",
                 cra2.atom && cra2.atom->altloc ? std::toupper(cra2.atom->altloc) : ' ',
                 cra2.residue->name.c_str(),
                 con.partner2.chain_name.c_str(),
@@ -624,6 +625,7 @@ inline void write_header(const Structure& st, std::ostream& os,
             // overwrite distance with link_id
             gf_snprintf(buf+72, 82-72, "%-8s\n", con.link_id.c_str());
           }
+          buf[80] = '\n';
           os.write(buf, 81);
         }
 

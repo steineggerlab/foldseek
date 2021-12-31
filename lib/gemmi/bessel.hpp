@@ -78,12 +78,12 @@ inline float bessel_i1_over_i0(float x) {
      float R[3] = { 1, 0.5f, evaluate_polynomial(P1, a) };
      float bessel1 = x * evaluate_polynomial(R, a) / 2;
      return bessel1 / bessel0;
-  } else {
-    float p = evaluate_polynomial(P2, 1 / x);
-    float q = x < 50 ? evaluate_polynomial(Q2, 1 / x)
-                     : evaluate_polynomial(Q3, 1 / x);
-    return p / q;
   }
+
+  float p = evaluate_polynomial(P2, 1 / x);
+  float q = x < 50 ? evaluate_polynomial(Q2, 1 / x)
+                   : evaluate_polynomial(Q3, 1 / x);
+  return p / q;
 }
 
 } // namespace gemmi

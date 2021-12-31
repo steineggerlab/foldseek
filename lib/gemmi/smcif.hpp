@@ -5,10 +5,11 @@
 #ifndef GEMMI_SMCIF_HPP_
 #define GEMMI_SMCIF_HPP_
 
-#include "small.hpp"     // SmallStructure
+#include "small.hpp"     // for SmallStructure
 #include "cifdoc.hpp"
 #include "numb.hpp"      // for as_number
-#include "symmetry.hpp"  // SpaceGroup
+#include "symmetry.hpp"  // for SpaceGroup
+#include "sprintf.hpp"   // for to_str
 
 namespace gemmi {
 
@@ -107,11 +108,68 @@ SmallStructure make_small_structure_from_block(const cif::Block& block_) {
   }
   if (cif::Column w_col = block.find_values("_diffrn_radiation_wavelength"))
     st.wavelength = cif::as_number(w_col.at(0));
+  st.setup_cell_images();
 
-  const SpaceGroup* sg = find_spacegroup_by_name(st.spacegroup_hm,
-                                                 st.cell.alpha, st.cell.gamma);
-  st.cell.set_cell_images_from_spacegroup(sg);
   return st;
+}
+
+inline cif::Block make_cif_block_from_small_structure(const SmallStructure& st) {
+  cif::Block block;
+  block.name = st.name;
+  if (st.cell.is_crystal()) {
+    block.set_pair("_cell_length_a", to_str(st.cell.a));
+    block.set_pair("_cell_length_b", to_str(st.cell.b));
+    block.set_pair("_cell_length_c", to_str(st.cell.c));
+    block.set_pair("_cell_angle_alpha", to_str(st.cell.alpha));
+    block.set_pair("_cell_angle_beta", to_str(st.cell.beta));
+    block.set_pair("_cell_angle_gamma", to_str(st.cell.gamma));
+  }
+  if (!st.spacegroup_hm.empty())
+    block.set_pair("_symmetry_space_group_name_H-M", cif::quote(st.spacegroup_hm));
+  if (st.wavelength != 0)
+    block.set_pair("_diffrn_radiation_wavelength", to_str(st.wavelength));
+
+  cif::Loop& atom_loop = block.init_loop("_atom_site_", {"label",
+                                                         "type_symbol",
+                                                         "fract_x",
+                                                         "fract_y",
+                                                         "fract_z",
+                                                         "U_iso_or_equiv",
+                                                         "occupancy",
+                                                         "disorder_group"});
+  for (const SmallStructure::Site& site: st.sites) {
+    atom_loop.add_row({
+        cif::quote(site.label),
+        site.type_symbol.empty() ? site.element_and_charge_symbol()
+                                 : cif::quote(site.type_symbol),
+        to_str(site.fract.x),
+        to_str(site.fract.y),
+        to_str(site.fract.z),
+        to_str(site.u_iso),
+        to_str(site.occ),
+        site.disorder_group == 0 ? "." : std::to_string(site.disorder_group)
+    });
+  }
+
+  bool has_aniso = false;
+  for (const SmallStructure::Site& site: st.sites)
+    if (site.aniso.nonzero()) {
+      has_aniso = true;
+      break;
+    }
+  if (has_aniso) {
+    cif::Loop& aniso_loop = block.init_loop("_atom_site_aniso_", {
+        "label", "U_11", "U_22", "U_33", "U_12", "U_13", "U_23"});
+    for (const SmallStructure::Site& site: st.sites)
+      if (site.aniso.nonzero())
+        aniso_loop.add_row({
+            cif::quote(site.label),
+            to_str(site.aniso.u11), to_str(site.aniso.u22), to_str(site.aniso.u33),
+            to_str(site.aniso.u12), to_str(site.aniso.u13), to_str(site.aniso.u23)
+        });
+  }
+
+  return block;
 }
 
 } // namespace gemmi

@@ -103,13 +103,9 @@ inline double calculate_b_est(const Atom& atom) {
                               (1/eig[0] + 1/eig[1] + 1/eig[2]));
 }
 
-inline double calculate_angle_v(const Vec3& a, const Vec3& b) {
-  return std::acos(a.dot(b) / std::sqrt(a.length_sq() * b.length_sq()));
-}
-
 inline double calculate_angle(const Position& p0, const Position& p1,
                               const Position& p2) {
-  return calculate_angle_v(p0 - p1, p2 - p1);
+  return (p0 - p1).angle(p2 - p1);
 }
 
 // discussion: https://stackoverflow.com/questions/20305272/
