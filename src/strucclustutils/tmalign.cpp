@@ -105,9 +105,17 @@ int tmalign(int argc, const char **argv, const Command& command) {
         float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
         float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
         AffineNeedlemanWunsch affineNW(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,tdbr->sequenceReader->getMaxSeqLen() + 1), 20);
+
+        std::string backtrace;
+        backtrace.reserve(par.maxSeqLen);
+
         std::vector<Matcher::result_t> swResults;
-        char buffer[1024+32768];
+        swResults.reserve(300);
+
         std::string resultBuffer;
+        resultBuffer.reserve(1024*1024);
+
+        char buffer[1024+32768];
 #pragma omp for schedule(dynamic, 1)
         for (size_t id = 0; id < resultReader.getSize(); id++) {
             progress.updateProgress();
@@ -138,7 +146,6 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     unsigned int targetId = tdbr->sequenceReader->getId(dbKey);
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB))? true : false;
                     if(isIdentity == true){
-                        std::string backtrace = "";
                         int anat= (queryLen%4) ? (queryLen/4)*4+4 : queryLen;
                         for(int i=queryLen;i<anat;i++){
                             query_x[i]=0.0f;
@@ -150,9 +157,12 @@ int tmalign(int argc, const char **argv, const Command& command) {
 //                                                            query_x, query_y, query_z,
 //                                                            query_x, query_y, query_z,
 //                                                            0,0,0);
+                        backtrace.append(SSTR(queryLen));
+                        backtrace.append(1, 'M');
                         Matcher::result_t result(dbKey, 0 , 1.0, 1.0, 1.0, 1.0, std::max(queryLen,queryLen), 0, queryLen-1, queryLen, 0, queryLen-1, queryLen, backtrace);
-                        size_t len = Matcher::resultToBuffer(buffer, result, true, false);
+                        size_t len = Matcher::resultToBuffer(buffer, result, par.addBacktrace, false);
                         resultBuffer.append(buffer, len);
+                        backtrace.clear();
                         continue;
                     }
                     char * targetSeq = tdbr->sequenceReader->getData(targetId, thread_idx);
@@ -195,11 +205,48 @@ int tmalign(int argc, const char **argv, const Command& command) {
                                  I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
                     //std::cout << queryId << "\t" << targetId << "\t" <<  TM_0 << "\t" << TM1 << std::endl;
 
-                    double seqId = Liden/(static_cast<double>(n_ali8));
+                    double seqId = (n_ali8 > 0) ? (Liden / (static_cast<double>(n_ali8))) : 0;
                     //int rmsdScore = static_cast<int>(rmsd0*1000.0);
-                    std::string backtrace = "";
-                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM_0, std::max(queryLen,targetLen), 0, queryLen-1, queryLen, 0, targetLen-1, targetLen, backtrace);
 
+                    // compute freeshift-backtrace from pairwise global alignment
+                    // find last match position first
+                    size_t shiftQ = 0, shiftT = 0, lastM = 0;
+                    for (size_t i = 0; i < seqxA.length(); ++i) {
+                        if (seqxA[i] != '-' && seqyA[i] != '-') {
+                            lastM = i;
+                        }
+                    }
+                    // compute backtrace from first match to last match
+                    bool hasMatch = false;
+                    for (size_t i = 0; i <= lastM; ++i) {
+                        if (seqxA[i] != '-' && seqyA[i] != '-') {
+                            backtrace.append(1, 'M');
+                            hasMatch = true;
+                        } else if (seqxA[i] == '-' && seqyA[i] != '-') {
+                            if (hasMatch == false) {
+                                shiftQ++;
+                            } else {
+                                backtrace.append(1, 'I');
+                            }
+                        } else if (seqxA[i] != '-' && seqyA[i] == '-') {
+                            if (hasMatch == false) {
+                                shiftT++;
+                            } else {
+                                backtrace.append(1, 'D');
+                            }
+                        }
+                    }
+                    // compute end offsets to fix end positions
+                    size_t endQ = 0, endT = 0;
+                    for (size_t i = lastM; i < seqxA.length(); ++i) {
+                        if (seqxA[i] == '-' && seqyA[i] != '-') {
+                            endQ++;
+                        } else if (seqxA[i] != '-' && seqyA[i] == '-') {
+                            endT++;
+                        }
+                    }
+                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM_0, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
+                    backtrace.clear();
 
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
                     bool hasSeqId = seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
@@ -211,7 +258,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 SORT_SERIAL(swResults.begin(), swResults.end(), compareHitsByTMScore);
 
                 for(size_t i = 0; i < swResults.size(); i++){
-                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], true, false);
+                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], par.addBacktrace, false);
                     resultBuffer.append(buffer, len);
                 }
 
