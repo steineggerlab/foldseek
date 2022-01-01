@@ -137,9 +137,17 @@ std::vector<struct Command> commands = {
 
 std::vector<DatabaseDownload> externalDownloads = {
         {
-                "AlphafoldDb",
+                "Alphafold/Proteome",
                 "AlphaFold Protein Structure Database.",
-                "Tunyasuvunakool et al. Highly accurate protein structure prediction for the human proteome. Nature, (2021)",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "Alphafold/Swiss-Prot",
+                "AlphaFold Swissprot Protein Structure Database.",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
                 "https://alphafold.ebi.ac.uk/",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
