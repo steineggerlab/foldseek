@@ -26,7 +26,8 @@ AffineNeedlemanWunsch::AffineNeedlemanWunsch(int maxLen, int profileRange){
     reverCigarBuffer  =  (uint32_t *) malloc(sizeof(uint32_t)*(maxLen+maxLen));
     result = result_new_trace(segLen8Bit, maxLen, ALIGN_INT, sizeof(simd_float));
     profile = (profile_t*)malloc(sizeof(profile_t));
-    vProfile =  (simd_float*) mem_align(ALIGN_INT, profileRange * segLen*sizeof(simd_float));
+    vProfile1 =  (simd_float*) mem_align(ALIGN_INT, profileRange * segLen * sizeof(simd_float));
+    vProfile2 =  (simd_float*) mem_align(ALIGN_INT, profileRange * segLen*sizeof(simd_float));
 }
 
 AffineNeedlemanWunsch::~AffineNeedlemanWunsch(){
@@ -45,17 +46,20 @@ AffineNeedlemanWunsch::~AffineNeedlemanWunsch(){
     free(result->trace);
     free(result);
     free(profile);
-    free(vProfile);
+    free(vProfile1);
+    free(vProfile2);
 }
 
-AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ(AffineNeedlemanWunsch::profile_t *profile,
-                                                                   long queryLen, long targetLen,
-                                                                   const float * targetX, const float * targetY, const float * targetZ,
-                                                                   const float d02, float t[3], float u[3][3],
-                                                                   float gapopen, float gapextend, int * invmap) {
+AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ_SS(
+                        AffineNeedlemanWunsch::profile_t *profile,
+                        long queryLen, long targetLen,
+                        const float * targetX, const float * targetY, const float * targetZ,
+                        const char  *target_ss, const float d02, float t[3],
+                        float u[3][3], float gapopen, float gapextend,
+                        int * invmap) {
     // fill matrix
-    result_t *result = stripedAlign<XYZ>(
-            profile, NULL, targetLen,
+    result_t *result = stripedAlign<XYZ_SS>(
+            profile, target_ss, targetLen,
                     targetX, targetY, targetZ,
                     d02, t, u, gapopen, gapextend);
     //std::cout << result->score << std::endl;
@@ -69,6 +73,30 @@ AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ(AffineNeedlem
                        cigar.beg_ref, result->end_ref,
                        cigar.len, cigar.seq);
 }
+
+AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::alignXYZ(AffineNeedlemanWunsch::profile_t *profile,
+                                                                   long queryLen, long targetLen,
+                                                                   const float * targetX, const float * targetY, const float * targetZ,
+                                                                   const float d02, float t[3], float u[3][3],
+                                                                   float gapopen, float gapextend, int * invmap) {
+    // fill matrix
+    result_t *result = stripedAlign<XYZ>(
+            profile, NULL, targetLen,
+            targetX, targetY, targetZ,
+            d02, t, u, gapopen, gapextend);
+    //std::cout << result->score << std::endl;
+    // compute backtrace
+    cigar_t cigar = cigar_striped_32(
+            queryLen,
+            targetLen,
+            result,
+            invmap);
+    return alignment_t(result->score, cigar.beg_query,result->end_query,
+                       cigar.beg_ref, result->end_ref,
+                       cigar.len, cigar.seq);
+}
+
+
 
 AffineNeedlemanWunsch::alignment_t AffineNeedlemanWunsch::align(AffineNeedlemanWunsch::profile_t *profile, long queryLen,
                                                                 const unsigned char *target, long targetLen,
@@ -105,6 +133,57 @@ static inline float _mm_extract_ps_rpl(simd_float a, const int imm) {
 
 
 
+AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_xyz_ss_create(
+        const char * s1, const int s1Len, const matrix_t *matrix,
+        const float * x,const float * y, const float * z){
+    int32_t i = 0;
+    int32_t j = 0;
+    int32_t segNum = 0;
+    const int32_t segWidth = VECSIZE_FLOAT; /* number of values in vector unit */
+    const int32_t segLen = (s1Len + segWidth - 1) / segWidth;
+    int32_t index = 0;
+
+    profile->s1 = s1;
+    profile->s1Len = s1Len;
+    profile->matrix = matrix;
+    profile->profile32.score1 = NULL;
+    profile->stop = INT32_MAX;
+    for (i=0; i<segLen; ++i) {
+        simd_float_32_t vX;
+        simd_float_32_t vY;
+        simd_float_32_t vZ;
+        j = i;
+        for (segNum=0; segNum<segWidth; ++segNum) {
+            vX.v[segNum] = j >= s1Len ? FLT_MIN : x[j];
+            vY.v[segNum] = j >= s1Len ? FLT_MIN : y[j];
+            vZ.v[segNum] = j >= s1Len ? FLT_MIN : z[j];
+            j += segLen;
+        }
+        simdf32_store((float*)&vProfile1[index], vX.m);
+        simdf32_store((float*)&vProfile1[index + 1], vY.m);
+        simdf32_store((float*)&vProfile1[index + 2], vZ.m);
+        index+=3;
+    }
+    index = 0;
+    for (int k=0; k < matrix->size; ++k) {
+        for (i=0; i<segLen; ++i) {
+            simd_float_32_t t;
+            j = i;
+            for (segNum=0; segNum<segWidth; ++segNum) {
+                t.v[segNum] = (float) j >= s1Len ? 0.0f : (k == matrix->mapper[(unsigned char)s1[j]]) ? 0.5 : 0.0;
+                j += segLen;
+            }
+            simdf32_store((float*)&vProfile2[index], t.m);
+            ++index;
+        }
+    }
+
+    profile->profile32.score1 = vProfile1;
+    profile->profile32.score2 = vProfile2;
+    return profile;
+}
+
+
 
 AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_xyz_create(
         const char * s1, const int s1Len,
@@ -120,7 +199,7 @@ AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_xyz_create(
     profile->s1 = s1;
     profile->s1Len = s1Len;
     profile->matrix = NULL;
-    profile->profile32.score = NULL;
+    profile->profile32.score1 = NULL;
     profile->stop = INT32_MAX;
     for (i=0; i<segLen; ++i) {
         simd_float_32_t vX;
@@ -133,13 +212,13 @@ AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_xyz_create(
             vZ.v[segNum] = j >= s1Len ? FLT_MIN : z[j];
             j += segLen;
         }
-        simdf32_store((float*)&vProfile[index], vX.m);
-        simdf32_store((float*)&vProfile[index+1], vY.m);
-        simdf32_store((float*)&vProfile[index+2], vZ.m);
+        simdf32_store((float*)&vProfile1[index], vX.m);
+        simdf32_store((float*)&vProfile1[index + 1], vY.m);
+        simdf32_store((float*)&vProfile1[index + 2], vZ.m);
         index+=3;
     }
 
-    profile->profile32.score = vProfile;
+    profile->profile32.score1 = vProfile1;
     return profile;
 }
 
@@ -160,7 +239,7 @@ AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_create(
     profile->s1 = s1;
     profile->s1Len = s1Len;
     profile->matrix = matrix;
-    profile->profile32.score = NULL;
+    profile->profile32.score1 = NULL;
     profile->stop = INT32_MAX;
 
     for (k=0; k<n; ++k) {
@@ -171,12 +250,12 @@ AffineNeedlemanWunsch::profile_t * AffineNeedlemanWunsch::profile_create(
                 t.v[segNum] = (float) j >= s1Len ? 0.0f : matrix->matrix[n*k+matrix->mapper[(unsigned char)s1[j]]];
                 j += segLen;
             }
-            simdf32_store((float*)&vProfile[index], t.m);
+            simdf32_store((float*)&vProfile1[index], t.m);
             ++index;
         }
     }
 
-    profile->profile32.score = vProfile;
+    profile->profile32.score1 = vProfile1;
     return profile;
 }
 
@@ -238,7 +317,8 @@ AffineNeedlemanWunsch::result_t* AffineNeedlemanWunsch::stripedAlign(
     const int32_t segLen8Bit = (s1Len + segWidth8Bit - 1) / segWidth8Bit;
     const int32_t offset = (s1Len - 1) % segLen;
     const int32_t position = (segWidth - 1) - (s1Len - 1) / segLen;
-    const simd_float* vProfile = (simd_float*)profile->profile32.score;
+    const simd_float* vProfile = (simd_float*)profile->profile32.score1;
+    const simd_float* vProfile2 = (simd_float*) profile->profile32.score2;
 
     simd_float vGapO = simdf32_set(open);
     simd_float vGapE = simdf32_set(gap);
@@ -308,6 +388,7 @@ AffineNeedlemanWunsch::result_t* AffineNeedlemanWunsch::stripedAlign(
         simd_float vZ;
 
         const simd_float* vP = NULL;
+        const simd_float* vP2 = NULL;
 
         /* Initialize F value to -inf.  Any errors to vH values will be
          * corrected in the Lazy_F loop.  */
@@ -320,8 +401,8 @@ AffineNeedlemanWunsch::result_t* AffineNeedlemanWunsch::stripedAlign(
         /* insert upper boundary condition */
         vH = (simd_float) simdi32_insert((simd_int)vH,(int) boundary[j], 0);
 
-        /* Correct part of the vProfile */
-        if(T == XYZ){
+        /* Correct part of the vProfile1 */
+        if(T == XYZ || T == XYZ_SS){
             float xx[3];
             //Transform
             xx[0]=t[0]+(u[0][0] * targetX[j] + u[0][1] * targetY[j] + u[0][2] * targetZ[j]);
@@ -331,9 +412,13 @@ AffineNeedlemanWunsch::result_t* AffineNeedlemanWunsch::stripedAlign(
             vY = simdf32_set(xx[1]);
             vZ = simdf32_set(xx[2]);
             vP = vProfile;
-        }else{
+            if(T == XYZ_SS){
+                vP2 = vProfile2 + matrix->mapper[(unsigned char)s2[j]] * segLen;
+            }
+        }else {
             vP = vProfile + matrix->mapper[(unsigned char)s2[j]] * segLen;
         }
+
 #define SWAP(A,B) { simd_float* tmp = A; A = B; B = tmp; }
         /* Swap the 2 H buffers. */
         SWAP(traceTableRow, nextTraceTableRow)
@@ -345,7 +430,7 @@ AffineNeedlemanWunsch::result_t* AffineNeedlemanWunsch::stripedAlign(
             vE = simdf32_load((float*)(pvE + i));
 
             /* Get max from vH, vE and vF. */
-            if(T == XYZ) {
+            if(T == XYZ||T == XYZ_SS) {
                 simd_float queryX = simdf32_load((float*)(vP + i*3));
                 simd_float queryY = simdf32_load((float*)(vP + i*3+1));
                 simd_float queryZ = simdf32_load((float*)(vP + i*3+2));
@@ -358,8 +443,10 @@ AffineNeedlemanWunsch::result_t* AffineNeedlemanWunsch::stripedAlign(
                 simd_float res = simdf32_add(queryX, queryY);
                 simd_float dij = simdf32_add(res, queryZ);
                 simd_float oneDividedDist = simdf32_div(one, simdf32_add(one, simdf32_div(dij,vd02)));
-
                 vH_dag = simdf32_add(vH, oneDividedDist);
+                if(T == XYZ_SS){
+                    vH_dag = simdf32_add(vH_dag, simdf32_load((float*)(vP2 + i)));
+                }
             }else{
                 vH_dag = simdf32_add(vH, simdf32_load((float*)(vP + i)));
             }

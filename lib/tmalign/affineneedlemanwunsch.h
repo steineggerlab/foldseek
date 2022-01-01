@@ -19,6 +19,7 @@ public:
 
     static const unsigned int SUBMAT = 0;
     static const unsigned int XYZ = 1;
+    static const unsigned int XYZ_SS = 2;
 
     typedef struct matrix {
         const char * name;
@@ -38,7 +39,8 @@ public:
 
 
     typedef struct profile_data {
-        void * score;
+        void * score1;
+        void * score2;
     } profile_data_t;
 
     typedef struct profile {
@@ -58,6 +60,9 @@ public:
             const char * s1, const int s1Len,
             const float* x, const float* y, const float* z);
 
+    profile_t * profile_xyz_ss_create(
+            const char * s1, const int s1Len, const matrix_t *matrix,
+            const float* x, const float* y, const float* z);
 
     typedef struct result_extra_trace {
         void * trace_table;    /* DP table of traceback */
@@ -97,6 +102,14 @@ public:
                          const float d02, float t[3], float u[3][3], float gapopen, float gapextend,
                          int * invmap);
 
+
+    alignment_t alignXYZ_SS(AffineNeedlemanWunsch::profile_t *profile,
+                            long queryLen, long targetLen,
+                            const float * targetX, const float * targetY, const float * targetZ,
+                            const char * target_ss, const float d02, float t[3],
+                            float u[3][3], float gapopen, float gapextend,
+                            int * invmap);
+
     alignment_t align(AffineNeedlemanWunsch::profile_t *profile, long queryLen,
                       const unsigned char *target, long targetLen,
                       float gapopen, float gapextend, int * invmap);
@@ -128,7 +141,8 @@ private:
     uint32_t * reverCigarBuffer;
     result_t * result;
     profile_t * profile;
-    simd_float* vProfile;
+    simd_float* vProfile1;
+    simd_float* vProfile2;
 
     typedef union simd_float_32 {
         simd_float m;

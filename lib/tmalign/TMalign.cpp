@@ -1639,22 +1639,31 @@ bool get_initial5(AffineNeedlemanWunsch *affineNW,
     return flag;
 }
 
-void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
-                            float **score, const char *secx, const char *secy,
-                            const Coordinates &x, const Coordinates &y, int xlen, int ylen,
-                            int *y2x, const float D0_MIN, float d0, float * mem)
+
+
+//get initial alignment from secondary structure and previous alignments
+//input: x, y, xlen, ylen
+//output: invmap stores the best alignment: e.g.,
+//invmap[j]=i means:
+//the jth element in y is aligned to the ith element in x if i>=0
+//the jth element in y is aligned to a gap in x if i==-1
+void get_initial_ssplus(AffineNeedlemanWunsch * affineNW, Coordinates &r1, Coordinates &r2,
+                        const char *secx, const char *secy,
+                        const Coordinates &x, const Coordinates &y,
+                        int xlen, int ylen, int *invmap, const double D0_MIN, double d0, float * mem)
 {
+    float gap_open=-1.0;
+
     float t[3], u[3][3];
-    float rmsd, dij;
+    float rmsd;
     float d01=d0+1.5;
     if(d01 < D0_MIN) d01=D0_MIN;
     float d02=d01*d01;
 
-    float xx[3];
     int i, k=0;
     for(int j=0; j<ylen; j++)
     {
-        i=y2x[j];
+        i=invmap[j];
         if(i>=0)
         {
             r1.x[k]=x.x[i];
@@ -1670,39 +1679,26 @@ void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
     }
     KabschFast(r1, r2, k, &rmsd, t, u, mem);
 
-
-    for(int ii=0; ii<xlen; ii++)
-    {
-        BasicFunction::BasicFunction::transform(t, u, x.x[ii], x.y[ii], x.z[ii], xx[0], xx[1], xx[2]);
-        for(int jj=0; jj<ylen; jj++)
-        {
-            dij=BasicFunction::BasicFunction::dist(xx[0], xx[1], xx[2], y.x[jj], y.y[jj], y.z[jj]);
-            if (secx[ii]==secy[jj])
-                score[ii+1][jj+1] = 1.0/(1+dij/d02) + 0.5;
-            else
-                score[ii+1][jj+1] = 1.0/(1+dij/d02);
-        }
-    }
-}
-
-
-//get initial alignment from secondary structure and previous alignments
-//input: x, y, xlen, ylen
-//output: y2x stores the best alignment: e.g.,
-//y2x[j]=i means:
-//the jth element in y is aligned to the ith element in x if i>=0
-//the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ssplus(Coordinates &r1, Coordinates &r2, float **score, bool **path,
-                        float **val, const char *secx, const char *secy,
-                        const Coordinates &x, const Coordinates &y,
-                        int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0, float * mem)
-{
     //create score matrix for DP
-    score_matrix_rmsd_sec(r1, r2, score, secx, secy, x, y, xlen, ylen,
-                          y2x0, D0_MIN,d0, mem);
+//    score_matrix_rmsd_sec(r1, r2, score, secx, secy, x, y, xlen, ylen,
+//                          y2x0, D0_MIN,d0, mem);
+    static const int map[256] = {0, 1, 2, 3, 4};
+    static const AffineNeedlemanWunsch::matrix_t matrix = {
+            "ss",
+            NULL,
+            map,
+            5,
+            1,
+            0};
 
-    float gap_open=-1.0;
-    NWDP_TM(score, path, val, xlen, ylen, gap_open, y2x);
+
+    std::fill(invmap, invmap+ylen, -1);
+    AffineNeedlemanWunsch::profile_t *profile = affineNW->profile_xyz_ss_create(secy, ylen, &matrix, y.x, y.y, y.z);
+    affineNW->alignXYZ_SS(profile, ylen, xlen, x.x, x.y, x.z, secx,
+                       d02, t, u, -gap_open, 0.0, invmap);
+
+
+    //NWDP_TM(score, path, val, xlen, ylen, gap_open, invmap);
 }
 
 void find_max_frag(const Coordinates &x, int len, int *start_max,
@@ -2042,20 +2038,6 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
     return tmscore;
 }
 
-template <class A> void DeleteArray(A *** array, int Narray)
-{
-    for(int i=0; i<Narray; i++)
-        if(*(*array+i)) delete [] *(*array+i);
-    if(Narray) delete [] (*array);
-    (*array)=NULL;
-}
-
-template <class A> void NewArray(A *** array, int Narray1, int Narray2)
-{
-    *array=new A* [Narray1];
-    for(int i=0; i<Narray1; i++) *(*array+i)=new A [Narray2];
-}
-
 /* entry function for TMalign */
 int TMalign_main(
         AffineNeedlemanWunsch * affineNW,
@@ -2077,9 +2059,6 @@ int TMalign_main(
     float Lnorm;         //normalization length
     float score_d8,d0,d0_search,dcu0;//for TMscore search
     float t[3], u[3][3]; //Kabsch translation vector and rotation matrix
-    float **score;     // Input score table for dynamic programming
-    bool   **path;     // for dynamic programming
-    float **val;       // for dynamic programming
     Coordinates xtm(minlen);
     Coordinates ytm(minlen);
     Coordinates xt(xlen);
@@ -2087,18 +2066,7 @@ int TMalign_main(
     Coordinates r2(minlen);
 
 
-    /***********************/
-    /* allocate memory     */
-    /***********************/
-    NewArray(&score, xlen+1, ylen+1);
-    NewArray(&path, xlen+1, ylen+1);
-    NewArray(&val, xlen+1, ylen+1);
 
-//    NewArray(&xtm, minlen, 3);
-//    NewArray(&ytm, minlen, 3);
-//    NewArray(&xt, xlen, 3);
-//    NewArray(&r1, minlen, 3);
-//    NewArray(&r2, minlen, 3);
 
     /***********************/
     /*    parameter set    */
@@ -2200,8 +2168,8 @@ int TMalign_main(
     /* get initial alignment by local superposition+secondary structure */
     /********************************************************************/
     //=initial3 in original TM-align
-    get_initial_ssplus(r1, r2, score, path, val, secx, secy, xa, ya,
-                       xlen, ylen, invmap0, invmap, D0_MIN, d0, mem);
+    get_initial_ssplus(affineNW, r1, r2, secx, secy, xa, ya,
+                       xlen, ylen, invmap, D0_MIN, d0, mem);
     TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, ylen, invmap,
                          t, u, simplify_step,  local_d0_search, Lnorm,
                          score_d8, d0, mem);
@@ -2466,9 +2434,6 @@ int TMalign_main(
     delete [] invmap;
     delete [] m1;
     delete [] m2;
-    DeleteArray(&score, xlen+1);
-    DeleteArray(&path, xlen+1);
-    DeleteArray(&val, xlen+1);
 
     free(xtm.x);
     free(xtm.y);
@@ -2490,11 +2455,5 @@ int TMalign_main(
     free(r2.y);
     free(r2.z);
 
-
-//    DeleteArray(&xtm, minlen);
-//    DeleteArray(&ytm, minlen);
-//    DeleteArray(&xt, xlen);
-//    DeleteArray(&r1, minlen);
-//    DeleteArray(&r2, minlen);
     return 0; // zero for no exception
 }
