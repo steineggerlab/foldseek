@@ -16,6 +16,7 @@ void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->gapOpen = 10;
     p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+    p->removeTmpFiles = true;
 }
 
 void setStructureSearchMustPassAlong(LocalParameters *p) {
@@ -26,7 +27,7 @@ void setStructureSearchMustPassAlong(LocalParameters *p) {
     p->PARAM_GAP_OPEN.wasSet = true;
     p->PARAM_GAP_EXTEND.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
-    p->removeTmpFiles = true;
+    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
 
 int structuresearch(int argc, const char **argv, const Command &command) {
