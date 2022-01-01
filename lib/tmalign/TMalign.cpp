@@ -6,6 +6,8 @@
    Yang Zhang lab
    And it is updated by Jianjie Wu at
    Yang Zhang lab
+   Adjusted by Martin Steinegger
+   Steinegger lab
    Department of Computational Medicine and Bioinformatics
    University of Michigan
    100 Washtenaw Avenue, Ann Arbor, MI 48109-2218
@@ -68,80 +70,6 @@ void parameter_set4scale(const int len, const float d_s, float &Lnorm,
     if (d0_search>8)   d0_search=8;
     if (d0_search<4.5) d0_search=4.5;
 }
-
-//     1, collect those residues with dis<d;
-//     2, calculate TMscore
-//int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
-//                float *score1, int score_sum_method, const float Lnorm,
-//                const float score_d8, const float d0
-//                , float * mem
-//
-//                )
-//{
-//    float score_sum=0, di;
-//    float d_tmp=d*d;
-//    float d02=d0*d0;
-//    float score_d8_cut = score_d8*score_d8;
-//
-//    int i, n_cut, inc=0;
-//    float *BasicFunction::distArray = mem;
-//    while(1)
-//    {
-//        n_cut=0;
-//        score_sum=0;
-//        simd_float sum = simdf32_set(0);
-//        simd_float vscore_d8_cut = simdf32_set(score_d8_cut);
-//        simd_float vd02 = simdf32_set(d02);
-//        simd_float one = simdf32_set(1.0f);
-//        for(i=0; i < n_ali; i+=VECSIZE_FLOAT){
-//            //    float d1=xx-yx;
-//            //    float d2=xy-yy;
-//            //    float d3=xz-yz;
-//            //    return (d1*d1 + d2*d2 + d3*d3);
-//            simd_float xa_x = simdf32_load(&xa.x[i]);
-//            simd_float ya_x = simdf32_load(&ya.x[i]);
-//            simd_float xa_y = simdf32_load(&xa.y[i]);
-//            simd_float ya_y = simdf32_load(&ya.y[i]);
-//            simd_float xa_z = simdf32_load(&xa.z[i]);
-//            simd_float ya_z = simdf32_load(&ya.z[i]);
-//            ya_x = simdf32_sub(xa_x, ya_x);
-//            ya_y = simdf32_sub(xa_y, ya_y);
-//            ya_z = simdf32_sub(xa_z, ya_z);
-//            ya_x = simdf32_mul(ya_x, ya_x);
-//            ya_y = simdf32_mul(ya_y, ya_y);
-//            ya_z = simdf32_mul(ya_z, ya_z);
-//            simd_float res = simdf32_add(ya_x, ya_y);
-//            simd_float di = simdf32_add(res, ya_z);
-//            simdf32_store(&BasicFunction::distArray[i], di);
-//            simd_float di_lt_score_d8 = simdf32_lt(di, vscore_d8_cut);
-//            simd_float oneDividedDist = simdf32_div(one, simdf32_add(one, simdf32_div(di,vd02)));
-//            sum = simdf32_add(sum, (simd_float)simdi_and((simd_int) di_lt_score_d8, (simd_int) oneDividedDist ));
-//        }
-//        for(i=0; i < VECSIZE_FLOAT; i++){
-//            score_sum+=((float*)&sum)[i];
-//        }
-//
-//        for(i=0; i<n_ali; i++)
-//        {
-//            di = BasicFunction::distArray[i];
-//            i_ali[n_cut]=i;
-//            n_cut+=(di<d_tmp);
-//            //score_sum += (di<=score_d8_cut) ? 1/(1+di/d02) : 0;
-//            //else score_sum += 1/(1+di/d02);
-//        }
-//        //there are not enough feasible pairs, reliefe the threshold
-//        if(n_cut<3 && n_ali>3)
-//        {
-//            inc++;
-//            double dinc=(d+inc*0.5);
-//            d_tmp = dinc * dinc;
-//        }
-//        else break;
-//    }
-//
-//    *score1=score_sum/Lnorm;
-//    return n_cut;
-//}
 
 
 //     1, collect those residues with dis<d;
@@ -986,75 +914,6 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
 }
 
 
-double get_score4pareun(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
-                        const Coordinates &x, const Coordinates &y, int * queryToTargetMapping,
-                        int queryLen,
-                        float t[3], float u[3][3], float * mem ) {
-    float rms, tmscore;
-    int i, j, k;
-    float d0;
-
-    float D0_MIN = 0.5;
-    int Lnorm = queryLen;
-
-    if (Lnorm > 21)
-        d0 = (1.24*pow((Lnorm*1.0 - 15), 1.0 / 3) - 1.8);
-    else
-        d0 = D0_MIN;
-    if (d0 < D0_MIN)
-        d0 = D0_MIN;
-
-    k=0;
-    for(j=0; j< queryLen; j++)
-    {
-        i=queryToTargetMapping[j];
-        //i = invmap[k][0];
-        //j = invmap[k][1];
-        if(i>=0)
-        {
-            r1.x[k]=x.x[i];
-            r1.y[k]=x.y[i];
-            r1.z[k]=x.z[i];
-
-            r2.x[k]=y.x[j];
-            r2.y[k]=y.y[j];
-            r2.z[k]=y.z[j];
-
-            xtm.x[k]=x.x[i];
-            xtm.y[k]=x.y[i];
-            xtm.z[k]=x.z[i];
-
-            ytm.x[k]=y.x[j];
-            ytm.y[k]=y.y[j];
-            ytm.z[k]=y.z[j];
-
-            k++;
-        }
-        else if(i!=-1) {
-            BasicFunction::PrintErrorAndQuit("Wrong map!\n");
-        }
-    }
-    KabschFast(r1, r2, k, &rms, t, u, mem);
-
-    //evaluate score
-    double di;
-    double d02=d0*d0;
-
-    int n_ali=k;
-    float xrot[3];
-    tmscore=0;
-    for(k=0; k<n_ali; k++)
-    {
-        BasicFunction::transform(t, u, xtm.x[k], xtm.y[k], xtm.z[k], xrot[0], xrot[1], xrot[2]);
-        di=BasicFunction::dist(xrot[0], xrot[1], xrot[2],
-                ytm.x[k], ytm.y[k], ytm.z[k]);
-        tmscore += 1/(1+di/d02);
-    }
-//    if(tmscore/Lnorm  > 0.5){
-//    cout << "di: " << di << '\n' << "tmscore[k]: " << tmscore/Lnorm << endl;
-//    }
-    return tmscore/Lnorm; // no need to normalize this score because it will not be used for latter scoring
-}
 
 
 //Comprehensive TMscore search engine
@@ -1518,7 +1377,7 @@ void get_initial_ss(AffineNeedlemanWunsch *affineNW,
 //    }
     std::fill(y2x, y2x+ylen, -1);
     AffineNeedlemanWunsch::profile_t *profile = affineNW->profile_create(secy, ylen, &matrix);
-    affineNW->align(profile, ylen, (const unsigned char * ) secx, xlen,  100, 0, y2x);
+    affineNW->align(profile, ylen, (const unsigned char * ) secx, xlen,  1.0, 0.0, y2x);
 
 //    for(size_t i = 0; i < ylen; i++){
 //        if(y2x[i]!=-1)
