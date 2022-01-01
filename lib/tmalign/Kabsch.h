@@ -13,7 +13,8 @@
    Please report bugs and questions to zhng@umich.edu
 =============================================================
 */
-#include <simd.h>
+#include "Coordinates.h"
+#include "simd.h"
 #include <string.h>
 #define SIMDE_ENABLE_NATIVE_ALIASES
 #include <simde/x86/avx2.h>

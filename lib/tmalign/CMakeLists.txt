@@ -4,13 +4,7 @@ add_library(tmalign
         basic_fun.h
         TMalign.h
         TMalign.cpp
-        NW.h
-        NW.cpp
         Kabsch.h
-        se.h
-        xyz_sfetch.cpp
-        pstream.h
-        param_set.h
         Coordinates.h
         )
 

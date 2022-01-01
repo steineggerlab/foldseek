@@ -39,68 +39,6 @@ public:
         exit(1);
     }
 
-    static char AAmap(string AA)
-    {
-        if (AA.compare("ALA")==0) return 'A';
-        if (AA.compare("ASX")==0) return 'B';
-        if (AA.compare("CYS")==0) return 'C';
-        if (AA.compare("ASP")==0) return 'D';
-        if (AA.compare("GLU")==0) return 'E';
-        if (AA.compare("PHE")==0) return 'F';
-        if (AA.compare("GLY")==0) return 'G';
-        if (AA.compare("HIS")==0) return 'H';
-        if (AA.compare("ILE")==0) return 'I';
-        if (AA.compare("LYS")==0) return 'K';
-        if (AA.compare("LEU")==0) return 'L';
-        if (AA.compare("MET")==0 || AA.compare("MSE")==0) return 'M';
-        if (AA.compare("ASN")==0) return 'N';
-        if (AA.compare("PYL")==0) return 'O';
-        if (AA.compare("PRO")==0) return 'P';
-        if (AA.compare("GLN")==0) return 'Q';
-        if (AA.compare("ARG")==0) return 'R';
-        if (AA.compare("SER")==0) return 'S';
-        if (AA.compare("THR")==0) return 'T';
-        if (AA.compare("SEC")==0) return 'U';
-        if (AA.compare("VAL")==0) return 'V';
-        if (AA.compare("TRP")==0) return 'W';
-        if (AA.compare("TYR")==0) return 'Y';
-        if (AA.compare("GLX")==0) return 'Z';
-
-        if (AA.compare(0,2," D")==0) return tolower(AA[2]);
-        if (AA.compare(0,2,"  ")==0) return tolower(AA[2]);
-        return 'X';
-    }
-
-    static void get_xyz(string line, double *x, double *y, double *z, char *resname, int *no)
-    {
-        char cstr[50];
-
-        strcpy(cstr, (line.substr(30, 8)).c_str());
-        sscanf(cstr, "%lf", x);
-
-        strcpy(cstr, (line.substr(38, 8)).c_str());
-        sscanf(cstr, "%lf", y);
-
-        strcpy(cstr, (line.substr(46, 8)).c_str());
-        sscanf(cstr, "%lf", z);
-
-        strcpy(cstr, (line.substr(17, 3)).c_str());
-        *resname = AAmap(cstr);
-
-        strcpy(cstr, (line.substr(22, 4)).c_str());
-        sscanf(cstr, "%d", no);
-    }
-
-    static int read_PDB(const vector<string> &PDB_lines, double **a, char *seq, int *resno)
-    {
-        size_t i;
-        for (i=0;i<PDB_lines.size();i++){
-            get_xyz(PDB_lines[i], &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
-        }
-        seq[i]='\0';
-        return i;
-    }
-
     static float dist(const float xx, const float xy, const float xz,
                const float yx, const float yy, const float yz)
     {
@@ -132,14 +70,6 @@ public:
         yx=t[0]+dotProd(&u[0][0], xyz);
         yy=t[1]+dotProd(&u[1][0], xyz);
         yz=t[2]+dotProd(&u[2][0], xyz);
-    }
-
-    static void do_rotation(const float *x, float *x1, int len, float t[3], float u[3][3])
-    {
-        for(int i=0; i<len; i++)
-        {
-            transform(t, u, &x[i*3], &x1[i*3]);
-        }
     }
 
     static void do_rotation( const Coordinates & x,  Coordinates & y,
