@@ -501,10 +501,10 @@ float rmsd_uncentered_avx (int nat,float *c1x,float *c1y, float *c1z,float *c2x,
 
             for(int i=0 ; i < upper8; i += 8){
                 //load the 4 sets of coords from molecule 2 and then load x,y,z of molecule 1
-                __m256 mmc2x = _mm256_load_ps(&(c2x[i]));
-                __m256 mmc2y = _mm256_load_ps(&(c2y[i]));
-                __m256 mmc2z = _mm256_load_ps(&(c2z[i]));
-                __m256 t1    = _mm256_load_ps(&(c1x[i])); //do everything necessary with c1x and then use as temp register
+                __m256 mmc2x = _mm256_loadu_ps(&(c2x[i]));
+                __m256 mmc2y = _mm256_loadu_ps(&(c2y[i]));
+                __m256 mmc2z = _mm256_loadu_ps(&(c2z[i]));
+                __m256 t1    = _mm256_loadu_ps(&(c1x[i])); //do everything necessary with c1x and then use as temp register
                 __m256 t2    = _mm256_mul_ps(t1,t1);
 
                 //block with extra temp
@@ -514,11 +514,11 @@ float rmsd_uncentered_avx (int nat,float *c1x,float *c1y, float *c1z,float *c2x,
                 sxxssq      = _mm256_add_ps(sxxssq,_mm256_permute2f128_ps(mmc1y,t2,0x20));
                 sxxssq      = _mm256_add_ps(sxxssq,_mm256_permute2f128_ps(mmc1y,t2,0x31));
                 __m256 mmc1z= _mm256_mul_ps(t1,mmc2y);
-                mmc1y       = _mm256_load_ps(&(c1y[i]));
+                mmc1y       = _mm256_loadu_ps(&(c1y[i]));
                 t2          = _mm256_mul_ps(mmc1y,mmc2z);
                 sxysyz      = _mm256_add_ps(sxysyz,_mm256_permute2f128_ps(mmc1z,t2,0x20));
                 sxysyz      = _mm256_add_ps(sxysyz,_mm256_permute2f128_ps(mmc1z,t2,0x31));
-                mmc1z = _mm256_load_ps(&(c1z[i]));
+                mmc1z = _mm256_loadu_ps(&(c1z[i]));
                 t1          = _mm256_mul_ps(t1,mmc2z); //t1 can be used freely now
                 t2          = _mm256_mul_ps(mmc1z,mmc2x);
                 sxzszx      = _mm256_add_ps(sxzszx,_mm256_permute2f128_ps(t1,t2,0x20));
