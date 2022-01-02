@@ -158,6 +158,9 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     align.score1 = std::max(1, static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1));
                     align.evalue = evaluer.computeEvalue(align.score1, querySeqLen);
                     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
+                    if(backtrace.size() > 0){
+                        alnLength = backtrace.size();
+                    }
                     float seqId = Util::computeSeqId(par.seqIdMode, align.identicalAACnt, querySeqLen, targetLen, alnLength);
 
                     Matcher::result_t res(dbKey, align.score1, align.qCov, align.tCov, seqId, align.evalue, alnLength, align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, targetLen, backtrace);

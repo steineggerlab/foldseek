@@ -250,7 +250,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                             endT++;
                         }
                     }
-                    unsigned int alnLength = Matcher::computeAlnLength(shiftQ, queryLen-endQ-1, shiftT, targetLen-endT-1);
+                    unsigned int alnLength = backtrace.size();
                     float seqId = static_cast<float>(aaIdCnt)/static_cast<float>(alnLength);
                     Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM_0, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
                     backtrace.clear();
