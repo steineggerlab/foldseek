@@ -280,7 +280,6 @@ private:
                                                           uint16_t terminate,
                                                           int32_t maskLen);
 
-    template <const unsigned int type>
     StructureSmithWaterman::cigar *banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                              const int8_t *query_aa_sequence, const int8_t *query_3di_sequence,
                                              const int8_t * compositionBias, int32_t db_length, int32_t query_length,
@@ -288,7 +287,6 @@ private:
                                              const uint32_t gap_extend, int32_t band_width,
                                              const int8_t *mat_aa, const int8_t *mat_3di, int32_t n);
 
-    template <const unsigned int type>
     void computerBacktrace(s_profile * query, const unsigned char * db_sequence,
                            s_align & alignment, std::string & backtrace, uint32_t & aaIds, size_t & mStatesCnt);
 

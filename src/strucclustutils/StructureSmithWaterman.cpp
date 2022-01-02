@@ -256,14 +256,14 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
     query_length = r.qEndPos1 - r.qStartPos1 + 1;
     band_width = abs(db_length - query_length) + 1;
 
-    path = banded_sw<SUBSTITUTIONMATRIX>(db_aa_sequence + r.dbStartPos1,
-                                         db_3di_sequence + r.dbStartPos1,
-                                         profile->query_aa_sequence + r.qStartPos1,
-                                         profile->query_3di_sequence + r.qStartPos1,
-                                         profile->composition_bias + r.qStartPos1,
-                                         db_length, query_length, r.score1,
-                                         gap_open, gap_extend, band_width,
-                                         profile->mat_aa, profile->mat_3di, profile->alphabetSize);
+    path = banded_sw(db_aa_sequence + r.dbStartPos1,
+                     db_3di_sequence + r.dbStartPos1,
+                     profile->query_aa_sequence + r.qStartPos1,
+                     profile->query_3di_sequence + r.qStartPos1,
+                     profile->composition_bias + r.qStartPos1,
+                     db_length, query_length, r.score1,
+                     gap_open, gap_extend, band_width,
+                     profile->mat_aa, profile->mat_3di, profile->alphabetSize);
 
     if (path != NULL) {
         r.cigar = path->seq;
@@ -272,7 +272,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
 
     uint32_t aaIds = 0;
     size_t mStateCnt = 0;
-    computerBacktrace<SUBSTITUTIONMATRIX>(profile, db_aa_sequence, r, backtrace, aaIds,  mStateCnt);
+    computerBacktrace(profile, db_aa_sequence, r, backtrace, aaIds,  mStateCnt);
     r.identicalAACnt = aaIds;
     if(path != NULL) {
         delete[] path->seq;
@@ -281,7 +281,6 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
     return r;
 }
 
-template <const unsigned int type>
 void StructureSmithWaterman::computerBacktrace(s_profile * query, const unsigned char * db_aa_sequence,
                                       s_align & alignment, std::string & backtrace,
                                       uint32_t & aaIds, size_t & mStatesCnt){
@@ -797,7 +796,6 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     profile->alphabetSize = alphabetSize;
 }
 
-template <const unsigned int type>
 StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                                                   const int8_t *query_aa_sequence, const int8_t *query_3di_sequence, const int8_t * compositionBias,
                                                                   int32_t db_length, int32_t query_length, int32_t score, const uint32_t gap_open,
@@ -879,9 +877,7 @@ StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned
                 e1 = e_b[u] > 0 ? e_b[u] : 0;
                 f1 = f > 0 ? f : 0;
                 temp1 = e1 > f1 ? e1 : f1;
-                if(type == SUBSTITUTIONMATRIX){
-                    temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * n + db_aa_sequence[j]] + mat_3di[query_3di_sequence[i] * n + db_3di_sequence[j]] + compositionBias[i];
-                }
+                temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * n + db_aa_sequence[j]] + mat_3di[query_3di_sequence[i] * n + db_3di_sequence[j]] + compositionBias[i];
                 h_c[u] = temp1 > temp2 ? temp1 : temp2;
 
                 if (h_c[u] > max) max = h_c[u];
