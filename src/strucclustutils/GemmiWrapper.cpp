@@ -30,6 +30,7 @@ gemmi::Structure openStructure(const std::string & filename){
 bool GemmiWrapper::load(std::string & filename){
     try {
         gemmi::Structure st = openStructure(filename);
+        title.clear();
         chain.clear();
         names.clear();
         chainNames.clear();
@@ -38,6 +39,7 @@ bool GemmiWrapper::load(std::string & filename){
         cb.clear();
         n.clear();
         ami.clear();
+        title.append(  st.get_info("_struct.title"));
         size_t currPos = 0;
         for (gemmi::Model& model : st.models){
             for (gemmi::Chain& ch : model.chains) {

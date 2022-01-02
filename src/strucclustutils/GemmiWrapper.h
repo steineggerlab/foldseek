@@ -25,7 +25,7 @@ public:
     std::vector<std::string> names;
     std::vector<std::string> chainNames;
     std::vector<std::pair<size_t ,size_t>> chain;
-
+    std::string title;
 private:
     std::unordered_map<std::string,char> threeAA2oneAA;
     int modelIt;
