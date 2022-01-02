@@ -6,6 +6,7 @@
 #include "QueryMatcher.h"
 #include "LocalParameters.h"
 #include "Matcher.h"
+#include "StructureSmithWaterman.h"
 
 #include <tmalign/TMalign.h>
 
@@ -74,7 +75,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
     const bool a_opt = false; // flag for -a, normalized by average length
     const bool u_opt = false; // flag for -u, normalized by user specified length
     const bool d_opt = false; // flag for -d, user specified d0
-    const bool fast_opt = false; // flags for -fast, fTM-align algorithm
+    const bool fast_opt = par.tmAlignFast; // flags for -fast, fTM-align algorithm
     double Lnorm_ass = 0.0;
     double  d0_scale = 0.0;
 
@@ -252,7 +253,10 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     }
                     unsigned int alnLength = backtrace.size();
                     float seqId = static_cast<float>(aaIdCnt)/static_cast<float>(alnLength);
-                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM_0, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
+
+                    float qCov = StructureSmithWaterman::computeCov(shiftQ, queryLen-endQ-1, queryLen);
+                    float tCov = StructureSmithWaterman::computeCov(shiftT, targetLen-endT-1, targetLen);
+                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , qCov, tCov, seqId, TM_0, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
                     backtrace.clear();
 
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);

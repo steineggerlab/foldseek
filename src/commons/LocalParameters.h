@@ -46,10 +46,12 @@ public:
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
     PARAMETER(PARAM_CHAIN_NAME_MODE)
+    PARAMETER(PARAM_TMALIGN_FAST)
 
     float tmScoreThr;
     int alignmentType;
     int chainNameMode;
+    int tmAlignFast;
 private:
 
     LocalParameters(LocalParameters const&);
