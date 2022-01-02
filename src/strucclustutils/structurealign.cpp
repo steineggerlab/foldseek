@@ -21,7 +21,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
-    Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
+    Debug(Debug::INFO) << "Query database: " << par.db1 << "\n";
+    Debug(Debug::INFO) << "Target database: " << par.db2 << "\n";
     DBReader<unsigned int> qdbrAA((par.db1).c_str(), (par.db1Index).c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     qdbrAA.open(DBReader<unsigned int>::NOSORT);
 
