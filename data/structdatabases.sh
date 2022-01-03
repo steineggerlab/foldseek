@@ -64,7 +64,7 @@ TMP_PATH="$3"
 
 INPUT_TYPE=""
 case "${SELECTION}" in
-    "AlphafoldDb")
+    "Alphafold/Proteome")
         if notExists "${TMP_PATH}/alphafolddb.tar.gz"; then
             date "+%s" > "${TMP_PATH}/version"
             downloadFile "http://wwwuser.gwdg.de/~compbiol/foldseek/alphafolddb.tar.gz" "${TMP_PATH}/alphafolddb.tar.gz"
@@ -72,6 +72,15 @@ case "${SELECTION}" in
         tar xvfz "${TMP_PATH}/alphafolddb.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/alphafolddb"
         INPUT_TYPE="FOLDSEEK_DB"
+    ;;
+    "Alphafold/Swiss-Prot")
+          if notExists "${TMP_PATH}/alphafold_swissprot.tar.gz"; then
+              date "+%s" > "${TMP_PATH}/version"
+              downloadFile "http://wwwuser.gwdg.de/~compbiol/foldseek/alphafold_swissprot.tar.gz" "${TMP_PATH}/alphafold_swissprot.tar.gz"
+          fi
+          tar xvfz "${TMP_PATH}/alphafold_swissprot.tar.gz" -C "${TMP_PATH}"
+          push_back "${TMP_PATH}/alphafold_swissprot"
+          INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "PDB")
         if notExists "${TMP_PATH}/pdb.tar.gz"; then

@@ -2,7 +2,6 @@
 // Created by Martin Steinegger on 6/7/21.
 //
 #include "GemmiWrapper.h"
-
 #include "mmread.hpp"
 #include "gz.hpp"
 #include "input.hpp"
@@ -31,24 +30,27 @@ gemmi::Structure openStructure(const std::string & filename){
 bool GemmiWrapper::load(std::string & filename){
     try {
         gemmi::Structure st = openStructure(filename);
+        title.clear();
         chain.clear();
         names.clear();
+        chainNames.clear();
         ca.clear();
         c.clear();
         cb.clear();
         n.clear();
         ami.clear();
+        title.append(  st.get_info("_struct.title"));
         size_t currPos = 0;
         for (gemmi::Model& model : st.models){
             for (gemmi::Chain& ch : model.chains) {
+
                 size_t chainStartPos = currPos;
                 size_t pos = filename.find_last_of("\\/");
                 std::string name = (std::string::npos == pos)
                                    ? filename
                                    : filename.substr(pos+1, filename.length());
-                name.push_back('_');
-                name.append(ch.name);
-                name.push_back('\n');
+                //name.push_back('_');
+                chainNames.push_back(ch.name);
                 names.push_back(name);
                 for (gemmi::Residue &res : ch.residues) {
                     if (res.het_flag != 'A')

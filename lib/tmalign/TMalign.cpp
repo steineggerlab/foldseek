@@ -6,6 +6,8 @@
    Yang Zhang lab
    And it is updated by Jianjie Wu at
    Yang Zhang lab
+   Adjusted by Martin Steinegger
+   Steinegger lab
    Department of Computational Medicine and Bioinformatics
    University of Michigan
    100 Washtenaw Avenue, Ann Arbor, MI 48109-2218
@@ -14,7 +16,6 @@
 =============================================================
 */
 
-#include "NW.h"
 #include "Kabsch.h"
 #include "affineneedlemanwunsch.h"
 #include "basic_fun.h"
@@ -68,80 +69,6 @@ void parameter_set4scale(const int len, const float d_s, float &Lnorm,
     if (d0_search>8)   d0_search=8;
     if (d0_search<4.5) d0_search=4.5;
 }
-
-//     1, collect those residues with dis<d;
-//     2, calculate TMscore
-//int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[],
-//                float *score1, int score_sum_method, const float Lnorm,
-//                const float score_d8, const float d0
-//                , float * mem
-//
-//                )
-//{
-//    float score_sum=0, di;
-//    float d_tmp=d*d;
-//    float d02=d0*d0;
-//    float score_d8_cut = score_d8*score_d8;
-//
-//    int i, n_cut, inc=0;
-//    float *BasicFunction::distArray = mem;
-//    while(1)
-//    {
-//        n_cut=0;
-//        score_sum=0;
-//        simd_float sum = simdf32_set(0);
-//        simd_float vscore_d8_cut = simdf32_set(score_d8_cut);
-//        simd_float vd02 = simdf32_set(d02);
-//        simd_float one = simdf32_set(1.0f);
-//        for(i=0; i < n_ali; i+=VECSIZE_FLOAT){
-//            //    float d1=xx-yx;
-//            //    float d2=xy-yy;
-//            //    float d3=xz-yz;
-//            //    return (d1*d1 + d2*d2 + d3*d3);
-//            simd_float xa_x = simdf32_load(&xa.x[i]);
-//            simd_float ya_x = simdf32_load(&ya.x[i]);
-//            simd_float xa_y = simdf32_load(&xa.y[i]);
-//            simd_float ya_y = simdf32_load(&ya.y[i]);
-//            simd_float xa_z = simdf32_load(&xa.z[i]);
-//            simd_float ya_z = simdf32_load(&ya.z[i]);
-//            ya_x = simdf32_sub(xa_x, ya_x);
-//            ya_y = simdf32_sub(xa_y, ya_y);
-//            ya_z = simdf32_sub(xa_z, ya_z);
-//            ya_x = simdf32_mul(ya_x, ya_x);
-//            ya_y = simdf32_mul(ya_y, ya_y);
-//            ya_z = simdf32_mul(ya_z, ya_z);
-//            simd_float res = simdf32_add(ya_x, ya_y);
-//            simd_float di = simdf32_add(res, ya_z);
-//            simdf32_store(&BasicFunction::distArray[i], di);
-//            simd_float di_lt_score_d8 = simdf32_lt(di, vscore_d8_cut);
-//            simd_float oneDividedDist = simdf32_div(one, simdf32_add(one, simdf32_div(di,vd02)));
-//            sum = simdf32_add(sum, (simd_float)simdi_and((simd_int) di_lt_score_d8, (simd_int) oneDividedDist ));
-//        }
-//        for(i=0; i < VECSIZE_FLOAT; i++){
-//            score_sum+=((float*)&sum)[i];
-//        }
-//
-//        for(i=0; i<n_ali; i++)
-//        {
-//            di = BasicFunction::distArray[i];
-//            i_ali[n_cut]=i;
-//            n_cut+=(di<d_tmp);
-//            //score_sum += (di<=score_d8_cut) ? 1/(1+di/d02) : 0;
-//            //else score_sum += 1/(1+di/d02);
-//        }
-//        //there are not enough feasible pairs, reliefe the threshold
-//        if(n_cut<3 && n_ali>3)
-//        {
-//            inc++;
-//            double dinc=(d+inc*0.5);
-//            d_tmp = dinc * dinc;
-//        }
-//        else break;
-//    }
-//
-//    *score1=score_sum/Lnorm;
-//    return n_cut;
-//}
 
 
 //     1, collect those residues with dis<d;
@@ -305,337 +232,7 @@ int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
     return n_cut;
 }
 
-/*bool Kabsch(Coordinates & x, Coordinates & y, int n, int mode, double *rms,
-            double t[3], double u[3][3])
-{
-    int i, j, m, m1, l, k;
-    double e0, rms1, d, h, g;
-    double cth, sth, sqrth, p, det, sigma;
-    double xc[3], yc[3];
-    double a[3][3], b[3][3], r[3][3], e[3], rr[6], ss[6];
-    double sqrt3 = 1.73205080756888, tol = 0.01;
-    int ip[] = { 0, 1, 3, 1, 2, 4, 3, 4, 5 };
-    int ip2312[] = { 1, 2, 0, 1 };
 
-    int a_failed = 0, b_failed = 0;
-    double epsilon = 0.00000001;
-
-    //initialization
-    *rms = 0;
-    rms1 = 0;
-    e0 = 0;
-    double c1[3], c2[3];
-    double s1[3], s2[3];
-    double sx[3], sy[3], sz[3];
-    for (i = 0; i < 3; i++)
-    {
-        s1[i] = 0.0;
-        s2[i] = 0.0;
-
-        sx[i] = 0.0;
-        sy[i] = 0.0;
-        sz[i] = 0.0;
-    }
-
-    for (i = 0; i<3; i++)
-    {
-        xc[i] = 0.0;
-        yc[i] = 0.0;
-        t[i] = 0.0;
-        for (j = 0; j<3; j++)
-        {
-            u[i][j] = 0.0;
-            r[i][j] = 0.0;
-            a[i][j] = 0.0;
-            if (i == j)
-            {
-                u[i][j] = 1.0;
-                a[i][j] = 1.0;
-            }
-        }
-    }
-
-    if (n<1) return false;
-
-    //compute centers for vector sets x, y
-    for (i = 0; i<n; i++)
-    {
-        for (j = 0; j < 3; j++)
-        {
-            c1[0] = x.x[i];
-            c1[1] = x.y[i];
-            c1[2] = x.z[i];
-
-            c2[0] = y.x[i];
-            c2[1] = y.y[i];
-            c2[2] = y.z[i];
-
-            s1[j] += c1[0]+c1[1]+c1[2];
-            s2[j] += c2[0]+c2[1]+c2[2];
-        }
-
-        for (j = 0; j < 3; j++)
-        {
-            sx[j] += c1[0] * c2[j];
-            sy[j] += c1[1] * c2[j];
-            sz[j] += c1[2] * c2[j];
-        }
-    }
-    for (i = 0; i < 3; i++)
-    {
-        xc[i] = s1[i] / n;
-        yc[i] = s2[i] / n;
-    }
-    if (mode == 2 || mode == 0)
-        for (int mm = 0; mm < n; mm++){
-            e0 += (x.x[mm] - xc[0]) * (x.x[mm] - xc[0]) +
-                  (y.x[mm] - yc[0]) * (y.x[mm] - yc[0]);
-            e0 += (x.y[mm] - xc[1]) * (x.y[mm] - xc[1]) +
-                  (y.y[mm] - yc[1]) * (y.y[mm] - yc[1]);
-            e0 += (x.z[mm] - xc[2]) * (x.z[mm] - xc[2]) +
-                  (y.z[mm] - yc[2]) * (y.z[mm] - yc[2]);
-        }
-    for (j = 0; j < 3; j++)
-    {
-        r[j][0] = sx[j] - s1[0] * s2[j] / n;
-        r[j][1] = sy[j] - s1[1] * s2[j] / n;
-        r[j][2] = sz[j] - s1[2] * s2[j] / n;
-    }
-
-    //compute determinant of matrix r
-    det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1])\
-        - r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0])\
-        + r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
-    sigma = det;
-
-    //compute tras(r)*r
-    m = 0;
-    for (j = 0; j<3; j++)
-    {
-        for (i = 0; i <= j; i++)
-        {
-            rr[m] = r[0][i] * r[0][j] + r[1][i] * r[1][j] + r[2][i] * r[2][j];
-            m++;
-        }
-    }
-
-    double spur = (rr[0] + rr[2] + rr[5]) / 3.0;
-    double cof = (((((rr[2] * rr[5] - rr[4] * rr[4]) + rr[0] * rr[5])\
-        - rr[3] * rr[3]) + rr[0] * rr[2]) - rr[1] * rr[1]) / 3.0;
-    det = det*det;
-
-    for (i = 0; i<3; i++) e[i] = spur;
-
-    if (spur>0)
-    {
-        d = spur*spur;
-        h = d - cof;
-        g = (spur*cof - det) / 2.0 - spur*h;
-
-        if (h>0)
-        {
-            sqrth = sqrt(h);
-            d = h*h*h - g*g;
-            if (d<0.0) d = 0.0;
-            d = atan2(sqrt(d), -g) / 3.0;
-            cth = sqrth * cos(d);
-            sth = sqrth*sqrt3*sin(d);
-            e[0] = (spur + cth) + cth;
-            e[1] = (spur - cth) + sth;
-            e[2] = (spur - cth) - sth;
-
-            if (mode != 0)
-            {//compute a
-                for (l = 0; l<3; l = l + 2)
-                {
-                    d = e[l];
-                    ss[0] = (d - rr[2]) * (d - rr[5]) - rr[4] * rr[4];
-                    ss[1] = (d - rr[5]) * rr[1] + rr[3] * rr[4];
-                    ss[2] = (d - rr[0]) * (d - rr[5]) - rr[3] * rr[3];
-                    ss[3] = (d - rr[2]) * rr[3] + rr[1] * rr[4];
-                    ss[4] = (d - rr[0]) * rr[4] + rr[1] * rr[3];
-                    ss[5] = (d - rr[0]) * (d - rr[2]) - rr[1] * rr[1];
-
-                    if (fabs(ss[0]) <= epsilon) ss[0] = 0.0;
-                    if (fabs(ss[1]) <= epsilon) ss[1] = 0.0;
-                    if (fabs(ss[2]) <= epsilon) ss[2] = 0.0;
-                    if (fabs(ss[3]) <= epsilon) ss[3] = 0.0;
-                    if (fabs(ss[4]) <= epsilon) ss[4] = 0.0;
-                    if (fabs(ss[5]) <= epsilon) ss[5] = 0.0;
-
-                    if (fabs(ss[0]) >= fabs(ss[2]))
-                    {
-                        j = 0;
-                        if (fabs(ss[0]) < fabs(ss[5])) j = 2;
-                    }
-                    else if (fabs(ss[2]) >= fabs(ss[5])) j = 1;
-                    else j = 2;
-
-                    d = 0.0;
-                    j = 3 * j;
-                    for (i = 0; i<3; i++)
-                    {
-                        k = ip[i + j];
-                        a[i][l] = ss[k];
-                        d = d + ss[k] * ss[k];
-                    }
-
-
-                    //if( d > 0.0 ) d = 1.0 / sqrt(d);
-                    if (d > epsilon) d = 1.0 / sqrt(d);
-                    else d = 0.0;
-                    for (i = 0; i<3; i++) a[i][l] = a[i][l] * d;
-                }//for l
-
-                d = a[0][0] * a[0][2] + a[1][0] * a[1][2] + a[2][0] * a[2][2];
-                if ((e[0] - e[1]) >(e[1] - e[2]))
-                {
-                    m1 = 2;
-                    m = 0;
-                }
-                else
-                {
-                    m1 = 0;
-                    m = 2;
-                }
-                p = 0;
-                for (i = 0; i<3; i++)
-                {
-                    a[i][m1] = a[i][m1] - d*a[i][m];
-                    p = p + a[i][m1] * a[i][m1];
-                }
-                if (p <= tol)
-                {
-                    p = 1.0;
-                    for (i = 0; i<3; i++)
-                    {
-                        if (p < fabs(a[i][m])) continue;
-                        p = fabs(a[i][m]);
-                        j = i;
-                    }
-                    k = ip2312[j];
-                    l = ip2312[j + 1];
-                    p = sqrt(a[k][m] * a[k][m] + a[l][m] * a[l][m]);
-                    if (p > tol)
-                    {
-                        a[j][m1] = 0.0;
-                        a[k][m1] = -a[l][m] / p;
-                        a[l][m1] = a[k][m] / p;
-                    }
-                    else a_failed = 1;
-                }//if p<=tol
-                else
-                {
-                    p = 1.0 / sqrt(p);
-                    for (i = 0; i<3; i++) a[i][m1] = a[i][m1] * p;
-                }//else p<=tol
-                if (a_failed != 1)
-                {
-                    a[0][1] = a[1][2] * a[2][0] - a[1][0] * a[2][2];
-                    a[1][1] = a[2][2] * a[0][0] - a[2][0] * a[0][2];
-                    a[2][1] = a[0][2] * a[1][0] - a[0][0] * a[1][2];
-                }
-            }//if(mode!=0)
-        }//h>0
-
-        //compute b anyway
-        if (mode != 0 && a_failed != 1)//a is computed correctly
-        {
-            //compute b
-            for (l = 0; l<2; l++)
-            {
-                d = 0.0;
-                for (i = 0; i<3; i++)
-                {
-                    b[i][l] = r[i][0] * a[0][l] +
-                              r[i][1] * a[1][l] + r[i][2] * a[2][l];
-                    d = d + b[i][l] * b[i][l];
-                }
-                //if( d > 0 ) d = 1.0 / sqrt(d);
-                if (d > epsilon) d = 1.0 / sqrt(d);
-                else d = 0.0;
-                for (i = 0; i<3; i++) b[i][l] = b[i][l] * d;
-            }
-            d = b[0][0] * b[0][1] + b[1][0] * b[1][1] + b[2][0] * b[2][1];
-            p = 0.0;
-
-            for (i = 0; i<3; i++)
-            {
-                b[i][1] = b[i][1] - d*b[i][0];
-                p += b[i][1] * b[i][1];
-            }
-
-            if (p <= tol)
-            {
-                p = 1.0;
-                for (i = 0; i<3; i++)
-                {
-                    if (p<fabs(b[i][0])) continue;
-                    p = fabs(b[i][0]);
-                    j = i;
-                }
-                k = ip2312[j];
-                l = ip2312[j + 1];
-                p = sqrt(b[k][0] * b[k][0] + b[l][0] * b[l][0]);
-                if (p > tol)
-                {
-                    b[j][1] = 0.0;
-                    b[k][1] = -b[l][0] / p;
-                    b[l][1] = b[k][0] / p;
-                }
-                else b_failed = 1;
-            }//if( p <= tol )
-            else
-            {
-                p = 1.0 / sqrt(p);
-                for (i = 0; i<3; i++) b[i][1] = b[i][1] * p;
-            }
-            if (b_failed != 1)
-            {
-                b[0][2] = b[1][0] * b[2][1] - b[1][1] * b[2][0];
-                b[1][2] = b[2][0] * b[0][1] - b[2][1] * b[0][0];
-                b[2][2] = b[0][0] * b[1][1] - b[0][1] * b[1][0];
-                //compute u
-                for (i = 0; i<3; i++)
-                    for (j = 0; j<3; j++)
-                        u[i][j] = b[i][0] * a[j][0] +
-                                  b[i][1] * a[j][1] + b[i][2] * a[j][2];
-            }
-
-            //compute t
-            for (i = 0; i<3; i++)
-                t[i] = ((yc[i] - u[i][0] * xc[0]) - u[i][1] * xc[1]) -
-                       u[i][2] * xc[2];
-        }//if(mode!=0 && a_failed!=1)
-    }//spur>0
-    else //just compute t and errors
-    {
-        //compute t
-        for (i = 0; i<3; i++)
-            t[i] = ((yc[i] - u[i][0] * xc[0]) - u[i][1] * xc[1]) -
-                   u[i][2] * xc[2];
-    }//else spur>0
-
-    //compute rms
-    for (i = 0; i<3; i++)
-    {
-        if (e[i] < 0) e[i] = 0;
-        e[i] = sqrt(e[i]);
-    }
-    d = e[2];
-    if (sigma < 0.0) d = -d;
-    d = (d + e[1]) + e[0];
-
-    if (mode == 2 || mode == 0)
-    {
-        rms1 = (e0 - d) - d;
-        if (rms1 < 0.0) rms1 = 0.0;
-    }
-
-    *rms = rms1;
-    return true;
-}
-*/
 bool KabschFast(Coordinates & x,
                  Coordinates & y,
                  int n,
@@ -985,79 +582,7 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
     return score_max;
 }
 
-
-double get_score4pareun(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
-                        const Coordinates &x, const Coordinates &y, int * queryToTargetMapping,
-                        int queryLen,
-                        float t[3], float u[3][3], float * mem ) {
-    float rms, tmscore;
-    int i, j, k;
-    float d0;
-
-    float D0_MIN = 0.5;
-    int Lnorm = queryLen;
-
-    if (Lnorm > 21)
-        d0 = (1.24*pow((Lnorm*1.0 - 15), 1.0 / 3) - 1.8);
-    else
-        d0 = D0_MIN;
-    if (d0 < D0_MIN)
-        d0 = D0_MIN;
-
-    k=0;
-    for(j=0; j< queryLen; j++)
-    {
-        i=queryToTargetMapping[j];
-        //i = invmap[k][0];
-        //j = invmap[k][1];
-        if(i>=0)
-        {
-            r1.x[k]=x.x[i];
-            r1.y[k]=x.y[i];
-            r1.z[k]=x.z[i];
-
-            r2.x[k]=y.x[j];
-            r2.y[k]=y.y[j];
-            r2.z[k]=y.z[j];
-
-            xtm.x[k]=x.x[i];
-            xtm.y[k]=x.y[i];
-            xtm.z[k]=x.z[i];
-
-            ytm.x[k]=y.x[j];
-            ytm.y[k]=y.y[j];
-            ytm.z[k]=y.z[j];
-
-            k++;
-        }
-        else if(i!=-1) {
-            BasicFunction::PrintErrorAndQuit("Wrong map!\n");
-        }
-    }
-    KabschFast(r1, r2, k, &rms, t, u, mem);
-
-    //evaluate score
-    double di;
-    double d02=d0*d0;
-
-    int n_ali=k;
-    float xrot[3];
-    tmscore=0;
-    for(k=0; k<n_ali; k++)
-    {
-        BasicFunction::transform(t, u, xtm.x[k], xtm.y[k], xtm.z[k], xrot[0], xrot[1], xrot[2]);
-        di=BasicFunction::dist(xrot[0], xrot[1], xrot[2],
-                ytm.x[k], ytm.y[k], ytm.z[k]);
-        tmscore += 1/(1+di/d02);
-    }
-//    if(tmscore/Lnorm  > 0.5){
-//    cout << "di: " << di << '\n' << "tmscore[k]: " << tmscore/Lnorm << endl;
-//    }
-    return tmscore/Lnorm; // no need to normalize this score because it will not be used for latter scoring
-}
-
-
-//Comprehensive TMscore search engine
+// Comprehensive TMscore search engine
 // input:   two vector sets: x, y
 //          an alignment invmap0[] between x and y
 //          simplify_step: 1 or 40 or other integers
@@ -1336,50 +861,6 @@ double get_initial(Coordinates &r1, Coordinates &r2,
     return tmscore_max;
 }
 
-void smooth(int *sec, int len)
-{
-    int i, j;
-    //smooth single  --x-- => -----
-    for (i=2; i<len-2; i++)
-    {
-        if(sec[i]==2 || sec[i]==4)
-        {
-            j=sec[i];
-            if (sec[i-2]!=j && sec[i-1]!=j && sec[i+1]!=j && sec[i+2]!=j)
-                sec[i]=1;
-        }
-    }
-
-    //   smooth double
-    //   --xx-- => ------
-    for (i=0; i<len-5; i++)
-    {
-        //helix
-        if (sec[i]!=2   && sec[i+1]!=2 && sec[i+2]==2 && sec[i+3]==2 &&
-            sec[i+4]!=2 && sec[i+5]!= 2)
-        {
-            sec[i+2]=1;
-            sec[i+3]=1;
-        }
-
-        //beta
-        if (sec[i]!=4   && sec[i+1]!=4 && sec[i+2]==4 && sec[i+3]==4 &&
-            sec[i+4]!=4 && sec[i+5]!= 4)
-        {
-            sec[i+2]=1;
-            sec[i+3]=1;
-        }
-    }
-
-    //smooth connect
-    for (i=0; i<len-2; i++)
-    {
-        if (sec[i]==2 && sec[i+1]!=2 && sec[i+2]==2) sec[i+1]=2;
-        else if(sec[i]==4 && sec[i+1]!=4 && sec[i+2]==4) sec[i+1]=4;
-    }
-
-}
-
 int sec_str(float dis13, float dis14, float dis15,
             float dis24, float dis25, float dis35)
 {
@@ -1453,52 +934,9 @@ void get_initial_ss(AffineNeedlemanWunsch *affineNW,
             0, 0, 0, 0, 1
     };
 
-//    static const int Ori_CLESUM_WS[18*18]={
-//     //      A   C   D    E       F       G      H    I       K      L   M   N   P   Q   R   S   T  V  X
-//            73,  20,  13,  -17,  -25,  -20,  -6,  -45,  -31, -23, -19, -11,  -2,  10,  25,  35,  16,  0,
-//            20,  51,   7,   13,   15,    7,  13,  -96,  -74, -57, -50, -12, -13, -11, -12,  42,  12,  0,
-//            13,   7,  53,   21,    3,   20,  -4,  -77,  -56, -43, -33,   0, -12,  -5,   3,   4,  29,  0,
-//            -17,  13,  21,   52,   22,   22, -31, -124, -105, -88, -81, -22, -49, -44, -42, -10,  14,  0,
-//            -25,  15,   3,   22,   36,   26, -22, -127, -108, -93, -84, -21, -47, -43, -48,  -5,  -6,  0,
-//            -20,   7,  20,   22,   26,   50,  -5, -107,  -88, -73, -69, -16, -33, -32, -30,   0,   3,  0,
-//            -6,  13,  -4,  -31,  -22,   -5,  69,  -51,  -34, -21, -13,  29,  21,  -8,  -1,   5,   8,  0,
-//            -45, -96, -77, -124, -127, -107, -51,   23,   18,  13,   5, -62,  -4, -34, -55, -60, -87,  0,
-//            -31, -74, -56, -105, -108,  -88, -34,   18,   23,  16,  21, -41,   1, -11, -34, -49, -62,  0,
-//            -23, -57, -43,  -88,  -93,  -73, -21,   13,   16,  37,  13, -32,  16,  -2, -24, -34, -44,  0,
-//            -19, -50, -33,  -81,  -84,  -69, -13,    5,   21,  13,  49,  -1,  12,  28,   5, -36, -24,  0,
-//            -11, -12,   0,  -22,  -21,  -16,  29,  -62,  -41, -32,  -1,  74,   5,   8,  -4, -12,  26,  0,
-//            -2, -13, -12,  -49,  -47,  -33,  21,   -4,    1,  16,  12,   5,  61,   7,   5,   8,  -7,  0,
-//            10, -11,  -5,  -44,  -43,  -32,  -8,  -34,  -11,  -2,  28,   8,   7,  90,  15,  -3,  32,  0,
-//            25, -12,   3,  -42,  -48,  -30,  -1,  -55,  -34, -24,   5,  -4,   5,  15, 104,   4, -13,  0,
-//            35,  42,   4,  -10,   -5,    0,   5,  -60,  -49, -34, -36, -12,   8,  -3,   4,  66,   7,  0,
-//            16,  12,  29,   14,   -6,    3,   8,  -87,  -62, -44, -24,  26,  -7,  32, -13,   7,  90,  0,
-//            0,   0,   0,    0,    0,    0,   0,    0,    0,   0,   0,   0,   0,   0,   0,   0,   0,  0};//R
-// A   B   C    D    E    F   G    H    I   J   K   L   M   N   O   P   Q R
-
     static const int map[256] = {
             0, 1, 2, 3, 4
     };
-    //      A   C   D    E       F       G      H    I       K      L   M   N   P   Q   R   S   T  V  X
-//    static const int map[256] = {
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23,  0, 20,  1,  2,  3, 4,  5,  6,  7, 23, 8, 9, 10,  11, 23,
-//            12,  13,  14, 15, 16, 23, 17, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23,  0, 20,  1,  2,  3, 4,  5,  6,  7, 23, 8, 0, 10,  11, 23,
-//            12,  13,  14, 15, 16, 23, 17, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//            23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-//    };
-
-
 
     static const AffineNeedlemanWunsch::matrix_t matrix = {
             "ss",
@@ -1509,22 +947,9 @@ void get_initial_ss(AffineNeedlemanWunsch *affineNW,
             0
     };
 
-
-
-//    NWDP_TM(score, path, val, secx, secy, xlen, ylen, -1.0, y2x);
-//    for(size_t i = 0; i < ylen; i++){
-//        if(y2x[i]!=-1)
-//        std::cout << i << "\t" << y2x[i] << "\t" << (int) secy[i] << "\t" << (int)  secx[y2x[i]] << std::endl;
-//    }
     std::fill(y2x, y2x+ylen, -1);
     AffineNeedlemanWunsch::profile_t *profile = affineNW->profile_create(secy, ylen, &matrix);
-    affineNW->align(profile, ylen, (const unsigned char * ) secx, xlen,  100, 0, y2x);
-
-//    for(size_t i = 0; i < ylen; i++){
-//        if(y2x[i]!=-1)
-//            std::cout << i << "\t" << y2x[i] << "\t" <<  secy[i] << "\t" <<   secx[y2x[i]] << std::endl;
-//    }
-//    std::cout << std::endl;
+    affineNW->align(profile, ylen, (const unsigned char * ) secx, xlen,  1.0, 0.0, y2x);
 }
 
 

@@ -82,9 +82,6 @@ double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
                        const Coordinates &x, const Coordinates &y, int ylen, int invmap[],
                        float d0, float d0_search, float t[3], float u[3][3], float * mem);
 
-void smooth(int *sec, int len);
-
-
 int sec_str(float dis13, float dis14, float dis15,
             float dis24, float dis25, float dis35);
 
@@ -115,23 +112,6 @@ bool get_initial5(AffineNeedlemanWunsch *affineNW,
                    float d0, float d0_search, const bool fast_opt, const float D0_MIN, float * mem);
 
 
-void score_matrix_rmsd_sec( Coordinates &r1,  Coordinates &r2,
-                            float **score, const char *secx, const char *secy,
-                            const Coordinates &x, const Coordinates &y, int xlen, int ylen,
-                            int *y2x, const float D0_MIN, float d0, float * mem);
-
-
-//get initial alignment from secondary structure and previous alignments
-//input: x, y, xlen, ylen
-//output: y2x stores the best alignment: e.g.,
-//y2x[j]=i means:
-//the jth element in y is aligned to the ith element in x if i>=0
-//the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ssplus(Coordinates &r1, Coordinates &r2, float **score, bool **path,
-                        float **val, const char *secx, const char *secy,
-                        const Coordinates &x, const Coordinates &y,
-                        int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0, float * mem);
-
 void find_max_frag(const Coordinates &x, int len, int *start_max,
                    int *end_max, float dcu0, const bool fast_opt);
 
@@ -147,11 +127,6 @@ double get_initial_fgt(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coord
                        float dcu0, const bool fast_opt, float t[3], float u[3][3],
                        float * mem);
 
-
-double get_score4pareun(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
-                        const Coordinates &x, const Coordinates &y, int * queryToTargetMapping, int ylen,
-                        float t[3], float u[3][3], float * mem );
-
 //heuristic run of dynamic programing iteratively to find the best alignment
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
@@ -162,28 +137,6 @@ double DP_iter(AffineNeedlemanWunsch * affineNW, Coordinates &r1, Coordinates &r
                int xlen, int ylen, float t[3], float u[3][3],
                int invmap0[], int g1, int g2, int iteration_max, float local_d0_search,
                float Lnorm, float d0, float score_d8, float * mem);
-
-/* extract rotation matrix based on TMscore8 */
-void output_rotation_matrix(const char* fname_matrix,
-                            const float t[3], const float u[3][3]);
-
-//output the final results
-void output_results(
-        const char *xname, const char *yname,
-        const char *chainID1, const char *chainID2,
-        const int xlen, const int ylen, float t[3], float u[3][3],
-        const float TM1, const float TM2,
-        const float TM3, const float TM4, const float TM5,
-        const float rmsd, const float d0_out,
-        const char *seqM, const char *seqxA, const char *seqyA, const float Liden,
-        const int n_ali8, const int n_ali, const int L_ali,
-        const float TM_ali, const float rmsd_ali, const float TM_0,
-        const float d0_0, const float d0A, const float d0B,
-        const float Lnorm_ass, const float d0_scale,
-        const float d0a, const float d0u, const char* fname_matrix,
-        const int outfmt_opt, const int ter_opt, const char *fname_super,
-        const bool i_opt, const bool I_opt, const bool a_opt,
-        const bool u_opt, const bool d_opt);
 
 double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
                         Coordinates &xt, Coordinates &x, Coordinates &y, int ylen, int invmap[],

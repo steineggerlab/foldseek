@@ -10,14 +10,16 @@ const int LocalParameters::DBTYPE_TMSCORE = 102;
 LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA\n",typeid(int), (void *) &alignmentType, "^[0-2]{1}$")
-//        PARAM_SLOPE(PARAM_SLOPE_ID,"--slope", "slope","slope for NN distance weighting" ,typeid(int), (void *) &slope, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|([0-9]*(\\.[0-9]+)?)$")
+        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA\n",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
+        PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$"),
+        PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$")
 {
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
     // structurecreatedb
     structurecreatedb.push_back(&PARAM_THREADS);
+    structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
     structurecreatedb.push_back(&PARAM_V);
     // tmalign
@@ -29,10 +31,11 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_ADD_BACKTRACE);
     tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    tmalign.push_back(&PARAM_TMALIGN_FAST);
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
-    tmalign.push_back(&PARAM_GAP_OPEN);
-    tmalign.push_back(&PARAM_GAP_EXTEND);
+//    tmalign.push_back(&PARAM_GAP_OPEN);
+//    tmalign.push_back(&PARAM_GAP_EXTEND);
     // strucclust
     strucclust = combineList(clust, align);
     strucclust = combineList(strucclust, kmermatcher);
@@ -76,6 +79,8 @@ LocalParameters::LocalParameters() :
 
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.5;
+    chainNameMode = 0;
+    tmAlignFast = 0;
 }
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};

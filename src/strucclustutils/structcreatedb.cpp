@@ -79,7 +79,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         GemmiWrapper readStructure;
         std::vector<char> alphabet3di;
         std::vector<float> camol;
-
+        std::string header;
         std::string name;
 #pragma omp for schedule(static)
         for (size_t i = 0; i < filenames.size(); i++) {
@@ -121,9 +121,20 @@ int createdb(int argc, const char **argv, const Command& command) {
                 char newline = '\n';
                 aadbw.writeAdd(&newline, 1, thread_idx);
                 aadbw.writeEnd(dbKey, thread_idx);
-                hdbw.writeData(readStructure.names[ch].c_str(), readStructure.names[ch].size(), dbKey, thread_idx);
+                header.clear();
+                header.append(readStructure.names[ch]);
+                if(par.chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
+                   (par.chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
+                    header.push_back('_');
+                    header.append(readStructure.chainNames[ch]);
+                }
+                if(readStructure.title.size() > 0){
+                    header.push_back(' ');
+                    header.append(readStructure.title);
+                }
+                header.push_back('\n');
+                hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
                 name.clear();
-                // TODO change it back eventually (from cb to ca) also cb is actually the virtual center
                 for(size_t pos = 0; pos < chainLen; pos++){
                     float val = (std::isnan(readStructure.ca[chainStart+pos].x))
                                 ? 0.0 : readStructure.ca[chainStart+pos].x;

@@ -7,6 +7,7 @@
 #include "LocalParameters.h"
 #include "Matcher.h"
 #include "StructureUtil.h"
+#include "StructureSmithWaterman.h"
 
 #include <tmalign/TMalign.h>
 
@@ -33,8 +34,10 @@ int tmalign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
+    Debug(Debug::INFO) << "Query database: " << par.db1 << "\n";
+    Debug(Debug::INFO) << "Target database: " << par.db2 << "\n";
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
-    IndexReader qdbr(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    IndexReader qdbr(par.db1, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
     IndexReader qcadbr(
             par.db1,
             par.threads,
@@ -52,7 +55,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         tdbr = &qdbr;
         tcadbr = &qcadbr;
     } else {
-        tdbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+        tdbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
         tcadbr = new IndexReader(
                 par.db2,
                 par.threads,
@@ -73,7 +76,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
     const bool a_opt = false; // flag for -a, normalized by average length
     const bool u_opt = false; // flag for -u, normalized by user specified length
     const bool d_opt = false; // flag for -d, user specified d0
-    const bool fast_opt = false; // flags for -fast, fTM-align algorithm
+    const bool fast_opt = par.tmAlignFast; // flags for -fast, fTM-align algorithm
     double Lnorm_ass = 0.0;
     double  d0_scale = 0.0;
 
@@ -206,7 +209,8 @@ int tmalign(int argc, const char **argv, const Command& command) {
                                  I_opt, a_opt, u_opt, d_opt, fast_opt, mem);
                     //std::cout << queryId << "\t" << targetId << "\t" <<  TM_0 << "\t" << TM1 << std::endl;
 
-                    double seqId = (n_ali8 > 0) ? (Liden / (static_cast<double>(n_ali8))) : 0;
+                    //double seqId = (n_ali8 > 0) ? (Liden / (static_cast<double>(n_ali8))) : 0;
+                    //std::cout << Liden << "\t" << n_ali8 << "\t" << queryLen << std::endl;
                     //int rmsdScore = static_cast<int>(rmsd0*1000.0);
 
                     // compute freeshift-backtrace from pairwise global alignment
@@ -219,9 +223,11 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     }
                     // compute backtrace from first match to last match
                     bool hasMatch = false;
+                    int aaIdCnt = 0;
                     for (size_t i = 0; i <= lastM; ++i) {
                         if (seqxA[i] != '-' && seqyA[i] != '-') {
                             backtrace.append(1, 'M');
+                            aaIdCnt += (seqxA[i] == seqyA[i]);
                             hasMatch = true;
                         } else if (seqxA[i] == '-' && seqyA[i] != '-') {
                             if (hasMatch == false) {
@@ -246,7 +252,12 @@ int tmalign(int argc, const char **argv, const Command& command) {
                             endT++;
                         }
                     }
-                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , 1.0, 1.0, seqId, TM_0, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
+                    unsigned int alnLength = backtrace.size();
+                    float seqId = static_cast<float>(aaIdCnt)/static_cast<float>(alnLength);
+
+                    float qCov = StructureSmithWaterman::computeCov(shiftQ, queryLen-endQ-1, queryLen);
+                    float tCov = StructureSmithWaterman::computeCov(shiftT, targetLen-endT-1, targetLen);
+                    Matcher::result_t result(dbKey, static_cast<int>(TM_0*100) , qCov, tCov, seqId, TM_0, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
                     backtrace.clear();
 
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
