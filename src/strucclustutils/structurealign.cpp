@@ -1,17 +1,13 @@
-#include <vector>
-#include <string.h>
 #include "DBReader.h"
+#include "IndexReader.h"
 #include "DBWriter.h"
 #include "Debug.h"
 #include "Util.h"
-#include "QueryMatcher.h"
 #include "LocalParameters.h"
 #include "Matcher.h"
-#include "simd.h"
 #include "Alignment.h"
 #include "structureto3diseqdist.h"
 #include "StructureSmithWaterman.h"
-#include <cmath>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -21,17 +17,32 @@ int structurealign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
-    Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
-    DBReader<unsigned int> qdbrAA((par.db1).c_str(), (par.db1Index).c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    qdbrAA.open(DBReader<unsigned int>::NOSORT);
+    const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
+    IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    IndexReader qdbr(par.db1 + "_ss", par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
 
-    DBReader<unsigned int> qdbr((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    qdbr.open(DBReader<unsigned int>::NOSORT);
+    IndexReader *t3DiDbr = NULL;
+    IndexReader *tAADbr = NULL;
+    bool sameDB = false;
+    if (par.db1.compare(par.db2) == 0) {
+        sameDB = true;
+        t3DiDbr = &qdbr;
+        tAADbr = &qdbrAA;
+    } else {
+        tAADbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+        t3DiDbr = new IndexReader(par.db2 + "_ss", par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    }
+
+    DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+    resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+
+    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
+    dbw.open();
 
     SubstitutionMatrix subMat3Di(par.scoringMatrixFile.values.aminoacid().c_str(), 2.1, par.scoreBias);
     std::string blosum;
-    for(size_t i = 0; i < par.substitutionMatrices.size(); i++){
-        if(par.substitutionMatrices[i].name == "blosum62.out"){
+    for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
+        if (par.substitutionMatrices[i].name == "blosum62.out") {
             std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
             std::string matrixName = par.substitutionMatrices[i].name;
             char * serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
@@ -41,29 +52,6 @@ int structurealign(int argc, const char **argv, const Command& command) {
         }
     }
     SubstitutionMatrix subMatAA(blosum.c_str(), 1.4, par.scoreBias);
-
-    DBReader<unsigned int> *t3DiDbr = NULL;
-    DBReader<unsigned int> *tAADbr = NULL;
-    bool sameDB = false;
-
-    if (par.db1.compare(par.db2) == 0) {
-        sameDB = true;
-        t3DiDbr = &qdbr;
-        tAADbr = &qdbrAA;
-    } else {
-        tAADbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-        tAADbr->open(DBReader<unsigned int>::NOSORT);
-        t3DiDbr = new DBReader<unsigned int>((par.db2 + "_ss").c_str(), (par.db2 + "_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-        t3DiDbr->open(DBReader<unsigned int>::NOSORT);
-
-    }
-
-    Debug(Debug::INFO) << "Result database: " << par.db3 << "\n";
-    DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
-    Debug(Debug::INFO) << "Output file: " << par.db4 << "\n";
-    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
-    dbw.open();
 
     //temporary output file
     Debug::Progress progress(resultReader.getSize());
@@ -82,7 +70,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
             tinySubMatAA[i * subMatAA.alphabetSize + j] = subMatAA.subMatrix[i][j];
         }
     }
-    EvalueComputation evaluer(tAADbr->getAminoAcidDBSize(), &subMatAA);
+    EvalueComputation evaluer(tAADbr->sequenceReader->getAminoAcidDBSize(), &subMatAA);
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
@@ -109,12 +97,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
             char *data = resultReader.getData(id, thread_idx);
             size_t queryKey = resultReader.getDbKey(id);
             if(*data != '\0') {
-                unsigned int queryId = qdbr.getId(queryKey);
+                unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
 
-                char *querySeqAA = qdbrAA.getData(queryId, thread_idx);
-                char *querySeq3Di = qdbr.getData(queryId, thread_idx);
+                char *querySeqAA = qdbrAA.sequenceReader->getData(queryId, thread_idx);
+                char *querySeq3Di = qdbr.sequenceReader->getData(queryId, thread_idx);
 
-                unsigned int querySeqLen = qdbr.getSeqLen(queryId);
+                unsigned int querySeqLen = qdbr.sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
                 int32_t maskLen = querySeqLen / 2;
@@ -128,12 +116,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     Util::parseKey(data, dbKeyBuffer);
                     data = Util::skipLine(data);
                     const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-                    unsigned int targetId = t3DiDbr->getId(dbKey);
+                    unsigned int targetId = t3DiDbr->sequenceReader->getId(dbKey);
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB))? true : false;
 
-                    char * targetSeq3Di = t3DiDbr->getData(targetId, thread_idx);
-                    char * targetSeqAA = tAADbr->getData(targetId, thread_idx);
-                    const int targetLen = static_cast<int>(t3DiDbr->getSeqLen(targetId));
+                    char * targetSeq3Di = t3DiDbr->sequenceReader->getData(targetId, thread_idx);
+                    char * targetSeqAA = tAADbr->sequenceReader->getData(targetId, thread_idx);
+                    const int targetLen = static_cast<int>(t3DiDbr->sequenceReader->getSeqLen(targetId));
 
                     tSeq3Di.mapSequence(targetId, dbKey, targetSeq3Di, targetLen);
                     tSeqAA.mapSequence(targetId, dbKey, targetSeqAA, targetLen);
@@ -183,12 +171,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
     dbw.close();
     resultReader.close();
-    qdbr.close();
-    qdbrAA.close();
-    if(sameDB == false){
-        t3DiDbr->close();
+    if (sameDB == false) {
         delete t3DiDbr;
-        tAADbr->close();
         delete tAADbr;
     }
     return EXIT_SUCCESS;
