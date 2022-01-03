@@ -19,7 +19,7 @@ fi
 # 2. tm alignment
 if notExists "${TMP_PATH}/aln.dbtype"; then
     # shellcheck disable=SC2086
-    $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}" "${TMP_PATH}/pref" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+    $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
         || fail "Alignment step died"
 fi
 
