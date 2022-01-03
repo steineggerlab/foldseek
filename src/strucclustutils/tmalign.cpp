@@ -6,6 +6,7 @@
 #include "QueryMatcher.h"
 #include "LocalParameters.h"
 #include "Matcher.h"
+#include "StructureUtil.h"
 
 #include <tmalign/TMalign.h>
 
@@ -33,7 +34,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
-    IndexReader qdbr(par.db1 + "_ss", par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    IndexReader qdbr(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
     IndexReader qcadbr(
             par.db1,
             par.threads,
@@ -51,7 +52,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
         tdbr = &qdbr;
         tcadbr = &qcadbr;
     } else {
-        tdbr = new IndexReader(par.db2 + "_ss", par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+        tdbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
         tcadbr = new IndexReader(
                 par.db2,
                 par.threads,
