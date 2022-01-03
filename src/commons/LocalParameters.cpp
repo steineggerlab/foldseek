@@ -18,9 +18,9 @@ LocalParameters::LocalParameters() :
     seedScoringMatrixFile = "3di.out";
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
     // structurecreatedb
-    structurecreatedb.push_back(&PARAM_THREADS);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
+    structurecreatedb.push_back(&PARAM_THREADS);
     structurecreatedb.push_back(&PARAM_V);
     // tmalign
     tmalign.push_back(&PARAM_MIN_SEQ_ID);
@@ -32,6 +32,7 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
     tmalign.push_back(&PARAM_TMALIGN_FAST);
+    tmalign.push_back(&PARAM_PRELOAD_MODE);
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
 //    tmalign.push_back(&PARAM_GAP_OPEN);
