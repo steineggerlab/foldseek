@@ -67,7 +67,7 @@ case "${SELECTION}" in
     "Alphafold/Proteome")
         if notExists "${TMP_PATH}/alphafolddb.tar.gz"; then
             date "+%s" > "${TMP_PATH}/version"
-            downloadFile "http://wwwuser.gwdg.de/~compbiol/foldseek/alphafolddb.tar.gz" "${TMP_PATH}/alphafolddb.tar.gz"
+            downloadFile "https://wwwuser.gwdg.de/~compbiol/foldseek/alphafolddb.tar.gz" "${TMP_PATH}/alphafolddb.tar.gz"
         fi
         tar xvfz "${TMP_PATH}/alphafolddb.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/alphafolddb"
@@ -76,7 +76,7 @@ case "${SELECTION}" in
     "Alphafold/Swiss-Prot")
           if notExists "${TMP_PATH}/alphafold_swissprot.tar.gz"; then
               date "+%s" > "${TMP_PATH}/version"
-              downloadFile "http://wwwuser.gwdg.de/~compbiol/foldseek/alphafold_swissprot.tar.gz" "${TMP_PATH}/alphafold_swissprot.tar.gz"
+              downloadFile "https://wwwuser.gwdg.de/~compbiol/foldseek/alphafold_swissprot.tar.gz" "${TMP_PATH}/alphafold_swissprot.tar.gz"
           fi
           tar xvfz "${TMP_PATH}/alphafold_swissprot.tar.gz" -C "${TMP_PATH}"
           push_back "${TMP_PATH}/alphafold_swissprot"
@@ -85,7 +85,7 @@ case "${SELECTION}" in
     "PDB")
         if notExists "${TMP_PATH}/pdb.tar.gz"; then
             date "+%s" > "${TMP_PATH}/version"
-            downloadFile "http://wwwuser.gwdg.de/~compbiol/foldseek/pdb.tar.gz" "${TMP_PATH}/pdb.tar.gz"
+            downloadFile "https://wwwuser.gwdg.de/~compbiol/foldseek/pdb.tar.gz" "${TMP_PATH}/pdb.tar.gz"
         fi
         tar xvfz "${TMP_PATH}/pdb.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/pdb"
