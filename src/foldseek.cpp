@@ -141,7 +141,7 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "AlphaFold Protein Structure Database.",
                 "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
                 "https://alphafold.ebi.ac.uk/",
-                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         },
         {
@@ -149,15 +149,15 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "AlphaFold Swissprot Protein Structure Database.",
                 "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
                 "https://alphafold.ebi.ac.uk/",
-                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         },
         {
                 "PDB",
                 "The Protein Data Bank is the single worldwide archive of structural data of biological macromolecules.",
-                "Berman et al: The Protein Data Bank. Nucleic Acids Res 28(1), 235-242 (2000)",
+                "Berman et al. The Protein Data Bank. Nucleic Acids Res, 28(1), 235-242 (2000)",
                 "https://www.rcsb.org",
-                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         }
 };

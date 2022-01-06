@@ -111,23 +111,15 @@ case "${INPUT_TYPE}" in
 esac
 fi
 
-
-
-
 if [ -n "${TAXONOMY}" ] && notExists "${OUTDB}_mapping"; then
-    case "${SELECTION}" in
-     *)
-       # shellcheck disable=SC2086
-       "${MMSEQS}" prefixid "${OUTDB}_h" "${TMP_PATH}/header_pref.tsv" --tsv ${THREADS_PAR} \
-           || fail "prefixid died"
-       awk '{ match($0, / OX=[0-9]+ /); if (RLENGTH != -1) { print $1"\t"substr($0, RSTART+4, RLENGTH-5); next; } match($0, / TaxID=[0-9]+ /); print $1"\t"substr($0, RSTART+7, RLENGTH-8); }' "${TMP_PATH}/header_pref.tsv" \
-           | LC_ALL=C sort -n > "${OUTDB}_mapping"
-       rm -f "${TMP_PATH}/header_pref.tsv"
-       # shellcheck disable=SC2086
-       "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
-           || fail "createtaxdb died"
-       ;;
-     esac
+case "${INPUT_TYPE}" in
+    "FOLDSEEK_DB")
+        eval "set -- $ARR"
+        IN="${*}"
+        mv -f -- "${IN}_mapping" "${OUTDB}_mapping"
+        mv -f -- "${IN}_taxonomy" "${OUTDB}_taxonomy"
+    ;;
+esac
 fi
 
 if notExists "${OUTDB}.version"; then
