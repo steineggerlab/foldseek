@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <vector>
-#include <math.h>
+#include <cmath>
 #include "structureto3di.h"
 #include "3di_encoder_weights.kerasify.h"
 
@@ -109,7 +109,7 @@ void StructureTo3DiBase::replaceCBWithVirtualCenter(Vec3 * ca, Vec3 * n,
                                 Vec3 * c, Vec3 * cb, const size_t len){
     // fix CB positions and create virtual center
     for (size_t i = 0; i < len; i++){
-        if (isnan(cb[i].x)){
+        if (std::isnan(cb[i].x)){
             cb[i] = approxCBetaPosition(ca[i], n[i], c[i]);
         }
         Vec3 virtCenter = calcVirtualCenter(ca[i], cb[i], n[i],
@@ -125,7 +125,7 @@ void StructureTo3DiBase::createResidueMask(std::vector<bool> & validMask,
                                            Vec3 * ca, Vec3 * n, Vec3 * c,
                                            const size_t len){
     for (size_t i = 0; i < len; i++){
-        if (isnan(ca[i].x) || isnan(c[i].x) || isnan(n[i].x)){
+        if (std::isnan(ca[i].x) || std::isnan(c[i].x) || std::isnan(n[i].x)){
             validMask[i] = 0;
         } else{
             validMask[i] = 1;
