@@ -4,6 +4,9 @@ Foldseek is a collaboration between the Söding and Steinegger Lab.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
+## Webserver 
+Search your protein structures against [AlphaFold DBs](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver.  🚀 [search.foldseek.com](https://search.foldseek.com)
+
 ## Version release
 Alpha release: July 24, 2021
 
