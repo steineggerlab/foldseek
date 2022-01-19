@@ -48,6 +48,7 @@
 
 #include "Sequence.h"
 #include "EvalueComputation.h"
+#include "EvalueNeuralNet.h"
 
 
 class StructureSmithWaterman{
@@ -144,7 +145,7 @@ public:
                         const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
                         std::string &backtrace,
                         const double filters,
-                        EvalueComputation * filterd,
+                        EvalueNeuralNet * evaluer, double mu, double lambda,
                         const int covMode, const float covThr,
                         const int32_t maskLen);
 

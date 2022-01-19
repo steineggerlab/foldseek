@@ -8,6 +8,7 @@ set(COMPILED_RESOURCES
         structdatabases.sh
         mat3di.out
         3di_encoder_weights.kerasify
+        evalue_nn.kerasify
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

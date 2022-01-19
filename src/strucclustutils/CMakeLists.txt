@@ -5,6 +5,8 @@ set(strucclustutils_source_files
         strucclustutils/structurealign.cpp
         strucclustutils/StructureSmithWaterman.cpp
         strucclustutils/StructureSmithWaterman.h
+        strucclustutils/EvalueNeuralNet.cpp
+        strucclustutils/EvalueNeuralNet.h
         PARENT_SCOPE
         )
 

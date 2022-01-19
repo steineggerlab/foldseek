@@ -30,6 +30,7 @@ SOFTWARE.
 #include "SubstitutionMatrix.h"
 #include "Debug.h"
 #include "UngappedAlignment.h"
+#include "EvalueNeuralNet.h"
 
 #include <iostream>
 
@@ -158,7 +159,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
         const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
         std::string & backtrace,
         const double  evalueThr,
-        EvalueComputation * evaluer,
+        EvalueNeuralNet * evaluer, double mu, double lambda,
         const int covMode, const float covThr,
         const int32_t maskLen) {
 
@@ -204,7 +205,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
         return r;
     }
     int32_t queryOffset = query_length - r.qEndPos1;
-    r.evalue = evaluer->computeEvalue(r.score1, query_length);
+    r.evalue = evaluer->computeEvalue(r.score1, mu, lambda);
     bool hasLowerEvalue = r.evalue > evalueThr;
     r.qCov = computeCov(0, r.qEndPos1, query_length);
     r.tCov = computeCov(0, r.dbEndPos1, db_length);

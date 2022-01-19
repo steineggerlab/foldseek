@@ -72,14 +72,13 @@ int structurealign(int argc, const char **argv, const Command& command) {
         }
     }
 
-    EvalueComputation evaluer(tAADbr->sequenceReader->getAminoAcidDBSize(), &subMat3Di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-
+        EvalueNeuralNet evaluer(tAADbr->sequenceReader->getAminoAcidDBSize(), &subMat3Di);
         std::vector<Matcher::result_t> alignmentResult;
         StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, false);
         StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, false);
@@ -109,7 +108,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
                 int32_t maskLen = querySeqLen / 2;
-
+                std::pair<double, double> muLambda = evaluer.predictMuLambda(qSeq3Di.numSequence, qSeq3Di.L);
                 structureSmithWaterman.ssw_init(&qSeqAA, &qSeq3Di, tinySubMatAA, tinySubMat3Di, &subMatAA);
                 qSeq3Di.reverse();
                 qSeqAA.reverse();
@@ -139,13 +138,13 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     backtrace.clear();
                     StructureSmithWaterman::s_align align = structureSmithWaterman.ssw_align(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
                                                      par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,
-                                                     par.evalThr, &evaluer, par.covMode, par.covThr, maskLen);
+                                                     par.evalThr, &evaluer, muLambda.first, muLambda.second, par.covMode, par.covThr, maskLen);
                     StructureSmithWaterman::s_align revAlign = reverseStructureSmithWaterman.ssw_align(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
                                                                                              par.gapExtend.values.aminoacid(), 0, backtrace,
-                                                                                             par.evalThr, &evaluer, par.covMode, par.covThr, maskLen);
+                                                                                             par.evalThr, &evaluer, muLambda.first, muLambda.second, par.covMode, par.covThr, maskLen);
 
                     align.score1 = std::max(1, static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1));
-                    align.evalue = evaluer.computeEvalue(align.score1, querySeqLen);
+                    align.evalue = evaluer.computeEvalue(align.score1, muLambda.first, muLambda.second);
                     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
                     if(backtrace.size() > 0){
                         alnLength = backtrace.size();
