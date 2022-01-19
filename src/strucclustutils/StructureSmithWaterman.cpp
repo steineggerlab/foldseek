@@ -160,6 +160,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
         const int32_t maskLen) {
     int32_t query_length = profile->query_length;
     s_align r;
+    r.word = 0;
     r.dbStartPos1 = -1;
     r.qStartPos1 = -1;
     r.cigar = 0;
@@ -174,6 +175,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
 
     if (bests.first.score == 255) {
         bests = sw_sse2_word(db_aa_sequence, db_3di_sequence, 0, db_length, query_length, gap_open, gap_extend, profile->profile_aa_word, profile->profile_3di_word,USHRT_MAX, maskLen);
+        r.word = 1;
     } else if (bests.first.score == 255) {
         fprintf(stderr, "Please set 2 to the score_size parameter of the function ssw_init, otherwise the alignment results will be incorrect.\n");
         EXIT(EXIT_FAILURE);
@@ -209,14 +211,14 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
         const uint8_t gap_extend,
         const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
         std::string & backtrace,
-        int32_t word, StructureSmithWaterman::s_align r,
+        StructureSmithWaterman::s_align r,
         const int covMode, const float covThr,
         const int32_t maskLen) {
     int32_t query_length = profile->query_length;
     int32_t queryOffset = query_length - r.qEndPos1;
     std::pair<alignment_end, alignment_end> bests_reverse;
     // Find the beginning position of the best alignment.
-    if (word == 0) {
+    if (r.word == 0) {
         createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, profile->composition_bias_rev, profile->mat_aa,
                                                                             r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
         createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, profile->composition_bias_rev, profile->mat_3di,

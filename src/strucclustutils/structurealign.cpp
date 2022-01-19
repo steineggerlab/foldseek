@@ -143,16 +143,15 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     }
                     StructureSmithWaterman::s_align revAlign = reverseStructureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
                                                                                                        par.gapExtend.values.aminoacid(), querySeqLen / 2);
-                    int word = (align.score1 >= 255);
-                    align.score1 = std::max(1, static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1));
-                    align.evalue = evaluer.computeEvalue(align.score1, muLambda.first, muLambda.second);
+                    int32_t score = std::max(1, static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1));
+                    align.evalue = evaluer.computeEvalue(score, muLambda.first, muLambda.second);
                     bool hasLowerEvalue = align.evalue > par.evalThr;
                     if (hasLowerEvalue) {
                         rejected++;
                         continue;
                     }
                     align = structureSmithWaterman.alignStartPosBacktrace(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
-                                                                    par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace, word, align, par.covMode, par.covThr, querySeqLen / 2);
+                                                                    par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
 
 
                     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
@@ -160,7 +159,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                         alnLength = backtrace.size();
                     }
                     float seqId = Util::computeSeqId(par.seqIdMode, align.identicalAACnt, querySeqLen, targetLen, alnLength);
-
+                    align.score1 = score;
                     Matcher::result_t res(dbKey, align.score1, align.qCov, align.tCov, seqId, align.evalue, alnLength, align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, targetLen, backtrace);
 
                     if (Alignment::checkCriteria(res, isIdentity, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
