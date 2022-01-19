@@ -107,7 +107,6 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 unsigned int querySeqLen = qdbr.sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
-                int32_t maskLen = querySeqLen / 2;
                 std::pair<double, double> muLambda = evaluer.predictMuLambda(qSeq3Di.numSequence, qSeq3Di.L);
                 structureSmithWaterman.ssw_init(&qSeqAA, &qSeq3Di, tinySubMatAA, tinySubMat3Di, &subMatAA);
                 qSeq3Di.reverse();
@@ -133,18 +132,29 @@ int structurealign(int argc, const char **argv, const Command& command) {
                         continue;
                     }
 
-
-
                     backtrace.clear();
-                    StructureSmithWaterman::s_align align = structureSmithWaterman.ssw_align(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
-                                                     par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,
-                                                     par.evalThr, &evaluer, muLambda.first, muLambda.second, par.covMode, par.covThr, maskLen);
-                    StructureSmithWaterman::s_align revAlign = reverseStructureSmithWaterman.ssw_align(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
-                                                                                             par.gapExtend.values.aminoacid(), 0, backtrace,
-                                                                                             par.evalThr, &evaluer, muLambda.first, muLambda.second, par.covMode, par.covThr, maskLen);
-
+                    // align only score and end pos
+                    StructureSmithWaterman::s_align align = structureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
+                                                     par.gapExtend.values.aminoacid(), querySeqLen / 2);
+                    bool hasLowerCoverage = !(Util::hasCoverage(par.covThr, par.covMode, align.qCov, align.tCov));
+                    if(hasLowerCoverage){
+                        rejected++;
+                        continue;
+                    }
+                    StructureSmithWaterman::s_align revAlign = reverseStructureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
+                                                                                                       par.gapExtend.values.aminoacid(), querySeqLen / 2);
+                    int word = (align.score1 >= 255);
                     align.score1 = std::max(1, static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1));
                     align.evalue = evaluer.computeEvalue(align.score1, muLambda.first, muLambda.second);
+                    bool hasLowerEvalue = align.evalue > par.evalThr;
+                    if (hasLowerEvalue) {
+                        rejected++;
+                        continue;
+                    }
+                    align = structureSmithWaterman.alignStartPosBacktrace(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
+                                                                    par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace, word, align, par.covMode, par.covThr, querySeqLen / 2);
+
+
                     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
                     if(backtrace.size() > 0){
                         alnLength = backtrace.size();
@@ -153,15 +163,11 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
                     Matcher::result_t res(dbKey, align.score1, align.qCov, align.tCov, seqId, align.evalue, alnLength, align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, targetLen, backtrace);
 
-                    //Matcher::result_t res = paruenAlign.align(qSeq3Di, tSeq3Di, &subMat3Di, evaluer);
-
                     if (Alignment::checkCriteria(res, isIdentity, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
                         alignmentResult.emplace_back(res);
                         passedNum++;
                         rejected = 0;
-                    }
-
-                    else {
+                    } else {
                         rejected++;
                     }
                 }

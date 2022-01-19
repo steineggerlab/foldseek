@@ -90,36 +90,13 @@ public:
         float qCov;
         float tCov;
         uint32_t* cigar;
+        double evalue;
         int identicalAACnt;
         int32_t cigarLen;
-        double evalue;
     } s_align;
 
     // @function	ssw alignment.
     /*!	@function	Do Striped Smith-Waterman alignment.
-
-     @param	db_sequence	pointer to the target sequence; the target sequence needs to be numbers and corresponding to the mat parameter of
-     function ssw_init
-
-     @param	db_length	length of the target sequence
-
-     @param	gap_open	the absolute value of gap open penalty
-
-     @param	gap_extend	the absolute value of gap extension penalty
-
-     @param	alignmentMode	bitwise FLAG; (from high to low) bit 5: when setted as 1, function ssw_align will return the best alignment
-     beginning position; bit 6: when setted as 1, if (ref_end1 - ref_begin1 < filterd && read_end1 - read_begin1
-     < filterd), (whatever bit 5 is setted) the function will return the best alignment beginning position and
-     cigar; bit 7: when setted as 1, if the best alignment score >= filters, (whatever bit 5 is setted) the function
-     will return the best alignment beginning position and cigar; bit 8: when setted as 1, (whatever bit 5, 6 or 7 is
-     setted) the function will always return the best alignment beginning position and cigar. When flag == 0, only
-     the optimal and sub-optimal scores and the optimal alignment ending position will be returned.
-
-     @param	filters	score filter: when bit 7 of flag is setted as 1 and bit 8 is setted as 0, filters will be used (Please check the
-     decription of the flag parameter for detailed usage.)
-
-     @param	filterd	distance filter: when bit 6 of flag is setted as 1 and bit 8 is setted as 0, filterd will be used (Please check
-     the decription of the flag parameter for detailed usage.)
 
      @param	maskLen	The distance between the optimal and suboptimal alignment ending position >= maskLen. We suggest to use
      readLen/2, if you don't have special concerns. Note: maskLen has to be >= 15, otherwise this function will NOT
@@ -137,17 +114,25 @@ public:
      while bit 8 is not, the function will return cigar only when both criteria are fulfilled. All returned positions are
      0-based coordinate.
      */
-    s_align  ssw_align (const unsigned char*db_aa_sequence,
-                        const unsigned char*db_3di_sequence,
-                        int32_t db_length,
-                        const uint8_t gap_open,
-                        const uint8_t gap_extend,
-                        const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
-                        std::string &backtrace,
-                        const double filters,
-                        EvalueNeuralNet * evaluer, double mu, double lambda,
-                        const int covMode, const float covThr,
-                        const int32_t maskLen);
+    s_align alignScoreEndPos (
+            const unsigned char *db_aa_sequence,
+            const unsigned char *db_3di_sequence,
+            int32_t db_length,
+            const uint8_t gap_open,
+            const uint8_t gap_extend,
+            const int32_t maskLen);
+
+    s_align alignStartPosBacktrace (
+            const unsigned char *db_aa_sequence,
+            const unsigned char *db_3di_sequence,
+            int32_t db_length,
+            const uint8_t gap_open,
+            const uint8_t gap_extend,
+            const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
+            std::string & backtrace,
+            int32_t word, StructureSmithWaterman::s_align r,
+            const int covMode, const float covThr,
+            const int32_t maskLen);
 
 
     /*!	@function	Create the query profile using the query sequence.

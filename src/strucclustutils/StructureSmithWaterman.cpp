@@ -150,22 +150,15 @@ void StructureSmithWaterman::createQueryProfile(simd_int *profile, const int8_t 
 }
 
 
-StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
+
+StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
         const unsigned char *db_aa_sequence,
         const unsigned char *db_3di_sequence,
         int32_t db_length,
         const uint8_t gap_open,
         const uint8_t gap_extend,
-        const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
-        std::string & backtrace,
-        const double  evalueThr,
-        EvalueNeuralNet * evaluer, double mu, double lambda,
-        const int covMode, const float covThr,
         const int32_t maskLen) {
-
-    int32_t word = 0, query_length = profile->query_length;
-    int32_t band_width = 0;
-    cigar* path;
+    int32_t query_length = profile->query_length;
     s_align r;
     r.dbStartPos1 = -1;
     r.qStartPos1 = -1;
@@ -176,13 +169,11 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
     //}
 
     std::pair<alignment_end, alignment_end> bests;
-    std::pair<alignment_end, alignment_end> bests_reverse;
     // Find the alignment scores and ending positions
     bests = sw_sse2_byte(db_aa_sequence, db_3di_sequence, 0, db_length, query_length, gap_open, gap_extend, profile->profile_aa_byte, profile->profile_3di_byte,UCHAR_MAX, profile->bias, maskLen);
 
     if (bests.first.score == 255) {
         bests = sw_sse2_word(db_aa_sequence, db_3di_sequence, 0, db_length, query_length, gap_open, gap_extend, profile->profile_aa_word, profile->profile_3di_word,USHRT_MAX, maskLen);
-        word = 1;
     } else if (bests.first.score == 255) {
         fprintf(stderr, "Please set 2 to the score_size parameter of the function ssw_init, otherwise the alignment results will be incorrect.\n");
         EXIT(EXIT_FAILURE);
@@ -204,17 +195,26 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
     if (r.dbEndPos1 == -1) {
         return r;
     }
-    int32_t queryOffset = query_length - r.qEndPos1;
-    r.evalue = evaluer->computeEvalue(r.score1, mu, lambda);
-    bool hasLowerEvalue = r.evalue > evalueThr;
     r.qCov = computeCov(0, r.qEndPos1, query_length);
     r.tCov = computeCov(0, r.dbEndPos1, db_length);
-    bool hasLowerCoverage = !(Util::hasCoverage(covThr, covMode, r.qCov, r.tCov));
 
-    if (alignmentMode == 0 || ((alignmentMode == 2 || alignmentMode == 1) && (hasLowerEvalue || hasLowerCoverage))) {
-        return r;
-    }
+    return r;
+}
 
+StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
+        const unsigned char *db_aa_sequence,
+        const unsigned char *db_3di_sequence,
+        int32_t db_length,
+        const uint8_t gap_open,
+        const uint8_t gap_extend,
+        const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
+        std::string & backtrace,
+        int32_t word, StructureSmithWaterman::s_align r,
+        const int covMode, const float covThr,
+        const int32_t maskLen) {
+    int32_t query_length = profile->query_length;
+    int32_t queryOffset = query_length - r.qEndPos1;
+    std::pair<alignment_end, alignment_end> bests_reverse;
     // Find the beginning position of the best alignment.
     if (word == 0) {
         createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, profile->composition_bias_rev, profile->mat_aa,
@@ -246,7 +246,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
 
     r.qCov = computeCov(r.qStartPos1, r.qEndPos1, query_length);
     r.tCov = computeCov(r.dbStartPos1, r.dbEndPos1, db_length);
-    hasLowerCoverage = !(Util::hasCoverage(covThr, covMode, r.qCov, r.tCov));
+    bool hasLowerCoverage = !(Util::hasCoverage(covThr, covMode, r.qCov, r.tCov));
     // only start and end point are needed
     if (alignmentMode == 1 || hasLowerCoverage) {
         return r;
@@ -255,9 +255,9 @@ StructureSmithWaterman::s_align StructureSmithWaterman::ssw_align (
     // Generate cigar.
     db_length = r.dbEndPos1 - r.dbStartPos1 + 1;
     query_length = r.qEndPos1 - r.qStartPos1 + 1;
-    band_width = abs(db_length - query_length) + 1;
+    int32_t band_width = abs(db_length - query_length) + 1;
 
-    path = banded_sw(db_aa_sequence + r.dbStartPos1,
+    cigar* path = banded_sw(db_aa_sequence + r.dbStartPos1,
                      db_3di_sequence + r.dbStartPos1,
                      profile->query_aa_sequence + r.qStartPos1,
                      profile->query_3di_sequence + r.qStartPos1,
