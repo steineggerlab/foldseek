@@ -34,9 +34,11 @@ SOFTWARE.
 
 #include <iostream>
 
-StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaSize, bool aaBiasCorrection) {
+StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaSize,
+                                               bool aaBiasCorrection, float aaBiasCorrectionScale) {
     maxSequenceLength += 1;
     this->aaBiasCorrection = aaBiasCorrection;
+    this->aaBiasCorrectionScale = aaBiasCorrectionScale;
     const int segSize = (maxSequenceLength+7)/8;
     vHStore = (simd_int*) mem_align(ALIGN_INT, segSize * sizeof(simd_int));
     vHLoad  = (simd_int*) mem_align(ALIGN_INT, segSize * sizeof(simd_int));
@@ -55,8 +57,10 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     profile->query_aa_sequence     = new int8_t[maxSequenceLength];
     profile->query_3di_rev_sequence = new int8_t[maxSequenceLength];
     profile->query_3di_sequence     = new int8_t[maxSequenceLength];
-    profile->composition_bias   = new int8_t[maxSequenceLength];
-    profile->composition_bias_rev   = new int8_t[maxSequenceLength];
+    profile->composition_bias_aa   = new int8_t[maxSequenceLength];
+    profile->composition_bias_ss   = new int8_t[maxSequenceLength];
+    profile->composition_bias_aa_rev   = new int8_t[maxSequenceLength];
+    profile->composition_bias_ss_rev   = new int8_t[maxSequenceLength];
     profile->profile_aa_word_linear = new short*[aaSize];
     profile_aa_word_linear_data = new short[aaSize*maxSequenceLength];
     profile->profile_3di_word_linear = new short*[aaSize];
@@ -75,8 +79,8 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     memset(profile->query_3di_sequence, 0, maxSequenceLength * sizeof(int8_t));
     memset(profile->query_3di_rev_sequence, 0, maxSequenceLength * sizeof(int8_t));
     memset(profile->mat_rev, 0, maxSequenceLength * aaSize);
-    memset(profile->composition_bias, 0, maxSequenceLength * sizeof(int8_t));
-    memset(profile->composition_bias_rev, 0, maxSequenceLength * sizeof(int8_t));
+    memset(profile->composition_bias_ss, 0, maxSequenceLength * sizeof(int8_t));
+    memset(profile->composition_bias_aa_rev, 0, maxSequenceLength * sizeof(int8_t));
 }
 
 StructureSmithWaterman::~StructureSmithWaterman(){
@@ -96,8 +100,10 @@ StructureSmithWaterman::~StructureSmithWaterman(){
     delete [] profile->query_aa_sequence;
     delete [] profile->query_3di_rev_sequence;
     delete [] profile->query_3di_sequence;
-    delete [] profile->composition_bias;
-    delete [] profile->composition_bias_rev;
+    delete [] profile->composition_bias_aa;
+    delete [] profile->composition_bias_ss;
+    delete [] profile->composition_bias_aa_rev;
+    delete [] profile->composition_bias_ss_rev;
     delete [] profile->profile_aa_word_linear;
     delete [] profile_aa_word_linear_data;
     delete [] profile->profile_3di_word_linear;
@@ -219,16 +225,16 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
     std::pair<alignment_end, alignment_end> bests_reverse;
     // Find the beginning position of the best alignment.
     if (r.word == 0) {
-        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, profile->composition_bias_rev, profile->mat_aa,
+        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
                                                                             r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
-        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, profile->composition_bias_rev, profile->mat_3di,
+        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
                                                                         r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
         bests_reverse = sw_sse2_byte(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1, gap_open, gap_extend, profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
                                      r.score1, profile->bias, maskLen);
     } else {
-        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_word, profile->query_aa_rev_sequence, profile->composition_bias_rev, profile->mat_aa,
+        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_word, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
                                                                              r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
-        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_word, profile->query_3di_rev_sequence, profile->composition_bias_rev, profile->mat_3di,
+        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_word, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
                                                                          r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
         bests_reverse = sw_sse2_word(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1, gap_open, gap_extend, profile->profile_aa_rev_word, profile->profile_3di_rev_word,
                                      r.score1, maskLen);
@@ -263,7 +269,8 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
                      db_3di_sequence + r.dbStartPos1,
                      profile->query_aa_sequence + r.qStartPos1,
                      profile->query_3di_sequence + r.qStartPos1,
-                     profile->composition_bias + r.qStartPos1,
+                     profile->composition_bias_aa + r.qStartPos1,
+                     profile->composition_bias_ss + r.qStartPos1,
                      db_length, query_length, r.score1,
                      gap_open, gap_extend, band_width,
                      profile->mat_aa, profile->mat_3di, profile->alphabetSize);
@@ -743,20 +750,25 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
                                       const Sequence* q_3di,
                                       const int8_t* mat_aa,
                                       const int8_t* mat_3di,
-                                      const BaseMatrix *m) {
+                                      const BaseMatrix *m){
 
     profile->bias = 0;
     const int32_t alphabetSize = m->alphabetSize;
     int32_t compositionBias = 0;
     if (aaBiasCorrection) {
-        SubstitutionMatrix::calcLocalAaBiasCorrection(m, q_aa->numSequence, q_aa->L, tmp_composition_bias);
+        SubstitutionMatrix::calcLocalAaBiasCorrection(m, q_aa->numSequence, q_aa->L, tmp_composition_bias, 1.0);
         for (int i =0; i < q_aa->L; i++) {
-            profile->composition_bias[i] = (int8_t) (tmp_composition_bias[i] < 0.0)? tmp_composition_bias[i] - 0.5: tmp_composition_bias[i] + 0.5;
-            compositionBias = (compositionBias < profile->composition_bias[i]) ? compositionBias : profile->composition_bias[i];
+            profile->composition_bias_aa[i] = (int8_t) (tmp_composition_bias[i] < 0.0) ? tmp_composition_bias[i] - 0.5 : tmp_composition_bias[i] + 0.5;
+            compositionBias = (compositionBias < profile->composition_bias_aa[i]) ? compositionBias : profile->composition_bias_aa[i];
+        }
+        SubstitutionMatrix::calcLocalAaBiasCorrection(m, q_3di->numSequence, q_3di->L, tmp_composition_bias, aaBiasCorrectionScale);
+        for (int i =0; i < q_aa->L; i++) {
+            profile->composition_bias_ss[i] = (int8_t) (tmp_composition_bias[i] < 0.0) ? tmp_composition_bias[i] - 0.5 : tmp_composition_bias[i] + 0.5;
+            compositionBias = (compositionBias < profile->composition_bias_ss[i]) ? compositionBias : profile->composition_bias_ss[i];
         }
         compositionBias = std::min(compositionBias, 0);
     } else {
-        memset(profile->composition_bias, 0, q_aa->L* sizeof(int8_t));
+        memset(profile->composition_bias_ss, 0, q_aa->L * sizeof(int8_t));
     }
     // copy memory to local memory todo: maybe change later
     memcpy(profile->mat_aa, mat_aa, alphabetSize * alphabetSize * sizeof(int8_t));
@@ -775,17 +787,17 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
 
     bias = abs(bias) + abs(compositionBias);
     profile->bias = bias;
-    createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_byte, profile->query_aa_sequence, profile->composition_bias, profile->mat_aa, q_aa->L, alphabetSize, bias, 0, 0);
-    createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_byte, profile->query_3di_sequence, profile->composition_bias, profile->mat_3di, q_3di->L, alphabetSize, bias, 0, 0);
+    createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_byte, profile->query_aa_sequence, profile->composition_bias_aa, profile->mat_aa, q_aa->L, alphabetSize, bias, 0, 0);
+    createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_byte, profile->query_3di_sequence, profile->composition_bias_ss, profile->mat_3di, q_3di->L, alphabetSize, bias, 0, 0);
 
 
-    createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_word, profile->query_aa_sequence, profile->composition_bias, profile->mat_aa, q_aa->L, alphabetSize, 0, 0, 0);
-    createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_word, profile->query_3di_sequence, profile->composition_bias, profile->mat_3di, q_3di->L, alphabetSize, 0, 0, 0);
+    createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_word, profile->query_aa_sequence, profile->composition_bias_aa, profile->mat_aa, q_aa->L, alphabetSize, 0, 0, 0);
+    createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_word, profile->query_3di_sequence, profile->composition_bias_ss, profile->mat_3di, q_3di->L, alphabetSize, 0, 0, 0);
     for(int32_t i = 0; i< alphabetSize; i++) {
         profile->profile_aa_word_linear[i] = &profile_aa_word_linear_data[i*q_aa->L];
         profile->profile_3di_word_linear[i] = &profile_3di_word_linear_data[i*q_3di->L];
         for (int j = 0; j < q_aa->L; j++) {
-            profile->profile_aa_word_linear[i][j] = mat_aa[i * alphabetSize + q_aa->numSequence[j]] + profile->composition_bias[j];
+            profile->profile_aa_word_linear[i][j] = mat_aa[i * alphabetSize + q_aa->numSequence[j]] + profile->composition_bias_ss[j];
             profile->profile_3di_word_linear[i][j] = mat_3di[i * alphabetSize + q_3di->numSequence[j]];
         }
     }
@@ -793,15 +805,15 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     // create reverse structures
     seq_reverse( profile->query_aa_rev_sequence, profile->query_aa_sequence, q_aa->L);
     seq_reverse( profile->query_3di_rev_sequence, profile->query_3di_sequence, q_3di->L);
-    seq_reverse( profile->composition_bias_rev, profile->composition_bias, q_aa->L);
-
+    seq_reverse(profile->composition_bias_aa_rev, profile->composition_bias_aa, q_aa->L);
+    seq_reverse(profile->composition_bias_ss_rev, profile->composition_bias_ss, q_3di->L);
     profile->query_length = q_aa->L;
     profile->alphabetSize = alphabetSize;
 }
 
 StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
-                                                                  const int8_t *query_aa_sequence, const int8_t *query_3di_sequence, const int8_t * compositionBias,
-                                                                  int32_t db_length, int32_t query_length, int32_t score, const uint32_t gap_open,
+                                                                  const int8_t *query_aa_sequence, const int8_t *query_3di_sequence, const int8_t * compositionBiasAA,
+                                                                  const int8_t * compositionBiasSS, int32_t db_length, int32_t query_length, int32_t score, const uint32_t gap_open,
                                                                   const uint32_t gap_extend, int32_t band_width, const int8_t *mat_aa, const int8_t *mat_3di, int32_t n) {
     /*! @function
      @abstract  Round an integer to the next closest power-2 integer.
@@ -880,7 +892,8 @@ StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned
                 e1 = e_b[u] > 0 ? e_b[u] : 0;
                 f1 = f > 0 ? f : 0;
                 temp1 = e1 > f1 ? e1 : f1;
-                temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * n + db_aa_sequence[j]] + mat_3di[query_3di_sequence[i] * n + db_3di_sequence[j]] + compositionBias[i];
+                temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * n + db_aa_sequence[j]] + compositionBiasAA[i]
+                               + mat_3di[query_3di_sequence[i] * n + db_3di_sequence[j]] + compositionBiasSS[i];
                 h_c[u] = temp1 > temp2 ? temp1 : temp2;
 
                 if (h_c[u] > max) max = h_c[u];

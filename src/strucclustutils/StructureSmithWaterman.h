@@ -54,7 +54,7 @@
 class StructureSmithWaterman{
 public:
 
-    StructureSmithWaterman(size_t maxSequenceLength, int aaSize, bool aaBiasCorrection);
+    StructureSmithWaterman(size_t maxSequenceLength, int aaSize, bool aaBiasCorrection, float aaBiasCorrectionScale);
     ~StructureSmithWaterman();
 
     // prints a __m128 vector containing 8 signed shorts
@@ -191,8 +191,10 @@ private:
         simd_int* profile_3di_rev_word;	// 0: none
         int8_t* query_3di_sequence;
         int8_t* query_3di_rev_sequence;
-        int8_t* composition_bias;
-        int8_t* composition_bias_rev;
+        int8_t* composition_bias_ss;
+        int8_t* composition_bias_aa;
+        int8_t* composition_bias_aa_rev;
+        int8_t* composition_bias_ss_rev;
         int8_t* mat_aa;
         int8_t* mat_3di;
         // Memory layout of if mat + queryProfile is qL * AA
@@ -269,7 +271,8 @@ private:
 
     StructureSmithWaterman::cigar *banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                              const int8_t *query_aa_sequence, const int8_t *query_3di_sequence,
-                                             const int8_t * compositionBias, int32_t db_length, int32_t query_length,
+                                             const int8_t * compositionBiasAA, const int8_t * compositionBiasSS,
+                                             int32_t db_length, int32_t query_length,
                                              int32_t score, const uint32_t gap_open,
                                              const uint32_t gap_extend, int32_t band_width,
                                              const int8_t *mat_aa, const int8_t *mat_3di, int32_t n);
@@ -302,6 +305,7 @@ private:
     short * profile_aa_word_linear_data;
     short * profile_3di_word_linear_data;
     bool aaBiasCorrection;
+    float aaBiasCorrectionScale;
 };
 
 
