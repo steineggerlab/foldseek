@@ -11,7 +11,6 @@
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->maskMode = 0;
     p->maskProb = 0.99995;
-    p->compBiasCorrection = 0;
     p->sensitivity = 7.5;
     p->gapOpen = 10;
     p->gapExtend = 1;
@@ -57,7 +56,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
 
     const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
+    par.compBiasCorrectionScale = 0.15;
     cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
+    par.compBiasCorrectionScale = 0.5;
     if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         cmd.addVariable("ALIGNMENT_ALGO", "align");
         cmd.addVariable("QUERY_ALIGNMENT", (query+"_ss").c_str());
