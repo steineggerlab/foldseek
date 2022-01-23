@@ -41,17 +41,20 @@ public:
     std::vector<MMseqsParameter *> structuresearchworkflow;
     std::vector<MMseqsParameter *> structureclusterworkflow;
     std::vector<MMseqsParameter *> databases;
+    std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
     PARAMETER(PARAM_CHAIN_NAME_MODE)
     PARAMETER(PARAM_TMALIGN_FAST)
+    PARAMETER(PARAM_N_SAMPLE)
 
     float tmScoreThr;
     int alignmentType;
     int chainNameMode;
     int tmAlignFast;
+    int nsample;
 private:
 
     LocalParameters(LocalParameters const&);

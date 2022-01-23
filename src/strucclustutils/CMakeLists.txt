@@ -3,6 +3,7 @@ set(strucclustutils_source_files
         strucclustutils/aln2tmscore.cpp
         strucclustutils/structcreatedb.cpp
         strucclustutils/structurealign.cpp
+        strucclustutils/samplemulambda.cpp
         strucclustutils/StructureSmithWaterman.cpp
         strucclustutils/StructureSmithWaterman.h
         strucclustutils/EvalueNeuralNet.cpp

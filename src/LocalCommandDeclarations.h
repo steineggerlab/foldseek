@@ -10,4 +10,5 @@ extern int easystructuresearch(int argc, const char** argv, const Command &comma
 extern int tmalign(int argc, const char** argv, const Command &command);
 extern int aln2tmscore(int argc, const char** argv, const Command &command);
 extern int structurealign(int argc, const char** argv, const Command &command);
+extern int samplemulambda(int argc, const char** argv, const Command &command);
 #endif

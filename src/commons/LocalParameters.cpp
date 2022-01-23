@@ -12,7 +12,8 @@ LocalParameters::LocalParameters() :
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA\n",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$"),
-        PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$")
+        PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
+        PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$")
 {
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
@@ -77,11 +78,15 @@ LocalParameters::LocalParameters() :
     databases.push_back(&PARAM_THREADS);
     databases.push_back(&PARAM_V);
     //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
+    samplemulambda.push_back(&PARAM_N_SAMPLE);
+    samplemulambda.push_back(&PARAM_THREADS);
+    samplemulambda.push_back(&PARAM_V);
 
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.5;
     chainNameMode = 0;
     tmAlignFast = 0;
+    nsample = 5000;
 }
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
