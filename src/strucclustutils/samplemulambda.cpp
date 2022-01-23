@@ -730,6 +730,7 @@ int samplemulambda(int argc, const char **argv, const Command& command) {
         std::string backtrace;
         std::string resultBuffer;
         // write output file
+        std::mt19937 rnd(0);
 
 #pragma omp for schedule(dynamic, 1)
         for(size_t id = 0; id < qdbrAA.sequenceReader->getSize(); id++) {
@@ -760,7 +761,7 @@ int samplemulambda(int argc, const char **argv, const Command& command) {
                 for (int i = 0; i < targetLen; i++) {
                     indices[i] = i;
                 }
-                std::random_shuffle(indices.begin(), indices.end());
+                std::shuffle(indices.begin(), indices.end(), rnd);
                 for (int i = 0; i < targetLen; i++) {
                     std::swap(tSeq3Di.numSequence[i], tSeq3Di.numSequence[indices[i]]);
                     std::swap(tSeqAA.numSequence[i], tSeqAA.numSequence[indices[i]]);
@@ -794,9 +795,9 @@ int samplemulambda(int argc, const char **argv, const Command& command) {
             float mu, lambda;
             EVDMaxLikelyFit(scores, NULL, alignmentResult.size(), &mu, &lambda);
             delete [] scores;
-            resultBuffer.append(querySeqAA);
-            resultBuffer.push_back('\t');
-            resultBuffer.append(querySeq3Di);
+            resultBuffer.append(querySeqAA, querySeqLen);
+	    resultBuffer.push_back('\t');
+            resultBuffer.append(querySeq3Di, querySeqLen);
             resultBuffer.push_back('\t');
             resultBuffer.append(SSTR(mu));
             resultBuffer.push_back('\t');
@@ -817,3 +818,4 @@ int samplemulambda(int argc, const char **argv, const Command& command) {
     }
     return EXIT_SUCCESS;
 }
+

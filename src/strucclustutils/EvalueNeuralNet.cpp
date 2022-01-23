@@ -25,10 +25,10 @@ std::pair<double, double> EvalueNeuralNet::predictMuLambda(unsigned char * seq, 
     in.data_[subMat->alphabetSize] = L;
     encoder.Apply(&in, &out);
     // used to normalize the output
-    double mu1 = 0.25319026504505765;
-    double sigma1 = 0.0870925635266098;
-    double mu2 = 16.48226262676655;
-    double sigmal2 = 3.472243709346458;
+    double mu1 = 0.17518475184751847;
+    double sigma1 = 0.03260331312698818;
+    double mu2 = -2.5569312493124934;
+    double sigmal2 = 0.4353169278257701;
     return std::make_pair(out.data_[0]*sigma1+mu1,
                           out.data_[1]*sigmal2+mu2);
 }

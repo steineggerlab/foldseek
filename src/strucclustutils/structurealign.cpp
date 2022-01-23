@@ -143,7 +143,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     }
                     StructureSmithWaterman::s_align revAlign = reverseStructureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
                                                                                                        par.gapExtend.values.aminoacid(), querySeqLen / 2);
-                    int32_t score = std::max(1, static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1));
+                    int32_t score = static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1);
                     align.evalue = evaluer.computeEvalue(score, muLambda.first, muLambda.second);
                     bool hasLowerEvalue = align.evalue > par.evalThr;
                     if (hasLowerEvalue) {
