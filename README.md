@@ -48,7 +48,9 @@ Setup the PDB or AlphaFold using the `databases` module.
 ### Important parameters
 
     -s                       adjusyesornot the sensitivity to speed trade-off (default: 7.5, high sensitivity: 9.0)
-    --alignment-type         0: 3Di Gotoh-Smith-Waterman (fast), 1: TMalign
+    --alignment-type         0: 3Di Gotoh-Smith-Waterman (local), 
+                             1: TMalign (global), 
+                             2: 3Di+AA Gotoh-Smith-Waterman (local, default)
     -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
     --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
 
