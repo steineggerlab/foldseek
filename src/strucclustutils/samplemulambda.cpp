@@ -792,7 +792,8 @@ int samplemulambda(int argc, const char **argv, const Command& command) {
             for(size_t i = 0; i < alignmentResult.size(); i++) {
                 scores[i] = alignmentResult[i].score;
             }
-            float mu, lambda;
+            float mu = 0.0;
+	    float lambda = 0.0;
             EVDMaxLikelyFit(scores, NULL, alignmentResult.size(), &mu, &lambda);
             delete [] scores;
             resultBuffer.append(querySeqAA, querySeqLen);

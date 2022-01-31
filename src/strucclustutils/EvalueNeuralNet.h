@@ -35,6 +35,10 @@ public:
     double computeEvalue(double score, double lambda_, double mu){
         return exp(computePvalue(score, lambda_, mu) + logDbResidueCount);
     }
+    
+    double computeEvalueCorr(double score, double lambda_, double mu){
+        return pow(exp(computePvalue(score, lambda_, mu) + logDbResidueCount), 0.32);
+    }
 };
 
 
