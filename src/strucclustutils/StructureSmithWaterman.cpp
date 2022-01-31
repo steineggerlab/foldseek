@@ -79,8 +79,10 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     memset(profile->query_3di_sequence, 0, maxSequenceLength * sizeof(int8_t));
     memset(profile->query_3di_rev_sequence, 0, maxSequenceLength * sizeof(int8_t));
     memset(profile->mat_rev, 0, maxSequenceLength * aaSize);
+    memset(profile->composition_bias_aa, 0, maxSequenceLength * sizeof(int8_t));
     memset(profile->composition_bias_ss, 0, maxSequenceLength * sizeof(int8_t));
     memset(profile->composition_bias_aa_rev, 0, maxSequenceLength * sizeof(int8_t));
+    memset(profile->composition_bias_ss_rev, 0, maxSequenceLength * sizeof(int8_t));
 }
 
 StructureSmithWaterman::~StructureSmithWaterman(){
@@ -768,7 +770,8 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
         }
         compositionBias = std::min(compositionBias, 0);
     } else {
-        memset(profile->composition_bias_ss, 0, q_aa->L * sizeof(int8_t));
+        memset(profile->composition_bias_aa, 0, q_aa->L * sizeof(int8_t));
+	memset(profile->composition_bias_ss, 0, q_aa->L * sizeof(int8_t));
     }
     // copy memory to local memory todo: maybe change later
     memcpy(profile->mat_aa, mat_aa, alphabetSize * alphabetSize * sizeof(int8_t));
