@@ -797,7 +797,7 @@ int samplemulambda(int argc, const char **argv, const Command& command) {
             EVDMaxLikelyFit(scores, NULL, alignmentResult.size(), &mu, &lambda);
             delete [] scores;
             resultBuffer.append(querySeqAA, querySeqLen);
-	    resultBuffer.push_back('\t');
+	        resultBuffer.push_back('\t');
             resultBuffer.append(querySeq3Di, querySeqLen);
             resultBuffer.push_back('\t');
             resultBuffer.append(SSTR(mu));
