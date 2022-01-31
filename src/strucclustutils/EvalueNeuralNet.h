@@ -7,7 +7,7 @@
 #include <cmath>
 #include "kerasify/keras_model.h"
 #include "BaseMatrix.h"
-
+#include <iostream>
 class EvalueNeuralNet {
 private:
     BaseMatrix *subMat;
@@ -23,6 +23,7 @@ public:
 
     double computePvalue(double score, double lambda_, double mu) {
         double h = lambda_ * (score - mu);
+	std::cout << score << '\t' << lambda_ << '\t' << mu << '\t' << h << std::endl;
         if(h > 10) {
             return -h;
         } else if (h < -2.5) {
@@ -37,7 +38,11 @@ public:
     }
     
     double computeEvalueCorr(double score, double lambda_, double mu){
-        return pow(exp(computePvalue(score, lambda_, mu) + logDbResidueCount), 0.32);
+	double logPVal = computePvalue(score, lambda_, mu);    
+	double dbSizeTimesLogPVal = logPVal + logDbResidueCount;
+	double evalue = exp(dbSizeTimesLogPVal);
+	double corrEvalue = pow(evalue, 0.32);
+        return corrEvalue;
     }
 };
 
