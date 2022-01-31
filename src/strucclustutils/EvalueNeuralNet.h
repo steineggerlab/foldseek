@@ -23,7 +23,6 @@ public:
 
     double computePvalue(double score, double lambda_, double mu) {
         double h = lambda_ * (score - mu);
-	std::cout << score << '\t' << lambda_ << '\t' << mu << '\t' << h << std::endl;
         if(h > 10) {
             return -h;
         } else if (h < -2.5) {
