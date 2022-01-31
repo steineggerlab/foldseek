@@ -10,6 +10,7 @@
 #include "StructureSmithWaterman.h"
 #include "StructureUtil.h"
 
+#include <random>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
