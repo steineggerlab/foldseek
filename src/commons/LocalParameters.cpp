@@ -85,7 +85,7 @@ LocalParameters::LocalParameters() :
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.5;
     chainNameMode = 0;
-    tmAlignFast = 0;
+    tmAlignFast = 1;
     nsample = 5000;
 }
 
