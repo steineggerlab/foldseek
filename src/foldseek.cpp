@@ -36,9 +36,11 @@ std::vector<struct Command> commands = {
         {"easy-search",          easystructuresearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
                 "Sensitive homology search",
                 "# Search a single/multiple PDB file against a set of PDB files\n"
-                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n"
-                "# Search a set of PDB files against a set of PDB files\n"
-                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n\n",
+                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n"
+                "# Format output differently\n"
+                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp --format-output query,target,qStart,tStart,cigar\n"
+                "# Align with TMalign (global)\n"
+                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp --alignment-type 1\n\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:alignmentFile> <tmpDir>",
                 CITATION_SERVER | CITATION_MMSEQS2,{{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder },

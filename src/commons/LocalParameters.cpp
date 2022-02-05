@@ -10,11 +10,29 @@ const int LocalParameters::DBTYPE_TMSCORE = 102;
 LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA\n",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
-        PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$"),
+        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
+        PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$")
 {
+    PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
+    PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
+    PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
+    PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_PCA.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_PCB.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_ZDROP.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_CORR_SCORE_WEIGHT.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_REALIGN.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_REALIGN_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_REALIGN_MAX_SEQS.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_WRAPPED_SCORING.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_ALPH_SIZE.category = MMseqsParameter::COMMAND_HIDDEN;
+    PARAM_INCLUDE_IDENTITY.category = MMseqsParameter::COMMAND_HIDDEN;
+
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
