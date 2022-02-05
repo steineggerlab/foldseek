@@ -10,7 +10,7 @@
 #include "easystructuresearch.sh.h"
 
 void setEasyStructureSearchDefaults(Parameters *p) {
-    p->sensitivity = 7.5;
+    p->sensitivity = 9.5;
     p->gapOpen = 7;
     p->gapExtend = 2;
     p->removeTmpFiles = true;
