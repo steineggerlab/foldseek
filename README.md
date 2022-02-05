@@ -1,14 +1,10 @@
-# foldseek 
+# Foldseek 
 Software suite for searching and clustering protein structures.
-Foldseek is a collaboration between the Söding and Steinegger Lab.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
 ## Webserver 
 Search your protein structures against [AlphaFold DBs](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver.  🚀 [search.foldseek.com](https://search.foldseek.com)
-
-## Version release
-Alpha release: July 24, 2021
 
 ## Installation
 
@@ -36,29 +32,62 @@ The target database can be pre-processed by `createdb`. This make sense if searc
  
     foldseek createdb example/ targetDB
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
-    
-Setup the PDB or AlphaFold using the `databases` module.
-    
-    # pdb  
-    foldseek databases PDB pdb tmp 
-    # alphafold db
-    foldseek databases AlphafoldDb afdb tmp 
 
-    
 ### Important parameters
-
-    -s                       adjusyesornot the sensitivity to speed trade-off (fast: 7.5, high sensitivity (default): 9.5)
+    -s                       adjust the sensitivity to speed trade-off.
+                             lower is faster, higher more sensitive (fast: 7.5, highest sensitivity (default): 9.5)
+    --max-seqs               adjust the amount of prefilter that are handed to the alignment. 
+                             Increasing it can lead to more hits (default: 300)
     --alignment-type         0: 3Di Gotoh-Smith-Waterman (local, not recommended), 
                              1: TMalign (global), 
                              2: 3Di+AA Gotoh-Smith-Waterman (local, default)
     -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
     --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
 
+
+
+### Databases 
+Setup the PDB or AlphaFold using the `databases` module.
+    
+    # pdb  
+    foldseek databases PDB pdb tmp 
+    # alphafold db
+    foldseek databases Alphafold/Proteome afdb tmp 
+
+We currently support the following databases: 
+```
+  Name                  Type            Taxonomy        Url
+- Alphafold/Proteome    Aminoacid            yes        https://alphafold.ebi.ac.uk/
+- Alphafold/Swiss-Prot  Aminoacid            yes        https://alphafold.ebi.ac.uk/
+- PDB                   Aminoacid            yes        https://www.rcsb.org
+```
+    
+
 ### Main Modules
 
 * `easy-search`       fast protein structure search  
 * `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 * `databases`         download pre-assembled databases
+
+### TMalign/TMscore 
+Foldseek supports to realign hits using TMalign as well as rescoring alignments using TMscore. 
+
+In case of the alignment type (`--alignment-type 1`) tmalign we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field.
+
+```
+foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
+```
+
+It is possible to compute the TMscores for the any kind of alignment output (e.g. 3Di/AA) using the following commands: 
+```
+    foldseek createdb example/ targetDB
+    foldseek createdb example/ queryDB
+    foldseek search queryDB targetDB aln tmpFolder -a
+    foldseek aln2tmscore queryDB targetDB aln aln_tmscore
+    foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
+```
+
+In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
 
 ### Compile from source
 
