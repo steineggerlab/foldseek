@@ -24,7 +24,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
     // never allow deletions
     par.allowDeletion = false;
 
-    DBReader<unsigned int> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+    DBReader<unsigned int> qdbr((par.db1 + "_ca").c_str(), (par.db1 + "_ca.index").c_str(),
+                                par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     qdbr.open(DBReader<unsigned int>::NOSORT);
 
     bool sameDB = false;
@@ -33,7 +34,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         sameDB = true;
         tdbr = &qdbr;
     } else {
-        tdbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        tdbr = new DBReader<unsigned int>((par.db2 + "_ca").c_str(), (par.db2 + "_ca.index").c_str(),
+                                          par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
         tdbr->open(DBReader<unsigned int>::NOSORT);
         if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
             tdbr->readMmapedDataInMemory();
@@ -77,6 +79,7 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             unsigned int queryKey = alndbr.getDbKey(i);
             char *data = alndbr.getData(i, thread_idx);
             Matcher::readAlignmentResults(results, data, false);
+
             unsigned int queryId = qdbr.getId(queryKey);
             int queryLen = static_cast<int>((qdbr.getEntryLen(queryId)-1)/(3*sizeof(float)));
             float *qdata = (float *) qdbr.getData(queryId, thread_idx);
@@ -89,6 +92,11 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
 
             for (size_t j = 0; j < results.size(); j++) {
                 Matcher::result_t& res = results[j];
+                if (res.backtrace.empty()) {
+                    Debug(Debug::ERROR) << "Backtrace cigar is missing in the alignment result. Please recompute the alignment with the -a flag.\n"
+                                           "Command: foldseek structurealign " << par.db1 << " " << par.db2 << " " << par.db3 << " " << "alnNew -a\n";
+                    EXIT(EXIT_FAILURE);
+                }
                 const unsigned int dbKey = res.dbKey;
                 unsigned int targetId = tdbr->getId(dbKey);
                 int targetLen = static_cast<int>((tdbr->getEntryLen(targetId)-1)/(3*sizeof(float)));
