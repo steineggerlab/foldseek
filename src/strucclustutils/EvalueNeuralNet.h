@@ -28,7 +28,7 @@ public:
         } else if (h < -2.5) {
             return -exp(-exp(-h));
         } else {
-            return log((1.0 - exp(-exp(-h))));
+            return log2((1.0 - exp(-exp(-h)))); // change to log 2
         }
     }
 
@@ -37,10 +37,10 @@ public:
     }
     
     double computeEvalueCorr(double score, double lambda_, double mu){
-	double logPVal = computePvalue(score, lambda_, mu);    
-	double dbSizeTimesLogPVal = logPVal + logDbResidueCount;
-	double evalue = exp(dbSizeTimesLogPVal);
-	double corrEvalue = pow(evalue, 0.32);
+        double logPVal = computePvalue(score, lambda_, mu);
+        double dbSizeTimesLogPVal = logPVal + logDbResidueCount;
+        double evalue = exp(dbSizeTimesLogPVal);
+        double corrEvalue = pow(evalue, 0.32);
         return corrEvalue;
     }
 };
