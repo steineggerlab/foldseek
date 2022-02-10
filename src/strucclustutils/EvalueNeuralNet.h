@@ -40,8 +40,8 @@ public:
         double logPVal = computePvalue(score, lambda_, mu);
         double dbSizeTimesLogPVal = logPVal + logDbResidueCount;
         double evalue = exp(dbSizeTimesLogPVal);
-        double corrEvalue = pow(evalue, 0.32);
-        return corrEvalue;
+        //double corrEvalue = pow(evalue, 0.32);
+        return evalue;
     }
 };
 
