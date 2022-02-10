@@ -22,6 +22,8 @@ Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.a
     wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
     # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
     wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+    # conda installer 
+    conda install -c conda-forge -c bioconda foldseek
 
 Precompiled binaries for other architectures (ARM64, PPC64LE) and very old AMD/Intel CPUs (SSE2 only) are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
