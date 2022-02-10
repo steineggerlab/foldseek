@@ -5,7 +5,7 @@ Foldseek enables fast and sensitive comparisons of large structure sets. It reac
 
 ## Publications
 
-[van Kempen M, Kim S, Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398  (2021)](https://www.biorxiv.org/content/10.1101/2022.02.07.479398)
+[van Kempen M, Kim S, Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398  (2022)](https://www.biorxiv.org/content/10.1101/2022.02.07.479398)
 
 ## Webserver 
 Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver:
