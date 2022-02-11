@@ -88,11 +88,11 @@ foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 
 It is possible to compute TMscores for the kind of alignment output (e.g. 3Di/AA) using the following commands: 
 ```
-    foldseek createdb example/ targetDB
-    foldseek createdb example/ queryDB
-    foldseek search queryDB targetDB aln tmpFolder -a
-    foldseek aln2tmscore queryDB targetDB aln aln_tmscore
-    foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
+foldseek createdb example/ targetDB
+foldseek createdb example/ queryDB
+foldseek search queryDB targetDB aln tmpFolder -a
+foldseek aln2tmscore queryDB targetDB aln aln_tmscore
+foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
 In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
