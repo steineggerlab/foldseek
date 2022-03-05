@@ -3,6 +3,8 @@
 
 #include <Parameters.h>
 
+const int CITATION_FOLDSEEK = CITATION_END;
+
 struct FoldSeekDbValidator : public DbValidator {
     static std::vector<int> tmscore;
     static std::vector<int> cadb;

@@ -1,10 +1,16 @@
 # Foldseek 
-Software suite for searching and clustering protein structures.
+Foldseek enables fast and sensitive comparisons of large structure sets. It reaches sensitivities similar to state-of-the-art structural aligners while being at least 20,000 times faster.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
+## Publications
+
+[van Kempen M, Kim S, Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398  (2022)](https://www.biorxiv.org/content/10.1101/2022.02.07.479398)
+
 ## Webserver 
-Search your protein structures against [AlphaFold DBs](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver.  🚀 [search.foldseek.com](https://search.foldseek.com)
+Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver:
+
+[🚀search.foldseek.com](https://search.foldseek.com)
 
 ## Installation
 
@@ -16,12 +22,14 @@ Search your protein structures against [AlphaFold DBs](https://alphafold.ebi.ac.
     wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
     # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
     wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+    # conda installer 
+    conda install -c conda-forge -c bioconda foldseek
 
 Precompiled binaries for other architectures (ARM64, PPC64LE) and very old AMD/Intel CPUs (SSE2 only) are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
 ### Quick start
     
-`easy-search` can search single or multiple queries formatted in pdb/mcif format (flat or gz) against a target database (`example/`) of protein structures. It outputs a tab separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
+`easy-search` can search single or multiple queries formatted in PDB/mmCIF format (flat or `.gz`) against a target database (`example/`) of protein structures. It outputs a tab-separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
 
     foldseek easy-search example/d1asha_ example/ aln.m8 tmpFolder
     
@@ -47,7 +55,7 @@ The target database can be pre-processed by `createdb`. This make sense if searc
 
 
 ### Databases 
-Setup the PDB or AlphaFold using the `databases` module.
+Setup the PDB or AlphaFoldDB using the `databases` module.
     
     # pdb  
     foldseek databases PDB pdb tmp 
@@ -78,13 +86,13 @@ In case of the alignment type (`--alignment-type 1`) tmalign we sort the results
 foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 ```
 
-It is possible to compute the TMscores for the any kind of alignment output (e.g. 3Di/AA) using the following commands: 
+It is possible to compute TMscores for the kind of alignment output (e.g. 3Di/AA) using the following commands: 
 ```
-    foldseek createdb example/ targetDB
-    foldseek createdb example/ queryDB
-    foldseek search queryDB targetDB aln tmpFolder -a
-    foldseek aln2tmscore queryDB targetDB aln aln_tmscore
-    foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
+foldseek createdb example/ targetDB
+foldseek createdb example/ queryDB
+foldseek search queryDB targetDB aln tmpFolder -a
+foldseek aln2tmscore queryDB targetDB aln aln_tmscore
+foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
 In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
@@ -102,9 +110,9 @@ Compiling `foldseek` from source has the advantage of system-specific optimizati
     make install
     export PATH=$(pwd)/foldseek/bin/:$PATH
 
-:exclamation: If you want to compile `foldseek` on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and `foldseek` will not be able to run multi-threaded. Adjust the `cmake` call above to:
+:exclamation: If you want to compile `foldseek` on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP (by default) and `foldseek` will not be able to run multi-threaded. Adjust the `cmake` call above to:
 
-    CC="$(brew --prefix)/bin/gcc-10" CXX="$(brew --prefix)/bin/g++-10" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
+    CC="$(brew --prefix)/bin/gcc-11" CXX="$(brew --prefix)/bin/g++-11" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
 
 
 ## Hardware requirements

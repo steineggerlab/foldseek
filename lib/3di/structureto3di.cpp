@@ -4,7 +4,7 @@
 #include <vector>
 #include <cmath>
 #include "structureto3di.h"
-#include "3di_encoder_weights.kerasify.h"
+#include "encoder_weights_3di.kerasify.h"
 
 Vec3 StructureTo3DiBase::add(Vec3 a, Vec3 b){
     a.x = a.x + b.x;
@@ -160,8 +160,8 @@ void StructureTo3DiBase::findResiduePartners(std::vector<int> & partnerIdx, Vec3
 
 StructureTo3Di::StructureTo3Di(){
     encoder.LoadModel(
-            std::string((const char *)__3di_encoder_weights_kerasify,
-                                      __3di_encoder_weights_kerasify_len));
+            std::string((const char *)encoder_weights_3di_kerasify,
+                                      encoder_weights_3di_kerasify_len));
 }
 
 // Describe interaction of residue i and j

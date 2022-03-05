@@ -105,6 +105,8 @@ LocalParameters::LocalParameters() :
     chainNameMode = 0;
     tmAlignFast = 1;
     nsample = 5000;
+
+    citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S,Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2021)");
 }
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
