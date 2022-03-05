@@ -14,6 +14,73 @@
 #include <omp.h>
 #endif
 
+int alignStructure(StructureSmithWaterman & structureSmithWaterman,
+                   StructureSmithWaterman & reverseStructureSmithWaterman,
+                   Sequence & tSeqAA, Sequence & tSeq3Di,
+                   unsigned int querySeqLen, unsigned int targetSeqLen,
+                   EvalueNeuralNet & evaluer, std::pair<double, double> muLambda,
+                   Matcher::result_t & res, std::string & backtrace,
+                   Parameters & par) {
+
+
+    backtrace.clear();
+    // align only score and end pos
+    StructureSmithWaterman::s_align align = structureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+                                                                                    par.gapExtend.values.aminoacid(), querySeqLen / 2);
+    bool hasLowerCoverage = !(Util::hasCoverage(par.covThr, par.covMode, align.qCov, align.tCov));
+    if(hasLowerCoverage){
+        return -1;
+    }
+    StructureSmithWaterman::s_align revAlign = reverseStructureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+                                                                                              par.gapExtend.values.aminoacid(), querySeqLen / 2);
+    int32_t score = static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1);
+    align.evalue = evaluer.computeEvalueCorr(score, muLambda.first, muLambda.second);
+    bool hasLowerEvalue = align.evalue > par.evalThr;
+    if (hasLowerEvalue) {
+        return -1;
+    }
+    align = structureSmithWaterman.alignStartPosBacktrace(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+                                                          par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
+
+
+    unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
+    if(backtrace.size() > 0){
+        alnLength = backtrace.size();
+    }
+    float seqId = Util::computeSeqId(par.seqIdMode, align.identicalAACnt, querySeqLen, targetSeqLen, alnLength);
+    align.score1 = score;
+    res = Matcher::result_t(tSeqAA.getDbKey(), align.score1, align.qCov, align.tCov, seqId, align.evalue, alnLength,
+        align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, targetSeqLen, backtrace);
+    return 0;
+}
+
+
+int computeAlternativeAlignment(StructureSmithWaterman & structureSmithWaterman,
+                                 StructureSmithWaterman & reverseStructureSmithWaterman,
+                                 Sequence & tSeqAA, Sequence & tSeq3Di,
+                                 unsigned int querySeqLen, unsigned int targetSeqLen,
+                                 EvalueNeuralNet & evaluer, std::pair<double, double> muLambda,
+                                 Matcher::result_t & result, Matcher::result_t & altRes,
+                                 std::string & backtrace, Parameters & par) {
+    const unsigned char xAAIndex = tSeqAA.subMat->aa2num[static_cast<int>('X')];
+    const unsigned char x3DiIndex = tSeq3Di.subMat->aa2num[static_cast<int>('X')];
+    for (int pos = result.dbStartPos; pos < result.dbEndPos; ++pos) {
+        tSeqAA.numSequence[pos] = xAAIndex;
+        tSeq3Di.numSequence[pos] = x3DiIndex;
+    }
+    if (alignStructure(structureSmithWaterman, reverseStructureSmithWaterman,
+                       tSeqAA, tSeq3Di, querySeqLen, targetSeqLen,
+                       evaluer, muLambda, altRes, backtrace, par) == -1) {
+        return -1;
+    }
+    if (Alignment::checkCriteria(altRes, false, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+
 int structurealign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
@@ -124,46 +191,38 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
                     char * targetSeq3Di = t3DiDbr->sequenceReader->getData(targetId, thread_idx);
                     char * targetSeqAA = tAADbr->sequenceReader->getData(targetId, thread_idx);
-                    const int targetLen = static_cast<int>(t3DiDbr->sequenceReader->getSeqLen(targetId));
+                    const int targetSeqLen = static_cast<int>(t3DiDbr->sequenceReader->getSeqLen(targetId));
 
-                    tSeq3Di.mapSequence(targetId, dbKey, targetSeq3Di, targetLen);
-                    tSeqAA.mapSequence(targetId, dbKey, targetSeqAA, targetLen);
-                    if(Util::canBeCovered(par.covThr, par.covMode, qSeq3Di.L, targetLen) == false){
-                        continue;
-                    }
-
-                    backtrace.clear();
-                    // align only score and end pos
-                    StructureSmithWaterman::s_align align = structureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
-                                                     par.gapExtend.values.aminoacid(), querySeqLen / 2);
-                    bool hasLowerCoverage = !(Util::hasCoverage(par.covThr, par.covMode, align.qCov, align.tCov));
-                    if(hasLowerCoverage){
+                    tSeq3Di.mapSequence(targetId, dbKey, targetSeq3Di, targetSeqLen);
+                    tSeqAA.mapSequence(targetId, dbKey, targetSeqAA, targetSeqLen);
+                    if(Util::canBeCovered(par.covThr, par.covMode, qSeq3Di.L, targetSeqLen) == false){
                         rejected++;
                         continue;
                     }
-                    StructureSmithWaterman::s_align revAlign = reverseStructureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
-                                                                                                       par.gapExtend.values.aminoacid(), querySeqLen / 2);
-                    int32_t score = static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1);
-                    align.evalue = evaluer.computeEvalueCorr(score, muLambda.first, muLambda.second);
-                    bool hasLowerEvalue = align.evalue > par.evalThr;
-                    if (hasLowerEvalue) {
+                    Matcher::result_t res;
+                    if(alignStructure(structureSmithWaterman, reverseStructureSmithWaterman,
+                                      tSeqAA, tSeq3Di, querySeqLen, targetSeqLen,
+                                      evaluer, muLambda, res, backtrace, par) == -1){
                         rejected++;
                         continue;
                     }
-                    align = structureSmithWaterman.alignStartPosBacktrace(tSeqAA.numSequence, tSeq3Di.numSequence, targetLen, par.gapOpen.values.aminoacid(),
-                                                                    par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
-
-
-                    unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
-                    if(backtrace.size() > 0){
-                        alnLength = backtrace.size();
-                    }
-                    float seqId = Util::computeSeqId(par.seqIdMode, align.identicalAACnt, querySeqLen, targetLen, alnLength);
-                    align.score1 = score;
-                    Matcher::result_t res(dbKey, align.score1, align.qCov, align.tCov, seqId, align.evalue, alnLength, align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, targetLen, backtrace);
-
                     if (Alignment::checkCriteria(res, isIdentity, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
                         alignmentResult.emplace_back(res);
+                        int altAli = par.altAlignment;
+                        bool moreAltAli = true;
+                        while(altAli && moreAltAli){
+                            Matcher::result_t altRes;
+                            if(computeAlternativeAlignment(structureSmithWaterman, reverseStructureSmithWaterman,
+                                                           tSeqAA, tSeq3Di, querySeqLen, targetSeqLen,
+                                                           evaluer, muLambda, res, altRes,
+                                                           backtrace, par) == -1) {
+                                moreAltAli = false;
+                                continue;
+                            }
+                            alignmentResult.push_back(altRes);
+                            res = altRes;
+                            altAli--;
+                        }
                         passedNum++;
                         rejected = 0;
                     } else {
@@ -171,6 +230,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     }
                 }
             }
+
+
             if (alignmentResult.size() > 1) {
                 SORT_SERIAL(alignmentResult.begin(), alignmentResult.end(), Matcher::compareHits);
             }
