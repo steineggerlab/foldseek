@@ -7,7 +7,7 @@ set(COMPILED_RESOURCES
         structuresearch.sh
         structdatabases.sh
         mat3di.out
-        3di_encoder_weights.kerasify
+        encoder_weights_3di.kerasify
         evalue_nn.kerasify
         )
 
