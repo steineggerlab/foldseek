@@ -103,7 +103,7 @@ std::vector<struct Command> commands = {
                 CITATION_FOLDSEEK, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"resultDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
-                                           {"tree", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
+                                           {"tree", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
         {"traversetree",      traversetree,      &localPar.align,      COMMAND_ALIGNMENT,
                 "Traverse guide tree and build progressive MSA",
                 NULL,
