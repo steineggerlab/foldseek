@@ -8,6 +8,8 @@ set(strucclustutils_source_files
         strucclustutils/StructureSmithWaterman.h
         strucclustutils/EvalueNeuralNet.cpp
         strucclustutils/EvalueNeuralNet.h
+	strucclustutils/generatetree.cpp
+	strucclustutils/traversetree.cpp
         PARENT_SCOPE
         )
 
