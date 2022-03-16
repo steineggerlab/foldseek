@@ -18,6 +18,6 @@ int traversetree(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
-    std::cout << "Hello, protein world!" << endl;
+    std::cout << "Hello, protein world!" << std::endl;
     return EXIT_SUCCESS;
 }

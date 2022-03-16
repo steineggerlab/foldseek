@@ -18,6 +18,6 @@ int generatetree(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
-    std::cout << "Hello, worldyMcWorldface!" << endl;
+    std::cout << "Hello, worldyMcWorldface!" << std::endl;
     return EXIT_SUCCESS;
 }
