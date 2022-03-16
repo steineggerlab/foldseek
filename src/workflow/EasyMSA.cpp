@@ -1,6 +1,7 @@
 #include <cassert>
 #include <LocalParameters.h>
 #include "LinsearchIndexReader.h"
+#include "PrefilteringIndexReader.h"
 #include "CommandCaller.h"
 #include "Util.h"
 #include "Debug.h"
