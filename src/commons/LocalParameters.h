@@ -36,6 +36,9 @@ public:
     static const int CHAIN_MODE_AUTO = 0;
     static const int CHAIN_MODE_ADD = 1;
 
+    static const int OUTFMT_QCA = 40;
+    static const int OUTFMT_TCA = 41;
+
     static const unsigned int INDEX_DB_CA_KEY = 500;
 
     std::vector<MMseqsParameter *> strucclust;

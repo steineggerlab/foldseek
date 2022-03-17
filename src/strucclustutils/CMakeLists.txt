@@ -6,6 +6,7 @@ set(strucclustutils_source_files
         strucclustutils/samplemulambda.cpp
         strucclustutils/StructureSmithWaterman.cpp
         strucclustutils/StructureSmithWaterman.h
+        strucclustutils/structureconvertalis.cpp
         strucclustutils/EvalueNeuralNet.cpp
         strucclustutils/EvalueNeuralNet.h
         PARENT_SCOPE

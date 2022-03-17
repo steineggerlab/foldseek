@@ -135,6 +135,30 @@ std::vector<struct Command> commands = {
                 "<i:sequenceDB> <tmpDir>",
                 CITATION_SERVER | CITATION_MMSEQS2,{{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"convertalis",          structureconvertalis,    &localPar.convertalignments,    COMMAND_FORMAT_CONVERSION,
+                "Convert alignment DB to BLAST-tab, SAM or custom format",
+                "# Create output in BLAST M8 format (12 columns):\n"
+                "#  (1,2) identifiers for query and target sequences/profiles,\n"
+                "#  (3) sequence identity, (4) alignment length, (5) number of mismatches,\n"
+                "#  (6) number of gap openings, (7-8, 9-10) alignment start and end-position in query and in target,\n"
+                "#  (11) E-value, and (12) bit score\n"
+                "foldseek convertalis queryDB targetDB result.m8\n\n"
+                "# Create a TSV containing pairwise alignments\n"
+                "foldseek convertalis queryDB targetDB result.tsv --format-output query,target,qaln,taln\n\n"
+                "# Annotate a alignment result with taxonomy information from targetDB\n"
+                "foldseek convertalis queryDB targetDB result.tsv --format-output query,target,taxid,taxname,taxlineage\n\n"
+                " Create SAM output\n"
+                "foldseek convertalis queryDB targetDB result.sam --format-mode 1\n\n"
+                "# Create a TSV containing which query file a result comes from\n"
+                "foldseek createdb euk_queries.fasta bac_queries.fasta queryDB\n"
+                "foldseek convertalis queryDB targetDB result.tsv --format-output qset,query,target\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:queryDb> <i:targetDb> <i:alignmentDB> <o:alignmentFile>",
+                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                          {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
+
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,
