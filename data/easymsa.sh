@@ -50,19 +50,20 @@ fi
 if notExists "${TMP_PATH}/${TREE}"; then
     # shellcheck disable=SC2086
 	# Query DB, Target DB, Alignment DB, Tree file
-	"$MMSEQS" generatetree "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${RESULTS}" "${TREE}" \
+	"$MMSEQS" generatetree "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${TREE}" \
 		|| fail "Generate Tree died"
 fi
 
 if notExists "${TMP_PATH}/${MSA}"; then
     # shellcheck disable=SC2086
 	# Query DB, Target DB, Results DB, Tree, MSA
-	"$MMSEQS" traversetree "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${RESULTS}" "${TREE}" "${MSA}" \
+	"$MMSEQS" traversetree "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${TREE}" "${MSA}" \
 		|| fail "Traverse Tree died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     if [ -n "${GREEDY_BEST_HITS}" ]; then
+        # shellcheck disable=SC2086
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/result_best" ${VERBOSITY}
     fi
