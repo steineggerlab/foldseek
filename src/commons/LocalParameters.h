@@ -60,12 +60,16 @@ public:
     int chainNameMode;
     int tmAlignFast;
     int nsample;
+
+    static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
+                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa);
+
+
 private:
 
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};
     void operator=(LocalParameters const&);
+
 };
-
-
 #endif

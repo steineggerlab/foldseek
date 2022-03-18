@@ -47,8 +47,9 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         bool needSequenceDB = false;
         bool needFullHeaders = false;
         bool needSource = false;
-        Parameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                    needLookup, needSource, needTaxonomyMapping, needTaxonomy);
+        bool needCA = false;
+        LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
+                                    needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA);
     }
 
     if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM || par.greedyBestHits) {
