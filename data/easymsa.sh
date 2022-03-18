@@ -8,21 +8,26 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-if notExists "${TMP_PATH}/query.dbtype"; then
+# Generate fake prefilter file for all vs all alignments
+fake_pref() {
+    QDB="$1"
+    TDB="$2"
+    RES="$3"
+    # create link to data file which contains a list of all targets that should be aligned
+    ln -s "${TDB}.index" "${RES}"
+    # create new index repeatedly pointing to same entry
+    # INDEX_SIZE="$(echo $(wc -c < "${TDB}.index"))"
+    INDEX_SIZE=$(wc -c < "${TDB}.index")
+    awk -v size="${INDEX_SIZE}" '{ print $1"\t0\t"size; }' "${QDB}.index" > "${RES}.index"
+    # create dbtype (7)
+    awk 'BEGIN { printf("%c%c%c%c",7,0,0,0); exit; }' > "${RES}.dbtype"
+}
+
+if notExists "${TMP_PATH}/structures.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createdb "$@" "${TMP_PATH}/query" ${CREATEDB_PAR} \
-        || fail "query createdb died"
+        || fail "Structures createdb died"
 fi
-
-if notExists "${TARGET}.dbtype"; then
-    if notExists "${TMP_PATH}/target"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" createdb "${TARGET}" "${TMP_PATH}/target" ${CREATEDB_PAR} \
-            || fail "target createdb died"
-    fi
-    TARGET="${TMP_PATH}/target"
-fi
-
 
 INTERMEDIATE="${TMP_PATH}/result"
 if notExists "${INTERMEDIATE}.dbtype"; then

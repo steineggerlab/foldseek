@@ -49,16 +49,11 @@ std::vector<struct Command> commands = {
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"easy-msa",          easymsa,           &localPar.easymsaworkflow,   COMMAND_EASY,
                 "Sensitive homology search and build MSAs",
-                "# Search a single/multiple PDB file against a set of PDB files and create MSAs\n"
-                "foldseek easy-search example/d1asha_ example/ result.m8 tmp\n"
-                "# Format output differently\n"
-                "foldseek easy-search example/d1asha_ example/ result.m8 tmp --format-output query,target,qstart,tstart,cigar\n"
-                "# Align with TMalign (global)\n"
-                "foldseek easy-search example/d1asha_ example/ result.m8 tmp --alignment-type 1\n\n",
+                "# Align a set of PDB files and create a MSA\n"
+                "foldseek easy-msa example/d1asha_ result.m8 tmp\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:alignmentFile> <tmpDir>",
-                CITATION_FOLDSEEK, {{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder },
-                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder },
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <o:alignmentFile> <tmpDir>",
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
                                            {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"search",               structuresearch,               &localPar.structuresearchworkflow,       COMMAND_MAIN,
