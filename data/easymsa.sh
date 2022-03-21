@@ -44,8 +44,8 @@ if notExists "${ALIGNDB}.dbtype"; then
 	"$MMSEQS" structurealign "${STRUCTUREDB}" "${STRUCTUREDB}" "${PREFILTER}" "${ALIGNDB}" -e 1000000000000 --threads 1
 fi
 
-echo "*** EXITING ***"
-exit 0
+# echo "*** EXITING ***"
+# exit 0
 
 # INTERMEDIATE="${TMP_PATH}/result"
 # if notExists "${INTERMEDIATE}.dbtype"; then
