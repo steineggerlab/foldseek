@@ -6,7 +6,6 @@ set(COMPILED_RESOURCES
         structureindex.sh
         structuresearch.sh
         structdatabases.sh
-        easymsa.sh
         mat3di.out
         encoder_weights_3di.kerasify
         evalue_nn.kerasify

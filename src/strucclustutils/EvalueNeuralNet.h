@@ -37,10 +37,10 @@ public:
     }
     
     double computeEvalueCorr(double score, double lambda_, double mu){
-        double logPVal = computePvalue(score, lambda_, mu);
-        double dbSizeTimesLogPVal = logPVal + logDbResidueCount;
-        double evalue = exp(dbSizeTimesLogPVal);
-        double corrEvalue = pow(evalue, 0.32);
+	double logPVal = computePvalue(score, lambda_, mu);    
+	double dbSizeTimesLogPVal = logPVal + logDbResidueCount;
+	double evalue = exp(dbSizeTimesLogPVal);
+	double corrEvalue = pow(evalue, 0.32);
         return corrEvalue;
     }
 };
