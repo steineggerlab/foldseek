@@ -9,6 +9,8 @@ set(strucclustutils_source_files
         strucclustutils/structureconvertalis.cpp
         strucclustutils/EvalueNeuralNet.cpp
         strucclustutils/EvalueNeuralNet.h
+	strucclustutils/generatetree.cpp
+	strucclustutils/traversetree.cpp
         PARENT_SCOPE
         )
 

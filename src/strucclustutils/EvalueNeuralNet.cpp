@@ -7,7 +7,7 @@
 
 
 EvalueNeuralNet::EvalueNeuralNet(size_t dbResCount, BaseMatrix* subMat) : subMat(subMat) {
-        logDbResidueCount = log(static_cast<double>(dbResCount));
+        logDbResidueCount = log(static_cast<double>(dbResCount)); // change to log 2
         encoder.LoadModel(
         std::string((const char *)evalue_nn_kerasify,
         evalue_nn_kerasify_len));
