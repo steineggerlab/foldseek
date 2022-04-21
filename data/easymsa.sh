@@ -44,25 +44,6 @@ if notExists "${ALIGNDB}.dbtype"; then
 	"$MMSEQS" structurealign "${STRUCTUREDB}" "${STRUCTUREDB}" "${PREFILTER}" "${ALIGNDB}" -e 1000000000000 --threads 1
 fi
 
-# echo "*** EXITING ***"
-# exit 0
-
-# INTERMEDIATE="${TMP_PATH}/result"
-# if notExists "${INTERMEDIATE}.dbtype"; then
-#     # shellcheck disable=SC2086
-#     "$MMSEQS" search "${TMP_PATH}/query" "${TARGET}" "${INTERMEDIATE}" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
-#         || fail "Search died"
-# fi
-
-# if [ -n "${GREEDY_BEST_HITS}" ]; then
-#     if notExists "${TMP_PATH}/result_best.dbtype"; then
-#         # shellcheck disable=SC2086
-#         $RUNNER "$MMSEQS" summarizeresult "${TMP_PATH}/result" "${TMP_PATH}/result_best" ${SUMMARIZE_PAR} \
-#             || fail "Search died"
-#     fi
-#     INTERMEDIATE="${TMP_PATH}/result_best"
-# fi
-
 if notExists "${TMP_PATH}/${TREE}"; then
     # shellcheck disable=SC2086
 	# Query DB, Target DB, Alignment DB, Tree file
