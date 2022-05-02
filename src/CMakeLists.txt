@@ -12,7 +12,7 @@ add_executable(foldseek
         foldseek.cpp)
 
 mmseqs_setup_derived_target(foldseek)
-target_link_libraries(foldseek version gemmiwrapper 3di kerasify tmalign)
+target_link_libraries(foldseek version gemmiwrapper 3di pulchra kerasify tmalign)
 
 add_dependencies(foldseek local-generated)
 

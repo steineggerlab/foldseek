@@ -9,6 +9,8 @@ set(strucclustutils_source_files
         strucclustutils/structureconvertalis.cpp
         strucclustutils/EvalueNeuralNet.cpp
         strucclustutils/EvalueNeuralNet.h
+        strucclustutils/PulchraWrapper.cpp
+        strucclustutils/PulchraWrapper.h
         PARENT_SCOPE
         )
 
