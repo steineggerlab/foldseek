@@ -7,10 +7,10 @@
 #include "DBWriter.h"
 #include "FastSort.h"
 
-#include "structureto3diseqdist.h"
 #include "structureto3di.h"
 #include "SubstitutionMatrix.h"
 #include "GemmiWrapper.h"
+#include "PulchraWrapper.h"
 
 #include <iostream>
 #include <dirent.h>
@@ -18,7 +18,6 @@
 #ifdef OPENMP
 #include <omp.h>
 #endif
-
 
 int createdb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
@@ -75,12 +74,14 @@ int createdb(int argc, const char **argv, const Command& command) {
 #endif
         //recon_related
         StructureTo3Di structureTo3Di;
-        //StructureTo3diSeqDist structureTo3Di;
+        PulchraWrapper pulchra;
         GemmiWrapper readStructure;
         std::vector<char> alphabet3di;
         std::vector<float> camol;
         std::string header;
         std::string name;
+
+
 #pragma omp for schedule(static)
         for (size_t i = 0; i < filenames.size(); i++) {
             progress.updateProgress();
@@ -105,6 +106,22 @@ int createdb(int argc, const char **argv, const Command& command) {
                     continue;
                 }
 
+                // Detect if structure is Ca only
+                if (std::isnan(readStructure.n[chainStart + 0].x) &&
+                    std::isnan(readStructure.n[chainStart + 1].x) &&
+                    std::isnan(readStructure.n[chainStart + 2].x) &&
+                    std::isnan(readStructure.n[chainStart + 3].x) &&
+                    std::isnan(readStructure.c[chainStart + 0].x) &&
+                    std::isnan(readStructure.c[chainStart + 1].x) &&
+                    std::isnan(readStructure.c[chainStart + 2].x) &&
+                    std::isnan(readStructure.c[chainStart + 3].x))
+                {
+                pulchra.rebuildBackbone(&readStructure.ca[chainStart],
+                                        &readStructure.n[chainStart],
+                                        &readStructure.c[chainStart],
+                                        &readStructure.ami[chainStart],
+                                        chainLen);
+                }
 
                 char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
                                                                 &readStructure.n[chainStart],
@@ -155,6 +172,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 camol.clear();
             }
         }
+
     }
 
     torsiondbw.close(true);
