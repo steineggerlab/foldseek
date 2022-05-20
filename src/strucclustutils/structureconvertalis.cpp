@@ -17,9 +17,7 @@
 
 
 #include <zstd.h>
-namespace viz{
-#include "result_viz_prelude.html.zst.h"
-}
+#include "result_viz_prelude_fs.html.zst.h"
 #include <map>
 
 #ifdef OPENMP
@@ -344,9 +342,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         }
         delete[] headerWritten;
     } else if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
-        size_t dstSize = ZSTD_findDecompressedSize(viz::result_viz_prelude_html_zst, viz::result_viz_prelude_html_zst_len);
+        size_t dstSize = ZSTD_findDecompressedSize(result_viz_prelude_fs_html_zst, result_viz_prelude_fs_html_zst_len);
         char* dst = (char*)malloc(sizeof(char) * dstSize);
-        size_t realSize = ZSTD_decompress(dst, dstSize, viz::result_viz_prelude_html_zst, viz::result_viz_prelude_html_zst_len);
+        size_t realSize = ZSTD_decompress(dst, dstSize, result_viz_prelude_fs_html_zst, result_viz_prelude_fs_html_zst_len);
         resultWriter.writeData(dst, realSize, 0, 0, false, false);
         const char* scriptBlock = "<script>render([";
         resultWriter.writeData(scriptBlock, strlen(scriptBlock), 0, 0, false, false);
@@ -441,6 +439,10 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 } else {
                     result.append(querySeqData, querySeqLen);
                 }
+                result.append("\", \"qca\": \"");
+                caStr.clear();
+                caToStr(queryCaData, querySeqLen, caStr);
+                result.append(caStr, 0, caStr.size()-1);
                 result.append("\"}, \"alignments\": [\n");
             }
 
@@ -769,7 +771,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                              res.dbStartPos + 1, res.dbEndPos + 1,
                                              res.eval, res.score,
                                              res.qLen, res.dbLen);
-
                         if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
                             Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
                             continue;
@@ -799,6 +800,14 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                                (res.dbStartPos > res.dbEndPos),
                                                (isTranslatedSearch == true && targetNucs == true), translateNucl);
                         }
+                        result.append("\", \"tca\": \"");
+                        caStr.clear();
+                        caToStr(targetCaData, res.dbLen, caStr);
+                        result.append(caStr, 0, caStr.size()-1);
+                        
+                        result.append("\", \"tseq\": \"");
+                        result.append(targetSeqData, 0, res.dbLen);
+
                         result.append("\" },\n");
                         break;
                     }

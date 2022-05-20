@@ -118,6 +118,7 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
     if (formatMode == Parameters::FORMAT_ALIGNMENT_SAM || formatMode == Parameters::FORMAT_ALIGNMENT_HTML) {
         needSequences = true;
         needBacktrace = true;
+	needCa = true;
         return formatCodes;
     }
     std::vector<std::string> outformatSplit = Util::split(outformat, ",");
