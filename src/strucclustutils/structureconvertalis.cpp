@@ -440,10 +440,10 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     result.append(querySeqData, querySeqLen);
                 }
                 result.append("\", \"qca\": \"");
-		caStr.clear();
-		caToStr(queryCaData, querySeqLen, caStr);
-		result.append(caStr, 0, caStr.size()-1);
-	    	result.append("\"}, \"alignments\": [\n");
+                caStr.clear();
+                caToStr(queryCaData, querySeqLen, caStr);
+                result.append(caStr, 0, caStr.size()-1);
+                result.append("\"}, \"alignments\": [\n");
             }
 
             char *data = alnDbr.getData(i, thread_idx);
@@ -801,12 +801,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                                (isTranslatedSearch == true && targetNucs == true), translateNucl);
                         }
                         result.append("\", \"tca\": \"");
-			caStr.clear();
-			caToStr(targetCaData, res.dbLen, caStr);
-			result.append(caStr, 0, caStr.size()-1);
-
-			result.append("\", \"tseq\": \"");
-			result.append(targetSeqData, 0, res.dbLen);
+                        caStr.clear();
+                        caToStr(targetCaData, res.dbLen, caStr);
+                        result.append(caStr, 0, caStr.size()-1);
+                        
+                        result.append("\", \"tseq\": \"");
+                        result.append(targetSeqData, 0, res.dbLen);
 
                         result.append("\" },\n");
                         break;
