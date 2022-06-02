@@ -103,7 +103,7 @@ Foldseek can locally generate search results resembling what is displayed on the
 format mode (``--format-mode 3``).
 
 ```
-foldseek easy-search example/* example/ aln tmp --format-mode 3
+foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 ```
 
 <p align="center"><img src="./.github/results.png" height="400"/></p>
