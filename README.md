@@ -97,6 +97,17 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 
 In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
 
+### Search result visualisations
+Foldseek can locally generate search results resembling what is displayed on the
+[search.foldseek.com](https://search.foldseek.com) webserver by specifying the HTML
+format mode (``--format-mode 3``).
+
+```
+foldseek easy-search example/* example/ aln tmp --format-mode 3
+```
+
+<p align="center"><img src="./.github/results.png" height="400"/></p>
+
 ### Compile from source
 
 Compiling `foldseek` from source has the advantage of system-specific optimizations, which should improve its performance. To compile it `git`, `g++` (4.9 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the foldseek binary will be located in the `build/bin` directory.
