@@ -242,8 +242,7 @@ bool KabschFast(Coordinates & x,
                  float * mem){
     float r[16] __attribute__ ((aligned (16)));
 
-//    Kabsch(x, y, n, 2, rms,
-//            t, u);
+
     *rms = kabsch_quat_soa_avx(n, x.x, x.y, x.z, y.x, y.y, y.z, r, mem);
     t[0] = r[3];
     t[1] = r[7];
@@ -257,6 +256,14 @@ bool KabschFast(Coordinates & x,
     u[2][0] = r[8];
     u[2][1] = r[9];
     u[2][2] = r[10];
+    if(isnan(u[0][0]) || isnan(u[0][1]) || isnan(u[0][2]) ||
+        isnan(u[1][0]) || isnan(u[1][1]) || isnan(u[1][2]) ||
+        isnan(u[2][0]) || isnan(u[2][1]) || isnan(u[2][2])
+    ){
+        Kabsch(x, y, n, 2, rms,
+               t, u);
+    }
+
     return true;
 }
 
