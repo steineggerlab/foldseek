@@ -42,10 +42,12 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
 
 ### Important parameters
+    # sensitivity 
     -s                       adjust the sensitivity to speed trade-off.
                              lower is faster, higher more sensitive (fast: 7.5, highest sensitivity (default): 9.5)
     --max-seqs               adjust the amount of prefilter that are handed to the alignment. 
                              Increasing it can lead to more hits (default: 300)
+    # other                         
     --alignment-type         0: 3Di Gotoh-Smith-Waterman (local, not recommended), 
                              1: TMalign (global), 
                              2: 3Di+AA Gotoh-Smith-Waterman (local, default)
@@ -77,7 +79,7 @@ We currently support the following databases:
 * `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 * `databases`         download pre-assembled databases
 
-### TMalign/TMscore 
+### TMalign 
 Foldseek supports to realign hits using TMalign as well as rescoring alignments using TMscore. 
 
 In case of the alignment type (`--alignment-type 1`) tmalign we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field.
@@ -85,7 +87,7 @@ In case of the alignment type (`--alignment-type 1`) tmalign we sort the results
 ```
 foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 ```
-
+### Rescore aligments using TMscore
 It is possible to compute TMscores for the kind of alignment output (e.g. 3Di/AA) using the following commands: 
 ```
 foldseek createdb example/ targetDB
@@ -96,6 +98,18 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
 In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
+
+### Cluster alignments 
+The following command aligns the structures all against all and keeps only alignments with a 80% of the sequence covered by the alignment `-c 0.8`. Read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster). and clusters the results using greedy set cover algrithm. The clustering mode can be adjusted using `--cluster-mode`, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
+
+```
+foldseek createdb example/ db
+foldseek search db db aln tmpFolder -c 0.8 
+foldseek clust db aln clu
+foldseek createtsv db db clu clu.tsv
+```
+
+
 
 ### Search result visualisations
 Foldseek can locally generate search results resembling what is displayed on the
