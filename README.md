@@ -99,17 +99,6 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 
 In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
 
-### Cluster structures 
-The following command aligns the structures all against all and keeps only alignments with a 80% of the sequence covered by the alignment `-c 0.8`. Read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster). and clusters the results using greedy set cover algrithm. The clustering mode can be adjusted using `--cluster-mode`, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
-
-```
-foldseek createdb example/ db
-foldseek search db db aln tmpFolder -c 0.8 
-foldseek clust db aln clu
-foldseek createtsv db db clu clu.tsv
-```
-
-
 
 ### Search result visualisations
 Foldseek can locally generate search results resembling what is displayed on the
@@ -121,6 +110,27 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 ```
 
 <p align="center"><img src="./.github/results.png" height="400"/></p>
+
+### Cluster structures 
+The following command aligns the structures all against all and keeps only alignments with a 80% of the sequence covered by the alignment `-c 0.8`. Read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster). and clusters the results using greedy set cover algrithm. The clustering mode can be adjusted using `--cluster-mode`, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
+
+```
+foldseek createdb example/ db
+foldseek search db db aln tmpFolder -c 0.8 
+foldseek clust db aln clu
+foldseek createtsv db db clu clu.tsv
+```
+
+### Query centered multiple sequence alignment 
+Foldseek can generate a3m based multiple sequence alignments using the following commands. 
+a3m can be converted to fasta format using [reformat.pl](https://raw.githubusercontent.com/soedinglab/hh-suite/master/scripts/reformat.pl) (`reformat.pl in.a3m out.fas`).
+```
+foldseek createdb example/ targetDB
+foldseek createdb example/ queryDB
+foldseek search queryDB targetDB aln tmpFolder -a
+foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
+foldseek unpackdb queryDB targetDB msa msa.txt --unpack-suffix a3m --unpack-name-mode 0
+```
 
 ### Compile from source
 
