@@ -99,7 +99,7 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 
 In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
 
-### Cluster alignments 
+### Cluster structures 
 The following command aligns the structures all against all and keeps only alignments with a 80% of the sequence covered by the alignment `-c 0.8`. Read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster). and clusters the results using greedy set cover algrithm. The clustering mode can be adjusted using `--cluster-mode`, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
 
 ```
