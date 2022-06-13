@@ -79,7 +79,7 @@ We currently support the following databases:
 * `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 * `databases`         download pre-assembled databases
 
-### TMalign 
+### Using TMalign for the alignment
 Foldseek supports to realign hits using TMalign as well as rescoring alignments using TMscore. 
 
 In case of the alignment type (`--alignment-type 1`) tmalign we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field.
