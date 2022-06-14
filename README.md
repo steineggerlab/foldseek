@@ -71,12 +71,12 @@ We currently support the following databases:
 
 ### Using TMalign for the alignment
 Foldseek supports to realign hits using TMalign as well as rescoring alignments using TMscore. 
-
-In case of the alignment type (`--alignment-type 1`) tmalign we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field.
-
 ```
 foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 ```
+In case of the alignment type (`--alignment-type 1`) tmalign we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field.
+
+
 ### Rescore aligments using TMscore
 It is possible to compute TMscores for the kind of alignment output (e.g. 3Di/AA) using the following commands: 
 ```
@@ -87,7 +87,7 @@ foldseek aln2tmscore queryDB targetDB aln aln_tmscore
 foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
-Output: query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
+Output format `aln_tmscore.tsv`: query and target identifier, TMscore, translation(3) and rotation vector=(3x3)
 
 
 ### Search result visualisations
