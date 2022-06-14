@@ -14,11 +14,9 @@ Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.a
 
 ## Installation
 
-`foldseek` can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system. We recommend using a system with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux).
-
-    # static Linux AVX2 build
+    # static Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
     wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-    # static Linux SSE4.1 build
+    # static Linux SSE4.1 build (check using: cat /proc/cpuinfo | grep sse4_1)
     wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
     # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
     wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
@@ -29,19 +27,18 @@ Precompiled binaries for other architectures (ARM64, PPC64LE) and very old AMD/I
 
 ### Quick start
     
-`easy-search` can search single or multiple queries formatted in PDB/mmCIF format (flat or `.gz`) against a target database (`example/`) of protein structures. It outputs a tab-separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
+`easy-search` can search single or multiple query structures formatted in PDB/mmCIF format (flat or `.gz`) against a target database (`example/`) of protein structures. It outputs a tab-separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
 
     foldseek easy-search example/d1asha_ example/ aln.m8 tmpFolder
     
-The output can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. 
-You can choose many different [output columns](https://github.com/soedinglab/mmseqs2/wiki#custom-alignment-format-with-convertalis).    
+The output can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different [output columns](https://github.com/soedinglab/mmseqs2/wiki#custom-alignment-format-with-convertalis).    
 
-The target database can be pre-processed by `createdb`. This make sense if searched multiple times.
+The target database can be pre-processed by `createdb`. This make sense if searched multiple times. 
  
     foldseek createdb example/ targetDB
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
 
-### Important parameters
+### Important search parameters
     # sensitivity 
     -s                       adjust the sensitivity to speed trade-off.
                              lower is faster, higher more sensitive (fast: 7.5, highest sensitivity (default): 9.5)
@@ -54,10 +51,8 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
     --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
 
-
-
 ### Databases 
-Setup the PDB or AlphaFoldDB using the `databases` module.
+The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
     
     # pdb  
     foldseek databases PDB pdb tmp 
@@ -71,10 +66,8 @@ We currently support the following databases:
 - Alphafold/Swiss-Prot  Aminoacid            yes        https://alphafold.ebi.ac.uk/
 - PDB                   Aminoacid            yes        https://www.rcsb.org
 ```
-    
 
 ### Main Modules
-
 * `easy-search`       fast protein structure search  
 * `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 * `databases`         download pre-assembled databases
