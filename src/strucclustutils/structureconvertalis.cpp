@@ -409,7 +409,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     querySeqData = (char*) queryBuffer.c_str();
                 }
                 if (queryProfile) {
-                    Sequence::extractProfileConsensus(querySeqData, *subMat, queryProfData);
+                    size_t queryEntryLen = qDbr.sequenceReader->getEntryLen(qId);
+                    Sequence::extractProfileConsensus(querySeqData, queryEntryLen, *subMat, queryProfData);
                 }
             }
             float *queryCaData = NULL;
@@ -538,7 +539,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                 size_t tId = tDbr->sequenceReader->getId(res.dbKey);
                                 targetSeqData = tDbr->sequenceReader->getData(tId, thread_idx);
                                 if (targetProfile) {
-                                    Sequence::extractProfileConsensus(targetSeqData, *subMat, targetProfData);
+                                    size_t targetEntryLen = tDbr->sequenceReader->getEntryLen(tId);
+                                    Sequence::extractProfileConsensus(targetSeqData, targetEntryLen, *subMat, targetProfData);
                                 }
                             }
                             for(size_t i = 0; i < outcodes.size(); i++) {
@@ -789,7 +791,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                         size_t tId = tDbr->sequenceReader->getId(res.dbKey);
                         char* targetSeqData = tDbr->sequenceReader->getData(tId, thread_idx);
                         if (targetProfile) {
-                            Sequence::extractProfileConsensus(targetSeqData, *subMat, targetProfData);
+                            size_t targetEntryLen = tDbr->sequenceReader->getEntryLen(tId);
+                            Sequence::extractProfileConsensus(targetSeqData, targetEntryLen, *subMat, targetProfData);
                             structurePrintSeqBasedOnAln(result, targetProfData.c_str(), res.dbStartPos,
                                                Matcher::uncompressAlignment(res.backtrace), true,
                                                (res.dbStartPos > res.dbEndPos),
