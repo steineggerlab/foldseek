@@ -129,7 +129,7 @@ foldseek createdb example/ targetDB
 foldseek createdb example/ queryDB
 foldseek search queryDB targetDB aln tmpFolder -a
 foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
-foldseek unpackdb queryDB targetDB msa msa.txt --unpack-suffix a3m --unpack-name-mode 0
+foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
 
 ### Compile from source
