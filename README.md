@@ -65,9 +65,9 @@ We currently support the following databases:
 ```
 
 ### Main Modules
-* `easy-search`       fast protein structure search  
-* `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
-* `databases`         download pre-assembled databases
+- `easy-search`       fast protein structure search  
+- `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
+- `databases`         download pre-assembled databases
 
 ### Using TMalign for the alignment
 Foldseek supports to realign hits using TMalign as well as rescoring alignments using TMscore. 
@@ -87,13 +87,11 @@ foldseek aln2tmscore queryDB targetDB aln aln_tmscore
 foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
-In the output is the query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
+Output: query and target identifier, TMscore, translation(3) and rotation vector=(3x3) (`query,target,TMscore,t[0-2],u[0-2][0-2]`)
 
 
 ### Search result visualisations
-Foldseek can locally generate search results resembling what is displayed on the
-[search.foldseek.com](https://search.foldseek.com) webserver by specifying the HTML
-format mode (``--format-mode 3``).
+Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
 
 ```
 foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
@@ -123,7 +121,6 @@ foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
 
 ### Compile from source
-
 Compiling `foldseek` from source has the advantage of system-specific optimizations, which should improve its performance. To compile it `git`, `g++` (4.9 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the foldseek binary will be located in the `build/bin` directory.
 
     git clone https://github.com/steineggerlab/foldseek.git
