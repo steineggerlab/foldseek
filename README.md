@@ -100,7 +100,7 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 <p align="center"><img src="./.github/results.png" height="400"/></p>
 
 ### Cluster structures 
-The following command aligns the structures all against all and keeps only alignments with a 80% of the sequence covered by the alignment `-c 0.8`. Read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster). and clusters the results using greedy set cover algorithm. The clustering mode can be adjusted using `--cluster-mode`, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
+The following command aligns the input structures all-against-all and keeps only alignments with 80% of the sequence covered by the alignment (-c 0.8) (read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster)). It then clusters the results using greedy set cover algorithm. The clustering mode can be adjusted using --cluster-mode, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
 
 ```
 foldseek createdb example/ db
