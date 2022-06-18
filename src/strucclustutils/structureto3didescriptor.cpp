@@ -61,6 +61,7 @@ int structureto3didescriptor(int argc, const char **argv, const Command& command
     size_t globalCnt = 0;
     size_t incorrectFiles = 0;
     size_t toShort = 0;
+
     //===================== single_process ===================//__110710__//
 #pragma omp parallel default(none) shared(par, vec3di, mat, filenames, progress, globalCnt, fileIdLookup) reduction(+:incorrectFiles, toShort)
     {
@@ -128,7 +129,7 @@ int structureto3didescriptor(int argc, const char **argv, const Command& command
                     header.append(readStructure.title);
                 }
 
-                structureTo3Di.structure2states(&readStructure.ca[chainStart],
+                char * seq3di = structureTo3Di.structure2states(&readStructure.ca[chainStart],
                                                                &readStructure.n[chainStart],
                                                                &readStructure.c[chainStart],
                                                                &readStructure.cb[chainStart],
@@ -136,6 +137,14 @@ int structureto3didescriptor(int argc, const char **argv, const Command& command
                 std::vector<StructureTo3Di::Feature> features = structureTo3Di.getFeatures();
                 result.clear();
                 result.append(header);
+                result.push_back('\t');
+                for (size_t j = 0; j < chainLen; j++) {
+                    result.push_back(readStructure.ami[chainStart+j]);
+                }
+                result.push_back('\t');
+                for (size_t j = 0; j < chainLen; j++) {
+                    result.push_back(mat.num2aa[(size_t)seq3di[j]]);
+                }
                 result.push_back('\t');
                 for (size_t j = 0; j < features.size(); j++) {
                     for(size_t f = 0; f < Alphabet3Di::FEATURE_CNT; f++){
