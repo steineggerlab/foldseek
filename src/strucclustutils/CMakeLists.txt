@@ -7,6 +7,7 @@ set(strucclustutils_source_files
         strucclustutils/StructureSmithWaterman.cpp
         strucclustutils/StructureSmithWaterman.h
         strucclustutils/structureconvertalis.cpp
+        strucclustutils/structureto3didescriptor.cpp
         strucclustutils/EvalueNeuralNet.cpp
         strucclustutils/EvalueNeuralNet.h
         strucclustutils/PulchraWrapper.cpp

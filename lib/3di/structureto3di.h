@@ -48,14 +48,6 @@ struct Vec3 {
 class StructureTo3DiBase{
 protected:
 
-    struct Feature{
-        double f[Alphabet3Di::FEATURE_CNT];
-        Feature(){}
-        Feature(double param_f[Alphabet3Di::FEATURE_CNT]){
-            memcpy(f, param_f, sizeof(double) * Alphabet3Di::FEATURE_CNT);
-        }
-    };
-
     Vec3 add(Vec3 a, Vec3 b);
     Vec3 sub(Vec3 a, Vec3 b);
     Vec3 norm(Vec3 a);
@@ -92,7 +84,13 @@ public:
                             Vec3 * c, Vec3 * cb,
                             size_t len);
 
-protected:
+    struct Feature{
+        double f[Alphabet3Di::FEATURE_CNT];
+        Feature(){}
+        Feature(double param_f[Alphabet3Di::FEATURE_CNT]){
+            memcpy(f, param_f, sizeof(double) * Alphabet3Di::FEATURE_CNT);
+        }
+    };
 
     struct Embedding{
         double f[Alphabet3Di::EMBEDDING_DIM];
@@ -101,6 +99,10 @@ protected:
             memcpy(f, param_f, sizeof(double) * Alphabet3Di::EMBEDDING_DIM);
         }
     };
+
+    std::vector<Feature> getFeatures(){
+        return features;
+    }
 
 private:
     // Encoding
