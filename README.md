@@ -52,7 +52,7 @@ The target database can be pre-processed by `createdb`. This make sense if searc
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
     
     # pdb  
-    foldseek databases PDB pdb tmp 
+    foldseek databases PDB100 pdb tmp 
     # alphafold db
     foldseek databases Alphafold/Proteome afdb tmp 
 
