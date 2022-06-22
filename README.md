@@ -61,7 +61,7 @@ We currently support the following databases:
   Name                  Type            Taxonomy        Url
 - Alphafold/Proteome    Aminoacid            yes        https://alphafold.ebi.ac.uk/
 - Alphafold/Swiss-Prot  Aminoacid            yes        https://alphafold.ebi.ac.uk/
-- PDB                   Aminoacid            yes        https://www.rcsb.org
+- PDB100                Aminoacid            yes        https://www.rcsb.org
 ```
 
 ### Main Modules
