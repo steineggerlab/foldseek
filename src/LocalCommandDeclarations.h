@@ -13,4 +13,7 @@ extern int structurealign(int argc, const char** argv, const Command &command);
 extern int samplemulambda(int argc, const char** argv, const Command &command);
 extern int structureconvertalis(int argc, const char** argv, const Command &command);
 extern int structureto3didescriptor(int argc, const char** argv, const Command &command);
+extern int structurerbh(int argc, const char** argv, const Command &command);
+extern int structureeasyrbh(int argc, const char** argv, const Command &command);
+
 #endif
