@@ -221,7 +221,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
     }
 
-    Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
+    Debug(Debug::INFO) << "Output file: " << outputName << "\n";
     SORT_PARALLEL(filenames.begin(), filenames.end());
 
     DBWriter torsiondbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
@@ -233,7 +233,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
     SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
-    Debug::Progress progress(filenames.size()+1);
+    Debug::Progress progress(filenames.size());
     std::map<std::string, size_t> entrynameToFileId;
     std::map<size_t, std::string> fileIdToName;
     std::map<std::string, size_t> filenameToFileId;
@@ -261,6 +261,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         } else {
             continue;
         }
+        progress.updateProgress();
 #ifdef OPENMP
         int localThreads = par.threads;
         if(localThreads > 1){
@@ -335,18 +336,18 @@ int createdb(int argc, const char **argv, const Command& command) {
                         }
                         if (tarHeader.type == MTAR_TREG || tarHeader.type == MTAR_TCONT ||
                             tarHeader.type == MTAR_TOLDREG) {
+                            if (tarHeader.size > bufferSize) {
+                                bufferSize = tarHeader.size * 1.5;
+                                dataBuffer = (char *) realloc(dataBuffer, bufferSize);
+                            }
+                            if (mtar_read_data(&tar, dataBuffer, tarHeader.size) != MTAR_ESUCCESS) {
+                                Debug(Debug::ERROR) << "Cannot read entry " << name << "\n";
+                                //EXIT(EXIT_FAILURE);
+                            }
                             if (include.isMatch(name.c_str()) == false || exclude.isMatch(name.c_str()) == true) {
                                 proceed = true;
                                 writeEntry = false;
                             } else {
-                                if (tarHeader.size > bufferSize) {
-                                    bufferSize = tarHeader.size * 1.5;
-                                    dataBuffer = (char *) realloc(dataBuffer, bufferSize);
-                                }
-                                if (mtar_read_data(&tar, dataBuffer, tarHeader.size) != MTAR_ESUCCESS) {
-                                    Debug(Debug::ERROR) << "Cannot read entry " << name << "\n";
-                                    //EXIT(EXIT_FAILURE);
-                                }
                                 proceed = true;
                                 writeEntry = true;
                             }
@@ -429,13 +430,13 @@ int createdb(int argc, const char **argv, const Command& command) {
 
 #pragma omp for schedule(static)
         for (size_t i = 0; i < filenames.size(); i++) {
-            progress.updateProgress();
             // skip tars since they were processed on top
             if (Util::endsWith(".tar.gz", filenames[i])
                 || Util::endsWith(".tgz", filenames[i])
                 || Util::endsWith(".tar", filenames[i])) {
                 continue;
             }
+            progress.updateProgress();
 
             if(readStructure.load(filenames[i]) == false){
                 incorrectFiles++;
