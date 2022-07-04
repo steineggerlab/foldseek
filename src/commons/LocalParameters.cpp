@@ -40,6 +40,8 @@ LocalParameters::LocalParameters() :
     // structurecreatedb
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
+    structurecreatedb.push_back(&PARAM_TAR_INCLUDE);
+    structurecreatedb.push_back(&PARAM_TAR_EXCLUDE);
     structurecreatedb.push_back(&PARAM_THREADS);
     structurecreatedb.push_back(&PARAM_V);
     // tmalign
