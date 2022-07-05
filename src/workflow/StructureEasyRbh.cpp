@@ -11,20 +11,8 @@ namespace structureRbh{
 }
 
 
-void structureEasyRbhDefault(LocalParameters * p){
-    p->maskMode = 0;
-    p->maskProb = 0.99995;
-    p->sensitivity = 9.5;
-    p->maxResListLen = 1000;
-    p->gapOpen = 10;
-    p->gapExtend = 1;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
-    p->removeTmpFiles = true;
-}
-
 int structureeasyrbh(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    structureEasyRbhDefault(&par);
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ZDROP.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -48,13 +36,11 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    par.sensitivity = 5.7;
     par.removeTmpFiles = true;
     par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     par.writeLookup = false;
     par.createdbMode = Parameters::SEQUENCE_SPLIT_MODE_SOFT;
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    par.PARAM_S.wasSet = true;
     par.PARAM_REMOVE_TMP_FILES.wasSet = true;
     par.PARAM_ALIGNMENT_MODE.wasSet = true;
 
@@ -104,7 +90,6 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     }
 
     cmd.addVariable("QUERY", par.filenames.back().c_str());
-
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
