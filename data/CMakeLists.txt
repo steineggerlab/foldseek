@@ -5,11 +5,12 @@ set(COMPILED_RESOURCES
         structurecluster.sh
         structureindex.sh
         structuresearch.sh
+        structurerbh.sh
         structdatabases.sh
         mat3di.out
         encoder_weights_3di.kerasify
         evalue_nn.kerasify
-	result_viz_prelude_fs.html.zst
+	    result_viz_prelude_fs.html.zst
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

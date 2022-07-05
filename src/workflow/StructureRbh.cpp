@@ -4,7 +4,7 @@
 #include "Debug.h"
 #include "LocalParameters.h"
 namespace structureRbh{
-#include "rbh.sh.h"
+#include "structurerbh.sh.h"
 }
 
 #include <cassert>
@@ -62,11 +62,22 @@ int structurerbh(int argc, const char **argv, const Command &command) {
     cmd.addVariable("SEARCH_B_A_PAR", par.createParameterString(par.structuresearchworkflow).c_str());
     par.covMode = originalCovMode;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+
+    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
+        cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
+        par.tmScoreThr = 0.0f;
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA){
+        cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
+        par.evalThr = 100000000;
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
+    }
+
     cmd.addVariable("VERB_COMP_PAR", par.createParameterString(par.verbandcompression).c_str());
     cmd.addVariable("THREADS_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
     std::string program = tmpDir + "/rbh.sh";
-    FileUtil::writeFile(program, structureRbh::rbh_sh, structureRbh::rbh_sh_len);
+    FileUtil::writeFile(program, structureRbh::structurerbh_sh, structureRbh::structurerbh_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
