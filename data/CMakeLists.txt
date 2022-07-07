@@ -10,7 +10,7 @@ set(COMPILED_RESOURCES
         mat3di.out
         encoder_weights_3di.kerasify
         evalue_nn.kerasify
-	    result_viz_prelude_fs.html.zst
+	result_viz_prelude_fs.html.zst
         )
 
 set(GENERATED_OUTPUT_HEADERS "")
