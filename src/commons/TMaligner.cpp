@@ -74,7 +74,7 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
     int L_ali;                // Aligned length in standard_TMscore
     float Lnorm;         //normalization length
     float score_d8,d0,d0_search,dcu0;//for TMscore search
-    parameter_set4search(targetLen,  queryLen, D0_MIN, Lnorm,
+    parameter_set4search(std::min((unsigned int)backtrace.size(), targetLen),  queryLen, D0_MIN, Lnorm,
                          score_d8, d0, d0_search, dcu0);
     double prevD0_MIN = D0_MIN;// stored for later use
     int prevLnorm = Lnorm;

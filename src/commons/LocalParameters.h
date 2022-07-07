@@ -40,7 +40,7 @@ public:
     static const int OUTFMT_TCA = 41;
     static const int OUTFMT_U = 42;
     static const int OUTFMT_T = 43;
-    static const int OUTFMT_TMSCORE = 44;
+    static const int OUTFMT_ALNTMSCORE = 44;
 
 
     static const unsigned int INDEX_DB_CA_KEY = 500;

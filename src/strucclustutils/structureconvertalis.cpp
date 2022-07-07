@@ -742,7 +742,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                         result.push_back(',');
                                         result.append(SSTR(tmres.t[2]));
                                         break;
-                                    case LocalParameters::OUTFMT_TMSCORE:
+                                    case LocalParameters::OUTFMT_ALNTMSCORE:
                                         result.append(SSTR(tmres.tmscore));
                                         break;
                                 }
