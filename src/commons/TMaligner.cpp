@@ -31,9 +31,9 @@ TMaligner::~TMaligner(){
     free(query_x);
     free(query_y);
     free(query_z);
-    free(querySecStruc);
-    free(targetSecStruc);
     free(mem);
+    delete [] querySecStruc;
+    delete [] targetSecStruc;
     delete [] invmap;
 }
 
