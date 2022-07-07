@@ -14,6 +14,11 @@ struct Coordinates{
     }
     Coordinates(){
     }
+    ~Coordinates(){
+        free(x);
+        free(y);
+        free(z);
+    }
     float * x;
     float * y;
     float * z;
