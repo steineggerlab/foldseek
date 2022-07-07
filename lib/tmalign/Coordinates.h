@@ -11,14 +11,19 @@ struct Coordinates{
         x =(float*) mem_align(ALIGN_FLOAT, (size+VECSIZE_FLOAT)*sizeof(float));
         y =(float*) mem_align(ALIGN_FLOAT, (size+VECSIZE_FLOAT)*sizeof(float));
         z =(float*) mem_align(ALIGN_FLOAT, (size+VECSIZE_FLOAT)*sizeof(float));
+        allocated = true;
     }
     Coordinates(){
+        allocated = false;
     }
     ~Coordinates(){
-        free(x);
-        free(y);
-        free(z);
+        if(allocated == true){
+            free(x);
+            free(y);
+            free(z);
+        }
     }
+    bool allocated;
     float * x;
     float * y;
     float * z;

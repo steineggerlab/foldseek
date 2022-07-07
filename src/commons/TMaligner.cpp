@@ -112,11 +112,11 @@ Matcher::result_t TMaligner::align(unsigned int dbKey, float *x, float *y, float
     memcpy(target_x, x, sizeof(float) * targetLen);
     memcpy(target_y, y, sizeof(float) * targetLen);
     memcpy(target_z, z, sizeof(float) * targetLen);
-    Coordinates targetCaCords;
+    Coordinates targetCaCords();
     targetCaCords.x = target_x;
     targetCaCords.y = target_y;
     targetCaCords.z = target_z;
-    Coordinates queryCaCords;
+    Coordinates queryCaCords();
     queryCaCords.x = query_x;
     queryCaCords.y = query_y;
     queryCaCords.z = query_z;
