@@ -12,8 +12,6 @@ TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast)
    : affineNW(maxSeqLen, 20), tmAlignFast(tmAlignFast),
      xtm(maxSeqLen), ytm(maxSeqLen), xt(maxSeqLen),
      r1(maxSeqLen), r2(maxSeqLen){
-    querySecStruc  = new char[maxSeqLen];
-    targetSecStruc = new char[maxSeqLen];
     query_x = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
     query_y = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
     query_z = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
@@ -21,16 +19,18 @@ TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast)
     target_y = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
     target_z = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
     mem = (float*)mem_align(ALIGN_FLOAT,6*maxSeqLen*4*sizeof(float));
+    querySecStruc  = new char[maxSeqLen];
+    targetSecStruc = new char[maxSeqLen];
     invmap = new int[maxSeqLen];
 }
 
 TMaligner::~TMaligner(){
-    free(target_x);
-    free(target_y);
-    free(target_z);
     free(query_x);
     free(query_y);
     free(query_z);
+    free(target_x);
+    free(target_y);
+    free(target_z);
     free(mem);
     delete [] querySecStruc;
     delete [] targetSecStruc;
