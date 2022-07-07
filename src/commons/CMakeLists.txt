@@ -2,4 +2,8 @@ set(commons_source_files
         commons/LocalParameters.h
         commons/LocalParameters.cpp
         commons/StructureUtil.h
+        commons/TMaligner.cpp
+        commons/TMaligner.h
+        commons/StructureSmithWaterman.cpp
+        commons/StructureSmithWaterman.h
         PARENT_SCOPE)

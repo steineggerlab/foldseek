@@ -38,6 +38,10 @@ public:
 
     static const int OUTFMT_QCA = 40;
     static const int OUTFMT_TCA = 41;
+    static const int OUTFMT_U = 42;
+    static const int OUTFMT_T = 43;
+    static const int OUTFMT_TMSCORE = 44;
+
 
     static const unsigned int INDEX_DB_CA_KEY = 500;
 
@@ -62,7 +66,7 @@ public:
     int nsample;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa);
+                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner);
 
 
 private:

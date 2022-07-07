@@ -18,6 +18,7 @@
 
 #include <zstd.h>
 #include "result_viz_prelude_fs.html.zst.h"
+#include "TMaligner.h"
 #include <map>
 
 #ifdef OPENMP
@@ -174,34 +175,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needTaxonomy = false;
     bool needCA = false;
     bool needTaxonomyMapping = false;
-
+    bool needTMaligner = false;
 
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA);
+                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner);
 
-    IndexReader *qcadbr = NULL;
-    IndexReader *tcadbr = NULL;
-    if(needCA) {
-        qcadbr = new IndexReader(
-                par.db1,
-                par.threads,
-                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
-                touch ? IndexReader::PRELOAD_INDEX : 0,
-                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-                "_ca");
-        if (sameDB) {
-            tcadbr = qcadbr;
-        } else {
-            tcadbr = new IndexReader(
-                    par.db2,
-                    par.threads,
-                    IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
-                    touch ? IndexReader::PRELOAD_INDEX : 0,
-                    DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-                    "_ca"
-            );
-        }
-    }
+
 
     NcbiTaxonomy* t = NULL;
     if(needTaxonomy){
@@ -248,6 +227,31 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         tDbr = new IndexReader(par.db2, par.threads, IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
         tDbrHeader = new IndexReader(par.db2, par.threads, IndexReader::SRC_HEADERS, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     }
+    IndexReader *qcadbr = NULL;
+    IndexReader *tcadbr = NULL;
+
+    if(needCA) {
+        qcadbr = new IndexReader(
+                par.db1,
+                par.threads,
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                "_ca");
+        if (sameDB) {
+            tcadbr = qcadbr;
+        } else {
+            tcadbr = new IndexReader(
+                    par.db2,
+                    par.threads,
+                    IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                    touch ? IndexReader::PRELOAD_INDEX : 0,
+                    DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                    "_ca"
+            );
+        }
+    }
+
 
     bool queryNucs = Parameters::isEqualDbtype(qDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
     bool targetNucs = Parameters::isEqualDbtype(tDbr->sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
@@ -368,6 +372,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         char buffer[1024];
+
+        TMaligner *tmaligner = NULL;
+        if(needTMaligner) {
+            tmaligner = new TMaligner(
+                    std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false);
+        }
 
         std::string result;
         result.reserve(1024*1024);
@@ -506,7 +516,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     const float bestMatchEstimate = static_cast<float>(std::min(abs(res.qEndPos - adjustQstart), abs(res.dbEndPos - adjustDBstart)));
                     missMatchCount = static_cast<unsigned int>(bestMatchEstimate * (1.0f - res.seqId) + 0.5);
                 }
-
+                TMaligner::TMscoreResult tmres;
+                if(needTMaligner){
+                    tmaligner->initQuery(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen], NULL, res.qLen);
+                    tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                      res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
+                }
                 switch (format) {
                     case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: {
                         if (outcodes.empty()) {
@@ -701,6 +716,35 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                         caToStr(targetCaData, res.dbLen, caStr);
                                         result.append(caStr, 0, caStr.size()-1);
                                         break;
+                                    case LocalParameters::OUTFMT_U:
+                                        result.append(SSTR(tmres.u[0][0]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[0][1]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[0][2]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[1][0]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[1][1]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[1][2]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[2][0]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[2][1]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.u[2][2]));
+                                        break;
+                                    case LocalParameters::OUTFMT_T:
+                                        result.append(SSTR(tmres.t[0]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.t[1]));
+                                        result.push_back(',');
+                                        result.append(SSTR(tmres.t[2]));
+                                        break;
+                                    case LocalParameters::OUTFMT_TMSCORE:
+                                        result.append(SSTR(tmres.tmscore));
+                                        break;
                                 }
                                 if (i < outcodes.size() - 1) {
                                     result.push_back('\t');
@@ -827,6 +871,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             resultWriter.writeData(result.c_str(), result.size(), queryKey, thread_idx, isDb);
             result.clear();
         }
+        if(tmaligner != NULL){
+            delete tmaligner;
+        }
     }
     if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
         const char* endBlock = "]);</script>";
@@ -837,6 +884,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     if (isDb == false) {
         FileUtil::remove(par.db4Index.c_str());
     }
+
     if(needCA){
         if(sameDB){
             delete qcadbr;

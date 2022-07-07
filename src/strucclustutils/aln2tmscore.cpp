@@ -10,6 +10,7 @@
 #include "SubstitutionMatrix.h"
 #include "GemmiWrapper.h"
 #include "tmalign/TMalign.h"
+#include "TMaligner.h"
 #include <iostream>
 #include <dirent.h>
 
@@ -58,21 +59,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
 #endif
         std::vector<Matcher::result_t> results;
         results.reserve(300);
-
-        float * query_x = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
-        float * query_y = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
-        float * query_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
-        float * target_x = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
-        float * target_y = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
-        float * target_z = (float*)mem_align(ALIGN_FLOAT, par.maxSeqLen * sizeof(float) );
-        float *mem = (float*)mem_align(ALIGN_FLOAT,6*par.maxSeqLen*4*sizeof(float));
-        int * invmap = new int[par.maxSeqLen];
-        Coordinates targetCaCords;
-        Coordinates queryCaCords;
         std::string resultsStr;
-        Coordinates xtm(par.maxSeqLen); Coordinates ytm(par.maxSeqLen);
-        Coordinates xt(par.maxSeqLen);
-        Coordinates r1(par.maxSeqLen); Coordinates r2(par.maxSeqLen);
+        TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false);
 #pragma omp for schedule(dynamic, 1000)
         for (size_t i = 0; i < alndbr.getSize(); i++) {
             progress.updateProgress();
@@ -83,12 +71,7 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             unsigned int queryId = qdbr.getId(queryKey);
             int queryLen = static_cast<int>((qdbr.getEntryLen(queryId)-1)/(3*sizeof(float)));
             float *qdata = (float *) qdbr.getData(queryId, thread_idx);
-            memcpy(query_x, qdata, sizeof(float) * queryLen);
-            memcpy(query_y, &qdata[queryLen], sizeof(float) * queryLen);
-            memcpy(query_z, &qdata[queryLen+queryLen], sizeof(float) * queryLen);
-            queryCaCords.x = query_x;
-            queryCaCords.y = query_y;
-            queryCaCords.z = query_z;
+            tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], NULL, queryLen);
 
             for (size_t j = 0; j < results.size(); j++) {
                 Matcher::result_t& res = results[j];
@@ -101,86 +84,40 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 unsigned int targetId = tdbr->getId(dbKey);
                 int targetLen = static_cast<int>((tdbr->getEntryLen(targetId)-1)/(3*sizeof(float)));
                 float * tdata = (float*) tdbr->getData(targetId, thread_idx);
-                memcpy(target_x, tdata, sizeof(float) * targetLen);
-                memcpy(target_y, &tdata[targetLen], sizeof(float) * targetLen);
-                memcpy(target_z, &tdata[targetLen+targetLen], sizeof(float) * targetLen);
-                if(queryKey == 585 && dbKey == 3493){
-//                    std::cout << "bal" << std::endl;
-                }
-                targetCaCords.x = target_x;
-                targetCaCords.y = target_y;
-                targetCaCords.z = target_z;
+
 
                 // Matching residue index collection
-                int qPos = res.qStartPos;
-                int tPos = res.dbStartPos;
-                std::string cigarString = res.backtrace;
-                std::fill(invmap, invmap+queryLen, -1);
-                for (size_t btPos = 0; btPos < cigarString.size(); btPos++) {
-                    if (cigarString[btPos] == 'M') {
-                        invmap[qPos] = tPos;
-                        qPos++;
-                        tPos++;
-                    }
-                    else if (cigarString[btPos] == 'I') {
-                        qPos++;
-                    }
-                    else {
-                        tPos++;
-                    }
-                }
-                //Add TM align score
+                TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen, res.qStartPos,
+                                     res.dbStartPos, res.backtrace);
 
-                float t[3], u[3][3];
-
-                float D0_MIN;
-
-                float rmsd0 = 0.0;
-                int L_ali;                // Aligned length in standard_TMscore
-                float Lnorm;         //normalization length
-                float score_d8,d0,d0_search,dcu0;//for TMscore search
-                parameter_set4search(targetLen,  queryLen, D0_MIN, Lnorm,
-                                     score_d8, d0, d0_search, dcu0);
-                double prevD0_MIN = D0_MIN;// stored for later use
-                int prevLnorm = Lnorm;
-                double prevd0 = d0;
-                double local_d0_search = d0_search;
-                double TMalnScore = standard_TMscore(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen, invmap,
-                                                     L_ali, rmsd0, D0_MIN, Lnorm, d0, score_d8, t, u,  mem);
-                D0_MIN = prevD0_MIN;
-                Lnorm = prevLnorm;
-                d0 = prevd0;
-                double TM = detailed_search_standard(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen,
-                                              invmap, t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0, mem);
-                TM = std::max(TM, TMalnScore);
                 //std::cout << TMalnScore << std::endl;
                 resultsStr.append(SSTR(dbKey));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(TM));
+                resultsStr.append(SSTR(tmres.tmscore));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(t[0]));
+                resultsStr.append(SSTR(tmres.t[0]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(t[1]));
+                resultsStr.append(SSTR(tmres.t[1]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(t[2]));
+                resultsStr.append(SSTR(tmres.t[2]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[0][0]));
+                resultsStr.append(SSTR(tmres.u[0][0]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[0][1]));
+                resultsStr.append(SSTR(tmres.u[0][1]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[0][2]));
+                resultsStr.append(SSTR(tmres.u[0][2]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[1][0]));
+                resultsStr.append(SSTR(tmres.u[1][0]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[1][1]));
+                resultsStr.append(SSTR(tmres.u[1][1]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[1][2]));
+                resultsStr.append(SSTR(tmres.u[1][2]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[2][0]));
+                resultsStr.append(SSTR(tmres.u[2][0]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[2][1]));
+                resultsStr.append(SSTR(tmres.u[2][1]));
                 resultsStr.push_back(' ');
-                resultsStr.append(SSTR(u[2][2]));
+                resultsStr.append(SSTR(tmres.u[2][2]));
                 resultsStr.push_back('\n');
             }
             dbw.writeData(resultsStr.c_str(), resultsStr.size(), queryKey, thread_idx);
@@ -188,14 +125,6 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             results.clear();
             resultsStr.clear();
         }
-        free(query_x);
-        free(query_y);
-        free(query_z);
-        free(target_x);
-        free(target_y);
-        free(target_z);
-        free(mem);
-        delete [] invmap;
     }
     dbw.close();
 
