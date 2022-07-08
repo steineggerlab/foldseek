@@ -78,7 +78,12 @@ In case of the alignment type (`--alignment-type 1`) tmalign we sort the results
 
 
 ### Rescore aligments using TMscore
-It is possible to compute TMscores for the kind of alignment output (e.g. 3Di/AA) using the following commands: 
+Easiest way to get the alignment TMscore normalized by min(alnLen,qLen,targetLen) as well as a rotation matrix is through the following command:
+```
+foldseek easy-search example/ example/ aln tmp --format-output query,target,alntmscore,u,t
+```
+
+Alternative, it is possible to compute TMscores for the kind of alignment output (e.g. 3Di/AA) using the following commands: 
 ```
 foldseek createdb example/ targetDB
 foldseek createdb example/ queryDB
