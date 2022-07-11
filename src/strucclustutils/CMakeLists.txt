@@ -12,6 +12,8 @@ set(strucclustutils_source_files
         strucclustutils/EvalueNeuralNet.h
         strucclustutils/PulchraWrapper.cpp
         strucclustutils/PulchraWrapper.h
+	strucclustutils/generatetree.cpp
+	strucclustutils/traversetree.cpp
         PARENT_SCOPE
         )
 

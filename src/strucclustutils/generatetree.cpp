@@ -19,7 +19,6 @@
 #define	EXIT_FAILURE	1
 #define	EXIT_SUCCESS	0
 
-
 struct Node {
     size_t id;
     std::string sequence;
@@ -30,7 +29,7 @@ struct Node {
     Node() = default;
 
     void print() {
-        std::cout << ">Node " << id << "\n" << sequence << std::endl;
+        std::cout << ">Node " << id << "\n" << sequence;
     }
 };
 
@@ -69,14 +68,28 @@ void printVector(std::vector<T> vector) {
     }
 }
 
-void print_sequences(std::string a, std::string b) {
-    std::cout << "  " << a;
-    std::cout << "  " << b;
+/**
+ * Print two sequences, shifted by alignment result position
+ */
+void print_sequences(std::string a, std::string b, Matcher::result_t result) {
+    if (result.qStartPos > result.dbStartPos) {
+        std::cout << a;
+        std::cout << std::string(result.qStartPos - result.dbStartPos, ' ') << b << std::endl;
+    } else {
+        std::cout << std::string(result.dbStartPos - result.qStartPos, ' ') << a;
+        std::cout << b << std::endl;
+    }
+    /* std::cout << "  " << a; */
+    /* std::cout << "  " << b; */
 }
 
 // Tests c is a match
 inline bool match(char c) {
     return (c >= 'A' && c <= 'Z') || c == '-';
+}
+
+inline bool insertion(char c) {
+    return (c >= 'a' && c <= 'z') || c == '.';
 }
 
 // Transforms chr into an uppercase character
@@ -89,225 +102,307 @@ inline char lwrchr(char chr) {
     return (chr >= 'A' && chr <= 'Z') ? chr - 'A' + 'a' : chr;
 }
 
+
+void testing(std::string a, std::string b, Matcher::result_t result) {
+
+}
+
 /**
  * Merge alignment B into alignment A.
  */
-void merge_a3m(std::string a, std::string b, Matcher::result_t result) {
-    std::cout << "Merging:" << std::endl;
+void merge_a3m(std::string _a, std::string _b, Matcher::result_t result) {
+    std::string a = _a;
+    std::string b = _b;
+
+    size_t i, j;
+    std::cout << "        Score: " << result.seqId * 100 << " " << result.eval << std::endl;
     std::cout << "  qStart/qEnd: " << result.qStartPos << " " << result.qEndPos << std::endl;
     std::cout << "  tStart/tEnd: " << result.dbStartPos << " " << result.dbEndPos << std::endl;
-    print_sequences(a, b);
+    std::cout << "    alnLength: " << result.alnLength << std::endl;
+    std::cout << "        CIGAR: " << result.backtrace << " (" << result.backtrace.length() << ")" << std::endl;
 
+    // CIGAR backtrace relates query to target
+    // i.e. 'D' --> deletion in query
+    //      'I' --> insertion in query, so gap in target
+    // NOTE: alnLength != CIGAR backtrace length
+    size_t aIdx = result.qStartPos;
+    size_t bIdx = result.dbStartPos;
+    for (i = 0; i < result.backtrace.length(); i++) {
+        switch (result.backtrace[i]) {
+            case 'M':
+                aIdx++;
+                bIdx++;
+                break;
+            case 'D':
+                a.insert(aIdx++, 1, '-');
+                bIdx++;
+                break;
+            case 'I':
+                b.insert(bIdx++, 1, '-');
+                aIdx++;
+                break;
+        }
+    }
+
+    // Regular MSA style
+    std::string diff(result.backtrace.length(), ' ');
+    for (i = 0; i < result.backtrace.length(); i++) {
+        if (a[i + result.qStartPos] == b[i + result.dbStartPos])
+            diff[i] =  a[i + result.qStartPos];
+    }
+    std::cout << "\n        Query: ";
+    for (i = 0; i < result.backtrace.length(); i++) {
+        std::cout << a[i + result.qStartPos];
+    }
+    std::cout << "\n         Diff: ";
+    for (i = 0; i < result.backtrace.length(); i++) {
+        std::cout << diff[i];
+    }
+    std::cout << "\n       Target: ";
+    for (i = 0; i < result.backtrace.length(); i++) {
+        std::cout << b[i + result.dbStartPos];
+    }
+
+    // A3M style
+    std::string fasta_a = a;
+    std::string fasta_b = b;
+    a = _a;
+    b = _b;
+    for (aIdx = result.qStartPos, bIdx = result.dbStartPos, i = 0; i < result.backtrace.length(); i++) {
+        switch (result.backtrace[i]) {
+            case 'M':
+                aIdx++;
+                bIdx++;
+                break;
+            case 'D':
+                b[bIdx] = lwrchr(b[bIdx]);
+                bIdx++;
+                a.insert(aIdx++, 1, '.');
+                break;
+            case 'I':
+                b.insert(bIdx++, 1, '-');
+                aIdx++;
+                break;
+        }
+    }
+    std::cout << "\n\n        Query: ";
+    for (i = 0; i < result.backtrace.length(); i++) {
+        std::cout << a[i + result.qStartPos];
+    }
+    std::cout << "\n       Target: ";
+    for (i = 0; i < result.backtrace.length(); i++) {
+        std::cout << b[i + result.dbStartPos];
+    }
+    a.insert(0, result.dbStartPos, '-');
+    b.insert(0, result.qStartPos, '-');
+
+    std::string a3m_a = a;
+    std::string a3m_b = b;
+
+    /* int *imatch = new int[result.dbEndPos + 1]; */
+    a = _a;
+    b = _b;
+    std::map<int, int> imap;
+
+    // Use CIGAR string to map matching target & query indices
     std::cout << std::endl;
-
-    int j;
-
-
-    // Count match states (capitals) in alignment A
-    // Used when adding remaining gaps to end of B
-    int l, L;
-    for (L = 0, l = 1; a[l] > '\0'; l++) {
-        if (match(a[l])) L++;
+    for (aIdx = result.qStartPos, bIdx = result.dbStartPos, i = 0; i < result.backtrace.length(); i++) {
+        switch (result.backtrace[i]) {
+            case 'M':
+                aIdx++;
+                bIdx++;
+                break;
+            case 'D':
+                bIdx++;
+                break;
+            case 'I':
+                aIdx++;
+                break;
+        }
+        imap[bIdx] = aIdx;
     }
 
-    // For each sequence in B, align to A
-    int par_maxcol = a.length();
+    int par_maxcol = a.length() + b.length();
     char *cur_seq = new char[par_maxcol];
+    char c;
+    size_t h;
+    size_t l, ll;
+    int pos;
 
-    {
-        // NOTE: Treat qStartPos-qEndPos/dbStartPos-dbEndPos as match states
+    // Add left-end gaps
+    for (h = 0; h < (size_t)result.qStartPos; h++)
+        cur_seq[h] = '-';
+
+    // Mark insertions until first match position
+    j = 0;
+    pos = 0;
+    if (result.dbStartPos > 0) {
+        while (j < (size_t)result.dbStartPos && b[pos] != '\0') {
+            c = b[pos++];
+            if (match(c)) j++;
+            cur_seq[h++] = (c == '-') ? '.' : lwrchr(c);
+        }
+    }
+
+    std::cout << "Marked insertions:\n";
+    i = 0;
+    while (cur_seq[i] != '\0') {
+        std::cout << cur_seq[i];
+        i++;
+    }
+    std::cout << "\n\n\n";
+
+    // Check if start position is an insertion; if so, copy
+    // b[pos] is first position after marking insertions above
+    c = b[pos];
+    while (insertion(c) && (c != '\0')) {
+        cur_seq[h++] = lwrchr(c);
+        c = b[pos++];
+    }
+
+    std::cout << "Checked start position:\n";
+    i = 0;
+    while (cur_seq[i] != '\0') {
+        std::cout << cur_seq[i];
+        i++;
+    }
+    std::cout << "\n\n\n";
+
+
+    // Advance to match state result.dbStartPos of b
+    // match state at position l?
+    // yes: increment j. Reached hit,j1? yes: break
+    // TODO is this any different to just l = result.dbStartPos ?
+    //  Just use pos?
+
+    for (j = 0, l = 0; (c = b[l]) != '\0'; l++) {
+        if (match(c))
+            if ((++j) == (size_t)result.dbStartPos)
+                break;
+    }
+    /* l = result.dbStartPos - 1; */
+
+
+    // Write first match state to cur_seq
+    int iprev = result.qStartPos;  // Previous query match state
+    int lprev = l;                 // Previous target match state
+    cur_seq[h++] = b[l];        // First column is Match-Match state
+
+    // Iterate next match states
+    for (j = result.dbStartPos + 1; j <= (result.dbStartPos + result.backtrace.length()); j++) {
+        // Get index in query from imap
+        i = imap[j];
+
+        // Advance to position of next T match state j
+        while ((c = b[++l]) > '\0' && insertion(c));
+
+        int di = i - iprev;
+        int dl = l - lprev;
+
+        /* std::cout */
+        /*     << "i: " << i << ", iprev: " << iprev << ", di: " << di */
+        /*     << ", l: " << l << ", lprev: " << lprev << ", dl: " << dl */
+        /*     << std::endl; */
         
-        // Lower case characters in A, if necessary
-        int i;
-        for (i = 0; i < result.qStartPos - 1; i++)
-            a[i] = lwrchr(a[i]);
-        for (i = 0; i < result.dbStartPos - 1; i++)
-            b[i] = lwrchr(b[i]);
-        for (i = result.qEndPos + 1; i < a.length(); i++)
-            a[i] = lwrchr(a[i]);
-        for (i = result.dbEndPos + 1; i < b.length(); i++)
-            b[i] = lwrchr(b[i]);
+        if (di == 1) {
+            /* std::cout << "di == 1" << std::endl; */
+            for (ll = lprev + 1; ll < l; ll++)
+                if (b[ll] != '-' && b[ll] != '.')
+                    cur_seq[h++] = lwrchr(b[ll]);
+            cur_seq[h++] = b[ll++];
 
-        // Insert 5' gaps
-        if (result.qStartPos == result.dbStartPos) {
-        } else if (result.qStartPos > result.dbStartPos) {
-            b.insert(0, result.qStartPos - result.dbStartPos, '-');
-        } else {
-            a.insert(0, result.dbStartPos - result.qStartPos, '.');
+        } else if (di == 0) {
+            /* std::cout << "di == 0" << std::endl; */
+            for (ll = lprev + 1; ll <= l; ll++)
+                if (b[ll] != '-' && b[ll] != '.')
+                    cur_seq[h++] = lwrchr(b[ll]);
+
+        } else if (di >= dl) {
+            /* std::cout << "di >= dl" << std::endl; */
+            for (ll = lprev + 1; ll <= (size_t)(lprev + (int)(dl / 2)); ll++)
+                cur_seq[h++] = uprchr(b[ll]);
+            for (int gap = 1; gap <= di - dl; gap++)
+                cur_seq[h++] = '-';
+            for (; ll <= l; ll++)
+                cur_seq[h++] = uprchr(b[ll]);
+
+        } else if (di < dl) {
+            /* std::cout << "di < dl" << std::endl; */
+            for (ll = lprev + 1; ll <= (size_t)(lprev + (int)(di / 2)); ll++)
+                cur_seq[h++] = uprchr(b[ll]);
+            for (int ins = 1; ins <= dl - di; ins++, ll++)
+                if (b[ll] != '-' && b[ll] != '.')
+                    cur_seq[h++] = lwrchr(b[ll]);
+            for (; ll <= l; ll++)
+                cur_seq[h++] = uprchr(b[ll]);
+        }
+        iprev = i;
+        lprev = l;
+
+        if (h >= par_maxcol - 1000)  // too few columns? Reserve double space
+        {
+            char *new_seq = new char[2 * par_maxcol];
+            strncpy(new_seq, cur_seq, h);  //////// check: maxcol-1 ????
+            delete[] (cur_seq);
+            cur_seq = new_seq;
+            par_maxcol *= 2;
         }
 
-
-        cur_seq[0] = ' ';  // 0th position not used
-        
-        // Add qStartpos - 1 left-end gaps to aligned sequence
-        int h;
-        for (h = 1; h < result.dbStartPos; h++)
-            cur_seq[h] = '-';
-
-        // 
-        char c;
-        j = 1;
-        int pos = 1; 
-        if (result.dbStartPos > 1) {
-            while (j < result.dbStartPos && a[pos] != '\0') {
-                c = a[pos];
-                if (match(c)) j++;                    
-                cur_seq[h++] = (c == '-') ? '.' : lwrchr(c);
-                pos++;
-            }
+        i = 0;
+        while (cur_seq[i] != '\0') {
+            std::cout << cur_seq[i];
+            i++;
         }
+        std::cout << '\n';
+    }
 
-        // Check if start position is an insertion
-        // If yes, copy
-        c = b[pos];
-        while (((c >= 'a' && c <= 'z') || c == '.') && c != '\0') {
-            cur_seq[h++] = lwrchr(c);
-            pos++;
-            c = b[pos];
-        }
+    // Count match states in alignment
+    size_t L = std::count(result.backtrace.begin(), result.backtrace.end(), 'M');
 
-        // Advance to match state dbStartPos of b
-        for (j = 0, l = 1; (c = b[l]) > '\0'; l++) {
-            if (match(c)) {
-                // Match at position l? increment j
-                // Reached dbStartPos? break
-                if ((++j) == result.dbStartPos) break;
-            }
-        }
-
-        if (j < result.dbStartPos) {
-            std::cerr << "Error: did not find " << result.dbStartPos << " match states";
-            exit(1);
-        }
-
-        /* // Write first match state to cur_seq */
-        /* int iprev = hit.i1;  // index of previous query match state */
-        /* int lprev = l;      // previous T match state in Tali.seq[k][l] */
-        /* cur_seq[h++] = Tali.seq[k][l];  // first column of alignment is Match-Match state */
-
-        /* // For each further match state j in alignment */
-        /* step = hit.nsteps; */
-        /* for (j = hit.j1 + 1; j <= hit.j2; ++j) { */
-        /*     // Advance to position of next T match state j */
-        /*     i = imatch[j]; */
-
-        /*     // Advance to position of next T match state j */
-        /*     while ((c = Tali.seq[k][++l]) > '\0' */
-        /*            && ((c >= 'a' && c <= 'z') || c == '.')); */
-
-        /*     int di = i - iprev;  // number of Match states in Q between T match state j-1 and j */
-        /*     int dl = l - lprev;  // 1 + number of inserted residues in T sequence between T match state j-1 and j */
-        /*     if (di == 1) { */
-        /*         // One Q match state for one T match state (treated as special case for speed reasons) */
-        /*         // i:       i-1   i         di=1 */
-        /*         // Q:  XXXXXX.....XXXXXX */
-        /*         // T:  YYYYYYyyyyyYYYYYY */
-        /*         // j:       j-1   j */
-        /*         // l:       lprev l         dl=6 */
-
-        /*         // Inserts in lower case */
-        /*         for (ll = lprev + 1; ll < l; ll++) */
-        /*             if (Tali.seq[k][ll] != '-' && Tali.seq[k][ll] != '.') */
-        /*                 cur_seq[h++] = lwrchr(Tali.seq[k][ll]); */
-
-        /*         // Template Match state -> upper case */
-        /*         cur_seq[h++] = Tali.seq[k][ll]; */
-        /*         ll++; */
-        /*     } else if (di == 0) { */
-        /*         // Gap in query: no Q match state for on T match state (special case for speed reasons) */
-        /*         // i:       i-1   i-1       di=0 */
-        /*         // Q:  XXXXXX.....~~~XXX */
-        /*         // T:  YYYYYYyyyyyYYYYYY */
-        /*         // j:       j-1   j */
-        /*         // l:       lprev l         dl=6 */
-
-        /*         // All T residues (including T match state) in lower case */
-        /*         for (ll = lprev + 1; ll <= l; ll++) */
-        /*             if (Tali.seq[k][ll] != '-' && Tali.seq[k][ll] != '.') */
-        /*                 cur_seq[h++] = lwrchr(Tali.seq[k][ll]); */
-        /*     } else if (di >= dl) { */
-        /*         // More Match states in Q than Inserts in the T sequence */
-        /*         // => half T inserts y left, half right-aligned in uc, gaps to fill up */
-        /*         // Number of T insert residues to be left-aligned: (int)(dl/2) */
-        /*         // i:        iprev  i       di=7 */
-        /*         // Q:  XXXXXXXXXXXXXXXXXX */
-        /*         // T:  YYYYYYYyyy-yyYYYYY */
-        /*         // j:        j-1    j */
-        /*         // l:        lprev  l       dl=6 */
-
-        /*         // Add left-bounded template residues */
-        /*         for (ll = lprev + 1; ll <= lprev + (int) (dl / 2); ll++) */
-        /*             cur_seq[h++] = uprchr(Tali.seq[k][ll]); */
-
-        /*         // Add central gaps */
-        /*         for (int gap = 1; gap <= di - dl; gap++) */
-        /*             cur_seq[h++] = '-'; */
-
-        /*         // Add right-bounded residues */
-        /*         for (; ll <= l; ll++) */
-        /*             cur_seq[h++] = uprchr(Tali.seq[k][ll]); */
-        /*     } else if (di < dl) { */
-        /*         // Fewer Match states in Q than inserts in T sequence */
-        /*         // => half of available space di for left- half for right-aligned T inserts, rest in lc */
-        /*         // number of T inserts to be left-aligned in uc: (int)(di/2), */
-        /*         // i:        iprev i       di=5 */
-        /*         // Q:  XXXXXXXXX.XXXXXXX */
-        /*         // T:  YYYYYYYyyyyyYYYYY */
-        /*         // j:        j-1   j */
-        /*         // l:        lprev l       dl=6 */
-
-        /*         // Add left-bounded template residues */
-        /*         for (ll = lprev + 1; ll <= lprev + (int) (di / 2); ll++) */
-        /*             cur_seq[h++] = uprchr(Tali.seq[k][ll]); */
-
-        /*         // Add central inserts */
-        /*         for (int ins = 1; ins <= dl - di; ins++, ll++) */
-        /*             if (Tali.seq[k][ll] != '-' && Tali.seq[k][ll] != '.') */
-        /*                 cur_seq[h++] = lwrchr(Tali.seq[k][ll]); */
-
-        /*         // Add right-bounded residues */
-        /*         for (; ll <= l; ll++) */
-        /*             cur_seq[h++] = uprchr(Tali.seq[k][ll]); */
-        /*     } */
-        /*     HH_LOG(DEBUG3) << "i=" << i << " j=" << j << " l=" << l << " cur_seq=" */
-        /*                    << cur_seq << "\n"; */
-
-        /*     iprev = i; */
-        /*     lprev = l; */
-        /*     if (h >= maxcol - 1000)  // too few columns? Reserve double space */
-        /*     { */
-        /*         char *new_seq = new char[2 * maxcol]; */
-        /*         strncpy(new_seq, cur_seq, h);  //////// check: maxcol-1 ???? */
-        /*         delete[] (cur_seq); */
-        /*         cur_seq = new_seq; */
-        /*         maxcol *= 2; */
-        /*     } */
-        /* } */
-
-
-        print_sequences(a, b);
+    // Add the remaining gaps '-' to the end of the template sequence
+    for (i = result.qEndPos + 1; i <= L; i++) {
+        cur_seq[h++] = '-';
 
     }
 
+    // add remaining seq. info as insertion state
+    while (b[ll] != '\0') {
+        if (b[ll] == '-') {
+            cur_seq[h++] = '.';
+        } else {
+            cur_seq[h++] = lwrchr(a[ll]);
+        }
+        ll++;
+    }
 
-    /* print_sequences(a, b); */
+    cur_seq[h++] = '\0';
 
-    /* int i = 1; */
-    /* int pos = 1; */
-    /* char c; */
-    /* while (i < result.qStartPos && b[pos] != '\0') { */
-    /*     std::cout << i << " " << b[pos] << " "; */
-    /*     c = b[pos]; */
 
-    /*     if ((c >= 'A' && c <= 'Z') || c == '-') { */
-    /*         i++; */
-    /*     } */
+    // Print out cur_seq
+    {
+        std::cout
+            << "               "
+            << std::string(result.dbStartPos + result.qStartPos, ' ') << '*'
+            << std::string(result.backtrace.length() - 2, ' ') << '*'
+            << std::endl;
+        std::cout << "    a3m query: " << a3m_a;
+        std::cout << "   a3m target: " << a3m_b;
+        std::cout
+            << "               "
+            << std::string(result.qStartPos + std::max(result.dbStartPos, 0), ' ') << '*'
+            << std::string(result.backtrace.length() - 2, ' ') << '*'
+            << std::endl;
+        std::cout << "        Query: " << a3m_a;
+        std::cout << "      cur_seq: "; //<< std::string(result.dbStartPos, ' ');
+        i = 0;
+        while (cur_seq[i] != '\0') {
+            std::cout << cur_seq[i];
+            i++;
+        }
+    }
 
-    /*     b[pos++] = */ 
-
-    /*     pos++; */
-    /* } */
-
+    delete[] cur_seq;
+    std::cout << std::endl;
 }
 
 int generatetree(int argc, const char **argv, const Command& command) {
@@ -342,6 +437,8 @@ int generatetree(int argc, const char **argv, const Command& command) {
         // Save best hit, ignoring self-hits
         if (result.size() > 1)
             results.emplace_back(reader.getDbKey(i), result[1]);
+
+        std::cout << "Align length: " << result[1].alnLength << ", Backtrace: " << result[1].backtrace.length() << std::endl;
         
         // Get sequence of query node
         unsigned int queryId = qdbr.sequenceReader->getId(reader.getDbKey(i));
@@ -351,32 +448,81 @@ int generatetree(int argc, const char **argv, const Command& command) {
     }
     std::sort(results.begin(), results.end(), BestResult);
 
-    for (size_t i = 0; i < nodes.size(); i++) {
-        nodes[i].print();
-    }
+    // TODO: make a simpler test case for a3m merging
+    // e.g.
+    //  Q   X X X X X X X X X X X X X X X
+    //  T1  Y Y Y Y Y Y Y Y Y Y Y
+    //  T2  Z Z Z Z Z Z Z Z
+    //
+    //  Q-T1 CIGAR
+    //        M M M D D M M M M M M M M
+    //  Q   X X X X X X X X X X X X X X X
+    //  T1    Y Y Y - - Y Y Y Y Y Y Y Y
+    //
+    //  Q-T2
+    //          M M M M M I I M
+    //  T1  Y Y Y Y Y Y Y . . Y Y Y Y
+    //  T2      Z Z Z Z Z z z Z
+    //
+    //  Expected a3m:
+    //  Q   X X X X X X X X X X X X X X X
+    //  T1  - Y Y Y - - Y Y Y Y Y Y Y Y
+    //  T2  - - - Z - - Z Z Z Z z z Z
+    //
+    //  Full alignment:
+    //  Q   X X X X X X X X X X - - X X X X X
+    //  T1  - Y Y Y - - Y Y Y Y - - Y Y Y Y -
+    //  T2  - - - Z - - Z Z Z Z z z Z - - - -
+    //
+    //  TODO: use CIGAR strings from other sequences to inform exact positioning ?
+
+    /* unsigned int dbKey; */
+    /* int score; */
+    /* float qcov; */
+    /* float dbcov; */
+    /* float seqId; */
+    /* double eval; */
+    /* unsigned int alnLength; */
+    /* int qStartPos; */
+    /* int qEndPos; */
+    /* unsigned int qLen; */
+    /* int dbStartPos; */
+    /* int dbEndPos; */
+    /* unsigned int dbLen; */
+    /* int queryOrfStartPos; */
+    /* int queryOrfEndPos; */
+    /* int dbOrfStartPos; */
+    /* int dbOrfEndPos; */
+    /* std::string backtrace; */
+
+    /* nodes.emplace_back(0, "XXXXXXXXXXXXXXX\n", *(new Matcher::result_t())); */
+    /* nodes.emplace_back(1, "YYYYYYYYYYY\n", *(new Matcher::result_t())); */
+    /* nodes.emplace_back(2, "ZZZZZZZZ\n", *(new Matcher::result_t())); */
+
+    /* nodes[0].result.dbKey = 1; */
+    /* nodes[0].result.backtrace = "MMMIIMMMMMMMM"; */
+    /* nodes[0].result.qStartPos = 1; */
+    /* nodes[0].result.qEndPos = 14; */
+    /* nodes[0].result.dbStartPos = 0; */
+    /* nodes[0].result.dbEndPos = 11; */
+
+    /* nodes[1].result.dbKey = 2; */
+    /* nodes[1].result.backtrace = "MMMMMDDM"; */
+    /* nodes[1].result.qStartPos = 2; */
+    /* nodes[1].result.qEndPos = 7; */
+    /* nodes[1].result.dbStartPos = 0; */
+    /* nodes[1].result.dbEndPos = 7; */
+
+    /* merge_a3m(nodes[0].sequence, nodes[1].sequence, nodes[0].result); */
 
     std::cout << "Best hits:" << std::endl;
     for (size_t i = 0; i < results.size(); i++) {
-        std::cout << results[i].first << " vs " << results[i].second.dbKey << " " << results[i].second.score << std::endl;
-
+        std::cout << "Merging " << results[i].first << " vs " << results[i].second.dbKey << std::endl;
         merge_a3m(nodes[results[i].first].sequence, nodes[results[i].second.dbKey].sequence, results[i].second);
+        std::cout << std::endl;
+        /* break; */
     }
     
-    size_t maxId = dbSize + 1;
-    std::set<int> merged;
-    std::vector<Cluster> clusters;
-    for (size_t i = 0; i < results.size(); i++) {
-        bool qMerged = (id2cluster[results[i].first] != results[i].first);
-        bool tMerged = (id2cluster[results[i].second.dbKey] != results[i].second.dbKey);
-        if (!qMerged && !tMerged) {
-            std::vector<size_t> members{results[i].first, results[i].second.dbKey};
-            /* clusters.emplace_back(maxId, members, ); */
-            maxId++;
-        } else {
-        }
-    }
-
-
     // Find linkages
     // Does a single pass through the best hits, saving unique pairs of query and target
     std::vector<Linkage> merges;

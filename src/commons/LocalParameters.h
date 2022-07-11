@@ -48,6 +48,7 @@ public:
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
+    std::vector<MMseqsParameter *> easymsaworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
