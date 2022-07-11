@@ -55,6 +55,7 @@ public:
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
+    std::vector<MMseqsParameter *> easymsaworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)

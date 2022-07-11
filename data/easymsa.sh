@@ -41,7 +41,7 @@ fi
 # Do all vs all alignment using structurealign
 ALIGNDB="${TMP_PATH}/align"
 if notExists "${ALIGNDB}.dbtype"; then
-	"$MMSEQS" structurealign "${STRUCTUREDB}" "${STRUCTUREDB}" "${PREFILTER}" "${ALIGNDB}" -e 1000000000000 --threads 1
+	"$MMSEQS" structurealign "${STRUCTUREDB}" "${STRUCTUREDB}" "${PREFILTER}" "${ALIGNDB}" -e 1000000000000 --threads 1 -a
 fi
 
 if notExists "${TMP_PATH}/${TREE}"; then

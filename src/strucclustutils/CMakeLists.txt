@@ -11,6 +11,8 @@ set(strucclustutils_source_files
         strucclustutils/PulchraWrapper.cpp
         strucclustutils/PulchraWrapper.h
         strucclustutils/structurerescorediagonal.cpp
+	strucclustutils/generatetree.cpp
+	strucclustutils/traversetree.cpp
         PARENT_SCOPE
         )
 
