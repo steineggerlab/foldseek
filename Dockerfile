@@ -39,7 +39,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi
 
 FROM debian:stable-slim
-MAINTAINER Milot Mirdita <milot@mirdita.de>
+ARG TARGETARCH
 ARG APP
 
 RUN apt-get update && apt-get install -y \
@@ -47,9 +47,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/build/${APP}_arch /opt/build/${APP}_sse2 /opt/build/${APP}_sse41 /opt/build/${APP}_avx2 /usr/local/bin/
-ADD util/${APP}_wrapper.sh /usr/local/bin/${APP}
-RUN if [ "$TARGETARCH" = "arm64" ]; then mv -f /opt/build/${APP}_arch /usr/local/bin/${APP}; fi
+ADD util/${APP}_wrapper.sh /usr/local/bin/entrypoint
+RUN if [ "$TARGETARCH" = "arm64" ]; then rm -f /usr/local/bin/entrypoint; ln -s /usr/local/bin/${APP}_arch /usr/local/bin/entrypoint; fi
 
-ENV APP=$APP
-ENTRYPOINT /usr/local/bin/${APP}
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
