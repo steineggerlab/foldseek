@@ -4,8 +4,6 @@ set(strucclustutils_source_files
         strucclustutils/structcreatedb.cpp
         strucclustutils/structurealign.cpp
         strucclustutils/samplemulambda.cpp
-        strucclustutils/StructureSmithWaterman.cpp
-        strucclustutils/StructureSmithWaterman.h
         strucclustutils/structureconvertalis.cpp
         strucclustutils/structureto3didescriptor.cpp
         strucclustutils/EvalueNeuralNet.cpp

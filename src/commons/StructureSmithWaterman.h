@@ -48,7 +48,7 @@
 
 #include "Sequence.h"
 #include "EvalueComputation.h"
-#include "EvalueNeuralNet.h"
+#include "../strucclustutils/EvalueNeuralNet.h"
 
 
 class StructureSmithWaterman{

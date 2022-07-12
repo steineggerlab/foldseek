@@ -1483,22 +1483,13 @@ int TMalign_main(
         float &rmsd0, float &Liden, int &n_ali, int &n_ali8,
         const int xlen, const int ylen, const float Lnorm_ass,
         const float d0_scale, const bool I_opt, const bool a_opt,
-        const bool u_opt, const bool d_opt, const bool fast_opt, float * mem)
+        const bool u_opt, const bool d_opt, const bool fast_opt, float * mem,
+        Coordinates & xtm, Coordinates & ytm, Coordinates & xt, Coordinates & r1, Coordinates & r2)
 {
-    int minlen = min(xlen, ylen);
-
     float D0_MIN;        //for d0
     float Lnorm;         //normalization length
     float score_d8,d0,d0_search,dcu0;//for TMscore search
     float t[3], u[3][3]; //Kabsch translation vector and rotation matrix
-    Coordinates xtm(minlen);
-    Coordinates ytm(minlen);
-    Coordinates xt(xlen);
-    Coordinates r1(minlen);
-    Coordinates r2(minlen);
-
-
-
 
     /***********************/
     /*    parameter set    */
@@ -1866,26 +1857,6 @@ int TMalign_main(
     delete [] invmap;
     delete [] m1;
     delete [] m2;
-
-    free(xtm.x);
-    free(xtm.y);
-    free(xtm.z);
-
-    free(ytm.x);
-    free(ytm.y);
-    free(ytm.z);
-
-    free(xt.x);
-    free(xt.y);
-    free(xt.z);
-
-    free(r1.x);
-    free(r1.y);
-    free(r1.z);
-
-    free(r2.x);
-    free(r2.y);
-    free(r2.z);
 
     return 0; // zero for no exception
 }
