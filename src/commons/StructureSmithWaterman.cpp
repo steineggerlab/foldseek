@@ -30,7 +30,7 @@ SOFTWARE.
 #include "SubstitutionMatrix.h"
 #include "Debug.h"
 #include "UngappedAlignment.h"
-#include "EvalueNeuralNet.h"
+#include "../strucclustutils/EvalueNeuralNet.h"
 
 #include <iostream>
 

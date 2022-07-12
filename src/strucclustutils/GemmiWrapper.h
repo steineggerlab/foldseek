@@ -13,6 +13,8 @@ class GemmiWrapper {
 public:
     GemmiWrapper();
 
+    bool loadFromBuffer(const char * buffer, size_t bufferSize, std::string & name);
+
     bool load(std::string & filename);
 
     std::pair<size_t, size_t> nextChain();
@@ -30,6 +32,8 @@ private:
     std::unordered_map<std::string,char> threeAA2oneAA;
     int modelIt;
     int chainIt;
+
+    void updateStructure(void * structure, std::string & filename);
 };
 
 

@@ -156,4 +156,5 @@ int TMalign_main(
         float &rmsd0, float &Liden, int &n_ali, int &n_ali8,
         const int xlen, const int ylen, const float Lnorm_ass,
         const float d0_scale, const bool I_opt, const bool a_opt,
-        const bool u_opt, const bool d_opt, const bool fast_opt, float * mem);
+        const bool u_opt, const bool d_opt, const bool fast_opt, float * mem,
+        Coordinates &xtm, Coordinates &ytm, Coordinates &xt, Coordinates &r1, Coordinates &r2);
