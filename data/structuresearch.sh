@@ -23,6 +23,7 @@ if notExists "${TMP_PATH}/aln.dbtype"; then
         || fail "Alignment step died"
 fi
 
+# shellcheck disable=SC2086
 "$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}" ${VERBOSITY}
 
 if [ -n "$REMOVE_TMP" ]; then
