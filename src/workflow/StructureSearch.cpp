@@ -78,7 +78,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     }
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
-
+    cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
     std::string program = tmpDir + "/structuresearch.sh";
     FileUtil::writeFile(program, structuresearch_sh, structuresearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);

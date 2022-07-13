@@ -69,6 +69,8 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     // this is the same alphabet size for both, please change this todo
     profile->mat_aa                = new int8_t[std::max(maxSequenceLength, (size_t)aaSize) * aaSize * 2];
     profile->mat_3di                = new int8_t[std::max(maxSequenceLength, (size_t)aaSize) * aaSize * 2];
+    profile->rev_alignment_3di_profile = new int8_t[maxSequenceLength * Sequence::PROFILE_AA_SIZE];
+    profile->alignment_3di_profile = new int8_t[maxSequenceLength * Sequence::PROFILE_AA_SIZE];
     tmp_composition_bias   = new float[maxSequenceLength];
     /* array to record the largest score of each reference position */
     maxColumn = new uint8_t[maxSequenceLength*sizeof(uint16_t)];
@@ -113,6 +115,8 @@ StructureSmithWaterman::~StructureSmithWaterman(){
     delete [] profile->mat_rev;
     delete [] profile->mat_aa;
     delete [] profile->mat_3di;
+    delete [] profile->rev_alignment_3di_profile;
+    delete [] profile->alignment_3di_profile;
     delete [] tmp_composition_bias;
     delete [] maxColumn;
     delete profile;
@@ -143,7 +147,7 @@ void StructureSmithWaterman::createQueryProfile(simd_int *profile, const int8_t 
 
                 } if(type == PROFILE) {
                     // profile starts by 0
-                    *t++ = ( j >= query_length) ? bias : mat[nt * entryLength  + (j + (offset - 1) )] + bias; //mat eq L*20  // mat[nt][j]
+                    *t++ = (j >= query_length) ? bias : mat[nt * entryLength + j + (offset-1)] + bias;
 //					printf("(%1d, %1d) ", j , *(t-1));
                 }
                 j += segLen;
@@ -229,15 +233,27 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
     if (r.word == 0) {
         createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
                                                                             r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
-        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
-                                                                        r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
+
+        if (profile->is_3di_profile) {
+            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, NULL, profile->rev_alignment_3di_profile,
+                                                                 r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
+        }else{
+            createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
+                                                                            r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
+
+        }
         bests_reverse = sw_sse2_byte(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1, gap_open, gap_extend, profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
                                      r.score1, profile->bias, maskLen);
     } else {
         createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_word, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
                                                                              r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
-        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_word, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
+        if (profile->is_3di_profile) {
+            createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_3di_rev_word,profile->query_3di_rev_sequence,NULL,profile->rev_alignment_3di_profile,
+                                                                 r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
+        }else{
+            createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_word, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
                                                                          r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
+        }
         bests_reverse = sw_sse2_word(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1, gap_open, gap_extend, profile->profile_aa_rev_word, profile->profile_3di_rev_word,
                                      r.score1, maskLen);
     }
@@ -267,16 +283,30 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
     query_length = r.qEndPos1 - r.qStartPos1 + 1;
     int32_t band_width = abs(db_length - query_length) + 1;
 
-    cigar* path = banded_sw(db_aa_sequence + r.dbStartPos1,
-                     db_3di_sequence + r.dbStartPos1,
-                     profile->query_aa_sequence + r.qStartPos1,
-                     profile->query_3di_sequence + r.qStartPos1,
-                     profile->composition_bias_aa + r.qStartPos1,
-                     profile->composition_bias_ss + r.qStartPos1,
-                     db_length, query_length, r.score1,
-                     gap_open, gap_extend, band_width,
-                     profile->mat_aa, profile->mat_3di, profile->alphabetSize);
-
+    cigar* path;
+    if (profile->is_3di_profile) {
+        path = banded_sw<PROFILE>(db_aa_sequence + r.dbStartPos1,
+                         db_3di_sequence + r.dbStartPos1,
+                         profile->query_aa_sequence + r.qStartPos1,
+                         profile->query_3di_sequence + r.qStartPos1,
+                         profile->composition_bias_aa + r.qStartPos1,
+                         profile->composition_bias_ss + r.qStartPos1,
+                         db_length, query_length, r.qStartPos1, r.score1,
+                         gap_open, gap_extend, band_width,
+                         profile->mat_aa,  profile->alphabetSize,
+                         profile->alignment_3di_profile, profile->query_length);
+    } else {
+        path = banded_sw<SUBSTITUTIONMATRIX>(db_aa_sequence + r.dbStartPos1,
+                    db_3di_sequence + r.dbStartPos1,
+                    profile->query_aa_sequence + r.qStartPos1,
+                    profile->query_3di_sequence + r.qStartPos1,
+                    profile->composition_bias_aa + r.qStartPos1,
+                    profile->composition_bias_ss + r.qStartPos1,
+                    db_length, query_length, r.qStartPos1, r.score1,
+                    gap_open, gap_extend, band_width,
+                    profile->mat_aa,  profile->alphabetSize,
+                    profile->mat_3di, profile->alphabetSize);
+    }
     if (path != NULL) {
         r.cigar = path->seq;
         r.cigarLen = path->length;
@@ -753,7 +783,6 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
                                       const int8_t* mat_aa,
                                       const int8_t* mat_3di,
                                       const BaseMatrix *m){
-
     profile->bias = 0;
     const int32_t alphabetSize = m->alphabetSize;
     int32_t compositionBias = 0;
@@ -771,7 +800,7 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
         compositionBias = std::min(compositionBias, 0);
     } else {
         memset(profile->composition_bias_aa, 0, q_aa->L * sizeof(int8_t));
-	memset(profile->composition_bias_ss, 0, q_aa->L * sizeof(int8_t));
+	    memset(profile->composition_bias_ss, 0, q_aa->L * sizeof(int8_t));
     }
     // copy memory to local memory todo: maybe change later
     memcpy(profile->mat_aa, mat_aa, alphabetSize * alphabetSize * sizeof(int8_t));
@@ -779,23 +808,70 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     memcpy(profile->query_aa_sequence, q_aa->numSequence, q_aa->L);
     memcpy(profile->query_3di_sequence, q_3di->numSequence, q_3di->L);
 
+    bool is3DiProfile = Parameters::isEqualDbtype(q_3di->getSequenceType(), Parameters::DBTYPE_HMM_PROFILE);
+    if(is3DiProfile){
+        memcpy(profile->alignment_3di_profile, q_3di->getAlignmentProfile(), q_3di->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
+        // set neutral state 'X' (score=0)
+        memset(profile->alignment_3di_profile + ((alphabetSize - 1) * q_3di->L), 0, q_3di->L * sizeof(int8_t));
+    }
+
     /* Find the bias to use in the substitution matrix */
     int8_t bias = 0;
-    int32_t matSize =  alphabetSize * alphabetSize;
-
-    for (int32_t i = 0; i < matSize; i++){
+    int32_t matAASize =  q_aa->subMat->alphabetSize * q_aa->subMat->alphabetSize;
+    for (int32_t i = 0; i < matAASize; i++){
         bias = std::min(bias, mat_aa[i]);
-        bias = std::min(bias, mat_3di[i]);
+    }
+
+    if (is3DiProfile) {
+        int32_t mat3DiProfileSize = q_3di->L * Sequence::PROFILE_AA_SIZE;
+        for (int32_t i = 0; i < mat3DiProfileSize; i++) {
+            bias = std::min(profile->alignment_3di_profile[i], bias);
+        }
+    }else{
+        int32_t mat3DiSize = q_3di->subMat->alphabetSize * q_3di->subMat->alphabetSize;
+        for (int32_t i = 0; i < mat3DiSize; i++) {
+            bias = std::min(mat_3di[i], bias);
+        }
     }
 
     bias = abs(bias) + abs(compositionBias);
     profile->bias = bias;
-    createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_byte, profile->query_aa_sequence, profile->composition_bias_aa, profile->mat_aa, q_aa->L, alphabetSize, bias, 0, 0);
-    createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_byte, profile->query_3di_sequence, profile->composition_bias_ss, profile->mat_3di, q_3di->L, alphabetSize, bias, 0, 0);
+    profile->is_3di_profile = false;
+    if(is3DiProfile){
+        profile->is_3di_profile = true;
+        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_byte,
+                                                                        profile->query_aa_sequence,
+                                                                        profile->composition_bias_aa, profile->mat_aa,
+                                                                        q_aa->L, alphabetSize, bias, 0, 0);
+        createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_3di_byte, profile->query_3di_sequence, NULL,
+                                                             profile->alignment_3di_profile, q_3di->L, alphabetSize, profile->bias, 1, q_3di->L);
+        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_word,
+                                                                         profile->query_aa_sequence,
+                                                                         profile->composition_bias_aa, profile->mat_aa,
+                                                                         q_aa->L, alphabetSize, 0, 0, 0);
+        createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_3di_word,
+                                                                         profile->query_3di_sequence,
+                                                                         NULL, profile->alignment_3di_profile,
+                                                                         q_3di->L, alphabetSize, 0, 1, q_3di->L);
 
-
-    createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_word, profile->query_aa_sequence, profile->composition_bias_aa, profile->mat_aa, q_aa->L, alphabetSize, 0, 0, 0);
-    createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_word, profile->query_3di_sequence, profile->composition_bias_ss, profile->mat_3di, q_3di->L, alphabetSize, 0, 0, 0);
+    }else {
+        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_byte,
+                                                                        profile->query_aa_sequence,
+                                                                        profile->composition_bias_aa, profile->mat_aa,
+                                                                        q_aa->L, alphabetSize, bias, 0, 0);
+        createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_byte,
+                                                                        profile->query_3di_sequence,
+                                                                        profile->composition_bias_ss, profile->mat_3di,
+                                                                        q_3di->L, alphabetSize, bias, 0, 0);
+        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_word,
+                                                                         profile->query_aa_sequence,
+                                                                         profile->composition_bias_aa, profile->mat_aa,
+                                                                         q_aa->L, alphabetSize, 0, 0, 0);
+        createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_word,
+                                                                         profile->query_3di_sequence,
+                                                                         profile->composition_bias_ss, profile->mat_3di,
+                                                                         q_3di->L, alphabetSize, 0, 0, 0);
+    }
     for(int32_t i = 0; i< alphabetSize; i++) {
         profile->profile_aa_word_linear[i] = &profile_aa_word_linear_data[i*q_aa->L];
         profile->profile_3di_word_linear[i] = &profile_3di_word_linear_data[i*q_3di->L];
@@ -812,12 +888,20 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     seq_reverse(profile->composition_bias_ss_rev, profile->composition_bias_ss, q_3di->L);
     profile->query_length = q_aa->L;
     profile->alphabetSize = alphabetSize;
-}
 
+    if (is3DiProfile) {
+        for (int32_t i = 0; i < alphabetSize; i++) {
+            const int8_t *startToRead = &profile->alignment_3di_profile[i * q_3di->L];
+            int8_t *startToWrite = &profile->rev_alignment_3di_profile[i * q_3di->L];
+            std::reverse_copy(startToRead, startToRead + q_3di->L, startToWrite);
+        }
+    }
+}
+template <const unsigned int type>
 StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                                                   const int8_t *query_aa_sequence, const int8_t *query_3di_sequence, const int8_t * compositionBiasAA,
-                                                                  const int8_t * compositionBiasSS, int32_t db_length, int32_t query_length, int32_t score, const uint32_t gap_open,
-                                                                  const uint32_t gap_extend, int32_t band_width, const int8_t *mat_aa, const int8_t *mat_3di, int32_t n) {
+                                                                  const int8_t * compositionBiasSS, int32_t db_length, int32_t query_length, int32_t queryStart, int32_t score, const uint32_t gap_open,
+                                                                  const uint32_t gap_extend, int32_t band_width, const int8_t *mat_aa, int32_t nAA, const int8_t *mat_3di, int32_t n3Di) {
     /*! @function
      @abstract  Round an integer to the next closest power-2 integer.
      @param  x  integer to be rounded (in place)
@@ -895,8 +979,15 @@ StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned
                 e1 = e_b[u] > 0 ? e_b[u] : 0;
                 f1 = f > 0 ? f : 0;
                 temp1 = e1 > f1 ? e1 : f1;
-                temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * n + db_aa_sequence[j]] + compositionBiasAA[i]
-                               + mat_3di[query_3di_sequence[i] * n + db_3di_sequence[j]] + compositionBiasSS[i];
+                if(type == SUBSTITUTIONMATRIX){
+                    temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * nAA + db_aa_sequence[j]] + compositionBiasAA[i]
+                            + mat_3di[query_3di_sequence[i] * n3Di + db_3di_sequence[j]] + compositionBiasSS[i];
+                }
+                if(type == PROFILE) {
+                    temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * nAA + db_aa_sequence[j]] + compositionBiasAA[i]
+                            + mat_3di[db_3di_sequence[j] * n3Di + (queryStart + i)];
+                }
+
                 h_c[u] = temp1 > temp2 ? temp1 : temp2;
 
                 if (h_c[u] > max) max = h_c[u];

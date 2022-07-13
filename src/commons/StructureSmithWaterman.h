@@ -175,6 +175,15 @@ public:
         }
     }
 
+    int isProfileSearch(){
+        return profile->is_3di_profile;
+    }
+
+    const static unsigned int SUBSTITUTIONMATRIX = 1;
+    const static unsigned int PROFILE = 2;
+    // ssw_align
+    const static unsigned int PROFILE_SEQ = 5;
+    const static unsigned int PROFILE_PROFILE = 6;
 
 private:
 
@@ -197,6 +206,9 @@ private:
         int8_t* composition_bias_ss_rev;
         int8_t* mat_aa;
         int8_t* mat_3di;
+        int8_t* rev_alignment_3di_profile;
+        int8_t* alignment_3di_profile;
+        bool is_3di_profile;
         // Memory layout of if mat + queryProfile is qL * AA
         //    Query length
         // A  -1  -3  -2  -1  -4  -2  -2  -3  -1  -3  -2  -2   7  -1  -2  -1  -1  -2  -5  -3
@@ -268,14 +280,14 @@ private:
                                                           const simd_int*query_3di_profile_byte,
                                                           uint16_t terminate,
                                                           int32_t maskLen);
-
+    template <const unsigned int type>
     StructureSmithWaterman::cigar *banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                              const int8_t *query_aa_sequence, const int8_t *query_3di_sequence,
                                              const int8_t * compositionBiasAA, const int8_t * compositionBiasSS,
-                                             int32_t db_length, int32_t query_length,
+                                             int32_t db_length, int32_t query_length, int32_t queryStart,
                                              int32_t score, const uint32_t gap_open,
                                              const uint32_t gap_extend, int32_t band_width,
-                                             const int8_t *mat_aa, const int8_t *mat_3di, int32_t n);
+                                             const int8_t *mat_aa, int32_t nAA, const int8_t *mat_3di, int32_t n3Di);
 
     void computerBacktrace(s_profile * query, const unsigned char * db_sequence,
                            s_align & alignment, std::string & backtrace, uint32_t & aaIds, size_t & mStatesCnt);
@@ -295,8 +307,7 @@ private:
 
     s_profile* profile;
 
-    const static unsigned int SUBSTITUTIONMATRIX = 1;
-    const static unsigned int PROFILE = 2;
+
 
     template <typename T, size_t Elements, const unsigned int type>
     void createQueryProfile(simd_int *profile, const int8_t *query_sequence, const int8_t * composition_bias, const int8_t *mat, const int32_t query_length, const int32_t aaSize, uint8_t bias, const int32_t offset, const int32_t entryLength);
@@ -306,6 +317,7 @@ private:
     short * profile_3di_word_linear_data;
     bool aaBiasCorrection;
     float aaBiasCorrectionScale;
+
 };
 
 

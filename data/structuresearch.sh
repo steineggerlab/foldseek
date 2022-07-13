@@ -23,9 +23,9 @@ if notExists "${TMP_PATH}/aln.dbtype"; then
         || fail "Alignment step died"
 fi
 
-"$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}"
+"$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}" ${VERBOSITY}
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
-    "$MMSEQS" rmdb "${TMP_PATH}/pref"
+    "$MMSEQS" rmdb "${TMP_PATH}/pref" ${VERBOSITY}
 fi
