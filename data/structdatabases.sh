@@ -82,7 +82,7 @@ case "${SELECTION}" in
           push_back "${TMP_PATH}/alphafold_swissprot"
           INPUT_TYPE="FOLDSEEK_DB"
     ;;
-    "PDB100")
+    "PDB")
         if notExists "${TMP_PATH}/pdb.tar.gz"; then
             date "+%s" > "${TMP_PATH}/version"
             downloadFile "https://foldseek.steineggerlab.workers.dev/pdb100.tar.gz" "${TMP_PATH}/pdb.tar.gz"
