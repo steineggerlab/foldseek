@@ -28,5 +28,6 @@ fi
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/pref" ${VERBOSITY}
 fi
