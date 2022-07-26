@@ -85,7 +85,7 @@ case "${SELECTION}" in
     "PDB")
         if notExists "${TMP_PATH}/pdb.tar.gz"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/pdb100.tar.gz" "${TMP_PATH}/pdb.tar.gz"
-	    downloadFile "https://foldseek.steineggerlab.workers.dev/pdb100.version" "${TMP_PATH}/pdb.version"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/pdb100.version" "${TMP_PATH}/pdb.version"
         fi
         tar xvfz "${TMP_PATH}/pdb.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/pdb"
