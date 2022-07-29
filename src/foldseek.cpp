@@ -31,7 +31,13 @@ std::vector<struct Command> commands = {
                 "Convert PDB/mmCIF/tar[.gz] files to an db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, 
+#ifdef HAVE_GCS
+                        &DbValidator::flatfileStdinGenericUri
+#else
+                        &DbValidator::flatfileStdinAndGeneric
+#endif
+                                          },
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"structureto3didescriptor",             structureto3didescriptor,            &localPar.structurecreatedb,    COMMAND_HIDDEN,
                 "Convert PDB/mmCIF/tar[.gz] files to an db.",
