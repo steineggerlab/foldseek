@@ -17,6 +17,10 @@
 #include <iostream>
 #include <dirent.h>
 
+#ifdef HAVE_GCS
+#include "google/cloud/storage/client.h"
+#endif
+
 #ifdef OPENMP
 #include <omp.h>
 #endif
@@ -197,7 +201,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     std::vector<std::string> filenames(par.filenames);
     std::string outputName = filenames.back();
     filenames.pop_back();
-    if(filenames.size() == 1 && FileUtil::directoryExists(filenames.back().c_str())){
+    if (filenames.size() == 1 && FileUtil::directoryExists(filenames.back().c_str())) {
         std::vector<std::string> dirs;
         dirs.push_back(filenames.back());
         filenames.pop_back();
@@ -433,7 +437,11 @@ int createdb(int argc, const char **argv, const Command& command) {
             // skip tars since they were processed on top
             if (Util::endsWith(".tar.gz", filenames[i])
                 || Util::endsWith(".tgz", filenames[i])
-                || Util::endsWith(".tar", filenames[i])) {
+                || Util::endsWith(".tar", filenames[i])
+#ifdef HAVE_GCS
+                || Util::startWith("gcs://", filenames[i])
+#endif
+                ) {
                 continue;
             }
             progress.updateProgress();
@@ -450,6 +458,73 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
 
     }
+
+#ifdef HAVE_GCS
+    namespace gcs = ::google::cloud::storage;
+    auto options = google::cloud::Options{}
+        .set<gcs::ConnectionPoolSizeOption>(par.threads)
+        .set<google::cloud::storage_experimental::HttpVersionOption>("2.0");
+    auto client = gcs::Client(options);
+    for (size_t i = 0; i < filenames.size(); i++) {
+        if (Util::startWith("gcs://", filenames[i]) == false) {
+            continue;
+        }
+        std::vector<std::string> parts = Util::split(filenames[i], "/");
+        if (parts.size() == 1) {
+            Debug(Debug::WARNING) << "Skipping invalid URI " << filenames[i] << "\n";
+            continue;
+        }
+        std::string bucket_name = parts[1];
+
+        char filter = '\0';
+        if (parts.size >= 3) {
+            filter = parts[2][0];
+        }
+        progress.reset(SIZE_MAX);
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter) reduction(+:incorrectFiles, tooShort)
+        {
+            StructureTo3Di structureTo3Di;
+            PulchraWrapper pulchra;
+            GemmiWrapper readStructure;
+            std::vector<char> alphabet3di;
+            std::vector<float> camol;
+            std::string header;
+            std::string name;
+
+#pragma omp single
+            for (auto&& object_metadata : client.ListObjects(bucket_name, gcs::Projection::NoAcl(), gcs::MaxResults(15000))) {
+                std::string obj_name = object_metadata->name();
+#pragma omp task firstprivate(obj_name, alphabet3di, camol, header, name, filter) private(structureTo3Di, pulchra, readStructure)
+                {
+                    bool skipFilter = filter != '\0' && obj_name.length() >= 9 && obj_name[8] == filter;
+                    bool allowedSuffix = Util::endsWith(".cif", obj_name) || Util::endsWith(".pdb", obj_name);
+                    if (skipFilter && allowedSuffix) {
+                        unsigned int thread_idx = 0;
+#ifdef OPENMP
+                        thread_idx = static_cast<unsigned int>(omp_get_thread_num());
+#endif
+                        progress.updateProgress();
+
+                        auto reader = client.ReadObject(bucket_name, obj_name);
+                        if (!reader.status().ok()) {
+                            Debug(Debug::ERROR) << reader.status().message() << "\n";
+                        } else {
+                            std::string contents{std::istreambuf_iterator<char>{reader}, {}};
+                            if (readStructure.loadFromBuffer(contents.c_str(), contents.size(), obj_name) == false) {
+                                incorrectFiles++;
+                            } else {
+                                writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
+                                        alphabet3di, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                                        par.chainNameMode, tooShort, globalCnt, thread_idx,
+                                        obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
 
     torsiondbw.close(true);
     hdbw.close(true);
