@@ -212,8 +212,24 @@ std::vector<struct Command> commands = {
 
 std::vector<DatabaseDownload> externalDownloads = {
         {
+                "Alphafold/UniProt",
+                "AlphaFold UniProt Protein Structure Database (including C-alpha, ~700GB download, ~950GB extracted).",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "Alphafold/UniProt-NO-CA",
+                "AlphaFold UniProt Protein Structure Database (excluding C-alpha, ~70GB download, ~170GB extracted).",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
                 "Alphafold/Proteome",
-                "AlphaFold Protein Structure Database.",
+                "AlphaFold Proteomes Protein Structure Database.",
                 "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
                 "https://alphafold.ebi.ac.uk/",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
