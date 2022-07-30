@@ -16,8 +16,8 @@ void setEasyStructureSearchDefaults(Parameters *p) {
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
-    p->gapOpen = 7;
-    p->gapExtend = 2;
+    p->gapOpen = 10;
+    p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
 }
