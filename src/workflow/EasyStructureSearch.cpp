@@ -10,13 +10,28 @@
 #include "easystructuresearch.sh.h"
 
 void setEasyStructureSearchDefaults(Parameters *p) {
+    // TODO: 7-mer sensitivity is not optimized yet
+    p->kmerSize = 6;
+    p->maskMode = 0;
+    p->maskProb = 0.99995;
     p->sensitivity = 9.5;
+    p->maxResListLen = 1000;
     p->gapOpen = 7;
     p->gapExtend = 2;
-    p->removeTmpFiles = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+    p->removeTmpFiles = true;
 }
-
+void setEasyStructureSearchMustPassAlong(Parameters *p) {
+    p->PARAM_K.wasSet = true;
+    p->PARAM_MASK_RESIDUES.wasSet = true;
+    p->PARAM_MASK_PROBABILTY.wasSet = true;
+    p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
+    p->PARAM_S.wasSet = true;
+    p->PARAM_GAP_OPEN.wasSet = true;
+    p->PARAM_GAP_EXTEND.wasSet = true;
+    p->PARAM_ALIGNMENT_MODE.wasSet = true;
+    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
+}
 
 int easystructuresearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -37,6 +52,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     setEasyStructureSearchDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    setEasyStructureSearchMustPassAlong(&par);
 
     bool needBacktrace = false;
     bool needTaxonomy = false;

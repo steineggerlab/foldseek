@@ -9,17 +9,20 @@
 #include "structuresearch.sh.h"
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
+    // TODO: 7-mer sensitivity is not optimized yet
+    p->kmerSize = 6;
     p->maskMode = 0;
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
-    p->gapOpen = 10;
-    p->gapExtend = 1;
+    p->gapOpen = 7;
+    p->gapExtend = 2;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
 }
 
 void setStructureSearchMustPassAlong(LocalParameters *p) {
+    p->PARAM_K.wasSet = true;
     p->PARAM_MASK_RESIDUES.wasSet = true;
     p->PARAM_MASK_PROBABILTY.wasSet = true;
     p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
