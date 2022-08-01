@@ -130,16 +130,13 @@ jobs:
           targetPath: $(Build.SourcesDirectory)/build/src/foldseek
           artifactName: foldseek-linux-$(SIMD)
 
-  - job: build_macos_1015
-    displayName: macOS 1015
+  - job: build_macos_11
+    displayName: macOS 11
     pool:
-      vmImage: 'macos-10.15'
+      vmImage: 'macos-11'
     steps:
       - checkout: self
         submodules: true
-      - script: |
-          sudo xcode-select -s "/Applications/Xcode_12.2.app"
-        displayName: Use Xcode 12.2
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build foldseek
@@ -160,7 +157,7 @@ jobs:
     pool:
       vmImage: 'Ubuntu-20.04'
     dependsOn:
-      - build_macos_1015
+      - build_macos_11
       - build_ubuntu_1804
       - build_ubuntu_cross_2004
     steps:
