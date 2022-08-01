@@ -228,6 +228,14 @@ std::vector<DatabaseDownload> externalDownloads = {
                 {}
         },
         {
+                "Alphafold/UniProt50",
+                "AlphaFold UniProt Protein Structure Database clustered at 50% sequence identity.",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
                 "Alphafold/Proteome",
                 "AlphaFold Proteomes Protein Structure Database.",
                 "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
