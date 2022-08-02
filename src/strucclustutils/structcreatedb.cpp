@@ -251,12 +251,15 @@ int createdb(int argc, const char **argv, const Command& command) {
     for(size_t i = 0; i < filenames.size(); i++) {
         mtar_t tar;
         if (Util::endsWith(".tar.gz", filenames[i]) || Util::endsWith(".tgz", filenames[i])) {
+#ifdef HAVE_ZLIB
             if (structure_mtar_gzopen(&tar, filenames[i].c_str()) != MTAR_ESUCCESS) {
                 Debug(Debug::ERROR) << "Cannot open file " << filenames[i] << "\n";
                 EXIT(EXIT_FAILURE);
             }
-            Debug(Debug::ERROR) << "MMseqs2 was not compiled with zlib support. Cannot read compressed input.\n";
+#else
+            Debug(Debug::ERROR) << "Foldseek was not compiled with zlib support. Cannot read compressed input.\n";
             EXIT(EXIT_FAILURE);
+#endif
         } else if (Util::endsWith(".tar", filenames[i])) {
             if (mtar_open(&tar, filenames[i].c_str()) != MTAR_ESUCCESS) {
                 Debug(Debug::ERROR) << "Cannot open file " << filenames[i] << "\n";
