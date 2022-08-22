@@ -9,8 +9,13 @@
 #include "structureto3diseqdist.h"
 #include "StructureSmithWaterman.h"
 #include "StructureUtil.h"
+#include "BacktraceTranslator.h"
+#include "MultipleAlignment.h"
+#include "Sequence.h"
 #include <tuple>
 #include <set>
+
+#include "MSANode.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -18,70 +23,6 @@
 
 #define	EXIT_FAILURE	1
 #define	EXIT_SUCCESS	0
-
-struct Node {
-    size_t id;
-    std::string sequence;
-    Matcher::result_t result;
-
-    Node(size_t n_id, std::string n_sequence, Matcher::result_t n_result)
-        : id(n_id), sequence(n_sequence), result(n_result) {};
-    Node() = default;
-
-    void print() {
-        std::cout << ">Node " << id << "\n" << sequence;
-    }
-};
-
-/**
- * A structure cluster within the MSA.
- * Stores member Nodes and a representative sequence for adding new Nodes.
- */
-struct Cluster {
-    size_t id;
-    std::vector<Node *> members;
-    std::string representative;
-};
-
-struct Linkage {
-    size_t query;
-    size_t target;
-    int score;
-    size_t index;
-};
-
-struct CompareResult{
-    public:
-        template <class T> bool operator() (T &a, T &b) {
-            return a.second.score > b.second.score;
-        }
-} BestResult;
-
-
-template <class T>
-void printVector(std::vector<T> vector) {
-    for (size_t i = 0; i < vector.size(); i++) {
-        std::cout << vector[i] << " ";
-        if (i == vector.size() - 1) {
-            std::cout << std::endl;
-        }
-    }
-}
-
-/**
- * Print two sequences, shifted by alignment result position
- */
-void print_sequences(std::string a, std::string b, Matcher::result_t result) {
-    if (result.qStartPos > result.dbStartPos) {
-        std::cout << a;
-        std::cout << std::string(result.qStartPos - result.dbStartPos, ' ') << b << std::endl;
-    } else {
-        std::cout << std::string(result.dbStartPos - result.qStartPos, ' ') << a;
-        std::cout << b << std::endl;
-    }
-    /* std::cout << "  " << a; */
-    /* std::cout << "  " << b; */
-}
 
 // Tests c is a match
 inline bool match(char c) {
@@ -102,9 +43,40 @@ inline char lwrchr(char chr) {
     return (chr >= 'A' && chr <= 'Z') ? chr - 'A' + 'a' : chr;
 }
 
+struct CompareResult {
+    public:
+        template <class T> bool operator() (T &a, T &b) {
+            return a.second.score > b.second.score;
+        }
+} BestResult;
 
-void testing(std::string a, std::string b, Matcher::result_t result) {
+template <class T> void printVector(std::vector<T> vector) {
+    for (size_t i = 0; i < vector.size(); i++) {
+        std::cout << vector[i] << " ";
+        if (i == vector.size() - 1) {
+            std::cout << std::endl;
+        }
+    }
+}
 
+/**
+ * Print two sequences, shifted by alignment result position
+ */
+void print_sequences(std::string a, std::string b, Matcher::result_t result) {
+    if (result.qStartPos > result.dbStartPos) {
+        std::cout << a;
+        std::cout << std::string(result.qStartPos - result.dbStartPos, ' ') << b << std::endl;
+    } else {
+        std::cout << std::string(result.dbStartPos - result.qStartPos, ' ') << a;
+        std::cout << b << std::endl;
+    }
+}
+
+void printCurSeq(char cur_seq[], size_t length) {
+    std::cout << "cur_seq: ";
+    for (size_t i = 0; i < length; i++)
+        std::cout << cur_seq[i];
+    std::cout << std::endl;
 }
 
 /**
@@ -222,12 +194,12 @@ void merge_a3m(std::string _a, std::string _b, Matcher::result_t result) {
         imap[bIdx] = aIdx;
     }
 
-    int par_maxcol = a.length() + b.length();
+    int par_maxcol = 32000;
     char *cur_seq = new char[par_maxcol];
+
     char c;
     size_t h;
     size_t l, ll;
-    int pos;
 
     // Add left-end gaps
     for (h = 0; h < (size_t)result.qStartPos; h++)
@@ -235,61 +207,31 @@ void merge_a3m(std::string _a, std::string _b, Matcher::result_t result) {
 
     // Mark insertions until first match position
     j = 0;
-    pos = 0;
     if (result.dbStartPos > 0) {
-        while (j < (size_t)result.dbStartPos && b[pos] != '\0') {
-            c = b[pos++];
-            if (match(c)) j++;
+        for (; j < (size_t)result.dbStartPos; j++) {
+            c = b[j];
             cur_seq[h++] = (c == '-') ? '.' : lwrchr(c);
         }
     }
 
-    std::cout << "Marked insertions:\n";
-    i = 0;
-    while (cur_seq[i] != '\0') {
-        std::cout << cur_seq[i];
-        i++;
-    }
-    std::cout << "\n\n\n";
-
-    // Check if start position is an insertion; if so, copy
-    // b[pos] is first position after marking insertions above
-    c = b[pos];
-    while (insertion(c) && (c != '\0')) {
+    // If the first position is an insertion, add lowercase until match
+    c = b[j];
+    while (insertion(c) && c != '\0') {
         cur_seq[h++] = lwrchr(c);
-        c = b[pos++];
+        c = b[j++];
     }
 
-    std::cout << "Checked start position:\n";
-    i = 0;
-    while (cur_seq[i] != '\0') {
-        std::cout << cur_seq[i];
-        i++;
-    }
-    std::cout << "\n\n\n";
-
-
-    // Advance to match state result.dbStartPos of b
-    // match state at position l?
-    // yes: increment j. Reached hit,j1? yes: break
-    // TODO is this any different to just l = result.dbStartPos ?
-    //  Just use pos?
-
-    for (j = 0, l = 0; (c = b[l]) != '\0'; l++) {
-        if (match(c))
-            if ((++j) == (size_t)result.dbStartPos)
-                break;
-    }
-    /* l = result.dbStartPos - 1; */
-
+    // Get index of first match state in backtrace
+    l = result.backtrace.find_first_of('M');
 
     // Write first match state to cur_seq
-    int iprev = result.qStartPos;  // Previous query match state
-    int lprev = l;                 // Previous target match state
-    cur_seq[h++] = b[l];        // First column is Match-Match state
+    int iprev = result.qStartPos;
+    int lprev = result.dbStartPos + l;
+
+    cur_seq[h++] = b[lprev];        // First column is Match-Match state
 
     // Iterate next match states
-    for (j = result.dbStartPos + 1; j <= (result.dbStartPos + result.backtrace.length()); j++) {
+    for (j = result.dbStartPos + 1; j < (result.dbStartPos + result.backtrace.length()); j++) {
         // Get index in query from imap
         i = imap[j];
 
@@ -299,26 +241,23 @@ void merge_a3m(std::string _a, std::string _b, Matcher::result_t result) {
         int di = i - iprev;
         int dl = l - lprev;
 
-        /* std::cout */
-        /*     << "i: " << i << ", iprev: " << iprev << ", di: " << di */
-        /*     << ", l: " << l << ", lprev: " << lprev << ", dl: " << dl */
-        /*     << std::endl; */
+        std::cout
+            << "j: " << j << ", i: " << i << ", iprev: " << iprev << ", di: " << di
+            << ", l: " << l << ", lprev: " << lprev << ", dl: " << dl
+            << std::endl;
         
         if (di == 1) {
-            /* std::cout << "di == 1" << std::endl; */
             for (ll = lprev + 1; ll < l; ll++)
                 if (b[ll] != '-' && b[ll] != '.')
                     cur_seq[h++] = lwrchr(b[ll]);
             cur_seq[h++] = b[ll++];
 
         } else if (di == 0) {
-            /* std::cout << "di == 0" << std::endl; */
             for (ll = lprev + 1; ll <= l; ll++)
                 if (b[ll] != '-' && b[ll] != '.')
                     cur_seq[h++] = lwrchr(b[ll]);
 
         } else if (di >= dl) {
-            /* std::cout << "di >= dl" << std::endl; */
             for (ll = lprev + 1; ll <= (size_t)(lprev + (int)(dl / 2)); ll++)
                 cur_seq[h++] = uprchr(b[ll]);
             for (int gap = 1; gap <= di - dl; gap++)
@@ -327,7 +266,6 @@ void merge_a3m(std::string _a, std::string _b, Matcher::result_t result) {
                 cur_seq[h++] = uprchr(b[ll]);
 
         } else if (di < dl) {
-            /* std::cout << "di < dl" << std::endl; */
             for (ll = lprev + 1; ll <= (size_t)(lprev + (int)(di / 2)); ll++)
                 cur_seq[h++] = uprchr(b[ll]);
             for (int ins = 1; ins <= dl - di; ins++, ll++)
@@ -339,7 +277,7 @@ void merge_a3m(std::string _a, std::string _b, Matcher::result_t result) {
         iprev = i;
         lprev = l;
 
-        if (h >= par_maxcol - 1000)  // too few columns? Reserve double space
+        if (h >= (size_t)(par_maxcol - 1000))  // too few columns? Reserve double space
         {
             char *new_seq = new char[2 * par_maxcol];
             strncpy(new_seq, cur_seq, h);  //////// check: maxcol-1 ????
@@ -347,59 +285,56 @@ void merge_a3m(std::string _a, std::string _b, Matcher::result_t result) {
             cur_seq = new_seq;
             par_maxcol *= 2;
         }
-
-        i = 0;
-        while (cur_seq[i] != '\0') {
-            std::cout << cur_seq[i];
-            i++;
-        }
-        std::cout << '\n';
     }
 
     // Count match states in alignment
-    size_t L = std::count(result.backtrace.begin(), result.backtrace.end(), 'M');
+    int matches = 0,
+        inserts = 0,
+        deletions = 0;
+    for (i = 0; i < result.backtrace.length(); i++) {
+        switch (result.backtrace[i]) {
+            case 'M':
+                matches++;
+                break;
+            case 'I':
+                inserts++;
+                break;
+            case 'D':
+                deletions++;
+                break;
+        }
+    }
+    /* size_t numMatches = std::count(result.backtrace.begin(), result.backtrace.end(), 'M'); */
+    /* size_t nonMatches = result.backtrace.length() - numMatches; */
 
     // Add the remaining gaps '-' to the end of the template sequence
-    for (i = result.qEndPos + 1; i <= L; i++) {
-        cur_seq[h++] = '-';
-
-    }
-
-    // add remaining seq. info as insertion state
-    while (b[ll] != '\0') {
-        if (b[ll] == '-') {
-            cur_seq[h++] = '.';
-        } else {
-            cur_seq[h++] = lwrchr(a[ll]);
-        }
-        ll++;
+    if (result.qEndPos > result.dbEndPos) {
+        size_t remainingGaps = result.qEndPos - result.dbEndPos + inserts - deletions;
+        std::cout << "Remaining: " << remainingGaps << std::endl;
+        for (i = 0; i < remainingGaps; i++)
+            cur_seq[h++] = '-';
+        printCurSeq(cur_seq, h);
     }
 
     cur_seq[h++] = '\0';
 
-
     // Print out cur_seq
-    {
-        std::cout
-            << "               "
-            << std::string(result.dbStartPos + result.qStartPos, ' ') << '*'
-            << std::string(result.backtrace.length() - 2, ' ') << '*'
-            << std::endl;
-        std::cout << "    a3m query: " << a3m_a;
-        std::cout << "   a3m target: " << a3m_b;
-        std::cout
-            << "               "
-            << std::string(result.qStartPos + std::max(result.dbStartPos, 0), ' ') << '*'
-            << std::string(result.backtrace.length() - 2, ' ') << '*'
-            << std::endl;
-        std::cout << "        Query: " << a3m_a;
-        std::cout << "      cur_seq: "; //<< std::string(result.dbStartPos, ' ');
-        i = 0;
-        while (cur_seq[i] != '\0') {
-            std::cout << cur_seq[i];
-            i++;
-        }
-    }
+    std::cout
+        << "               "
+        << std::string(result.dbStartPos + result.qStartPos, ' ') << '*'
+        << std::string(result.backtrace.length() - 2, ' ') << '*'
+        << std::endl;
+    std::cout << "    a3m query: " << a3m_a;
+    std::cout << "\n   a3m target: " << a3m_b;
+    std::cout
+        << "\n               "
+        << std::string(result.qStartPos + std::max(result.dbStartPos, 0), ' ') << '*'
+        << std::string(result.backtrace.length() - 2, ' ') << '*'
+        << std::endl;
+    std::cout << "\n        Query: " << a3m_a;
+    std::cout << "\n      cur_seq: ";
+    for (i = 0; i < h; i++)
+        std::cout << cur_seq[i];
 
     delete[] cur_seq;
     std::cout << std::endl;
@@ -417,7 +352,7 @@ int generatetree(int argc, const char **argv, const Command& command) {
     // Alignment database from structurealign
     DBReader<unsigned int> reader(par.db2.c_str(), par.db2Index.c_str(), 1, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
-
+    
     size_t dbSize = reader.getSize();
     unsigned int thread_idx = 0;
 
@@ -426,8 +361,11 @@ int generatetree(int argc, const char **argv, const Command& command) {
 
     std::cout << "Generating tree" << std::endl;
 
-    std::vector<int> id2cluster(dbSize, -1);  // Map database IDs to cluster IDs
-    std::vector<Node> nodes;
+    MSASequence sequences[dbSize];
+    MSANode nodes[dbSize];
+
+    /* std::vector<MSASequence> sequences; */
+    /* std::vector<MSANode> nodes(dbSize); */
 
     // Save best hit per query, reverse sorted by score
     for (size_t i = 0; i < dbSize; ++i) {
@@ -438,118 +376,124 @@ int generatetree(int argc, const char **argv, const Command& command) {
         if (result.size() > 1)
             results.emplace_back(reader.getDbKey(i), result[1]);
 
-        std::cout << "Align length: " << result[1].alnLength << ", Backtrace: " << result[1].backtrace.length() << std::endl;
-        
         // Get sequence of query node
         unsigned int queryId = qdbr.sequenceReader->getId(reader.getDbKey(i));
-        nodes.emplace_back(reader.getDbKey(i), qdbrAA.sequenceReader->getData(queryId, thread_idx), result[1]);
+
+        // FIXME
+        // this is likely going out of scope, so address will be garbage when
+        // stored in members array
+        /* MSASequence sequence(queryId, qdbrAA.sequenceReader->getData(queryId, thread_idx)); */
+        MSASequence sequence(queryId, qdbrAA.sequenceReader->getData(queryId, thread_idx));
+        sequences[i] = sequence;
+        /* sequences.emplace_back(queryId, qdbrAA.sequenceReader->getData(queryId, thread_idx)); */
+
+        MSANode node(reader.getDbKey(i));
+        node.members.push_back(&sequences[i]);
+        nodes[i] = node;
+
+        /* nodes.emplace_back(reader.getDbKey(i)); */
+        /* nodes[i].members.push_back(&sequences[i]); */
 
         result.clear();
     }
     std::sort(results.begin(), results.end(), BestResult);
 
-    // TODO: make a simpler test case for a3m merging
-    // e.g.
-    //  Q   X X X X X X X X X X X X X X X
-    //  T1  Y Y Y Y Y Y Y Y Y Y Y
-    //  T2  Z Z Z Z Z Z Z Z
-    //
-    //  Q-T1 CIGAR
-    //        M M M D D M M M M M M M M
-    //  Q   X X X X X X X X X X X X X X X
-    //  T1    Y Y Y - - Y Y Y Y Y Y Y Y
-    //
-    //  Q-T2
-    //          M M M M M I I M
-    //  T1  Y Y Y Y Y Y Y . . Y Y Y Y
-    //  T2      Z Z Z Z Z z z Z
-    //
-    //  Expected a3m:
-    //  Q   X X X X X X X X X X X X X X X
-    //  T1  - Y Y Y - - Y Y Y Y Y Y Y Y
-    //  T2  - - - Z - - Z Z Z Z z z Z
-    //
-    //  Full alignment:
-    //  Q   X X X X X X X X X X - - X X X X X
-    //  T1  - Y Y Y - - Y Y Y Y - - Y Y Y Y -
-    //  T2  - - - Z - - Z Z Z Z z z Z - - - -
-    //
-    //  TODO: use CIGAR strings from other sequences to inform exact positioning ?
 
-    /* unsigned int dbKey; */
-    /* int score; */
-    /* float qcov; */
-    /* float dbcov; */
-    /* float seqId; */
-    /* double eval; */
-    /* unsigned int alnLength; */
-    /* int qStartPos; */
-    /* int qEndPos; */
-    /* unsigned int qLen; */
-    /* int dbStartPos; */
-    /* int dbEndPos; */
-    /* unsigned int dbLen; */
-    /* int queryOrfStartPos; */
-    /* int queryOrfEndPos; */
-    /* int dbOrfStartPos; */
-    /* int dbOrfEndPos; */
-    /* std::string backtrace; */
-
-    /* nodes.emplace_back(0, "XXXXXXXXXXXXXXX\n", *(new Matcher::result_t())); */
-    /* nodes.emplace_back(1, "YYYYYYYYYYY\n", *(new Matcher::result_t())); */
-    /* nodes.emplace_back(2, "ZZZZZZZZ\n", *(new Matcher::result_t())); */
-
-    /* nodes[0].result.dbKey = 1; */
-    /* nodes[0].result.backtrace = "MMMIIMMMMMMMM"; */
-    /* nodes[0].result.qStartPos = 1; */
-    /* nodes[0].result.qEndPos = 14; */
-    /* nodes[0].result.dbStartPos = 0; */
-    /* nodes[0].result.dbEndPos = 11; */
-
-    /* nodes[1].result.dbKey = 2; */
-    /* nodes[1].result.backtrace = "MMMMMDDM"; */
-    /* nodes[1].result.qStartPos = 2; */
-    /* nodes[1].result.qEndPos = 7; */
-    /* nodes[1].result.dbStartPos = 0; */
-    /* nodes[1].result.dbEndPos = 7; */
-
-    /* merge_a3m(nodes[0].sequence, nodes[1].sequence, nodes[0].result); */
-
-    std::cout << "Best hits:" << std::endl;
-    for (size_t i = 0; i < results.size(); i++) {
-        std::cout << "Merging " << results[i].first << " vs " << results[i].second.dbKey << std::endl;
-        merge_a3m(nodes[results[i].first].sequence, nodes[results[i].second.dbKey].sequence, results[i].second);
-        std::cout << std::endl;
-        /* break; */
-    }
-    
     // Find linkages
     // Does a single pass through the best hits, saving unique pairs of query and target
-    std::vector<Linkage> merges;
+    std::set<int> merged;
+    std::map<int, MSANode> nodies;
+    std::vector<int> merges;
 
-    /* size_t idx = results.size();  // TODO need to get maximum ID in database+1 */
-    /* for (size_t i = 0; i < results.size(); i++) { */
-    /*     if (merged.find(i) != merged.end() || merged.find(results[i].dbKey) != merged.end()) { */
-    /*         continue; */
-    /*     } else { */
-    /*         Linkage linkage = {i, results[i].dbKey, results[i].score, idx}; */
+    //  Sequences = []
+    //  Hits = []
+    //  For each entry in align db (query sequence)
+    //      new MSASequence (query ID, sequence from sequenceDB) --> Sequences[i]
+    //      save best hit (target, dbKey) --> (MSASequence, result_t) --> Hits[i]
+    //
+    //  Reverse sort Hits (best --> worst)
+    //
+    //  Merged = {}
+    //  Nodes = []
+    //  For each best hit (MSASequence, result_t)
+    //
+    //      query ID  = MSASequence.id
+    //      target ID = result_t.dbKey
+    //
+    //      If query ID in Merged
+    //          get MSANode
+    //      Else
+    //          create MSANode --> Nodes
+    //          MSANode --> Merged[query ID]
+    //
+    //      If target ID in Merged
+    //          get MSANode
+    //      Else
+    //          create MSANode --> Nodes
+    //          MSANode --> Merged[target ID]
+    //
+    //      If queryNode == targetNode
+    //          continue
+    //      
+    //      # always assume result_t is hit to targetNode from queryNode
+    //      # (i.e. dbKey = target ID)
+    //      # Need queryID corresponding to query sequence of result_t
+    //      queryNode.add_cluster(queryID, targetNode, result_t)
 
-    /*         merges.push_back(linkage); */
-    /*         merged.insert(i); */
-    /*         merged.insert(results[i].dbKey); */
-    /*         idx++; */
-    /*     } */
-    /* } */
+    MSANode *query;
+    MSANode *target;
 
-    /* std::cout << "\nMerged nodes:" << std::endl; */
-    /* for (auto it = merged.begin(); it != merged.end(); it++) { */
-    /*     std::cout << "  " << *it; */
-    /* } */
+    std::cout << "Filling nodes_p\n";
+    MSANode* nodes_p[dbSize];
 
-    /* std::cout << "\nMerges:" << std::endl; */
-    /* for (size_t i = 0; i < merges.size(); i++) { */
-    /*     std::cout << "  " << merges[i].query << " " << merges[i].target << " " << merges[i].score << " " << merges[i].index << std::endl; */
-    /* } */
+    for (size_t i = 0; i < dbSize; ++i)
+        nodes_p[i] = &nodes[i];
+
+    std::cout << "Printing nodes_p\n";
+    for (size_t i = 0; i < dbSize; ++i)
+        std::cout << " Node: " << nodes_p[i]->id << std::endl;
+
+    std::cout << "Merging nodes_p\n";
+    for (std::pair<size_t, Matcher::result_t> pair : results) {
+        size_t queryId = pair.first;
+        Matcher::result_t result = pair.second;
+
+        query = nodes_p[queryId];
+        target = nodes_p[result.dbKey];
+
+        // Check if query or target have already been merged
+        if (query->id == target->id)
+            continue;
+
+        std::cout << "Merging " << result.dbKey << " (" << target->id << ")" << " into " << queryId << " (" << query->id << ")" << std::endl;
+        query->addNode(queryId, target, result);
+
+        // overwrite MSANode at q/t index after merge
+        // so all indexes point to MSANode sequence is currently in
+        for (size_t i = 0; i < target->members.size(); ++i)
+            nodes_p[target->members[i]->id] = query;
+    }
+
+    for (size_t i = 0; i < dbSize; ++i) {
+        std::cout << i << " = " << nodes_p[i]->id << std::endl;
+    }
+
+    // Print the MSA
+    std::set<int> set;
+    for (size_t i = 0; i < dbSize; ++i) {
+        MSANode *node = nodes_p[i]; 
+        if (set.find(node->id) != set.end()) {
+            std::cout << "Found " << node->id << " in set\n";
+            continue;
+        }
+        std::cout << "Printing node " << node->id << std::endl;
+        /* node->print(); */
+
+        set.insert(node->id);
+        for (int id : set)
+            std::cout << id << " ";
+        std::cout << std::endl;
+    }
 
     return EXIT_SUCCESS;
 }
