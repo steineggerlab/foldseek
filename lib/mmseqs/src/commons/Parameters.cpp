@@ -402,6 +402,7 @@ Parameters::Parameters():
     prefilter.push_back(&PARAM_MASK_PROBABILTY);
     prefilter.push_back(&PARAM_MASK_LOWER_CASE);
     prefilter.push_back(&PARAM_MIN_DIAG_SCORE);
+    prefilter.push_back(&PARAM_TAXON_LIST);
     prefilter.push_back(&PARAM_INCLUDE_IDENTITY);
     prefilter.push_back(&PARAM_SPACED_KMER_MODE);
     prefilter.push_back(&PARAM_PRELOAD_MODE);
@@ -1303,6 +1304,7 @@ Parameters::Parameters():
 
     databases.push_back(&PARAM_HELP);
     databases.push_back(&PARAM_HELP_LONG);
+    databases.push_back(&PARAM_TSV);
     databases.push_back(&PARAM_REUSELATEST);
     databases.push_back(&PARAM_REMOVE_TMP_FILES);
     databases.push_back(&PARAM_COMPRESSED);
@@ -2006,9 +2008,15 @@ void Parameters::checkIfDatabaseIsValid(const Command& command, int argc, const 
                 }
 
                 if (filenames[fileIdx] != "stdin" && FileUtil::fileExists((filenames[fileIdx]).c_str()) == false && FileUtil::fileExists((filenames[fileIdx] + ".dbtype").c_str()) == false) {
-                    printParameters(command.cmd, argc, argv, *command.params);
-                    Debug(Debug::ERROR) << "Input " << filenames[fileIdx] << " does not exist\n";
-                    EXIT(EXIT_FAILURE);
+                    regex_t regex;
+                    compileRegex(&regex, "[a-zA-Z][a-zA-Z0-9+-.]*:\\/\\/");
+                    int nomatch = regexec(&regex, filenames[fileIdx].c_str(), 0, NULL, 0);
+                    regfree(&regex);
+                    if (nomatch) {
+                        printParameters(command.cmd, argc, argv, *command.params);
+                        Debug(Debug::ERROR) << "Input " << filenames[fileIdx] << " does not exist\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                 }
                 int dbtype = FileUtil::parseDbType(filenames[fileIdx].c_str());
                 if (db.specialType & DbType::NEED_HEADER && FileUtil::fileExists((filenames[fileIdx] + "_h.dbtype").c_str()) == false && Parameters::isEqualDbtype(dbtype, Parameters::DBTYPE_INDEX_DB) == false) {
@@ -2034,6 +2042,12 @@ void Parameters::checkIfDatabaseIsValid(const Command& command, int argc, const 
                     int validatorDbtype = db.validator->at(i);
                     if (validatorDbtype == Parameters::DBTYPE_STDIN) {
                         dbtypeFound = (filenames[fileIdx] == "stdin");
+                    } else if (validatorDbtype == Parameters::DBTYPE_URI) {
+                        regex_t regex;
+                        compileRegex(&regex, "[a-zA-Z][a-zA-Z0-9+-.]*:\\/\\/");
+                        int nomatch = regexec(&regex, filenames[fileIdx].c_str(), 0, NULL, 0);
+                        regfree(&regex);
+                        dbtypeFound = nomatch == false;
                     } else if (validatorDbtype == Parameters::DBTYPE_FLATFILE) {
                         dbtypeFound = (FileUtil::fileExists(filenames[fileIdx].c_str()) == true &&
                                        FileUtil::directoryExists(filenames[fileIdx].c_str()) == false);

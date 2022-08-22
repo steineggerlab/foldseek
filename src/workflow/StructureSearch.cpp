@@ -9,6 +9,8 @@
 #include "structuresearch.sh.h"
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
+    // TODO: 7-mer sensitivity is not optimized yet
+    p->kmerSize = 6;
     p->maskMode = 0;
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
@@ -20,6 +22,7 @@ void setStructureSearchWorkflowDefaults(LocalParameters *p) {
 }
 
 void setStructureSearchMustPassAlong(LocalParameters *p) {
+    p->PARAM_K.wasSet = true;
     p->PARAM_MASK_RESIDUES.wasSet = true;
     p->PARAM_MASK_PROBABILTY.wasSet = true;
     p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
@@ -78,7 +81,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     }
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
-
+    cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
     std::string program = tmpDir + "/structuresearch.sh";
     FileUtil::writeFile(program, structuresearch_sh, structuresearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);

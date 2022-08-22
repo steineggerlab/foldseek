@@ -23,9 +23,11 @@ if notExists "${TMP_PATH}/aln.dbtype"; then
         || fail "Alignment step died"
 fi
 
-"$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}"
+# shellcheck disable=SC2086
+"$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}" ${VERBOSITY}
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
-    "$MMSEQS" rmdb "${TMP_PATH}/pref"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/pref" ${VERBOSITY}
 fi

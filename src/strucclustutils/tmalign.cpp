@@ -135,6 +135,10 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     bool hasTMscore = (TMscore >= par.tmScoreThr);
                     if(hasCov && hasSeqId  && hasTMscore){
                         swResults.emplace_back(result);
+                        passedNum++;
+                        rejected = 0;
+                    }else{
+                        rejected++;
                     }
                 }
                 SORT_SERIAL(swResults.begin(), swResults.end(), compareHitsByTMScore);

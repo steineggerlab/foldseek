@@ -93,6 +93,7 @@ LocalParameters::LocalParameters() :
 
     databases.push_back(&PARAM_HELP);
     databases.push_back(&PARAM_HELP_LONG);
+    databases.push_back(&PARAM_TSV);
     databases.push_back(&PARAM_REUSELATEST);
     databases.push_back(&PARAM_REMOVE_TMP_FILES);
     databases.push_back(&PARAM_COMPRESSED);
@@ -109,7 +110,7 @@ LocalParameters::LocalParameters() :
     tmAlignFast = 1;
     nsample = 5000;
 
-    citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S,Tumescheit C, Mirdita M, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2022)");
+    citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S, Tumescheit C, Mirdita M, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2022)");
 
     //rewrite param vals.
 

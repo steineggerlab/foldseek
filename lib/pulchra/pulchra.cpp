@@ -8,7 +8,10 @@
 #include <string.h>
 
 #include "pulchra_common.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-braces"
 #include "nco_data.h"
+#pragma GCC diagnostic pop
 #include "pulchra.h"
 
 // distance

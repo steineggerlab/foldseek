@@ -31,7 +31,13 @@ std::vector<struct Command> commands = {
                 "Convert PDB/mmCIF/tar[.gz] files to an db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, 
+#ifdef HAVE_GCS
+                        &DbValidator::flatfileStdinGenericUri
+#else
+                        &DbValidator::flatfileStdinAndGeneric
+#endif
+                                          },
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"structureto3didescriptor",             structureto3didescriptor,            &localPar.structurecreatedb,    COMMAND_HIDDEN,
                 "Convert PDB/mmCIF/tar[.gz] files to an db.",
@@ -233,8 +239,32 @@ std::vector<struct Command> commands = {
 
 std::vector<DatabaseDownload> externalDownloads = {
         {
+                "Alphafold/UniProt",
+                "AlphaFold UniProt Protein Structure Database (including C-alpha, ~700GB download, ~950GB extracted).",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "Alphafold/UniProt-NO-CA",
+                "AlphaFold UniProt Protein Structure Database (excluding C-alpha, ~70GB download, ~170GB extracted).",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "Alphafold/UniProt50",
+                "AlphaFold UniProt Protein Structure Database clustered at 50% sequence identity.",
+                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "https://alphafold.ebi.ac.uk/",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
                 "Alphafold/Proteome",
-                "AlphaFold Protein Structure Database.",
+                "AlphaFold Proteomes Protein Structure Database.",
                 "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
                 "https://alphafold.ebi.ac.uk/",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,

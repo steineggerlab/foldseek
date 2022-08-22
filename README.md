@@ -28,7 +28,49 @@ Other precompiled binaries for ARM64, PPC64LE amd SSE2 are available at [https:/
 
     foldseek easy-search example/d1asha_ example/ aln.m8 tmpFolder
     
-The output can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different [output columns](https://github.com/soedinglab/mmseqs2/wiki#custom-alignment-format-with-convertalis).    
+The output can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different output columns.
+
+```
+query       Query sequence identifier 
+target      Target sequence identifier
+evalue      E-value
+gapopen     Number of gap open events (note: this is NOT the number of gap characters)
+pident      Percentage of identical matches
+fident      Fraction of identical matches
+nident      Number of identical matches
+qstart      1-indexed alignment start position in query sequence
+qend        1-indexed alignment end position in query sequence
+qlen        Query sequence length
+tstart      1-indexed alignment start position in target sequence
+tend        1-indexed alignment end position in target sequence
+tlen        Target sequence length
+alnlen      Alignment length (number of aligned columns)
+raw         Raw alignment score
+bits        Bit score
+cigar       Alignment as string. Each position contains either M (match), D (deletion, gap in query), or I (Insertion, gap in target)
+qseq        Query sequence 
+tseq        Target sequence
+qaln        Aligned query sequence with gaps
+taln        Aligned target sequence with gaps
+qheader     Header of Query sequence
+theader     Header of Target sequence
+mismatch    Number of mismatches
+qcov        Fraction of query sequence covered by alignment
+tcov        Fraction of target sequence covered by alignment
+empty       Dash column '-'
+taxid       Taxonomical identifier (needs mmseqs tax db)
+taxname     Taxon Name (needs mmseqs tax db)
+taxlineage  Taxonomical lineage (needs mmseqs tax db)
+qset        Query filename of FASTA/Q (useful if multiple files were passed to createdb)
+qsetid      Numeric identifier for query filename
+tset        Target filename of FASTA/Q (useful if multiple files were passed to createdb)
+tsetid      Numeric identifier for target filename
+qca         Calpha corrdinates of the query
+tca         Calpha corrdinates of the target
+alntmscore  TM-score of the alignment 
+u           Rotation matrix (computed to by TM-score)
+t           Translation vector (computed to by TM-score)
+```
 
 The target database can be pre-processed by `createdb`. This make sense if searched multiple times. 
  
@@ -58,10 +100,13 @@ The `databases` command downloads pre-generated databases like PDB or AlphaFoldD
 
 We currently support the following databases: 
 ```
-  Name                  Type            Taxonomy        Url
-- Alphafold/Proteome    Aminoacid            yes        https://alphafold.ebi.ac.uk/
-- Alphafold/Swiss-Prot  Aminoacid            yes        https://alphafold.ebi.ac.uk/
-- PDB100                Aminoacid            yes        https://www.rcsb.org
+  Name                   	Type     	Taxonomy	Url
+- Alphafold/UniProt      	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/UniProt-NO-CA	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/UniProt50    	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/Proteome     	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/Swiss-Prot   	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- PDB                    	Aminoacid	     yes	https://www.rcsb.org
 ```
 
 ### Main Modules
