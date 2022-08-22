@@ -4,6 +4,8 @@ set(commons_source_files
         commons/StructureUtil.h
         commons/TMaligner.cpp
         commons/TMaligner.h
+	commons/MSANode.h
+	commons/MSANode.cpp
         commons/StructureSmithWaterman.cpp
         commons/StructureSmithWaterman.h
         PARENT_SCOPE)
