@@ -5,12 +5,12 @@
 #include "Util.h"
 #include "Matcher.h"
 
-std::string noQueryMS(std::string targetSeq, int prevIdx, int curIdx);
-std::string oneQueryMS(std::string targetSeq, int prevIdx, int curIdx);
+void noQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int curIdx);
+void oneQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int curIdx);
 void gtQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int curIdx, int dq, int dt);
 void ltQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int curIdx, int dq, int dt);
 
-int findAlnStartIdx(std::string string, int start_pos);
+int findNonGapIndex(std::string string, int pos);
 
 std::vector<int> mapBacktrace(
     std::string query,
@@ -25,6 +25,8 @@ std::string alignNewSequence(
     std::string target,
     size_t qId,
     size_t tId,
+    size_t qEnd,
+    size_t tEnd,
     size_t queryLen,
     Matcher::result_t result,
     std::vector<int> matches

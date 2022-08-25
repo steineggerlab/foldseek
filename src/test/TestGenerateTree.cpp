@@ -20,7 +20,7 @@ void test_dq_0() {
     std::cout << " newSeq (b) = " << newSeq << std::endl;
     std::cout << "  targetSeq = " << targetSeq << std::endl;
 
-    newSeq.append(noQueryMS(targetSeq, 3, 8));
+    noQueryMS(newSeq, targetSeq, 3, 8);
     std::cout << " newSeq (a) = " << newSeq << std::endl;
     assert(newSeq == "AAAAbbbbc");
     std::cout << std::endl;
@@ -39,7 +39,7 @@ void test_dq_1() {
     std::cout << " newSeq (b) = " << newSeq << std::endl;
     std::cout << "  targetSeq = " << targetSeq << std::endl;
 
-    newSeq.append(oneQueryMS(targetSeq, 3, 8));
+    oneQueryMS(newSeq, targetSeq, 3, 8);
     std::cout << " newSeq (a) = " << newSeq << std::endl;
     assert(newSeq == "AAAAbbbbC");
     std::cout << std::endl;
@@ -112,6 +112,75 @@ void test_dq_lt_dt() {
     std::cout << std::endl;   
 }
 
+
+void testFullMSA2() {
+    // ABCDEFGHIJK-LMNOPQRSTU---VWXYZ
+    // ABC---GHIJK-LMNOPQRSTU---VWXYZ
+    // ABCDEFGHIJK-LMNOPQRSTUSTUVWXYZ
+    // ABCDEFGHIJKKLMNOPQRSTU---VWXYZ
+    // ABCDEFGHIJK-LMNOPQRSTU---VWXYZ
+    // ABCDEFGHIJK-LMNOABCSTU---VWXYZ
+
+    std::vector<MSASequence> seqs;
+    
+    MSASequence seq0(0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    MSASequence seq1(1, "ABCGHIJKLMNOPQRSTUVWXYZ\n");
+    MSASequence seq2(2, "ABCDEFGHIJKLMNOPQRSTUSTUVWXYZ\n");
+    MSASequence seq3(3, "ABCDEFGHIJKKLMNOPQRSTUVWXYZ\n");
+    MSASequence seq4(4, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    MSASequence seq5(5, "ABCDEFGHIJKLMNOABCSTUVWXYZ\n");
+
+    seq0.print();
+    seq1.print();
+    seq2.print();
+    seq3.print();
+    seq4.print();
+    seq5.print();
+
+    // After iterating best hits and creating MSANodes
+    std::vector<MSASequence *> node_one_seqs = { &seq0 };
+    std::vector<MSASequence *> node_two_seqs = { &seq1 };
+    std::vector<MSASequence *> node_thr_seqs = { &seq2 };
+    std::vector<MSASequence *> node_fou_seqs = { &seq3 };
+    std::vector<MSASequence *> node_fiv_seqs = { &seq4 };
+    std::vector<MSASequence *> node_six_seqs = { &seq5 };
+
+    MSANode node_one(0, node_one_seqs);
+    MSANode node_two(1, node_two_seqs);
+    MSANode node_thr(2, node_thr_seqs);
+    MSANode node_fou(3, node_fou_seqs);
+    MSANode node_fiv(4, node_fiv_seqs);
+    MSANode node_six(5, node_six_seqs);
+
+    // Test cases
+    Matcher::result_t result = {};
+
+    // 0 ABCDEFGHIJKLMNOPQRSTUVWXYZ
+    //   MMMIIIMMMMMMMMMMMMMMMMMMMM
+    // 1 ABC---GHIJKLMNOPQRSTUVWXYZ
+    result.dbKey = 1;
+    result.backtrace = "MMMIIIMMMMMMMMMMMMMMMMMMMM";
+    result.qStartPos = 0;
+    result.qEndPos = 25;
+    result.dbStartPos = 0;
+    result.dbEndPos = 22;
+    node_one.addNode(0, &node_two, result);
+    
+    // 1 ABC---GHIJKLMNOPQRSTU---VWXYZ
+    //   MMMDDDMMMMMMMMMMMMMMMDDDMMMMM
+    // 2 ABCDEFGHIJKLMNOPQRSTUSTUVWXYZ
+    result.dbKey = 2;
+    result.backtrace = "MMMDDDMMMMMMMMMMMMMMMDDDMMMMM";
+    result.qStartPos = 0;
+    result.qEndPos = 22;
+    result.dbStartPos = 0;
+    result.dbEndPos = 28;
+    node_one.addNode(1, &node_thr, result);
+
+    std::cout << "\n*** Printing node ***\n";
+    node_one.print();
+}
+
 void test_full_MSA() {
     std::vector<MSASequence> seqs;
     
@@ -123,6 +192,7 @@ void test_full_MSA() {
     MSASequence seq5(5, "GHIJKLMMNOPMNOPQRSTUVWXYZ\n");
     MSASequence seq6(6, "ABCDEFFFLMNOPQRSTUVWXYZ\n");
 
+    std::cout << "Sequences:\n";
     seq0.print();
     seq1.print();
     seq2.print();
@@ -130,6 +200,7 @@ void test_full_MSA() {
     seq4.print();
     seq5.print();
     seq6.print();
+    std::cout << std::endl;
 
     // After iterating best hits and creating MSANodes
     std::vector<MSASequence *> node_one_seqs = { &seq0 };
@@ -162,9 +233,9 @@ void test_full_MSA() {
     result.dbKey = 1;
     result.backtrace = "MMDMMMMMMMMMMMMMMMMM";
     result.qStartPos = 4;
-    result.qEndPos = 22;
+    result.qEndPos = 21;
     result.dbStartPos = 0;
-    result.dbEndPos = 19;
+    result.dbEndPos = 18;
     node_one.addNode(0, &node_two, result);
 
 
@@ -199,9 +270,9 @@ void test_full_MSA() {
     result.dbKey = 2;
     result.backtrace = "MMMIMMMMMMMMMMMMMMMM";
     result.qStartPos = 2;
-    result.qEndPos = 21;
+    result.qEndPos = 20;
     result.dbStartPos = 0;
-    result.dbEndPos = 18;
+    result.dbEndPos = 17;
     node_one.addNode(0,  &node_thr, result);
 
     // Single insertions
@@ -216,9 +287,9 @@ void test_full_MSA() {
     result.dbKey = 2;
     result.backtrace = "MMMMMMMIMMMMMMMMM";
     result.qStartPos = 0;
-    result.qEndPos = 20;
+    result.qEndPos = 19;
     result.dbStartPos = 3;
-    result.dbEndPos = 18;
+    result.dbEndPos = 17;
     node_fou.addNode(3, &node_one, result);
     /* return EXIT_SUCCESS; */
 
@@ -235,9 +306,9 @@ void test_full_MSA() {
     result.dbKey = 4;
     result.backtrace = "MMMMMMIIIIIMMMMMMMMMM";
     result.qStartPos = 0;
-    result.qEndPos = 21;
+    result.qEndPos = 20;
     result.dbStartPos = 0;
-    result.dbEndPos = 16;
+    result.dbEndPos = 15;
     node_fou.addNode(3, &node_fiv, result);
     /* return EXIT_SUCCESS; */
 
@@ -253,32 +324,35 @@ void test_full_MSA() {
     result.dbKey = 5;
     result.backtrace = "MMMMMMMMMMMDDDDMMMMMMMMMM";
     result.qStartPos = 0;
-    result.qEndPos = 21;
+    result.qEndPos = 20;
     result.dbStartPos = 0;
-    result.dbEndPos = 25;
+    result.dbEndPos = 24;
     node_fou.addNode(3, &node_six, result);
 
     // Multiple insertions and deletions
     // Query ID=3, Target ID=5
     // 
-    //    0                          26
+    //    0                          25
     // 0: ABCDEF--GHIJKLMNOPQRSTUVWXYZ
     //    MMMMMMDDIIIIIMMMMMMMMMMMMMMM
     // 6: ABCDEFFF-----LMNOPQRSTUVWXYZ
-    //    0                          23
+    //    0                          22
     //
     result.dbKey = 6;
     result.backtrace = "MMMMMMDDIIIIIMMMMMMMMMMMMMMM";
     result.qStartPos = 0;
-    result.qEndPos = 26;
+    result.qEndPos = 25;
     result.dbStartPos = 0;
-    result.dbEndPos = 23;
+    result.dbEndPos = 22;
     node_fou.addNode(0, &node_sev, result);
+    
+    std::cout << "Final alignment:\n";
+    node_fou.print();
 }
 
 std::string mapAndAlign(std::string query, std::string target, Matcher::result_t result) {
-    size_t qId = findAlnStartIdx(query, result.qStartPos);
-    size_t tId = findAlnStartIdx(target, result.dbStartPos);
+    size_t qId = findNonGapIndex(query, result.qStartPos);
+    size_t tId = findNonGapIndex(target, result.dbStartPos);
     std::cout << "\nqId: " << qId << ", tId: " << tId << std::endl;
     std::vector<int> matches = mapBacktrace(
         query,
@@ -297,6 +371,8 @@ std::string mapAndAlign(std::string query, std::string target, Matcher::result_t
         target,
         qId,
         tId,
+        0,
+        0,
         query.length(),
         result,
         matches
@@ -367,21 +443,24 @@ void test_alignNewSequence() {
     testAndPrint(querySeq, targetSeq, newSeq, result.backtrace, expected);
 
     // Starts with an insertion
-    querySeq         = "ABCDEFGHIJKL";
-    targetSeq        = "aBCDEFGHIJKL";
-    expected         = "aBCDEFGHIJKL";
-    result.backtrace = "MMMMMMMMMMMM";
-    result.qEndPos = 11;
-    result.dbEndPos = 11;
-    newSeq = mapAndAlign(querySeq, targetSeq, result);
-    std::cout << "Testing insertion start:\n";
-    testAndPrint(querySeq, targetSeq, newSeq, result.backtrace, expected);
+    // TODO what would actually be the scenario here?
+    // querySeq         = "ABCDEFGHIJKL";
+    // targetSeq        = "aBCDEFGHIJKL";
+    // expected         = "aABCDEFGHIJKL";
+    // result.backtrace = "MMMMMMMMMMMM";
+    // result.qEndPos = 11;
+    // result.dbEndPos = 11;
+    // newSeq = mapAndAlign(querySeq, targetSeq, result);
+    // std::cout << "Testing insertion start:\n";
+    // testAndPrint(querySeq, targetSeq, newSeq, result.backtrace, expected);
 
     // Already aligned
     querySeq         = "BCDEFGhiJKL";
     targetSeq        = "ABCdeFGHIJKL";
-    expected         = "ABCDEFGHIJKL";
-    result.backtrace = "DMMMMMMMMMMM";
+    expected         = "aBCDEFGHIJKL";
+    result.backtrace = "MMMMMMMMMMM";
+    result.qStartPos = 0;
+    result.dbStartPos = 1;
     result.qEndPos = 10;
     result.dbEndPos = 11;
     newSeq = mapAndAlign(querySeq, targetSeq, result);
@@ -395,8 +474,9 @@ int main(int, const char**) {
     test_dq_gt_dt();
     test_dq_lt_dt();
     test_alignNewSequence();
-    return EXIT_SUCCESS;
+    // return EXIT_SUCCESS;
 
     test_full_MSA();
+    // testFullMSA2();
     return EXIT_SUCCESS;
 }
