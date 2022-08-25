@@ -364,9 +364,6 @@ int generatetree(int argc, const char **argv, const Command& command) {
     MSASequence sequences[dbSize];
     MSANode nodes[dbSize];
 
-    /* std::vector<MSASequence> sequences; */
-    /* std::vector<MSANode> nodes(dbSize); */
-
     // Save best hit per query, reverse sorted by score
     for (size_t i = 0; i < dbSize; ++i) {
         char *data = reader.getData(i, thread_idx);
@@ -382,22 +379,17 @@ int generatetree(int argc, const char **argv, const Command& command) {
         // FIXME
         // this is likely going out of scope, so address will be garbage when
         // stored in members array
-        /* MSASequence sequence(queryId, qdbrAA.sequenceReader->getData(queryId, thread_idx)); */
-        MSASequence sequence(queryId, qdbrAA.sequenceReader->getData(queryId, thread_idx));
-        sequences[i] = sequence;
-        /* sequences.emplace_back(queryId, qdbrAA.sequenceReader->getData(queryId, thread_idx)); */
+        const char *cseq = qdbrAA.sequenceReader->getData(queryId, thread_idx);
+        size_t seqLen = qdbrAA.sequenceReader->getSeqLen(queryId);
+        sequences[i].id = queryId;
+        sequences[i].sequence = std::string(cseq, seqLen);
 
-        MSANode node(reader.getDbKey(i));
-        node.members.push_back(&sequences[i]);
-        nodes[i] = node;
-
-        /* nodes.emplace_back(reader.getDbKey(i)); */
-        /* nodes[i].members.push_back(&sequences[i]); */
+        nodes[i].id = queryId;
+        nodes[i].members.push_back(&sequences[i]);
 
         result.clear();
     }
     std::sort(results.begin(), results.end(), BestResult);
-
 
     // Find linkages
     // Does a single pass through the best hits, saving unique pairs of query and target
@@ -443,15 +435,16 @@ int generatetree(int argc, const char **argv, const Command& command) {
     MSANode *query;
     MSANode *target;
 
-    std::cout << "Filling nodes_p\n";
+    // Create array holding MSANode pointers
+    // Access the most current MSANode from any sequence id
     MSANode* nodes_p[dbSize];
-
     for (size_t i = 0; i < dbSize; ++i)
         nodes_p[i] = &nodes[i];
-
-    std::cout << "Printing nodes_p\n";
-    for (size_t i = 0; i < dbSize; ++i)
-        std::cout << " Node: " << nodes_p[i]->id << std::endl;
+    
+    for (MSANode *node : nodes_p) {
+        node->print(); 
+        std::cout << std::endl;
+    }
 
     std::cout << "Merging nodes_p\n";
     for (std::pair<size_t, Matcher::result_t> pair : results) {
@@ -467,11 +460,33 @@ int generatetree(int argc, const char **argv, const Command& command) {
 
         std::cout << "Merging " << result.dbKey << " (" << target->id << ")" << " into " << queryId << " (" << query->id << ")" << std::endl;
         query->addNode(queryId, target, result);
-
+               
         // overwrite MSANode at q/t index after merge
         // so all indexes point to MSANode sequence is currently in
         for (size_t i = 0; i < target->members.size(); ++i)
             nodes_p[target->members[i]->id] = query;
+
+        // Print
+        std::cout << "\n******\n";
+        std::set<int> set;
+        for (size_t i = 0; i < dbSize; ++i) {
+            MSANode *node = nodes_p[i]; 
+            if (set.find(node->id) != set.end()) {
+                //std::cout << "Found " << node->id << " in set\n";
+                continue;
+            }
+
+            std::cout << "\n-----------------------------\n";
+            std::cout << "Node " << node->id << std::endl;
+            node->print();
+            std::cout << "-----------------------------\n";
+
+            set.insert(node->id);
+            //for (int id : set)
+            //    std::cout << id << " ";
+            std::cout << std::endl;
+        }
+ 
     }
 
     for (size_t i = 0; i < dbSize; ++i) {
@@ -486,8 +501,9 @@ int generatetree(int argc, const char **argv, const Command& command) {
             std::cout << "Found " << node->id << " in set\n";
             continue;
         }
+
         std::cout << "Printing node " << node->id << std::endl;
-        /* node->print(); */
+        node->print();
 
         set.insert(node->id);
         for (int id : set)
