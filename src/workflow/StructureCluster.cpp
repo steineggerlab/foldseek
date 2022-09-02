@@ -12,7 +12,8 @@ void setStructureClusterWorkflowDefaults(Parameters *p) {
     p->spacedKmer = true;
     p->covThr = 0.8;
     p->evalThr = 10;
-    p->maxResListLen = 20;
+    p->maxResListLen = 1000;
+    p->kmersPerSequence = 300;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->maskMode = 0;
     p->compBiasCorrection = 0;
@@ -24,7 +25,7 @@ void setStructureClusterWorkflowDefaults(Parameters *p) {
 float setAutomaticStructureClusterThreshold(float seqId) {
     float sens;
     if (seqId <= 0.3) {
-        sens = 6;
+        sens = 8;
     } else if (seqId > 0.8) {
         sens = 1.0;
     } else {
@@ -128,7 +129,11 @@ int structurecluster(int argc, const char **argv, const Command& command) {
     par.covThr = std::max(0.5f, par.covThr);
     cmd.addVariable("HAMMING_PAR", par.createParameterString(par.rescorediagonal).c_str());
     par.covThr = prevCov;
+    //par.alphabetSize = 14;
+    //par.kmerSize = 10;
+    //par.spacedKmer = 1;
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
+
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("ALIGNMENT_PAR", alnParam.c_str());
     cmd.addVariable("RUN_LINCLUST", "1");
@@ -149,6 +154,8 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         par.minDiagScoreThr = 0;
         par.diagonalScoring = 0;
         par.compBiasCorrection = 0;
+        size_t maxResListLen = par.maxResListLen;
+        par.maxResListLen = maxResListLen / 10;
         cmd.addVariable("PREFILTER0_PAR", par.createParameterString(par.prefilter).c_str());
         cmd.addVariable("ALIGNMENT0_PAR", alnParam.c_str());
         cmd.addVariable("CLUSTER0_PAR", par.createParameterString(par.clust).c_str());
@@ -158,7 +165,15 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         float sensStepSize = (targetSensitivity - 1) / (static_cast<float>(par.clusterSteps) - 1);
         for (int step = 1; step < par.clusterSteps; step++) {
             par.sensitivity = 1.0 + sensStepSize * step;
+            if(step == (par.clusterSteps - 1)) {
+                par.maxResListLen = maxResListLen;
+            } else {
+                par.maxResListLen = maxResListLen / (10 / (step + 1));
+            }
+
+            par.compBiasCorrectionScale = 0.15;
             cmd.addVariable(std::string("PREFILTER" + SSTR(step) + "_PAR").c_str(), par.createParameterString(par.prefilter).c_str());
+            par.compBiasCorrectionScale = 0.5;
             cmd.addVariable(std::string("ALIGNMENT" + SSTR(step) + "_PAR").c_str(), alnParam.c_str());
             cmd.addVariable(std::string("CLUSTER" + SSTR(step) + "_PAR").c_str(), par.createParameterString(par.clust).c_str());
         }

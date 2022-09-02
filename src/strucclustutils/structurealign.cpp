@@ -93,14 +93,14 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
-    IndexReader qdbr(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
 
     IndexReader *t3DiDbr = NULL;
     IndexReader *tAADbr = NULL;
     bool sameDB = false;
     if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
-        t3DiDbr = &qdbr;
+        t3DiDbr = &qdbr3Di;
         tAADbr = &qdbrAA;
     } else {
         tAADbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
@@ -155,8 +155,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
         StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
         StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
 
-        Sequence qSeqAA(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
-        Sequence qSeq3Di(par.maxSeqLen, qdbr.getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
+        Sequence qSeqAA(par.maxSeqLen, qdbrAA.getDbtype(), (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
+        Sequence qSeq3Di(par.maxSeqLen, qdbr3Di.getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         Sequence tSeqAA(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
         Sequence tSeq3Di(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         std::string backtrace;
@@ -171,12 +171,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
             char *data = resultReader.getData(id, thread_idx);
             size_t queryKey = resultReader.getDbKey(id);
             if(*data != '\0') {
-                unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
+                unsigned int queryId = qdbr3Di.sequenceReader->getId(queryKey);
 
                 char *querySeqAA = qdbrAA.sequenceReader->getData(queryId, thread_idx);
-                char *querySeq3Di = qdbr.sequenceReader->getData(queryId, thread_idx);
+                char *querySeq3Di = qdbr3Di.sequenceReader->getData(queryId, thread_idx);
 
-                unsigned int querySeqLen = qdbr.sequenceReader->getSeqLen(queryId);
+                unsigned int querySeqLen = qdbr3Di.sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
                 std::pair<double, double> muLambda = evaluer.predictMuLambda(qSeq3Di.numSequence, qSeq3Di.L);

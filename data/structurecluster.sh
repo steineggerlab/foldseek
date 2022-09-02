@@ -8,6 +8,10 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+exists() {
+	[ -f "$1" ]
+}
+
 abspath() {
     if [ -d "$1" ]; then
         (cd "$1"; pwd)
@@ -46,7 +50,7 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
   # 2. Hamming distance pre-clustering
   if notExists "${TMP_PATH}/pref_rescore1.dbtype"; then
       # shellcheck disable=SC2086
-      $RUNNER "$MMSEQS" rescorediagonal "${INPUT}_ss" "${INPUT}_ss" "${TMP_PATH}/pref" "${TMP_PATH}/pref_rescore1" ${HAMMING_PAR} \
+      $RUNNER "$MMSEQS" structurerescorediagonal "${INPUT}" "${INPUT}" "${TMP_PATH}/pref" "${TMP_PATH}/pref_rescore1" ${HAMMING_PAR} \
           || fail "Rescore with hamming distance step died"
   fi
 
@@ -61,9 +65,11 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
           || fail "createsubdb step died"
-      # shellcheck disable=SC2086
-      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
-          || fail "createsubdb step died"
+      if exists "${INPUT}_ca.dbtype"; then
+        # shellcheck disable=SC2086
+         "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
+            || fail "createsubdb step died"
+      fi
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
           || fail "createsubdb step died"
@@ -111,9 +117,12 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
           || fail "createsubdb died"
-      # shellcheck disable=SC2086
-      "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
-                || fail "createsubdb died"
+
+      if exists "${INPUT}_ca.dbtype"; then
+        # shellcheck disable=SC2086
+         "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
+            || fail "createsubdb died"
+      fi
       # shellcheck disable=SC2086
       "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
               || fail "createsubdb died"
@@ -165,9 +174,12 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
               # shellcheck disable=SC2086
               "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ss" "${NEXTINPUT}_ss" ${VERBOSITY} --subdb-mode 1 \
                   || fail "Order step $STEP died"
-              # shellcheck disable=SC2086
-              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ca" "${NEXTINPUT}_ca" ${VERBOSITY} --subdb-mode 1 \
+
+              if exists "${INPUT}_ca.dbtype"; then
+                  # shellcheck disable=SC2086
+                 "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ca" "${NEXTINPUT}_ca" ${VERBOSITY} --subdb-mode 1 \
                                 || fail "Order step $STEP died"
+              fi
               # shellcheck disable=SC2086
               "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}" "${NEXTINPUT}" ${VERBOSITY} --subdb-mode 1 \
                                 || fail "Order step $STEP died"

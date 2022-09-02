@@ -176,7 +176,7 @@ public:
     }
 
     int isProfileSearch(){
-        return profile->is_3di_profile;
+        return profile->isProfile;
     }
 
     const static unsigned int SUBSTITUTIONMATRIX = 1;
@@ -206,9 +206,11 @@ private:
         int8_t* composition_bias_ss_rev;
         int8_t* mat_aa;
         int8_t* mat_3di;
+        int8_t* rev_alignment_aa_profile;
         int8_t* rev_alignment_3di_profile;
+        int8_t* alignment_aa_profile;
         int8_t* alignment_3di_profile;
-        bool is_3di_profile;
+        bool isProfile;
         // Memory layout of if mat + queryProfile is qL * AA
         //    Query length
         // A  -1  -3  -2  -1  -4  -2  -2  -3  -1  -3  -2  -2   7  -1  -2  -1  -1  -2  -5  -3

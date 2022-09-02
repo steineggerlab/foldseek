@@ -10,6 +10,7 @@ set(strucclustutils_source_files
         strucclustutils/EvalueNeuralNet.h
         strucclustutils/PulchraWrapper.cpp
         strucclustutils/PulchraWrapper.h
+        strucclustutils/structurerescorediagonal.cpp
         PARENT_SCOPE
         )
 
