@@ -111,6 +111,7 @@ LocalParameters::LocalParameters() :
 
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
+    maskBfactorThreshold = 0;
     chainNameMode = 0;
     tmAlignFast = 1;
     nsample = 5000;
