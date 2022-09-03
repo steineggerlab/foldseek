@@ -9,6 +9,7 @@
 #include "structureto3diseqdist.h"
 #include "StructureSmithWaterman.h"
 #include "StructureUtil.h"
+#include "TMaligner.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -56,18 +57,18 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     }
     align.score1 = score;
     res = Matcher::result_t(tSeqAA.getDbKey(), align.score1, align.qCov, align.tCov, seqId, align.evalue, alnLength,
-        align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, targetSeqLen, backtrace);
+                            align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, targetSeqLen, backtrace);
     return 0;
 }
 
 
 int computeAlternativeAlignment(StructureSmithWaterman & structureSmithWaterman,
-                                 StructureSmithWaterman & reverseStructureSmithWaterman,
-                                 Sequence & tSeqAA, Sequence & tSeq3Di,
-                                 unsigned int querySeqLen, unsigned int targetSeqLen,
-                                 EvalueNeuralNet & evaluer, std::pair<double, double> muLambda,
-                                 Matcher::result_t & result, Matcher::result_t & altRes,
-                                 std::string & backtrace, Parameters & par) {
+                                StructureSmithWaterman & reverseStructureSmithWaterman,
+                                Sequence & tSeqAA, Sequence & tSeq3Di,
+                                unsigned int querySeqLen, unsigned int targetSeqLen,
+                                EvalueNeuralNet & evaluer, std::pair<double, double> muLambda,
+                                Matcher::result_t & result, Matcher::result_t & altRes,
+                                std::string & backtrace, Parameters & par) {
     const unsigned char xAAIndex = tSeqAA.subMat->aa2num[static_cast<int>('X')];
     const unsigned char x3DiIndex = tSeq3Di.subMat->aa2num[static_cast<int>('X')];
     for (int pos = result.dbStartPos; pos < result.dbEndPos; ++pos) {
@@ -112,6 +113,30 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
     dbw.open();
+    bool needTMaligner = (par.tmScoreThr > 0);
+    IndexReader *qcadbr = NULL;
+    IndexReader *tcadbr = NULL;
+    if(needTMaligner){
+        qcadbr = new IndexReader(
+                par.db1,
+                par.threads,
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                "_ca");
+        if (sameDB) {
+            tcadbr = qcadbr;
+        } else {
+            tcadbr = new IndexReader(
+                    par.db2,
+                    par.threads,
+                    IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                    touch ? IndexReader::PRELOAD_INDEX : 0,
+                    DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                    "_ca"
+            );
+        }
+    }
 
     SubstitutionMatrix subMat3Di(par.scoringMatrixFile.values.aminoacid().c_str(), 2.1, par.scoreBias);
     std::string blosum;
@@ -154,7 +179,11 @@ int structurealign(int argc, const char **argv, const Command& command) {
         std::vector<Matcher::result_t> alignmentResult;
         StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
         StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
-
+        TMaligner *tmaligner = NULL;
+        if(needTMaligner) {
+            tmaligner = new TMaligner(
+                    std::max(t3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false);
+        }
         Sequence qSeqAA(par.maxSeqLen, qdbrAA.getDbtype(), (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
         Sequence qSeq3Di(par.maxSeqLen, qdbr3Di.getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         Sequence tSeqAA(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
@@ -175,10 +204,14 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
                 char *querySeqAA = qdbrAA.sequenceReader->getData(queryId, thread_idx);
                 char *querySeq3Di = qdbr3Di.sequenceReader->getData(queryId, thread_idx);
-
                 unsigned int querySeqLen = qdbr3Di.sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
+                if(needTMaligner){
+                    size_t qId = qcadbr->sequenceReader->getId(queryKey);
+                    float * queryCaData = (float*) qcadbr->sequenceReader->getData(qId, thread_idx);
+                    tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
+                }
                 std::pair<double, double> muLambda = evaluer.predictMuLambda(qSeq3Di.numSequence, qSeq3Di.L);
                 structureSmithWaterman.ssw_init(&qSeqAA, &qSeq3Di, tinySubMatAA, tinySubMat3Di, &subMatAA);
                 qSeq3Di.reverse();
@@ -211,6 +244,16 @@ int structurealign(int argc, const char **argv, const Command& command) {
                         rejected++;
                         continue;
                     }
+                    if(needTMaligner) {
+                        size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
+                        float * targetCaData = (float*) tcadbr->sequenceReader->getData(tId, thread_idx);
+                        TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
+                        if(tmres.tmscore < par.tmScoreThr){
+                            continue;
+                        }
+                    }
+
                     if (Alignment::checkCriteria(res, isIdentity, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
                         alignmentResult.emplace_back(res);
                         int altAli = par.altAlignment;
@@ -247,6 +290,9 @@ int structurealign(int argc, const char **argv, const Command& command) {
             dbw.writeData(resultBuffer.c_str(), resultBuffer.length(), queryKey, thread_idx);
             resultBuffer.clear();
             alignmentResult.clear();
+        }
+        if(needTMaligner){
+            delete tmaligner;
         }
     }
 

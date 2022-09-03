@@ -57,6 +57,9 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_PRELOAD_MODE);
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
+
+    structurealign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurealign = combineList(align,structurealign);
 //    tmalign.push_back(&PARAM_GAP_OPEN);
 //    tmalign.push_back(&PARAM_GAP_EXTEND);
     // strucclust
@@ -105,7 +108,7 @@ LocalParameters::LocalParameters() :
     samplemulambda.push_back(&PARAM_V);
 
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
-    tmScoreThr = 0.5;
+    tmScoreThr = 0.0;
     chainNameMode = 0;
     tmAlignFast = 1;
     nsample = 5000;

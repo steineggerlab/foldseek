@@ -119,7 +119,7 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alnDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::alignmentDb }}},
-        {"structurealign",      structurealign,      &localPar.align,      COMMAND_ALIGNMENT,
+        {"structurealign",      structurealign,      &localPar.structurealign,      COMMAND_ALIGNMENT,
                 "Compute structural alignment using 3Di alphabet, amino acids and neighborhood information",
                 NULL,
                 "Charlotte Tumescheit <ch.tumescheit@gmail.com> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
