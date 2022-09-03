@@ -11,6 +11,7 @@
 #include "StructureUtil.h"
 #include "DistanceCalculator.h"
 #include "QueryMatcher.h"
+#include "TMaligner.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -175,6 +176,32 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
         t3DiDbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
     }
 
+    bool needTMaligner = (par.tmScoreThr > 0);
+    IndexReader *qcadbr = NULL;
+    IndexReader *tcadbr = NULL;
+    if(needTMaligner){
+        qcadbr = new IndexReader(
+                par.db1,
+                par.threads,
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                "_ca");
+        if (sameDB) {
+            tcadbr = qcadbr;
+        } else {
+            tcadbr = new IndexReader(
+                    par.db2,
+                    par.threads,
+                    IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                    touch ? IndexReader::PRELOAD_INDEX : 0,
+                    DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                    "_ca"
+            );
+        }
+    }
+
+
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
@@ -229,6 +256,12 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
         Sequence qRevSeq3Di(par.maxSeqLen, qdbr3Di.getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         Sequence tSeqAA(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
         Sequence tSeq3Di(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
+        TMaligner *tmaligner = NULL;
+        if(needTMaligner) {
+            tmaligner = new TMaligner(
+                    std::max(t3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false);
+        }
+
         std::string backtrace;
         char buffer[1024+32768];
         std::string resultBuffer;
@@ -249,6 +282,11 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                 unsigned int querySeqLen = qdbr3Di.sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
+                if(needTMaligner){
+                    size_t qId = qcadbr->sequenceReader->getId(queryKey);
+                    float * queryCaData = (float*) qcadbr->sequenceReader->getData(qId, thread_idx);
+                    tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
+                }
                 qRevSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qRevSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
                 std::pair<double, double> muLambda = evaluer.predictMuLambda(qSeq3Di.numSequence, qSeq3Di.L);
@@ -281,6 +319,17 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                         rejected++;
                         continue;
                     }
+
+                    if(needTMaligner) {
+                        size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
+                        float * targetCaData = (float*) tcadbr->sequenceReader->getData(tId, thread_idx);
+                        TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                                                   res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
+                        if(tmres.tmscore < par.tmScoreThr){
+                            continue;
+                        }
+                    }
+
                     if (Alignment::checkCriteria(res, isIdentity, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
                         alignmentResult.emplace_back(res);
                         passedNum++;
@@ -302,6 +351,9 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
             dbw.writeData(resultBuffer.c_str(), resultBuffer.length(), queryKey, thread_idx);
             resultBuffer.clear();
             alignmentResult.clear();
+        }
+        if(needTMaligner){
+            delete tmaligner;
         }
     }
 
