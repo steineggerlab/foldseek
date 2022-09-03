@@ -77,7 +77,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
-        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());

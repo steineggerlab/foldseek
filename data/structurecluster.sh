@@ -50,7 +50,7 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
   # 2. Hamming distance pre-clustering
   if notExists "${TMP_PATH}/pref_rescore1.dbtype"; then
       # shellcheck disable=SC2086
-      $RUNNER "$MMSEQS" structurerescorediagonal "${INPUT}" "${INPUT}" "${TMP_PATH}/pref" "${TMP_PATH}/pref_rescore1" ${HAMMING_PAR} \
+      $RUNNER "$MMSEQS" structurerescorediagonal "${INPUT}" "${INPUT}" "${TMP_PATH}/pref" "${TMP_PATH}/pref_rescore1" ${STRUCTURERESCOREDIAGONAL_PAR} \
           || fail "Rescore with hamming distance step died"
   fi
 

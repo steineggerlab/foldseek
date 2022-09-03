@@ -60,12 +60,16 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
 
+    structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurerescorediagonal = combineList(structurerescorediagonal, align);
+
     structurealign.push_back(&PARAM_TMSCORE_THRESHOLD);
-    structurealign = combineList(align,structurealign);
+    structurealign = combineList(structurealign, align);
 //    tmalign.push_back(&PARAM_GAP_OPEN);
 //    tmalign.push_back(&PARAM_GAP_EXTEND);
     // strucclust
     strucclust = combineList(clust, structurealign);
+    strucclust = combineList(strucclust, structurerescorediagonal);
     strucclust = combineList(strucclust, kmermatcher);
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
@@ -73,6 +77,7 @@ LocalParameters::LocalParameters() :
     // structuresearchworkflow
     structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
+    structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
     structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structuresearchworkflow.push_back(&PARAM_RUNNER);

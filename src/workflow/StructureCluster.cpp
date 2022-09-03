@@ -127,7 +127,7 @@ int structurecluster(int argc, const char **argv, const Command& command) {
     // also coverage should not be under 0.5
     float prevCov = par.covThr;
     par.covThr = std::max(0.5f, par.covThr);
-    cmd.addVariable("HAMMING_PAR", par.createParameterString(par.rescorediagonal).c_str());
+    cmd.addVariable("STRUCTURERESCOREDIAGONAL_PAR", par.createParameterString(par.structurerescorediagonal).c_str());
     par.covThr = prevCov;
     //par.alphabetSize = 14;
     //par.kmerSize = 10;
@@ -186,7 +186,7 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         par.covMode = swapedCovMode;
         cmd.addVariable("PREFILTER_REASSIGN_PAR", par.createParameterString(par.prefilter).c_str());
         par.covMode = tmpCovMode;
-        cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.align).c_str());
+        cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.structurealign).c_str());
         cmd.addVariable("MERGEDBS_PAR", par.createParameterString(par.mergedbs).c_str());
 
         std::string program = tmpDir + "/clustering.sh";
