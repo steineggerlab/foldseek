@@ -65,13 +65,13 @@ LocalParameters::LocalParameters() :
 //    tmalign.push_back(&PARAM_GAP_OPEN);
 //    tmalign.push_back(&PARAM_GAP_EXTEND);
     // strucclust
-    strucclust = combineList(clust, align);
+    strucclust = combineList(clust, structurealign);
     strucclust = combineList(strucclust, kmermatcher);
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     // structuresearchworkflow
     // structuresearchworkflow
-    structuresearchworkflow = combineList(align, prefilter);
+    structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
