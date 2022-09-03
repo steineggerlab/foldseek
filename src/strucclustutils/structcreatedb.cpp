@@ -68,11 +68,10 @@ int structure_mtar_gzopen(mtar_t *tar, const char *filename) {
 
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
-                    PulchraWrapper & pulchra, std::vector<char> & alphabet3di,
+                    PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
                     std::vector<float> & camol, std::string & header, std::string & name,
-                    DBWriter & aadbw, DBWriter & hdbw,
-                    DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
-                    size_t & tooShort, size_t &globalCnt, int thread_idx,
+                    DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
+                    float maskBfactorThreshold, size_t & tooShort, size_t &globalCnt, int thread_idx,
                     std::string & filename,  size_t  &fileidCnt,
                     std::map<std::string, size_t> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
@@ -112,15 +111,18 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                                                         &readStructure.cb[chainStart],
                                                         chainLen);
         for(size_t pos = 0; pos < chainLen; pos++){
-            alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
+            if(readStructure.ca_bfactor[pos] < maskBfactorThreshold){
+                alphabet3di.push_back(tolower(mat.num2aa[static_cast<int>(states[pos])]));
+                alphabetAA.push_back(tolower(readStructure.ami[chainStart+pos]));
+            }else{
+                alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
+                alphabetAA.push_back(readStructure.ami[chainStart+pos]);
+            }
         }
         alphabet3di.push_back('\n');
+        alphabetAA.push_back('\n');
         torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
-        aadbw.writeStart(thread_idx);
-        aadbw.writeAdd(&readStructure.ami[chainStart], chainLen, thread_idx);
-        char newline = '\n';
-        aadbw.writeAdd(&newline, 1, thread_idx);
-        aadbw.writeEnd(dbKey, thread_idx);
+        aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
         header.append(readStructure.names[ch]);
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
@@ -167,6 +169,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         }
         cadbw.writeData((const char*)camol.data(), camol.size() * sizeof(float), dbKey, thread_idx);
         alphabet3di.clear();
+        alphabetAA.clear();
         camol.clear();
         entriesAdded++;
     }
@@ -304,6 +307,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             PulchraWrapper pulchra;
             GemmiWrapper readStructure;
             std::vector<char> alphabet3di;
+            std::vector<char> alphabetAA;
             std::vector<float> camol;
             std::string header;
             std::string name;
@@ -406,8 +410,8 @@ int createdb(int argc, const char **argv, const Command& command) {
                         continue;
                     }
                     writeStructureEntry(mat, readStructure, structureTo3Di, pulchra,
-                                        alphabet3di, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                        par.chainNameMode, tooShort, globalCnt, thread_idx,
+                                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                                        par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx,
                                         name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
                 }
             } // end while
@@ -430,6 +434,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         PulchraWrapper pulchra;
         GemmiWrapper readStructure;
         std::vector<char> alphabet3di;
+        std::vector<char> alphabetAA;
         std::vector<float> camol;
         std::string header;
         std::string name;
@@ -455,8 +460,8 @@ int createdb(int argc, const char **argv, const Command& command) {
             }
             // clear memory
             writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
-                                alphabet3di, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                par.chainNameMode, tooShort, globalCnt, thread_idx,
+                                alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                                par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx,
                                 filenames[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
         }
 
@@ -490,6 +495,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             PulchraWrapper pulchra;
             GemmiWrapper readStructure;
             std::vector<char> alphabet3di;
+            std::vector<char> alphabetAA;
             std::vector<float> camol;
             std::string header;
             std::string name;
@@ -497,7 +503,7 @@ int createdb(int argc, const char **argv, const Command& command) {
 #pragma omp single
             for (auto&& object_metadata : client.ListObjects(bucket_name, gcs::Projection::NoAcl(), gcs::MaxResults(15000))) {
                 std::string obj_name = object_metadata->name();
-#pragma omp task firstprivate(obj_name, alphabet3di, camol, header, name, filter) private(structureTo3Di, pulchra, readStructure)
+#pragma omp task firstprivate(obj_name, alphabet3di, alphabetAA, camol, header, name, filter) private(structureTo3Di, pulchra, readStructure)
                 {
                     bool skipFilter = filter != '\0' && obj_name.length() >= 9 && obj_name[8] == filter;
                     bool allowedSuffix = Util::endsWith(".cif", obj_name) || Util::endsWith(".pdb", obj_name);
@@ -517,8 +523,8 @@ int createdb(int argc, const char **argv, const Command& command) {
                                 incorrectFiles++;
                             } else {
                                 writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
-                                        alphabet3di, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                        par.chainNameMode, tooShort, globalCnt, thread_idx,
+                                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                                        par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx,
                                         obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
                             }
                         }

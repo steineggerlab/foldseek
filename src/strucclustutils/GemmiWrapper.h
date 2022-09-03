@@ -20,6 +20,7 @@ public:
     std::pair<size_t, size_t> nextChain();
 
     std::vector<Vec3> ca;
+    std::vector<float> ca_bfactor;
     std::vector<Vec3> n;
     std::vector<Vec3> c;
     std::vector<Vec3> cb;
