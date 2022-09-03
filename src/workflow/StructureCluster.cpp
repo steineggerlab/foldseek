@@ -115,7 +115,7 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         alnParam = par.createParameterString(par.tmalign);
     } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA) {
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
-        alnParam = par.createParameterString(par.align);
+        alnParam = par.createParameterString(par.structurealign);
     }
 
     cmd.addVariable("RUNNER", par.runner.c_str());

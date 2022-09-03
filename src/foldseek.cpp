@@ -57,10 +57,29 @@ std::vector<struct Command> commands = {
                 "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp --alignment-type 1\n\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:alignmentFile> <tmpDir>",
-                CITATION_FOLDSEEK, {{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder },
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder },
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder },
                                           {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"easy-cluster",         easystructurecluster,          &localPar.easystructureclusterworkflow, COMMAND_EASY,
+                "Slower, sensitive clustering",
+                "foldseek easy-cluster examples/ result tmp\n"
+                "# Cluster output\n"
+                "#  - result_rep_seq.fasta: Representatives\n"
+                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
+                "#  - result_cluster.tsv:   Adjacency list\n\n"
+                "# Important parameter: --min-seq-id, --cov-mode and -c \n"
+                "#                  --cov-mode \n"
+                "#                  0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "#        -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:clusterPrefix> <tmpDir>",
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder },
+                                                            {"clusterPrefix", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
+                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"search",               structuresearch,               &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Sensitive homology search",
                 "# Search multiple structures (mmCIF,PDB,tar) against structures.\n"
@@ -128,7 +147,7 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alnDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::alignmentDb }}},
-        {"structurerescorediagonal",     structureungappedalign,       &localPar.rescorediagonal,      COMMAND_ALIGNMENT,
+        {"structurerescorediagonal",     structureungappedalign,       &localPar.structurerescorediagonal,      COMMAND_ALIGNMENT,
                 "Compute sequence identity for diagonal",
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",

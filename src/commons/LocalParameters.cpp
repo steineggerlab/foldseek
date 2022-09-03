@@ -83,13 +83,10 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow.push_back(&PARAM_RUNNER);
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
 
-    // Setup DbValidation
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
 
-    // Setup DbValidation
-
-    structureclusterworkflow = combineList(prefilter, align);
+    structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, rescorediagonal);
     structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
     structureclusterworkflow = combineList(structureclusterworkflow, clust);
@@ -100,6 +97,10 @@ LocalParameters::LocalParameters() :
     structureclusterworkflow.push_back(&PARAM_REUSELATEST);
     structureclusterworkflow.push_back(&PARAM_RUNNER);
     structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
+
+    easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
+    easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);
+
 
     databases.push_back(&PARAM_HELP);
     databases.push_back(&PARAM_HELP_LONG);
