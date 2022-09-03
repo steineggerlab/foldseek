@@ -110,7 +110,7 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"cluster",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_HIDDEN,
+        {"cluster",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_MAIN,
                 "Slower, sensitive clustering",
                 "# Cascaded clustering of FASTA file\n"
                 "mmseqs cluster sequenceDB clusterDB tmp\n\n"
