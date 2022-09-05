@@ -11,7 +11,7 @@
 void setStructureClusterWorkflowDefaults(Parameters *p) {
     p->spacedKmer = true;
     p->covThr = 0.8;
-    p->evalThr = 10;
+    p->evalThr = 0.01;
     p->maxResListLen = 1000;
     p->kmersPerSequence = 300;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;

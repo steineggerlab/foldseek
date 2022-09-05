@@ -12,17 +12,9 @@ namespace structure{
 
 void setEasyStructureClusterDefaults(Parameters *p) {
     p->removeTmpFiles = true;
-    p->covThr = 0.8;
-    p->evalThr = 0.001;
-    p->maxResListLen = 20;
 }
 void setEasyStructureClusterMustPassAlong(Parameters *p) {
-    p->PARAM_SPACED_KMER_MODE.wasSet = true;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
-    p->PARAM_C.wasSet = true;
-    p->PARAM_E.wasSet = true;
-    p->PARAM_ALIGNMENT_MODE.wasSet = true;
-    p->PARAM_MAX_SEQS.wasSet = true;
 }
 
 int easystructurecluster(int argc, const char **argv, const Command &command) {
