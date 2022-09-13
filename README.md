@@ -84,12 +84,14 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     --max-seqs               adjust the amount of prefilter that are handed to the alignment. 
                              Increasing it can lead to more hits (default: 1000)
     -e                       List matches below this E-value (range 0.0-inf, default: 0.001)
-                             Increasing it helps to report more distantly related structures
+                             Increasing it helps to report more distantly related structures.
+                             Structures with an E-value of up to 1 might be still related.
     # other                         
     --alignment-type         0: 3Di Gotoh-Smith-Waterman (local, not recommended), 
-                             1: TMalign (global), 
+                             1: TMalign (global, slow), 
                              2: 3Di+AA Gotoh-Smith-Waterman (local, default)
     -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
+                             The higher the alignment coverage the more global is the alignment.
     --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
 
 ### Databases 
