@@ -1,4 +1,5 @@
 #include "DownloadDatabase.h"
+#include "Prefiltering.h"
 #include "CommandDeclarations.h"
 #include "LocalCommandDeclarations.h"
 #include "LocalParameters.h"
@@ -236,7 +237,12 @@ std::vector<struct Command> commands = {
                 CITATION_FOLDSEEK, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
 };
 
+
+std::vector<KmerThreshold> externalThreshold = { {Parameters::DBTYPE_AMINO_ACIDS, 7, 197.0, 11.22}};
+
+
 #include "structdatabases.sh.h"
+
 
 std::vector<DatabaseDownload> externalDownloads = {
         {
