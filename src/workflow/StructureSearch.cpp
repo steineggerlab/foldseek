@@ -9,8 +9,7 @@
 #include "structuresearch.sh.h"
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
-    // TODO: 7-mer sensitivity is not optimized yet
-    p->kmerSize = 6;
+    p->kmerSize = 0;
     p->maskMode = 0;
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
