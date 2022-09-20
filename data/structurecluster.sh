@@ -136,7 +136,7 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       eval TMP="\$$PARAM"
       if notExists "${TMP_PATH}/pref_step$STEP.dbtype"; then
            # shellcheck disable=SC2086
-          $RUNNER "$MMSEQS" prefilter "${INPUT}" "${INPUT}" "${TMP_PATH}/pref_step$STEP" ${TMP} \
+          $RUNNER "$MMSEQS" prefilter "${INPUT}" "${INPUT}_ss" "${TMP_PATH}/pref_step$STEP" ${TMP} \
               || fail "Prefilter step $STEP died"
       fi
       PARAM=ALIGNMENT${STEP}_PAR

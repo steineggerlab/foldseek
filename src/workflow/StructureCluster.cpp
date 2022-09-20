@@ -170,7 +170,8 @@ int structurecluster(int argc, const char **argv, const Command& command) {
             } else {
                 par.maxResListLen = maxResListLen / (10 / (step + 1));
             }
-
+            // only set true for first step
+            par.exactKmerMatching = (step == 1);
             par.compBiasCorrectionScale = 0.15;
             cmd.addVariable(std::string("PREFILTER" + SSTR(step) + "_PAR").c_str(), par.createParameterString(par.prefilter).c_str());
             par.compBiasCorrectionScale = 0.5;
