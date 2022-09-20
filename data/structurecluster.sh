@@ -100,7 +100,7 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
       "$MMSEQS" clust "${TMP_PATH}/input_step_redundancy_ss" "${TMP_PATH}/aln" "${TMP_PATH}/clust" ${CLUSTER_PAR} \
           || fail "Clustering step died"
   fi
-  if notExists "${TMP_PATH}/clu.dbtype"; then
+  if notExists "${TMP_PATH}/clu_redundancy.dbtype"; then
       # shellcheck disable=SC2086
       if [ "${RUN_ITERATIVE}" = "1" ]; then
          "$MMSEQS" mergeclusters "$SOURCE" "${TMP_PATH}/clu_redundancy" "${TMP_PATH}/pre_clust" "${TMP_PATH}/clust" $MERGECLU_PAR \
@@ -114,18 +114,21 @@ fi
 
 if [ "${RUN_ITERATIVE}" = "1" ]; then
   if [ "${RUN_LINCLUST}" = "1" ]; then
-      # shellcheck disable=SC2086
-      "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
-          || fail "createsubdb died"
-
+      if notExists "${TMP_PATH}/input_step_redundancy_ss.dbtype"; then
+         # shellcheck disable=SC2086
+         "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
+            || fail "createsubdb died"
+      fi
       if exists "${INPUT}_ca.dbtype"; then
         # shellcheck disable=SC2086
          "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
             || fail "createsubdb died"
       fi
-      # shellcheck disable=SC2086
-      "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
-              || fail "createsubdb died"
+      if notExists "${TMP_PATH}/input_step_redundancy.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
+                || fail "createsubdb died"
+      fi
       INPUT="${TMP_PATH}/input_step_redundancy"
   fi
   STEP=0
@@ -136,7 +139,7 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       eval TMP="\$$PARAM"
       if notExists "${TMP_PATH}/pref_step$STEP.dbtype"; then
            # shellcheck disable=SC2086
-          $RUNNER "$MMSEQS" prefilter "${INPUT}" "${INPUT}_ss" "${TMP_PATH}/pref_step$STEP" ${TMP} \
+          $RUNNER "$MMSEQS" prefilter "${INPUT}_ss" "${INPUT}_ss" "${TMP_PATH}/pref_step$STEP" ${TMP} \
               || fail "Prefilter step $STEP died"
       fi
       PARAM=ALIGNMENT${STEP}_PAR
@@ -242,4 +245,5 @@ if [ -n "$REMOVE_TMP" ]; then
     fi
     rm -f "${TMP_PATH}/clustering.sh"
 fi
+
 

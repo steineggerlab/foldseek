@@ -124,11 +124,8 @@ int structurecluster(int argc, const char **argv, const Command& command) {
     cmd.addVariable("VERBOSITYANDCOMPRESS", par.createParameterString(par.threadsandcompression).c_str());
 
     // Linclust parameter
-    // also coverage should not be under 0.5
-    float prevCov = par.covThr;
-    par.covThr = std::max(0.5f, par.covThr);
+    par.includeIdentity = true;
     cmd.addVariable("STRUCTURERESCOREDIAGONAL_PAR", par.createParameterString(par.structurerescorediagonal).c_str());
-    par.covThr = prevCov;
     //par.alphabetSize = 14;
     //par.kmerSize = 10;
     //par.spacedKmer = 1;
@@ -170,8 +167,7 @@ int structurecluster(int argc, const char **argv, const Command& command) {
             } else {
                 par.maxResListLen = maxResListLen / (10 / (step + 1));
             }
-            // only set true for first step
-            par.exactKmerMatching = (step == 1);
+
             par.compBiasCorrectionScale = 0.15;
             cmd.addVariable(std::string("PREFILTER" + SSTR(step) + "_PAR").c_str(), par.createParameterString(par.prefilter).c_str());
             par.compBiasCorrectionScale = 0.5;
@@ -209,3 +205,4 @@ int structurecluster(int argc, const char **argv, const Command& command) {
     assert(false);
     return EXIT_FAILURE;
 }
+
