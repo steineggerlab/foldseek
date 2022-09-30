@@ -8,13 +8,12 @@
 
 const float cutoff = 15.0;
 const float INF = std::numeric_limits<float>::infinity(); 
+typedef float* fptr_t;
 
 class LDDTcalculator {
 public:
-    LDDTcalculator() {}
-    ~LDDTcalculator() {
-        if(reduce_score) delete[] reduce_score;
-    }
+    LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTargetLength);
+    ~LDDTcalculator();
 
     // TODO: get rid of matrix2D struct
     // Instead, use dynamic float array passed on from structureconvertalis.cpp
@@ -123,7 +122,7 @@ public:
         float min[3] = {INF, INF, INF};
         float max[3] = {-INF, -INF, -INF};
         int num_cells[3];
-        std::multimap<std::tuple<int, int, int>, int> box;
+        std::multimap<std::tuple<int, int, int>, int> box; // bottleneck
     };
 
     struct LDDTscoreResult {
@@ -145,19 +144,20 @@ public:
         double avgLddtScore;
     };
 
-    void initVariables(unsigned int queryLen, unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace);
-    void construct_hash_tables_align(int align_idx, int query_idx, int target_idx, int cigar_idx);
+    void initQuery(unsigned int queryLen, float *qx, float *qy, float *qz);
+    void construct_hash_tables_align(int align_idx, int query_idx, int target_idx);
     void calculate_distance();
     void compute_scores();
-    LDDTscoreResult computeLDDTScore(float *qx, float *qy, float *qz, float *tx, float *ty, float *tz, int qStartPos, int tStartPos);
+    LDDTscoreResult computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
 
 // TODO: encapsulate variables
 // private:
     int queryStart, targetStart, queryLength, targetLength, alignLength;
-    float *reduce_score = NULL;
+    fptr_t reduce_score, norm, norm_aligned;
     std::unordered_map<int, int> query_to_align, target_to_align, align_to_query, align_to_target;
     std::string cigar; // backtrace
-    matrix2D query_pos, target_pos, dists_to_score, aligned_dists_to_score, dist_l1;
+    matrix2D query_pos, target_pos, dists_to_score, aligned_dists_to_score, dist_l1, score;
+    LDDTcalculator::Grid query_grid;
 };
 
 #endif

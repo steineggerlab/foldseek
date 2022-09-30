@@ -8,29 +8,54 @@ float dist(float* arr1, float* arr2) {
     return sqrt(D2);
 }
 
-void LDDTcalculator::initVariables(unsigned int queryLen, unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace) {
-    queryLength = queryLen, targetLength = targetLen, queryStart = qStartPos, targetStart = tStartPos, cigar = backtrace;
-    query_pos = matrix2D(queryLength, 3);
-    target_pos = matrix2D(targetLength, 3);
+LDDTcalculator::LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTargetLength) {
+    unsigned int maxAlignLength = std::max(maxQueryLength, maxTargetLength);
+
+    query_pos = matrix2D(maxQueryLength, 3);
+    target_pos = matrix2D(maxTargetLength, 3);
+
+    dists_to_score = matrix2D(maxQueryLength, maxQueryLength);
+    aligned_dists_to_score = matrix2D(maxAlignLength, maxAlignLength);
+    dist_l1 = matrix2D(maxAlignLength, maxAlignLength);
+
+    score = matrix2D(maxAlignLength, maxAlignLength); 
+    reduce_score = new float[maxAlignLength];
+    norm = new float[maxQueryLength];
+    norm_aligned = new float[maxAlignLength];
+
+    query_grid = Grid(query_pos);
 }
 
-LDDTcalculator::LDDTscoreResult LDDTcalculator::computeLDDTScore(float *qx, float *qy, float *qz, float *tx, float *ty, float *tz, int qStartPos, int tStartPos) {
-    float ** qcoordinates = new float*[queryLength];
-    for(int i = 0; i < queryLength; i++) {
-        qcoordinates[i] = new float[3]{qx[i], qy[i], qz[i]};
-    }
-    query_pos.arr = qcoordinates; 
-    float ** tcoordinates = new float*[targetLength];
-    for(int i = 0; i < targetLength; i++) tcoordinates[i] = new float[3]{tx[i], ty[i], tz[i]};
-    target_pos.arr = tcoordinates;
+LDDTcalculator::~LDDTcalculator() {
+    if(norm) delete[] norm;
+    if(norm_aligned) delete[] norm_aligned;
+    if(reduce_score) delete[] reduce_score;
+}
 
-    construct_hash_tables_align(0, qStartPos, tStartPos, 0);
+void LDDTcalculator::initQuery(unsigned int queryLen, float *qx, float *qy, float *qz) {
+    queryLength = queryLen;
+    for(int i = 0; i < queryLength; i++) {
+        query_pos(i, 0) = qx[i];
+        query_pos(i, 1) = qy[i];
+        query_pos(i, 2) = qz[i];
+    }
+}
+
+LDDTcalculator::LDDTscoreResult LDDTcalculator::computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz) {
+    targetLength = targetLen, queryStart = qStartPos, targetStart = tStartPos, cigar = backtrace;
+    for(int i = 0; i < targetLength; i++) {
+        target_pos(i, 0) = tx[i];
+        target_pos(i, 1) = ty[i];
+        target_pos(i, 2) = tz[i];
+    }
+
+    construct_hash_tables_align(0, qStartPos, tStartPos);
     calculate_distance();
     compute_scores();
     return LDDTscoreResult(reduce_score, alignLength);
 }
 
-void LDDTcalculator::construct_hash_tables_align(int align_idx, int query_idx, int target_idx, int cigar_idx) {
+void LDDTcalculator::construct_hash_tables_align(int align_idx, int query_idx, int target_idx) {
     for(int i = 0; i < query_idx; i++) query_to_align[i] = -1;
     for(int i = 0; i < target_idx; i++) target_to_align[i] = -1;
     for(std::size_t i = 0; i < cigar.length(); i++) {
@@ -45,26 +70,37 @@ void LDDTcalculator::construct_hash_tables_align(int align_idx, int query_idx, i
             query_to_align[query_idx] = -1; // does not align
             query_idx++;
         }
-        cigar_idx = i+1;
     }
     for(; query_idx < query_pos.xdim; query_idx++) query_to_align[query_idx] = -1;
     for(; target_idx < target_pos.xdim; target_idx++) target_to_align[target_idx] = -1;
 
     alignLength = align_idx;
-    dists_to_score = matrix2D(queryLength, queryLength);
-    aligned_dists_to_score = matrix2D(alignLength, alignLength);
-    dist_l1 = matrix2D(alignLength, alignLength);
 }
 
 void LDDTcalculator::calculate_distance() {
-    Grid query_grid(query_pos);
-
     // Directions
     const int DIR = 14;
     int dx[DIR] = {0,1,1, 1,1,1, 1, 1, 1, 1,0,0, 0,0};
     int dy[DIR] = {0,1,1, 1,0,0, 0,-1,-1,-1,1,1, 1,0};
     int dz[DIR] = {0,1,0,-1,1,0,-1, 1, 0,-1,1,0,-1,1};
     typedef std::multimap<std::tuple<int, int, int>, int>::iterator box_iterator;
+
+    // Initialize arrays
+    for(int i = 0; i < queryLength; i++) {
+        for(int j = 0; j < queryLength; j++) {
+            dists_to_score(i, j) = 0;
+        }
+    }
+    for(int i = 0; i < alignLength; i++) {
+        for(int j = 0; j < alignLength; j++) {
+            aligned_dists_to_score(i, j) = 0;
+        }
+    }
+    for(int i = 0; i < alignLength; i++) {
+        for(int j = 0; j < alignLength; j++) {
+            dist_l1(i, j) = 0;
+        }
+    }
 
     // Iterate through query_grid
     // Update dists_to_score, aligned_dists_to_score, dist_l1
@@ -125,25 +161,27 @@ void LDDTcalculator::calculate_distance() {
 }
 
 void LDDTcalculator::compute_scores() {
-    matrix2D score(alignLength, alignLength); 
-    float* norm = new float[queryLength];
-    float* norm_aligned = new float[alignLength]; 
-    reduce_score = new float[alignLength];
     for(int i = 0; i < queryLength; i++) {
         norm[i] = 0;
     }
     for(int i = 0; i < alignLength; i++) {
-        norm_aligned[i] = reduce_score[i] = 0;
+        norm_aligned[i] = 0;
+    }
+    for(int i = 0; i < alignLength; i++) {
+        reduce_score[i] = 0;
     }
 
     // Compute score per residue using the matrices computed above
     for(int i = 0; i < alignLength; i++) {
         for(int j = 0; j < alignLength; j++) {
-            if(i == j) continue; // no self-interaction
-            score(i, j) = 0.25 * ((dist_l1(i, j) < 0.5) +
+            if(i == j) { // no self-interaction
+                score(i, j) = 0;
+            } else {
+                score(i, j) = 0.25 * ((dist_l1(i, j) < 0.5) +
                                     (dist_l1(i, j) < 1.0) +
                                     (dist_l1(i, j) < 2.0) +
                                     (dist_l1(i, j) < 4.0));
+            }
         }
     }
 
@@ -168,6 +206,4 @@ void LDDTcalculator::compute_scores() {
     for(int idx = 0; idx < alignLength; idx++) {
         reduce_score[idx] *= norm_aligned[idx]; // reduce_score[] contains the lddt scores per residue
     }
-
-    delete[] norm; delete[] norm_aligned; 
 }
