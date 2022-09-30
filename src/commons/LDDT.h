@@ -6,15 +6,12 @@
 #ifndef LDDT_H
 #define LDDT_H
 
-#define INF 3.40282e+038 // TODO: More elegant way of handling divide-by-zero
 const float cutoff = 15.0;
+const float INF = std::numeric_limits<float>::infinity(); 
 
 class LDDTcalculator {
 public:
     LDDTcalculator() {}
-    LDDTcalculator(int qLen, int tLen) {
-        queryLength = qLen, targetLength = tLen;
-    }
     ~LDDTcalculator() {
         if(reduce_score) delete[] reduce_score;
     }

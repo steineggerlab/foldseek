@@ -381,6 +381,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false);
         }
         LDDTcalculator *lddtcalculator = NULL;
+        if(needLDDT) {
+            lddtcalculator = new LDDTcalculator();
+        }
 
         std::string result;
         result.reserve(1024*1024);
@@ -527,7 +530,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 }
                 LDDTcalculator::LDDTscoreResult lddtres;
                 if(needLDDT) {
-                    lddtcalculator = new LDDTcalculator(res.qLen, res.dbLen);
                     lddtcalculator->initVariables(res.qLen, res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
                     lddtres = lddtcalculator->computeLDDTScore(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen],
                                                                targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen],
