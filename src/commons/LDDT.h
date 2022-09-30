@@ -48,7 +48,6 @@ public:
             }
             delete[] dist_l1;
         }
-
     }
 
     struct Grid {
@@ -104,8 +103,7 @@ public:
     void compute_scores();
     LDDTscoreResult computeLDDTScore(float *qx, float *qy, float *qz, float *tx, float *ty, float *tz, int qStartPos, int tStartPos);
 
-// TODO: encapsulate variables
-// private:
+private:
     int queryStart, targetStart, queryLength, targetLength, alignLength;
     float *reduce_score = NULL;
     std::unordered_map<int, int> query_to_align, target_to_align, align_to_query, align_to_target;

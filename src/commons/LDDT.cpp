@@ -149,7 +149,6 @@ void LDDTcalculator::compute_scores() {
             score[i][j] = 0;
         }
     }
-
     float* norm = new float[queryLength];
     float* norm_aligned = new float[alignLength]; 
     reduce_score = new float[alignLength];
@@ -182,7 +181,6 @@ void LDDTcalculator::compute_scores() {
     for(int idx = 0; idx < alignLength; idx++) {
         norm_aligned[idx] = norm[align_to_query[idx]];
     }
-
     for(int i = 0; i < alignLength; i++) {
         for(int j = 0; j < alignLength; j++) {
             score[i][j] *= aligned_dists_to_score[i][j];
