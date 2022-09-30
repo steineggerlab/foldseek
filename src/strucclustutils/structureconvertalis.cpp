@@ -19,6 +19,7 @@
 #include <zstd.h>
 #include "result_viz_prelude_fs.html.zst.h"
 #include "TMaligner.h"
+#include "LDDT.h"
 #include <map>
 
 #ifdef OPENMP
@@ -176,9 +177,10 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needCA = false;
     bool needTaxonomyMapping = false;
     bool needTMaligner = false;
+    bool needLDDT = false;
 
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner);
+                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
 
 
 
@@ -378,6 +380,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             tmaligner = new TMaligner(
                     std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false);
         }
+        LDDTcalculator *lddtcalculator = NULL;
 
         std::string result;
         result.reserve(1024*1024);
@@ -521,6 +524,14 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     tmaligner->initQuery(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen], NULL, res.qLen);
                     tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                       res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
+                }
+                LDDTcalculator::LDDTscoreResult lddtres;
+                if(needLDDT) {
+                    lddtcalculator = new LDDTcalculator(res.qLen, res.dbLen);
+                    lddtcalculator->initVariables(res.qLen, res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
+                    lddtres = lddtcalculator->computeLDDTScore(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen],
+                                                               targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen],
+                                                               res.qStartPos, res.dbStartPos);
                 }
                 switch (format) {
                     case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: {
@@ -745,6 +756,17 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                     case LocalParameters::OUTFMT_ALNTMSCORE:
                                         result.append(SSTR(tmres.tmscore));
                                         break;
+                                    case LocalParameters::OUTFMT_LDDT:
+                                        // TODO: make SSTR_approx that outputs %2f, not %3f
+                                        result.append(SSTR(lddtres.avgLddtScore));
+                                        break;
+                                    case LocalParameters::OUTFMT_LDDT_FULL:
+                                        for(int i = 0; i < lddtres.scoreLength - 1; i++) {
+                                            result.append(SSTR(lddtres.perCaLddtScore[i]));
+                                            result.push_back(',');
+                                        }
+                                        result.append(SSTR(lddtres.perCaLddtScore[lddtres.scoreLength - 1]));
+                                        break;
                                 }
                                 if (i < outcodes.size() - 1) {
                                     result.push_back('\t');
@@ -873,6 +895,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         }
         if(tmaligner != NULL){
             delete tmaligner;
+        }
+        if(lddtcalculator != NULL) {
+            delete lddtcalculator;
         }
     }
     if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
