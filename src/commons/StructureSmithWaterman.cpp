@@ -819,11 +819,7 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     bool isProfile = Parameters::isEqualDbtype(q_3di->getSequenceType(), Parameters::DBTYPE_HMM_PROFILE) &&
                      Parameters::isEqualDbtype(q_aa->getSequenceType(),  Parameters::DBTYPE_HMM_PROFILE);
     if(isProfile){
-        //memcpy(profile->alignment_aa_profile, q_aa->getAlignmentProfile(), q_aa->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
-        for(size_t i = 0; i < q_aa->L * Sequence::PROFILE_AA_SIZE; i++){
-            profile->alignment_aa_profile[i] = 0;
-            //q_aa->getAlignmentProfile()[i]
-        }
+        memcpy(profile->alignment_aa_profile, q_aa->getAlignmentProfile(), q_aa->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
         memcpy(profile->alignment_3di_profile, q_3di->getAlignmentProfile(), q_3di->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
         // set neutral state 'X' (score=0)
         memset(profile->alignment_aa_profile + ((alphabetSize - 1) * q_aa->L), 0, q_aa->L * sizeof(int8_t));
