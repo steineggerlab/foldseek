@@ -1,29 +1,25 @@
 #include "Matcher.h"
 #include "MSANode.h"
+#include "filesystem"
 #include <cassert>
 
 #include <TMaligner.h>
 
-
-inline bool match(char c) {
-    return (c >= 'A' && c <= 'Z') || c == '-';
-}
-
-inline bool insertion(char c) {
-    return (c >= 'a' && c <= 'z') || c == '.';
-}
-
-inline char uprchr(char chr) {
-  return (chr >= 'a' && chr <= 'z') ? chr + 'A' - 'a' : chr;
-}
-
-inline char lwrchr(char chr) {
-    return (chr >= 'A' && chr <= 'Z') ? chr - 'A' + 'a' : chr;
-}
-
-inline char isGap(char chr) {
-    return (chr == '-' || chr == '.');
-}
+// Map residue in query to target
+struct ResidueMapping {
+    char state;
+    int qPos;
+    int tPos;
+    bool insertion;
+    
+    ResidueMapping(char state, int qPos, int tPos, bool insertion) : state(state), qPos(qPos), tPos(tPos), insertion(insertion) {};
+    ResidueMapping() = default;
+    ~ResidueMapping() {};
+    
+    void print() {
+        std::cout << "State: " << state << ", qPos: " << qPos << ", tPos: " << tPos << ", Insertion: " << insertion << std::endl;
+    }
+};
 
 // Find index of next non-gap character in alignment string
 inline size_t findNextResidueIdx(std::string str, size_t start) {
@@ -68,7 +64,7 @@ int findNonGapIndex(std::string string, int pos) {
     for (size_t i = 0; i < string.length(); ++i) {
         if (!isGap(string[i])) {
             if (matches == pos) {  
-                index = matches;
+                index = i;
                 break;
             }
             ++matches;
@@ -83,13 +79,126 @@ void print_vector(std::vector<int> vector) {
     std::cout << std::endl;
 }
 
+/**
+ * @brief Aligns two MSANodes using ResidueMappings from Foldseek backtraces
+ * 
+ * @param query - query MSANode*
+ * @param target - target MSANode*
+ * @param mapping - mappings between query and target residue indices
+ */
+void alignNodes(MSANode *query, MSANode *target, std::vector<ResidueMapping> mapping) {
+    
+    ResidueMapping curRM;
+    ResidueMapping oldRM;
+    
+    // Keep track of new gaps in query/target to adjust indices
+    int qGaps = mapping[0].tPos;
+    int tGaps = mapping[0].qPos;
+    
+    // Also characters after final match position before sequences are modified
+    int tEndChars = target->members[0]->sequence.length() - 1 - mapping[mapping.size() - 1].tPos;
+    int qEndChars = query->members[0]->sequence.length() - 1 - mapping[mapping.size() - 1].qPos;
+
+    // Insert start gaps
+    // Query: qPos gaps from 0
+    // Target: tPos gaps from qPos
+    //               v 
+    // e.g. Q: ---xxxXXXXX
+    //      T: yyy---YYYYY
+    query->insertGaps(0, qGaps);
+    target->insertGaps(qGaps, tGaps); 
+    
+    for (size_t i = 1; i < mapping.size(); ++i) {
+        curRM = mapping[i];
+        oldRM = mapping[i - 1];
+        
+        int dq = curRM.qPos - oldRM.qPos;
+        int dt = curRM.tPos - oldRM.tPos;
+        
+        if (dq == 1) {
+            // One match in query
+            // Mark dt - 1 characters before match as insertion
+            query->insertGaps(oldRM.qPos + qGaps + 1, dt - 1);
+            qGaps += dt - 1;
+
+        } else if (dq == 0) {
+            // No matches in query, all target residues are insertions
+            // Insert dt gaps in query
+            query->insertGaps(oldRM.qPos + qGaps + 1, dt);
+            qGaps += dt;
+
+        } else if (dq >= dt) {
+            // More query matches than target matches
+            // Insert dq - dt gaps in target
+            // TODO insert at middle of oldRM.tPos and curRM.tPos
+            target->insertGaps(oldRM.tPos + tGaps + 1, dq - dt);
+            tGaps += dq - dt;
+            
+        } else if (dt >= dq) {
+            // More target matches than query matches
+            // Insert dt - dq gaps in query
+            // TODO mark from middle of oldRM.tPos and curRM.tPos
+            query->insertGaps(oldRM.qPos + qGaps + 1, dt - dq);
+            qGaps = dt - dq;
+        }
+    }
+    
+    // End gaps
+    // Query: from dbEndPos to end of target
+    // Target: from qEndPos to end of query
+    if (tEndChars > 0)
+        query->insertGapsAtEnd(tEndChars);
+    if (qEndChars > 0)
+        target->insertGaps(curRM.tPos + 1 + tGaps, qEndChars);
+   
+    // Add target members to query
+    query->members.insert(query->members.end(), target->members.begin(), target->members.end());
+}
+
+// Map matching indices in query/target based on CIGAR
+// Need to be able to retrieve query index i given target index j when iterating through the backtrace
+std::vector<ResidueMapping> mapBacktraceRM(std::string query, std::string target, size_t q, size_t t, std::string backtrace) {
+    std::vector<ResidueMapping> matchesRM;
+    matchesRM.reserve(backtrace.length());
+    size_t b = 0;
+    while (b < backtrace.length()) {
+        if (t >= target.length() || q >= query.length())
+            break;
+        switch (backtrace[b]) {
+            case 'M': {
+                matchesRM.emplace_back('M', q, t, islower(query[q]));
+                t = findNextResidueIdx(target, t);
+                q = findNextResidueIdx(query, q);
+                break;
+            }
+            case 'I': {
+                q = findNextResidueIdx(query, q);
+                break;
+            }
+            case 'D': {
+                t = findNextResidueIdx(target, t);
+                break;
+            }
+        }
+        ++b;
+    }
+    return matchesRM;
+}
+
 // Map matching indices in query/target based on CIGAR
 // Need to be able to retrieve query index i given target index j when iterating through the backtrace
 std::vector<int> mapBacktrace(std::string query, std::string target, size_t q, size_t t, std::string backtrace) {
+    std::cout << "Mapping backtrace\n"; 
+    std::cout << "   Query: " << query << std::endl;
+    std::cout << "  Target: " << target << std::endl;
+    std::cout << "       q: " << q << std::endl;
+    std::cout << "       t: " << t << std::endl;
+
     std::vector<int> matches(target.length());
+
     assert(matches.size() > 0);
     size_t b = 0;
-    size_t qq = q;      // NOTE: keeping track of the old q here works..
+    size_t qq = q;
     while (b < backtrace.length()) {
         if (t >= target.length() || q >= query.length())
             break;
@@ -119,7 +228,7 @@ std::vector<int> mapBacktrace(std::string query, std::string target, size_t q, s
         ++b;
         assert(t <= matches.size());
     }
-
+    
     // TODO maybe not necessary
     // Fill in remainder of indices
     
@@ -133,7 +242,7 @@ void noQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int curI
     assert(prevIdx >= 0);
     assert(curIdx >= prevIdx);
     assert(curIdx <= targetSeq.length());
-
+    
     for (int i = prevIdx + 1; i <= curIdx; ++i) {
         if (!isGap(targetSeq[i]))
             newSeq.push_back(lwrchr(targetSeq[i]));
@@ -152,7 +261,8 @@ void oneQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int cur
             newSeq.push_back(lwrchr(targetSeq[i]));
     }
     // Add match
-    newSeq.push_back(targetSeq[curIdx]);
+    // std::cout << "          Adding: " << uprchr(targetSeq[curIdx]) <<std::endl;
+    newSeq.push_back(uprchr(targetSeq[curIdx]));
 }
 
 void gtQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int curIdx, int dq, int dt) {
@@ -192,64 +302,11 @@ void ltQueryMS(std::string &newSeq, std::string targetSeq, int prevIdx, int curI
         newSeq.push_back(uprchr(targetSeq[i]));
 }
 
-std::string alignWithTMAlign(std::string query, std::string target, Matcher::result_t result) {
-    // TMaligner::TMaligner aligner;
-
-    // Pre: take only matching residues in query/target based on Foldseek backtrace
-    // e.g. ABCDEFGHI     ABCDGHI
-    //      MMMMIIMMM --> MMMMMMM
-    //      ABCD--GHI     ABCDGHI
-    int q = findNonGapIndex(query, result.qStartPos);
-    int t = findNonGapIndex(target, result.dbStartPos);
-
-    size_t numMatches = (size_t)std::count(result.backtrace.begin(), result.backtrace.end(), 'M');
-    char newQuery[numMatches];
-    char newTarget[numMatches];
-
-    size_t b = 0;
-    size_t m = 0;
-    for (; m < numMatches && b < result.backtrace.length(); ++b) {
-        switch (result.backtrace[b]) {
-            case 'M': {
-                newQuery[m] = query[q];
-                newTarget[m] = target[t];
-                ++m;
-                ++q;
-                ++t;
-                break;
-            }
-            case 'I': {
-                ++q;
-                break;
-            }
-            case 'D': {
-                ++t;
-                break;
-            }
-        }
-    }
-    
-    std::cout << "     Query: " << query;
-    std::cout << "    Target: " << target;
-    std::cout << " New query: " << newQuery << std::endl;
-    std::cout << "New target: " << newTarget << std::endl;
-    
-    // Initialise query on the aligner (xyz, sequence, length)
-    // aligner.initQuery();
-    
-    // Align using TMAlign
-    // Matcher::result_t result = aligner.align();
-    
-    // Adjust target based on new backtrace
-
-    return "abc";
-}
-
-// 
 std::string alignNewSequence(std::string query, std::string target, size_t qId, size_t tId, size_t qEnd, size_t tEnd, size_t queryLen, Matcher::result_t result, std::vector<int> matches) {
+
     // TODO better way to initialise this?
     std::string newSeq = "";
-    newSeq.reserve(32000);
+    newSeq.reserve(query.length());
 
     // Insert gaps up until query start position
     size_t j = 0;
@@ -281,14 +338,16 @@ std::string alignNewSequence(std::string query, std::string target, size_t qId, 
     newSeq.push_back((islower(target[tId])) ? uprchr(target[tId]) : target[tId]);
 
     // std::cout << "  newSeq bef: " << newSeq << '\n';
-    std::cout << "  matches: " ;
-    for (int match : matches)
-        std::cout << match << " ";
+    // std::cout << "  matches: " ;
+    // for (int match : matches)
+    //     std::cout << match << " ";
     // std::cout << std::endl;
     // std::cout << "current sequence: " << target << std::endl;
     
     int qPrev = qId;
     int tPrev = tId;
+    
+    // TODO insertions getting marked single index too early
 
     // TODO dbEndPos relates only to the target sequence driving this merge
     // and may be longer than the current sequence being merged
@@ -296,6 +355,15 @@ std::string alignNewSequence(std::string query, std::string target, size_t qId, 
     //   alignments are same length at end of alignment
     int b = 1;
     for (size_t j = tPrev + 1; j <= tEnd; ++j) {
+        if (j >= target.length()) {
+            newSeq += '-';
+            int i = matches[j];
+            int dq = i - qPrev;
+            int dt = j - tPrev;
+            qPrev = i;
+            tPrev = j;
+            continue;
+        }
 
         // Get matching index in query
         int i = matches[j];
@@ -309,80 +377,62 @@ std::string alignNewSequence(std::string query, std::string target, size_t qId, 
         std::cout
             << "  i: " << i << ", j: " << j << ", qPrev: " << qPrev << ", tPrev: " << tPrev << ", di: " << dq
             << ", dj: " << dt << ", qlen: " << query.length() << ", tlen: " << target.length()
-            << ", state: " << matchState << "\n";
+            << ", state: " << matchState;
         assert(dq >= 0);
         assert(dt >= 0);
 
-        if (dq == 1)
+        if (dq == 1) {
+            std::cout << ", oneQueryMS";
             oneQueryMS(newSeq, target, tPrev, j);
-        else if (dq == 0)
+        } else if (dq == 0) {
+            std::cout << ", noQueryMS";
             noQueryMS(newSeq, target, tPrev, j);
-        else if (dq >= dt)
+        } else if (dq >= dt) {
+            std::cout << ", gtQueryMS";
             gtQueryMS(newSeq, target, tPrev, j, dq, dt);
-        else if (dt < dq)
+        } else if (dt < dq) {
+            std::cout << ", ltQueryMS";
             ltQueryMS(newSeq, target, tPrev, j, dq, dt);
+        }
+        std::cout << ", new char: " << newSeq[newSeq.length() - 1] << std::endl;
 
         qPrev = i;
         tPrev = j;
         // std::cout << "  newSeq aft: " << newSeq << '\n';
     }
-   
+    
+  
     std::string::difference_type numMatches = std::count(result.backtrace.begin(), result.backtrace.end(), 'M');
     
     // Backfill gaps til equal match states
     size_t targetLen = countMatches(newSeq);
     assert(targetLen > 0);
-    std::cout<< "queryLen: " << queryLen << ", targetLen: " << targetLen << ", numMatches: " << numMatches << std::endl;
+    std::cout << "\nqueryLen: " << queryLen << ", targetLen: " << targetLen << ", numMatches: " << numMatches;
     
-    int numGaps = queryLen - result.qEndPos - 1;        // How many gaps to insert to match query
-    std::cout << ", numGaps: " << numGaps << ", qEndPos: " << result.qEndPos + 1 << std::endl;
+    int numGaps;
+    if (queryLen > targetLen)
+        numGaps = queryLen - targetLen;        // How many gaps to insert to match query
+    else
+        numGaps = 0;
 
+    std::cout << ", numGaps: " << numGaps << ", qEndPos: " << result.qEndPos + 1 << std::endl;
+    std::cout << std::endl;
+    std::cout << newSeq << std::endl;
+    
+    // Gaps to equal query match states
     for (size_t j = 0; j < numGaps; ++j)
         newSeq.push_back('-');
 
-    // for (size_t j = targetLen; j < (size_t)numMatches; ++j)
-    //     newSeq.push_back('-');
-    
-    // add remaining seq. info as insertion state
+    // Add remaining sequence
     for (size_t j = tPrev + 1; j < target.length(); ++j) {
-        newSeq.push_back(target[j]);
+        newSeq.push_back(lwrchr(target[j]));
     }
-
-    // for (size_t j = tPrev + 1; j < target.length(); ++j) {
-    //     if (target[j] == '\n')
-    //         break;
-    //     newSeq.push_back(target[j] == '-' ? '-' : target[j]);
-    // }
-    
-    // Add the remaining gaps '-' to the end of the template sequence
-    // for (i = hit.i2 + 1; i <= L; ++i) {
-    //     cur_seq[h++] = '-';
-    //     // too few columns? Reserve double space
-    //     if (h >= maxcol - 1000) {
-    //         char *new_seq = new char[2 * maxcol];
-    //         strncpy(new_seq, cur_seq, h);
-    //         delete[] (cur_seq);
-    //         cur_seq = new_seq;
-    //         maxcol *= 2;
-    //     }
-    // }
-    // // add remaining seq. info as insertion state
-    // while(Tali.seq[k][ll] != '\0'){
-    //     if(Tali.seq[k][ll] == '-'){
-    //         cur_seq[h++] = '.';
-    //     }else{
-    //         cur_seq[h++] = lwrchr(Tali.seq[k][ll]);
-    //     }
-    //     ll++;
-    // }
-    // cur_seq[h++] = '\0';
 
     // Save the new target to the current MSANode
     assert(target.length() > 0);
 
     // TODO index is likely pushing too far forward, copying \n from original target sequence AND adding this new one
     // newSeq.push_back('\n');
-    
     // std::cout << "final newSeq: " << newSeq;
 
     return newSeq;
@@ -407,43 +457,70 @@ void MSANode::addNode(size_t queryID, MSANode *newNode, Matcher::result_t &resul
     // Grab MSASequence objects corresponding to query/target in result
     MSASequence *query = findSeqById(queryID);
     MSASequence *target = newNode->findSeqById(result.dbKey);
-
+    
     // Count number of match states in query sequence
     // Used to calculate gaps at end of target
     size_t queryLen = countMatches(query->sequence);
+    numMatches = queryLen;
     assert(queryLen > 0);
     if (alnLength == 0)
         alnLength = queryLen;
-
-    // Result summary
-    // summariseResult(result);
-    std::cout << " Query " << query->id << ": " << query->sequence << " " << query->sequence.length() << std::endl;
-    std::cout << "Target " << target->id << ": " << target->sequence << " " << target->sequence.length() << std::endl;
-   
+    
     // Identify index of first match state in query/target
     size_t qId = findNonGapIndex(query->sequence, result.qStartPos);
     size_t tId = findNonGapIndex(target->sequence, result.dbStartPos);
     size_t qEnd = findNonGapIndex(query->sequence, result.qEndPos);
     size_t tEnd = findNonGapIndex(target->sequence, result.dbEndPos);
-    std::cout << result.qStartPos << " " << result.qEndPos << std::endl;
-    std::cout << qId << " " << qEnd << std::endl;
-    std::cout << result.dbStartPos << " " << result.dbEndPos << std::endl;
-    std::cout << tId << " " << tEnd << std::endl;
-    std::cout << "CIGAR: " << result.backtrace << std::endl;
 
     // Map matching indices in query/target based on CIGAR
-    // Need to be able to retrieve query index i given target index j when iterating through the backtrace
-    std::vector<int> matches = mapBacktrace(query->sequence, target->sequence, qId, tId, result.backtrace);
-    assert(matches.size() > 0);
-
+    // std::vector<int> matches = mapBacktrace(query->sequence, target->sequence, qId, tId, result.backtrace);
+    std::vector<ResidueMapping> matchesRM = mapBacktraceRM(
+        query->sequence,
+        target->sequence,
+        qId,
+        tId,
+        result.backtrace
+    );
+    assert(matchesRM.size() > 0);
+    
     // Iterate all members of the new (target) MSANode, aligning them to the query (i.e. this MSANode)
-    for (size_t i = 0; i < newNode->members.size(); ++i) {
-        target = newNode->members[i];
-        target->sequence = alignNewSequence(query->sequence, target->sequence, qId, tId, qEnd, tEnd, queryLen, result, matches);
-        // alignWithTMAlign(query->sequence, target->sequence, result);
-        members.push_back(target);
-    }
-
+    // for (size_t i = 0; i < newNode->members.size(); ++i) {
+    //     target = newNode->members[i];
+    //     target->sequence = alignNewSequence(query->sequence, target->sequence, qId, tId, qEnd, tEnd, queryLen, result, matches);
+    //     target->print();
+    //     members.push_back(target);
+    // }
+    
+    alignNodes(this, newNode, matchesRM);
+    
+    // Run reformat.pl to make sure a3m is valid after every merge
+    // {
+    //     char fileName[] = "/tmp/mytemp.XXXXXX";
+    //     int fd = mkstemp(fileName);
+        
+    //     std::stringstream ss;
+    //     for (MSASequence *seq : members)
+    //         ss << '>' << seq->id << '\n' << seq->sequence << '\n';
+    //     std::string alnFASTA = ss.str();
+    //     std::cout << "\n#######\n";
+    //     std::cout << alnFASTA << std::endl;
+    //     std::cout << "\n#######\n";
+    //     write(fd, alnFASTA.c_str(), alnFASTA.size());
+        
+    //     char fileNameOut[] = "/tmp/mytemp.XXXXXX";
+    //     int fdOut = mkstemp(fileNameOut);  // Necessary?
+        
+    //     std::string command = std::string("perl ~/Downloads/reformat.pl a3m fas ") + fileName + " " + fileNameOut;
+    //     int code = system(command.c_str());
+    //     unlink(fileName);
+    //     unlink(fileNameOut);
+    //     if (code == -1 || WEXITSTATUS(code) != 0) {
+    //         std::cout << "Error when reformatting alignment" << std::endl;
+    //         exit(code);
+    //     }
+    //     std::cout << "return code after reformat.pl: " << code << std::endl;
+    // }
+    
     return;
 }
 
