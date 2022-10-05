@@ -32,6 +32,19 @@ if notExists "${STRUCTUREDB}.dbtype"; then
         || fail "Structure createdb died"
 fi
 
+# TODO move createdb outside workflow
+
+# clust connected component -> results DB
+# realign using structurealign/alignall
+#       alignall/join repeat in one module
+# separate entries -> completely unaligned (not connected) -> separate MSA
+# walk through list
+
+# or
+
+# foldseek cluster --> clusters (i.e. connected components)
+# form MSAs from clusters
+
 # Generate a fake prefilter for all vs all alignment
 PREFILTER="${TMP_PATH}/prefilter"
 if notExists "${PREFILTER}.dbtype"; then
@@ -46,24 +59,24 @@ fi
 
 if notExists "${TMP_PATH}/${TREE}"; then
     # shellcheck disable=SC2086
-	# Query DB, Target DB, Alignment DB, Tree file
-	"$MMSEQS" generatetree "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${TREE}" \
+	# Query DB, Alignment DB, temporary directory
+	"$MMSEQS" generatetree "${STRUCTUREDB}" "${ALIGNDB}" "${RESULTS}" \
 		|| fail "Generate Tree died"
 fi
 
-if notExists "${TMP_PATH}/${MSA}"; then
-    # shellcheck disable=SC2086
-	# Query DB, Target DB, Results DB, Tree, MSA
-	"$MMSEQS" traversetree "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${TREE}" "${MSA}" \
-		|| fail "Traverse Tree died"
-fi
+# if notExists "${TMP_PATH}/${MSA}"; then
+#     # shellcheck disable=SC2086
+# 	# Query DB, Target DB, Results DB, Tree, MSA
+# 	"$MMSEQS" traversetree "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${TREE}" "${MSA}" \
+# 		|| fail "Traverse Tree died"
+# fi
 
-if notExists "${TMP_PATH}/alis.dbtype"; then
-    # shellcheck disable=SC2086
-	# querydb targetdb alndb alnfile
-    "$MMSEQS" convertalis "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${RESULTS}" ${CONVERT_PAR} \
-        || fail "Convert Alignments died"
-fi
+# if notExists "${TMP_PATH}/alis.dbtype"; then
+#     # shellcheck disable=SC2086
+# 	# querydb targetdb alndb alnfile
+#     "$MMSEQS" convertalis "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${RESULTS}" ${CONVERT_PAR} \
+#         || fail "Convert Alignments died"
+# fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     if [ -n "${GREEDY_BEST_HITS}" ]; then
