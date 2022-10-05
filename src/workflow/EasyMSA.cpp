@@ -73,21 +73,8 @@ int easymsa(int argc, const char **argv, const Command &command) {
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("RESULTS", par.filenames.back().c_str());
     par.filenames.pop_back();
-    std::string target = par.filenames.back().c_str();
-    cmd.addVariable("TARGET", target.c_str());
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
-    par.filenames.pop_back();
 
-    if (needTaxonomy || needTaxonomyMapping) {
-        std::vector<std::string> missingFiles = Parameters::findMissingTaxDbFiles(target);
-        if (missingFiles.empty() == false) {
-            Parameters::printTaxDbError(target, missingFiles);
-            EXIT(EXIT_FAILURE);
-        }
-    }
-
-    const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
-    cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
 
