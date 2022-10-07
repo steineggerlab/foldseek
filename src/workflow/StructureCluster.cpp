@@ -178,6 +178,10 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         cmd.addVariable("STEPS", SSTR(par.clusterSteps).c_str());
         cmd.addVariable("THREADSANDCOMPRESS", par.createParameterString(par.threadsandcompression).c_str());
         cmd.addVariable("VERBCOMPRESS", par.createParameterString(par.verbandcompression).c_str());
+        // correct for cascading clustering errors
+        if (par.clusterReassignment) {
+            cmd.addVariable("REASSIGN", "TRUE");
+        }
         int swapedCovMode = Util::swapCoverageMode(par.covMode);
         int tmpCovMode = par.covMode;
         par.covMode = swapedCovMode;

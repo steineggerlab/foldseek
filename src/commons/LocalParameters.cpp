@@ -92,7 +92,7 @@ LocalParameters::LocalParameters() :
     structureclusterworkflow = combineList(structureclusterworkflow, clust);
     structureclusterworkflow.push_back(&PARAM_CASCADED);
     structureclusterworkflow.push_back(&PARAM_CLUSTER_STEPS);
-    //structuresearchworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
+    structureclusterworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
     structureclusterworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structureclusterworkflow.push_back(&PARAM_REUSELATEST);
     structureclusterworkflow.push_back(&PARAM_RUNNER);
@@ -120,6 +120,8 @@ LocalParameters::LocalParameters() :
     maskBfactorThreshold = 0;
     chainNameMode = 0;
     tmAlignFast = 1;
+    gapOpen = 10;
+    gapExtend = 1;
     nsample = 5000;
     maskLowerCaseMode = 1;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S, Tumescheit C, Mirdita M, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2022)");

@@ -7,6 +7,7 @@
 #include "LocalParameters.h"
 #include "PrefilteringIndexReader.h"
 #include "structuresearch.sh.h"
+#include "structureiterativesearch.sh.h"
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
@@ -81,9 +82,50 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-    std::string program = tmpDir + "/structuresearch.sh";
-    FileUtil::writeFile(program, structuresearch_sh, structuresearch_sh_len);
-    cmd.execProgram(program.c_str(), par.filenames);
+    if(par.numIterations > 1){
+        cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
+        par.scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("blosum62.out", "nucleotide.out"));
+        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2profile).c_str());
+        par.pca = 1.4;
+        par.pcb = 1.5;
+        par.scoringMatrixFile = "3di.out";
+        par.seedScoringMatrixFile = "3di.out";
+        par.maskProfile = 0;
+        par.compBiasCorrection = 0;
+        par.evalProfile = 0.1;
+        par.evalThr = 0.1;
+        cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2profile).c_str());
+        cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
+        cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
+        cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
+        double originalEval = par.evalThr;
+        par.evalThr = (par.evalThr < par.evalProfile) ? par.evalThr  : par.evalProfile;
+        for (int i = 0; i < par.numIterations; i++) {
+            if (i == (par.numIterations - 1)) {
+                par.evalThr = originalEval;
+            }
+            par.compBiasCorrectionScale = 0.15;
+            cmd.addVariable(std::string("PREFILTER_PAR_" + SSTR(i)).c_str(),
+                            par.createParameterString(par.prefilter).c_str());
+            par.compBiasCorrectionScale = 0.5;
+            if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
+                cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(), par.createParameterString(par.align).c_str());
+            }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
+                cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(), par.createParameterString(par.tmalign).c_str());
+            }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA){
+                cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(), par.createParameterString(par.structurealign).c_str());
+            }
+        }
+
+
+        std::string program = tmpDir + "/structureiterativesearch.sh";
+        FileUtil::writeFile(program, structureiterativesearch_sh, structureiterativesearch_sh_len);
+        cmd.execProgram(program.c_str(), par.filenames);
+    }else{
+        std::string program = tmpDir + "/structuresearch.sh";
+        FileUtil::writeFile(program, structuresearch_sh, structuresearch_sh_len);
+        cmd.execProgram(program.c_str(), par.filenames);
+    }
 
     // Should never get here
     assert(false);
