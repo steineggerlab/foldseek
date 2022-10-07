@@ -9,107 +9,27 @@
 const float cutoff = 15.0;
 const float INF = std::numeric_limits<float>::infinity(); 
 typedef float* fptr_t;
+typedef float** farrptr_t;
 
 class LDDTcalculator {
 public:
     LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTargetLength);
     ~LDDTcalculator();
 
-    // TODO: get rid of matrix2D struct
-    // Instead, use dynamic float array passed on from structureconvertalis.cpp
-    struct matrix2D {
-        matrix2D(int dim1 = 0, int dim2 = 0) {
-            arr = new float*[dim1]{};
-            for(int i = 0; i < dim1; i++) {
-                arr[i] = new float[dim2]{};
-            }
-            xdim = dim1; ydim = dim2;
-        }
-        ~matrix2D() {
-            for(int i = 0; i < xdim; i++) {
-                delete[] arr[i];
-            }
-            delete[] arr;
-            arr = nullptr;
-            xdim = ydim = 0;
-        }
-        matrix2D(const matrix2D& m1) { // Copy constructor
-            xdim = m1.xdim; ydim = m1.ydim;
-            arr = new float*[xdim]{};
-            for(int i = 0; i < xdim; i++) {
-                arr[i] = new float[ydim]{};
-            }
-            for(int i = 0; i < xdim; i++) {
-                for(int j = 0; j < ydim; j++) {
-                    arr[i][j] = m1(i, j);
-                }
-            }
-        } 
-        matrix2D& operator= (const matrix2D& m1) { // Assignment operator
-            // Self-assignment check
-            if(this == &m1) return *this;
-
-            // If data exists, delete it
-            if (arr) {
-                for(int i = 0; i < xdim; i++) {
-                    delete[] arr[i];
-                }
-                delete[] arr;
-                arr = nullptr;
-            }
-
-            xdim = m1.xdim; ydim = m1.ydim;
-            arr = new float*[xdim]{};
-            for(int i = 0; i < xdim; i++) {
-                arr[i] = new float[ydim]{};
-            }
-            for(int i = 0; i < xdim; i++) {
-                for(int j = 0; j < ydim; j++) {
-                    arr[i][j] = m1(i, j);
-                }
-            }
-            return *this;
-        }
-        float& operator() (int x_idx, int y_idx) {
-            if(x_idx >= xdim || y_idx >= ydim) {
-                exit(1); // TODO: Throw error
-            }
-            return arr[x_idx][y_idx];
-        }
-        float operator() (int x_idx, int y_idx) const {
-            if(x_idx >= xdim || y_idx >= ydim) {
-                exit(1); // TODO: Throw error
-            }
-            return arr[x_idx][y_idx];
-        }
-        float*& operator() (int x_idx) {
-            if(x_idx >= xdim) exit(1);
-            return arr[x_idx];
-        }
-        float* operator() (int x_idx) const {
-            if(x_idx >= xdim) exit(1);
-            return arr[x_idx];
-        }
-        bool isCoordinate() const { return ydim == 3; }
-
-        int xdim, ydim;
-        float** arr;
-    };
-
     struct Grid {
         Grid() {};
-        Grid(matrix2D& m1) {
-            int len = m1.xdim;
+        Grid(farrptr_t& m1, unsigned int queryLength) {
+            int len = queryLength;
             for(int i = 0; i < len; i++) {
                 for(int dim = 0; dim < 3; dim++) {
-                    if(m1(i, dim) < min[dim]) min[dim] = m1(i, dim);
-                    if(m1(i, dim) > max[dim]) max[dim] = m1(i, dim);
+                    if(m1[i][dim] < min[dim]) min[dim] = m1[i][dim];
+                    if(m1[i][dim] > max[dim]) max[dim] = m1[i][dim];
                 }
             }
             for(int i = 0; i < len; i++) {
                 int box_coord[3];
                 for(int dim = 0; dim < 3; dim++) {
-                    box_coord[dim] = (int)((m1(i, dim) - min[dim]) / cutoff);
+                    box_coord[dim] = (int)((m1[i][dim] - min[dim]) / cutoff);
                 }
                 box.insert(std::make_pair(std::make_tuple(box_coord[0], box_coord[1], box_coord[2]), i));
             }
@@ -138,6 +58,32 @@ public:
             }
             avgLddtScore = (double)(sum/(float)scoreLength);
         }
+        // copy constructor
+        LDDTscoreResult(const LDDTscoreResult& r1) {
+            scoreLength = r1.scoreLength;
+            avgLddtScore = r1.avgLddtScore;
+            perCaLddtScore = new float[scoreLength];
+            for(int i = 0; i < scoreLength; i++) {
+                perCaLddtScore[i] = r1.perCaLddtScore[i];
+            }
+        }
+        // assignment operator
+        LDDTscoreResult& operator= (const LDDTscoreResult& r1) {
+            if(this == &r1) return *this;
+            if(perCaLddtScore) {
+                delete[] perCaLddtScore;
+            }
+            scoreLength = r1.scoreLength;
+            avgLddtScore = r1.avgLddtScore;
+            perCaLddtScore = new float[scoreLength];
+            for(int i = 0; i < scoreLength; i++) {
+                perCaLddtScore[i] = r1.perCaLddtScore[i];
+            }
+            return *this;
+        }
+        ~LDDTscoreResult() {
+            if(perCaLddtScore) delete[] perCaLddtScore;
+        }
 
         float *perCaLddtScore = NULL;
         int scoreLength;
@@ -152,11 +98,12 @@ public:
 
 // TODO: encapsulate variables
 // private:
-    int queryStart, targetStart, queryLength, targetLength, alignLength;
+    unsigned int queryStart, targetStart, queryLength, targetLength, alignLength;
+    unsigned int max_QueryLength, max_TargetLength, max_AlignLength;
     fptr_t reduce_score, norm, norm_aligned;
     std::unordered_map<int, int> query_to_align, target_to_align, align_to_query, align_to_target;
     std::string cigar; // backtrace
-    matrix2D query_pos, target_pos, dists_to_score, aligned_dists_to_score, dist_l1, score;
+    farrptr_t query_pos, target_pos, dists_to_score, aligned_dists_to_score, dist_l1, score;
     LDDTcalculator::Grid query_grid;
 };
 
