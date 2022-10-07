@@ -381,6 +381,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false);
         }
         LDDTcalculator *lddtcalculator = NULL;
+        if(needLDDT) {
+            lddtcalculator = new LDDTcalculator(qDbr.sequenceReader->getMaxSeqLen() + 1, tDbr->sequenceReader->getMaxSeqLen() + 1);
+        }
 
         std::string result;
         result.reserve(1024*1024);
@@ -527,11 +530,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 }
                 LDDTcalculator::LDDTscoreResult lddtres;
                 if(needLDDT) {
-                    lddtcalculator = new LDDTcalculator(res.qLen, res.dbLen);
-                    lddtcalculator->initVariables(res.qLen, res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
-                    lddtres = lddtcalculator->computeLDDTScore(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen],
-                                                               targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen],
-                                                               res.qStartPos, res.dbStartPos);
+                    lddtcalculator->initQuery(res.qLen, queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen]);
+                    lddtres = lddtcalculator->computeLDDTScore(res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace), targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen]);
                 }
                 switch (format) {
                     case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: {

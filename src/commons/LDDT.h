@@ -6,54 +6,21 @@
 #ifndef LDDT_H
 #define LDDT_H
 
-#define INF 3.40282e+038 // TODO: More elegant way of handling divide-by-zero
 const float cutoff = 15.0;
-typedef float** table_t;
+const float INF = std::numeric_limits<float>::infinity(); 
+typedef float* fptr_t;
+typedef float** farrptr_t;
 
 class LDDTcalculator {
 public:
-    LDDTcalculator() {}
-    LDDTcalculator(int qLen, int tLen) {
-        queryLength = qLen, targetLength = tLen;
-    }
-    ~LDDTcalculator() {
-        if(reduce_score) delete[] reduce_score;
-        if(query_pos) {
-            for(int i = 0; i < queryLength; i++) {
-                delete[] query_pos[i];
-            }
-            delete[] query_pos;
-        }
-        if(target_pos) {
-            for(int i = 0; i < targetLength; i++) {
-                delete[] target_pos[i];
-            }
-            delete[] target_pos;
-        }
-        if(dists_to_score) {
-            for(int i = 0; i < queryLength; i++) {
-                delete[] dists_to_score[i];
-            }
-            delete[] dists_to_score;
-        }
-        if(aligned_dists_to_score) {
-            for(int i = 0; i < alignLength; i++) {
-                delete[] aligned_dists_to_score[i];
-            }
-            delete[] aligned_dists_to_score;
-        }
-        if(dist_l1) {
-            for(int i = 0; i < alignLength; i++) {
-                delete[] dist_l1[i];
-            }
-            delete[] dist_l1;
-        }
-    }
+    LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTargetLength);
+    ~LDDTcalculator();
 
     struct Grid {
         Grid() {};
-        Grid(table_t& m1, int queryLength) {
-            for(int i = 0; i < queryLength; i++) {
+        Grid(farrptr_t& m1, unsigned int queryLength) {
+            int len = queryLength;
+            for(int i = 0; i < len; i++) {
                 for(int dim = 0; dim < 3; dim++) {
                     if(m1[i][dim] < min[dim]) min[dim] = m1[i][dim];
                     if(m1[i][dim] > max[dim]) max[dim] = m1[i][dim];
@@ -75,7 +42,7 @@ public:
         float min[3] = {INF, INF, INF};
         float max[3] = {-INF, -INF, -INF};
         int num_cells[3];
-        std::multimap<std::tuple<int, int, int>, int> box;
+        std::multimap<std::tuple<int, int, int>, int> box; // bottleneck
     };
 
     struct LDDTscoreResult {
@@ -91,24 +58,53 @@ public:
             }
             avgLddtScore = (double)(sum/(float)scoreLength);
         }
+        // copy constructor
+        LDDTscoreResult(const LDDTscoreResult& r1) {
+            scoreLength = r1.scoreLength;
+            avgLddtScore = r1.avgLddtScore;
+            perCaLddtScore = new float[scoreLength];
+            for(int i = 0; i < scoreLength; i++) {
+                perCaLddtScore[i] = r1.perCaLddtScore[i];
+            }
+        }
+        // assignment operator
+        LDDTscoreResult& operator= (const LDDTscoreResult& r1) {
+            if(this == &r1) return *this;
+            if(perCaLddtScore) {
+                delete[] perCaLddtScore;
+            }
+            scoreLength = r1.scoreLength;
+            avgLddtScore = r1.avgLddtScore;
+            perCaLddtScore = new float[scoreLength];
+            for(int i = 0; i < scoreLength; i++) {
+                perCaLddtScore[i] = r1.perCaLddtScore[i];
+            }
+            return *this;
+        }
+        ~LDDTscoreResult() {
+            if(perCaLddtScore) delete[] perCaLddtScore;
+        }
 
         float *perCaLddtScore = NULL;
         int scoreLength;
         double avgLddtScore;
     };
 
-    void initVariables(unsigned int queryLen, unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace);
-    void construct_hash_tables_align(int align_idx, int query_idx, int target_idx, int cigar_idx);
+    void initQuery(unsigned int queryLen, float *qx, float *qy, float *qz);
+    void construct_hash_tables_align(int align_idx, int query_idx, int target_idx);
     void calculate_distance();
     void compute_scores();
-    LDDTscoreResult computeLDDTScore(float *qx, float *qy, float *qz, float *tx, float *ty, float *tz, int qStartPos, int tStartPos);
+    LDDTscoreResult computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
 
-private:
-    int queryStart, targetStart, queryLength, targetLength, alignLength;
-    float *reduce_score = NULL;
+// TODO: encapsulate variables
+// private:
+    unsigned int queryStart, targetStart, queryLength, targetLength, alignLength;
+    unsigned int max_QueryLength, max_TargetLength, max_AlignLength;
+    fptr_t reduce_score, norm, norm_aligned;
     std::unordered_map<int, int> query_to_align, target_to_align, align_to_query, align_to_target;
     std::string cigar; // backtrace
-    table_t query_pos = NULL, target_pos = NULL, dists_to_score = NULL, aligned_dists_to_score = NULL, dist_l1 = NULL;
+    farrptr_t query_pos, target_pos, dists_to_score, aligned_dists_to_score, dist_l1, score;
+    LDDTcalculator::Grid query_grid;
 };
 
 #endif
