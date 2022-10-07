@@ -8,11 +8,9 @@ float dist(float* arr1, float* arr2) {
     return sqrt(D2);
 }
 
-LDDTcalculator::LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTargetLength) {
-    unsigned int maxAlignLength = std::max(maxQueryLength, maxTargetLength);
-    max_QueryLength = maxQueryLength;
-    max_TargetLength = maxTargetLength;
-    max_AlignLength = maxAlignLength;
+LDDTcalculator::LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
+    : maxQueryLength(maxQueryLength), maxTargetLength(maxTargetLength) {
+    maxAlignLength = std::max(maxQueryLength, maxTargetLength);
 
     query_pos = new fptr_t[maxQueryLength];
     for(unsigned int i = 0; i < maxQueryLength; i++) {
@@ -45,37 +43,37 @@ LDDTcalculator::LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTarg
 
 LDDTcalculator::~LDDTcalculator() {
     if(query_pos) {
-        for(unsigned int i = 0; i < max_QueryLength; i++) {
+        for(unsigned int i = 0; i < maxQueryLength; i++) {
             delete[] query_pos[i];
         }
         delete[] query_pos;
     }
     if(target_pos) {
-        for(unsigned int i = 0; i < max_TargetLength; i++) {
+        for(unsigned int i = 0; i < maxTargetLength; i++) {
             delete[] target_pos[i];
         }
         delete[] target_pos;
     }
     if(dists_to_score) {
-        for(unsigned int i = 0; i < max_QueryLength; i++) {
+        for(unsigned int i = 0; i < maxQueryLength; i++) {
             delete[] dists_to_score[i];
         }
         delete[] dists_to_score;
     }
     if(aligned_dists_to_score) {
-        for(unsigned int i = 0; i < max_AlignLength; i++) {
+        for(unsigned int i = 0; i < maxAlignLength; i++) {
             delete[] aligned_dists_to_score[i];
         }
         delete[] aligned_dists_to_score;
     }
     if(dist_l1) {
-        for(unsigned int i = 0; i < max_AlignLength; i++) {
+        for(unsigned int i = 0; i < maxAlignLength; i++) {
             delete[] dist_l1[i];
         }
         delete[] dist_l1;
     }
     if(score) {
-        for(unsigned int i = 0; i < max_AlignLength; i++) {
+        for(unsigned int i = 0; i < maxAlignLength; i++) {
             delete[] score[i];
         }
         delete[] score;

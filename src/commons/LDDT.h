@@ -26,7 +26,7 @@ public:
                     if(m1[i][dim] > max[dim]) max[dim] = m1[i][dim];
                 }
             }
-            for(int i = 0; i < queryLength; i++) {
+            for(int i = 0; i < (int)queryLength; i++) {
                 int box_coord[3];
                 for(int dim = 0; dim < 3; dim++) {
                     box_coord[dim] = (int)((m1[i][dim] - min[dim]) / cutoff);
@@ -49,7 +49,9 @@ public:
         LDDTscoreResult() {}
         LDDTscoreResult(float *reduce_score, int alignLength) {
             scoreLength = alignLength;
-            if(perCaLddtScore) delete[] perCaLddtScore;
+            if(perCaLddtScore) {
+                delete[] perCaLddtScore;
+            }
             perCaLddtScore = new float[scoreLength];
             float sum = 0.0;
             for(int i = 0; i < scoreLength; i++) {
@@ -58,7 +60,6 @@ public:
             }
             avgLddtScore = (double)(sum/(float)scoreLength);
         }
-        // copy constructor
         LDDTscoreResult(const LDDTscoreResult& r1) {
             scoreLength = r1.scoreLength;
             avgLddtScore = r1.avgLddtScore;
@@ -67,7 +68,6 @@ public:
                 perCaLddtScore[i] = r1.perCaLddtScore[i];
             }
         }
-        // assignment operator
         LDDTscoreResult& operator= (const LDDTscoreResult& r1) {
             if(this == &r1) return *this;
             if(perCaLddtScore) {
@@ -82,10 +82,12 @@ public:
             return *this;
         }
         ~LDDTscoreResult() {
-            if(perCaLddtScore) delete[] perCaLddtScore;
+            if(perCaLddtScore) {
+                delete[] perCaLddtScore;
+            }
         }
 
-        float *perCaLddtScore = NULL;
+        fptr_t perCaLddtScore = NULL;
         int scoreLength;
         double avgLddtScore;
     };
@@ -96,10 +98,9 @@ public:
     void compute_scores();
     LDDTscoreResult computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
 
-// TODO: encapsulate variables
-// private:
+private:
     unsigned int queryStart, targetStart, queryLength, targetLength, alignLength;
-    unsigned int max_QueryLength, max_TargetLength, max_AlignLength;
+    unsigned int maxQueryLength, maxTargetLength, maxAlignLength;
     fptr_t reduce_score, norm, norm_aligned;
     std::unordered_map<int, int> query_to_align, target_to_align, align_to_query, align_to_target;
     std::string cigar; // backtrace
