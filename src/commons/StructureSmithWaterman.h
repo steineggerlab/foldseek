@@ -164,23 +164,13 @@ public:
 
     static float computeCov(unsigned int startPos, unsigned int endPos, unsigned int len);
 
-    static void seq_reverse(int8_t * reverse, const int8_t* seq, int32_t end)	/* end is 0-based alignment ending position */
-    {
-        int32_t start = 0;
-        while (LIKELY(start <= end)) {
-            reverse[start] = seq[end];
-            reverse[end] = seq[start];
-            ++start;
-            --end;
-        }
-    }
-
     int isProfileSearch(){
         return profile->isProfile;
     }
 
     const static unsigned int SUBSTITUTIONMATRIX = 1;
     const static unsigned int PROFILE = 2;
+    const static unsigned int PROFILE_HMM = 3;
     // ssw_align
     const static unsigned int PROFILE_SEQ = 5;
     const static unsigned int PROFILE_PROFILE = 6;
@@ -192,6 +182,25 @@ private:
         simd_int* profile_aa_word;	// 0: none
         simd_int* profile_aa_rev_byte;	// 0: none
         simd_int* profile_aa_rev_word;	// 0: none
+        // gap penalties
+        simd_int* profile_gDelOpen_byte;
+        simd_int* profile_gDelOpen_word;
+        simd_int* profile_gDelClose_byte;
+        simd_int* profile_gDelClose_word;
+        simd_int* profile_gIns_byte;
+        simd_int* profile_gIns_word;
+        simd_int* profile_gDelOpen_rev_byte;
+        simd_int* profile_gDelOpen_rev_word;
+        simd_int* profile_gDelClose_rev_byte;
+        simd_int* profile_gDelClose_rev_word;
+        simd_int* profile_gIns_rev_byte;
+        simd_int* profile_gIns_rev_word;
+        uint8_t* gDelOpen;
+        uint8_t* gDelClose;
+        uint8_t* gIns;
+        uint8_t* gDelOpen_rev;
+        uint8_t* gDelClose_rev;
+        uint8_t* gIns_rev;
         int8_t* query_aa_sequence;
         int8_t* query_aa_rev_sequence;
         simd_int* profile_3di_byte;	// 0: none
@@ -255,6 +264,7 @@ private:
      wight_match > 0, all other weights < 0.
      The returned positions are 0-based.
      */
+    template <const unsigned int type>
     std::pair<alignment_end, alignment_end> sw_sse2_byte (const unsigned char*db_aa_sequence,
                                                           const unsigned char*db_3di_sequence,
                                                           int8_t ref_dir,	// 0: forward ref; 1: reverse ref
@@ -262,6 +272,9 @@ private:
                                                           int32_t query_length,
                                                           const uint8_t gap_open, /* will be used as - */
                                                           const uint8_t gap_extend, /* will be used as - */
+                                                          const simd_int *gap_open_del,
+                                                          const simd_int *gap_close_del,
+                                                          const simd_int *gap_open_ins,
                                                           const simd_int* query_aa_profile_byte,
                                                           const simd_int* query_3di_profile_byte,
                                                           uint8_t terminate,	/* the best alignment score: used to terminate
@@ -270,7 +283,7 @@ private:
                                                      is set to 0, it will not be used */
                                                           uint8_t bias,  /* Shift 0 point to a positive value. */
                                                           int32_t maskLen);
-
+    template <const unsigned int type>
     std::pair<alignment_end, alignment_end> sw_sse2_word (const unsigned char* db_aa_sequence,
                                                           const unsigned char* db_3di_sequence,
                                                           int8_t ref_dir,	// 0: forward ref; 1: reverse ref
@@ -278,6 +291,9 @@ private:
                                                           int32_t query_length,
                                                           const uint8_t gap_open, /* will be used as - */
                                                           const uint8_t gap_extend, /* will be used as - */
+                                                          const simd_int *gap_open_del,
+                                                          const simd_int *gap_close_del,
+                                                          const simd_int *gap_open_ins,
                                                           const simd_int*query_aa_profile_byte,
                                                           const simd_int*query_3di_profile_byte,
                                                           uint16_t terminate,
@@ -287,8 +303,8 @@ private:
                                              const int8_t *query_aa_sequence, const int8_t *query_3di_sequence,
                                              const int8_t * compositionBiasAA, const int8_t * compositionBiasSS,
                                              int32_t db_length, int32_t query_length, int32_t queryStart,
-                                             int32_t score, const uint32_t gap_open,
-                                             const uint32_t gap_extend, int32_t band_width,
+                                             int32_t score, const uint32_t gap_open, const uint32_t gap_extend,
+                                             uint8_t *gDelOpen, uint8_t *gDelClose, uint8_t *gIns, int32_t band_width,
                                              const int8_t *mat_aa, int32_t nAA, const int8_t *mat_3di, int32_t n3Di);
 
     void computerBacktrace(s_profile * query, const unsigned char * db_sequence,
@@ -313,6 +329,9 @@ private:
 
     template <typename T, size_t Elements, const unsigned int type>
     void createQueryProfile(simd_int *profile, const int8_t *query_sequence, const int8_t * composition_bias, const int8_t *mat, const int32_t query_length, const int32_t aaSize, uint8_t bias, const int32_t offset, const int32_t entryLength);
+    
+    template <typename T, size_t Elements>
+    void createGapProfile(simd_int* profile_gDelOpen, simd_int* profile_gDelClose, simd_int* profile_gIns, const uint8_t* gDelOpen, const uint8_t* gDelClose, const uint8_t* gIns,const int32_t query_length, const int32_t offset);
 
     float *tmp_composition_bias;
     short * profile_aa_word_linear_data;
