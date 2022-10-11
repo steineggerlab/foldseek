@@ -6,8 +6,7 @@
 #ifndef LDDT_H
 #define LDDT_H
 
-const float cutoff = 15.0;
-const float INF = std::numeric_limits<float>::infinity(); 
+
 typedef float* fptr_t;
 typedef float** farrptr_t;
 
@@ -99,6 +98,9 @@ public:
     LDDTscoreResult computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
 
 private:
+    static const float cutoff;
+    static const float INF;
+
     unsigned int queryStart, targetStart, queryLength, targetLength, alignLength;
     unsigned int maxQueryLength, maxTargetLength, maxAlignLength;
     fptr_t reduce_score, norm, norm_aligned;
