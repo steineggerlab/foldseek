@@ -45,7 +45,10 @@ public:
     };
 
     struct LDDTscoreResult {
-        LDDTscoreResult() {}
+        LDDTscoreResult() {
+            avgLddtScore = 0.0;
+            scoreLength = 0;
+        }
         LDDTscoreResult(float *reduce_score, int alignLength) {
             scoreLength = alignLength;
             if(perCaLddtScore) {
