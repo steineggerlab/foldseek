@@ -1,4 +1,6 @@
 set(commons_source_files
+        commons/LDDT.h
+        commons/LDDT.cpp
         commons/LocalParameters.h
         commons/LocalParameters.cpp
         commons/StructureUtil.h
