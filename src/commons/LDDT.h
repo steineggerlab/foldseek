@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <cmath>
 #include <map>
+#include <limits>
 
 #ifndef LDDT_H
 #define LDDT_H
