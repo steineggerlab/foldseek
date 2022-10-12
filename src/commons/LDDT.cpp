@@ -1,4 +1,7 @@
 #include "LDDT.h"
+#include <limits>
+const float LDDTcalculator::cutoff = 15.0;
+const float LDDTcalculator::INF = std::numeric_limits<float>::infinity();
 
 float dist(float* arr1, float* arr2) {
     float D2 = 0;
