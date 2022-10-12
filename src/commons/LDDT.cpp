@@ -1,7 +1,4 @@
 #include "LDDT.h"
-#include <limits>
-const float LDDTcalculator::cutoff = 15.0;
-const float LDDTcalculator::INF = std::numeric_limits<float>::infinity();
 
 float dist(float* arr1, float* arr2) {
     float D2 = 0;
@@ -11,31 +8,31 @@ float dist(float* arr1, float* arr2) {
     return sqrt(D2);
 }
 
-LDDTcalculator::LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
+LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
     : maxQueryLength(maxQueryLength), maxTargetLength(maxTargetLength) {
     maxAlignLength = std::max(maxQueryLength, maxTargetLength);
 
-    query_pos = new fptr_t[maxQueryLength];
+    query_pos = new float*[maxQueryLength];
     for(unsigned int i = 0; i < maxQueryLength; i++) {
         query_pos[i] = new float[3];
     }
-    target_pos = new fptr_t[maxTargetLength];
+    target_pos = new float*[maxTargetLength];
     for(unsigned int i = 0; i < maxTargetLength; i++) {
         target_pos[i] = new float[3];
     }    
-    dists_to_score = new fptr_t[maxQueryLength];
+    dists_to_score = new float*[maxQueryLength];
     for(unsigned int i = 0; i < maxQueryLength; i++) {
         dists_to_score[i] = new float[maxQueryLength];
     }
-    aligned_dists_to_score = new fptr_t[maxAlignLength];
+    aligned_dists_to_score = new float*[maxAlignLength];
     for(unsigned int i = 0; i < maxAlignLength; i++) {
         aligned_dists_to_score[i] = new float[maxAlignLength];
     }
-    dist_l1 = new fptr_t[maxAlignLength];
+    dist_l1 = new float*[maxAlignLength];
     for(unsigned int i = 0; i < maxAlignLength; i++) {
         dist_l1[i] = new float[maxAlignLength];
     }
-    score = new fptr_t[maxAlignLength];
+    score = new float*[maxAlignLength];
     for(unsigned int i = 0; i < maxAlignLength; i++) {
         score[i] = new float[maxAlignLength];
     }
@@ -44,7 +41,7 @@ LDDTcalculator::LDDTcalculator(unsigned int maxQueryLength, unsigned int maxTarg
     norm_aligned = new float[maxAlignLength];
 }
 
-LDDTcalculator::~LDDTcalculator() {
+LDDTCalculator::~LDDTCalculator() {
     if(query_pos) {
         for(unsigned int i = 0; i < maxQueryLength; i++) {
             delete[] query_pos[i];
@@ -81,12 +78,18 @@ LDDTcalculator::~LDDTcalculator() {
         }
         delete[] score;
     }
-    if(reduce_score) delete[] reduce_score;
-    if(norm) delete[] norm;
-    if(norm_aligned) delete[] norm_aligned;
+    if(reduce_score) {
+        delete[] reduce_score;
+    }
+    if(norm) {
+        delete[] norm;
+    }
+    if(norm_aligned) {
+        delete[] norm_aligned;
+    }
 }
 
-void LDDTcalculator::initQuery(unsigned int queryLen, float *qx, float *qy, float *qz) {
+void LDDTCalculator::initQuery(unsigned int queryLen, float *qx, float *qy, float *qz) {
     queryLength = queryLen;
     for(unsigned int i = 0; i < queryLength; i++) {
         query_pos[i][0] = qx[i];
@@ -96,23 +99,31 @@ void LDDTcalculator::initQuery(unsigned int queryLen, float *qx, float *qy, floa
     query_grid = Grid(query_pos, queryLength);
 }
 
-LDDTcalculator::LDDTscoreResult LDDTcalculator::computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz) {
-    targetLength = targetLen, queryStart = qStartPos, targetStart = tStartPos, cigar = backtrace;
+LDDTCalculator::LDDTScoreResult LDDTCalculator::computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz) {
+    targetLength = targetLen; 
+    queryStart = qStartPos; 
+    targetStart = tStartPos; 
+    cigar = backtrace;
+
     for(unsigned int i = 0; i < targetLength; i++) {
         target_pos[i][0] = tx[i];
         target_pos[i][1] = ty[i];
         target_pos[i][2] = tz[i];
     }
 
-    construct_hash_tables_align(0, qStartPos, tStartPos);
-    calculate_distance();
-    compute_scores();
-    return LDDTscoreResult(reduce_score, alignLength);
+    constructAlignHashes(0, qStartPos, tStartPos);
+    calculateDistance();
+    computeScores();
+    return LDDTScoreResult(reduce_score, alignLength);
 }
 
-void LDDTcalculator::construct_hash_tables_align(int align_idx, int query_idx, int target_idx) {
-    for(int i = 0; i < query_idx; i++) query_to_align[i] = -1;
-    for(int i = 0; i < target_idx; i++) target_to_align[i] = -1;
+void LDDTCalculator::constructAlignHashes(int align_idx, int query_idx, int target_idx) {
+    for(int i = 0; i < query_idx; i++) {
+        query_to_align[i] = -1;
+    }
+    for(int i = 0; i < target_idx; i++) {
+        target_to_align[i] = -1;
+    }
     for(std::size_t i = 0; i < cigar.length(); i++) {
         if(cigar[i] == 'M') {
             align_to_query[align_idx] = query_idx; query_to_align[query_idx] = align_idx;
@@ -126,13 +137,17 @@ void LDDTcalculator::construct_hash_tables_align(int align_idx, int query_idx, i
             query_idx++;
         }
     }
-    for(; query_idx < (int)queryLength; query_idx++) query_to_align[query_idx] = -1;
-    for(; target_idx < (int)targetLength; target_idx++) target_to_align[target_idx] = -1;
+    for(; query_idx < (int)queryLength; query_idx++) {
+        query_to_align[query_idx] = -1;
+    }
+    for(; target_idx < (int)targetLength; target_idx++) {
+        target_to_align[target_idx] = -1;
+    }
 
     alignLength = align_idx;
 }
 
-void LDDTcalculator::calculate_distance() {
+void LDDTCalculator::calculateDistance() {
     // Directions
     const int DIR = 14;
     int dx[DIR] = {0,1,1, 1,1,1, 1, 1, 1, 1,0,0, 0,0};
@@ -166,15 +181,17 @@ void LDDTcalculator::calculate_distance() {
                 std::pair<box_iterator, box_iterator> box_members = query_grid.box.equal_range(std::make_tuple(i, j, k));
                 for(box_iterator it = box_members.first; it != box_members.second; it++) { // it->second contains query_idx corresponding to a "point"
                     for(box_iterator it2 = it; it2 != box_members.second; it2++) {
-                        int query_idx1 = it->second; int query_idx2 = it2->second;
+                        int query_idx1 = it->second; 
+                        int query_idx2 = it2->second;
                         if(query_idx1 == query_idx2) continue; // no self-interaction
                         float distance = dist(query_pos[query_idx1], query_pos[query_idx2]);
-                        bool isClose = (distance < cutoff);
+                        bool isClose = (distance < CUTOFF);
 
                         dists_to_score[query_idx1][query_idx2] = isClose;
                         dists_to_score[query_idx2][query_idx1] = isClose;
 
-                        int align_idx1 = query_to_align[query_idx1]; int align_idx2 = query_to_align[query_idx2]; 
+                        int align_idx1 = query_to_align[query_idx1]; 
+                        int align_idx2 = query_to_align[query_idx2]; 
                         if(align_idx1 == -1 || align_idx2 == -1) continue; // not aligned
                         aligned_dists_to_score[align_idx1][align_idx2] = isClose;
                         aligned_dists_to_score[align_idx2][align_idx1] = isClose;
@@ -190,15 +207,17 @@ void LDDTcalculator::calculate_distance() {
                     std::pair<box_iterator, box_iterator> boxPrime_members = query_grid.box.equal_range(std::make_tuple(i+dx[dir], j+dy[dir], k+dz[dir]));
                     for(box_iterator it = box_members.first; it != box_members.second; it++) {
                         for(box_iterator it2 = boxPrime_members.first; it2 != boxPrime_members.second; it2++) {
-                            int query_idx1 = it->second; int query_idx2 = it2->second;
+                            int query_idx1 = it->second; 
+                            int query_idx2 = it2->second;
                             if(query_idx1 == query_idx2) continue; // no self-interaction
                             float distance = dist(query_pos[query_idx1], query_pos[query_idx2]);
-                            bool isClose = (distance < cutoff);
+                            bool isClose = (distance < CUTOFF);
 
                             dists_to_score[query_idx1][query_idx2] = isClose;
                             dists_to_score[query_idx2][query_idx1] = isClose;
 
-                            int align_idx1 = query_to_align[query_idx1]; int align_idx2 = query_to_align[query_idx2]; 
+                            int align_idx1 = query_to_align[query_idx1]; 
+                            int align_idx2 = query_to_align[query_idx2]; 
                             if(align_idx1 == -1 || align_idx2 == -1) continue; // not aligned
                             aligned_dists_to_score[align_idx1][align_idx2] = isClose;
                             aligned_dists_to_score[align_idx2][align_idx1] = isClose;
@@ -215,7 +234,7 @@ void LDDTcalculator::calculate_distance() {
     }
 }
 
-void LDDTcalculator::compute_scores() {
+void LDDTCalculator::computeScores() {
     for(unsigned int i = 0; i < queryLength; i++) {
         norm[i] = 0;
     }
