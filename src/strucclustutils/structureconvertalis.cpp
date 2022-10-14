@@ -380,9 +380,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             tmaligner = new TMaligner(
                     std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false);
         }
-        LDDTcalculator *lddtcalculator = NULL;
+        LDDTCalculator *lddtcalculator = NULL;
         if(needLDDT) {
-            lddtcalculator = new LDDTcalculator(qDbr.sequenceReader->getMaxSeqLen() + 1, tDbr->sequenceReader->getMaxSeqLen() + 1);
+            lddtcalculator = new LDDTCalculator(qDbr.sequenceReader->getMaxSeqLen() + 1, tDbr->sequenceReader->getMaxSeqLen() + 1);
         }
 
         std::string result;
@@ -528,7 +528,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                       res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
                 }
-                LDDTcalculator::LDDTscoreResult lddtres;
+                LDDTCalculator::LDDTScoreResult lddtres;
                 if(needLDDT) {
                     lddtcalculator->initQuery(res.qLen, queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen]);
                     lddtres = lddtcalculator->computeLDDTScore(res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace), targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen]);
