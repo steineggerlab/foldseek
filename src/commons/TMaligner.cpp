@@ -88,7 +88,7 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
     double TM = detailed_search_standard(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen,
                                          invmap, t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0, mem);
     TM = std::max(TM, TMalnScore);
-    return TMaligner::TMscoreResult(u, t, TM);
+    return TMaligner::TMscoreResult(u, t, TM, rmsd0);
 }
 
 void TMaligner::initQuery(float *x, float *y, float *z, char * querySeq, unsigned int queryLen){

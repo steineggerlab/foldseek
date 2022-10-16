@@ -756,6 +756,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                     case LocalParameters::OUTFMT_ALNTMSCORE:
                                         result.append(SSTR(tmres.tmscore));
                                         break;
+                                    case LocalParameters::OUTFMT_RMSD:
+                                        result.append(SSTR(tmres.rmsd));
+                                        break;
                                     case LocalParameters::OUTFMT_LDDT:
                                         // TODO: make SSTR_approx that outputs %2f, not %3f
                                         result.append(SSTR(lddtres.avgLddtScore));
