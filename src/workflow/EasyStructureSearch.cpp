@@ -66,8 +66,9 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         bool needCA = false;
         bool needTMalign = false;
         bool needLDDT = false;
+        bool needDali = false;
         LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                    needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT);
+                                    needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT, needDali);
     }
 
     if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM || par.greedyBestHits) {

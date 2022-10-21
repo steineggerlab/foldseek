@@ -20,6 +20,7 @@
 #include "result_viz_prelude_fs.html.zst.h"
 #include "TMaligner.h"
 #include "LDDT.h"
+#include "DaliZScore.h"
 #include <map>
 
 #ifdef OPENMP
@@ -178,9 +179,10 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needTaxonomyMapping = false;
     bool needTMaligner = false;
     bool needLDDT = false;
+    bool needDali = false;
 
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
+                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT, needDali);
 
 
 
@@ -384,6 +386,10 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         if(needLDDT) {
             lddtcalculator = new LDDTCalculator(qDbr.sequenceReader->getMaxSeqLen() + 1, tDbr->sequenceReader->getMaxSeqLen() + 1);
         }
+        DaliCalculator *dalicalculator = NULL;
+        if(needDali) {
+            dalicalculator = new DaliCalculator(qDbr.sequenceReader->getMaxSeqLen() + 1, tDbr->sequenceReader->getMaxSeqLen() + 1);
+        }
 
         std::string result;
         result.reserve(1024*1024);
@@ -532,6 +538,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 if(needLDDT) {
                     lddtcalculator->initQuery(res.qLen, queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen]);
                     lddtres = lddtcalculator->computeLDDTScore(res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace), targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen]);
+                }
+                DaliCalculator::DaliScoreResult dalires;
+                if(needDali) {
+                    dalicalculator->initQuery(res.qLen, queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen]);
+                    dalires = dalicalculator->computeDaliScore(res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace), targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen]);
                 }
                 switch (format) {
                     case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: {
@@ -770,6 +781,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                         }
                                         result.append(SSTR(lddtres.perCaLddtScore[lddtres.scoreLength - 1]));
                                         break;
+                                    case LocalParameters::OUTFMT_DALI:
+                                        result.append(SSTR(dalires.daliZScore));
+                                        break;
                                 }
                                 if (i < outcodes.size() - 1) {
                                     result.push_back('\t');
@@ -901,6 +915,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         }
         if(lddtcalculator != NULL) {
             delete lddtcalculator;
+        }
+        if(dalicalculator != NULL) {
+            delete dalicalculator;
         }
     }
     if (format == Parameters::FORMAT_ALIGNMENT_HTML) {

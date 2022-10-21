@@ -44,6 +44,7 @@ public:
     static const int OUTFMT_LDDT = 45;
     static const int OUTFMT_LDDT_FULL = 46;
     static const int OUTFMT_RMSD = 47;
+    static const int OUTFMT_DALI = 48;
 
 
     static const unsigned int INDEX_DB_CA_KEY = 500;
@@ -74,7 +75,7 @@ public:
     int nsample;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT);
+                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT, bool &needDali);
 
 
 private:
