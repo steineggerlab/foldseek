@@ -17,14 +17,16 @@ public:
 
     struct TMscoreResult{
         TMscoreResult(){}
-        TMscoreResult(float u[3][3], float t[3], double tmscore) {
+        TMscoreResult(float u[3][3], float t[3], double tmscore, double rmsd) {
             memcpy(this->u,u,3*3*sizeof(float));
             memcpy(this->t,t,3*sizeof(float));
             this->tmscore = tmscore;
+            this->rmsd = rmsd;
         }
         float u[3][3];
         float t[3];
         double tmscore;
+        double rmsd;
     };
     void initQuery(float * x, float * y, float * z, char * querySeq, unsigned int queryLen);
     TMscoreResult computeTMscore(float *x, float *y, float *z,
