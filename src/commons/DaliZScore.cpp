@@ -1,5 +1,6 @@
 #include "DaliZScore.h"
-float dist(float* arr1, float* arr2) {
+
+float DaliCalculator::dist(float* arr1, float* arr2) {
     float D2 = 0;
     for(int i = 0; i < 3; i++) {
         D2 += (arr1[i] - arr2[i]) * (arr1[i] - arr2[i]);
@@ -25,15 +26,15 @@ DaliCalculator::DaliCalculator(unsigned int maxQueryLength, unsigned int maxTarg
 
     query_distmat = new float*[maxQueryLength];
     for(unsigned int i = 0; i < maxQueryLength; i++) {
-        query_distmat[i] = new float[i];
+        query_distmat[i] = new float[maxQueryLength];
     }
     target_distmat = new float*[maxTargetLength];
     for(unsigned int i = 0; i < maxTargetLength; i++) {
-        target_distmat[i] = new float[i];
+        target_distmat[i] = new float[maxTargetLength];
     }
 
     dali = new float[maxQueryLength];
-    for(unsigned int i = 0; i < maxTargetLength; i++) {
+    for(unsigned int i = 0; i < maxQueryLength; i++) {
         dali[i] = 0.0;
     }
 }
@@ -84,8 +85,12 @@ void DaliCalculator::initQuery(unsigned int queryLen, float *qx, float *qy, floa
 
     for(unsigned int i = 0; i < queryLength; i++) {
         for(unsigned int j = 0; j < queryLength; j++) {
-            query_distmat[i][j] = dist(query_pos[i], query_pos[j]);
+            query_distmat[i][j] = DaliCalculator::dist(query_pos[i], query_pos[j]);
         }
+    }
+
+    for(unsigned int i = 0; i < queryLength; i++) {
+        dali[i] = 0.0;
     }
 }
 
@@ -118,7 +123,7 @@ DaliCalculator::DaliScoreResult DaliCalculator::computeDaliScore(unsigned int ta
 
     for(unsigned int i = 0; i < targetLength; i++) {
         for(unsigned int j = 0; j < targetLength; j++) {
-            target_distmat[i][j] = dist(target_pos[i], target_pos[j]);
+            target_distmat[i][j] = DaliCalculator::dist(target_pos[i], target_pos[j]);
         }
     }
 
@@ -130,7 +135,7 @@ DaliCalculator::DaliScoreResult DaliCalculator::computeDaliScore(unsigned int ta
         int targetIndex = align_to_target[i];
         for(unsigned int j = 0; j < alignLength; j++) {
             if(i == j) {
-                dali[i] += DALI_THETA_E;
+                dali[queryIndex] += DALI_THETA_E;
                 continue;
             }
             int queryIndex2 = align_to_query[j];
@@ -140,7 +145,7 @@ DaliCalculator::DaliScoreResult DaliCalculator::computeDaliScore(unsigned int ta
             float dist2 = target_distmat[targetIndex][targetIndex2];
             float distAverage = (dist1 + dist2) / 2.0;
 
-            dali[i] += (DALI_THETA_E - fabs(dist1-dist2)/distAverage) * exp(-distAverage*distAverage/DALI_ALPHA);
+            dali[queryIndex] += (DALI_THETA_E - fabs(dist1-dist2)/distAverage) * exp(-distAverage*distAverage/DALI_ALPHA);
         }
         daliScore += dali[queryIndex];
         if(dali[queryIndex] < 0) {
@@ -155,7 +160,7 @@ DaliCalculator::DaliScoreResult DaliCalculator::computeDaliScore(unsigned int ta
     }
     float mean = DALI_C1 + DALI_C2*L + DALI_C3*L*L + DALI_C4*L*L*L;
     if(numAtomsEffective > DALI_LMAX) {
-        mean += numAtomsEffective - L;
+        mean += (numAtomsEffective - L);
     }
     float sigma = 0.50 * mean;
 

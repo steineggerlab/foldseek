@@ -1,12 +1,11 @@
-// #include <iostream>
+#ifndef LDDT_H
+#define LDDT_H
+
 #include <string>
 #include <unordered_map>
 #include <cmath>
 #include <map>
 #include <limits>
-
-#ifndef LDDT_H
-#define LDDT_H
 
 class LDDTCalculator {
 public:
@@ -95,6 +94,7 @@ public:
         double avgLddtScore;
     };
 
+    float dist(float* arr1, float* arr2);
     void initQuery(unsigned int queryLen, float *qx, float *qy, float *qz);
     void constructAlignHashes(int align_idx, int query_idx, int target_idx);
     void calculateDistance();

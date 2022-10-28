@@ -1,6 +1,6 @@
 #include "LDDT.h"
 
-float dist(float* arr1, float* arr2) {
+float LDDTCalculator::dist(float* arr1, float* arr2) {
     float D2 = 0;
     for(int i = 0; i < 3; i++) {
         D2 += (arr1[i] - arr2[i]) * (arr1[i] - arr2[i]);

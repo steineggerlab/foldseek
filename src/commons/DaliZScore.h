@@ -1,8 +1,10 @@
-#include <algorithm>
-#include <cmath>
-
 #ifndef DALI_Z_H
 #define DALI_Z_H
+
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <iostream> // for debug
 
 class DaliCalculator {
 public:
@@ -28,6 +30,7 @@ public:
         float daliZScore; 
     };
 
+    float dist(float* arr1, float* arr2);
     void initQuery(unsigned int queryLen, float *qx, float *qy, float *qz);
     void constructAlignHashes(int align_idx, int query_idx, int target_idx);
     DaliScoreResult computeDaliScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
@@ -35,7 +38,7 @@ public:
 private:
     unsigned int queryStart, targetStart, queryLength, targetLength, alignLength;
     unsigned int maxQueryLength, maxTargetLength, maxAlignLength;
-    float **query_pos, **target_pos, **query_distmat, **target_distmat; // distmat1, distmat2
+    float **query_pos, **target_pos, **query_distmat, **target_distmat;
     float *align_to_query, *align_to_target, *dali;
     std::string cigar; // backtrace
 };
