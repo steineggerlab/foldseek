@@ -208,7 +208,7 @@ typedef struct __kstring_t {
 			seq->seq.s[seq->seq.l++] = c; /* this is safe: we always have enough space for 1 char */ \
 			ks_getuntil2(ks, KS_SEP_LINE, &seq->seq, 0, 1); /* read the rest of the line */ \
 		} \
-		seq->newlineCount = ks->newline; \
+		seq->multiline = (ks->newline > 1); \
         if (c == '>' || c == '@') {  /* the first header char has been read */ \
 		    seq->last_char = c; \
         } \
@@ -238,7 +238,7 @@ typedef struct __kstring_t {
 		int last_char;							\
 		size_t headerOffset;                    \
 		size_t sequenceOffset;                  \
-		int newlineCount;                       \
+		bool multiline;                         \
 		kstream_t *f;							\
 	} kseq_t;
 

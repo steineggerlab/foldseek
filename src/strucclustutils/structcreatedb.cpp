@@ -264,7 +264,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             EXIT(EXIT_FAILURE);
 #endif
         } else if (Util::endsWith(".tar", filenames[i])) {
-            if (mtar_open(&tar, filenames[i].c_str(), "r") != MTAR_ESUCCESS) {
+            if (mtar_open(&tar, filenames[i].c_str()) != MTAR_ESUCCESS) {
                 Debug(Debug::ERROR) << "Cannot open file " << filenames[i] << "\n";
                 EXIT(EXIT_FAILURE);
             }

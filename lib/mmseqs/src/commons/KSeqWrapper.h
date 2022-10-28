@@ -15,7 +15,7 @@ public:
         kstring_t qual;
         size_t headerOffset;
         size_t sequenceOffset;
-        int newlineCount;
+        bool multiline;
     } entry;
 
     enum kseq_type {

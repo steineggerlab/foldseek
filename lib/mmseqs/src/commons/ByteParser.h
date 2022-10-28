@@ -39,7 +39,6 @@ public:
         }
         
         char* rest;
-        errno = 0;
         uint64_t size = strtoull(digitsString.c_str(), &rest, 10);
         if ((rest != digitsString.c_str() && *rest != '\0') || errno == ERANGE) {
             // conversion to uint64_t failed
