@@ -14,18 +14,19 @@ add_library(foldseek-framework
         ${workflow_source_files})
 
 mmseqs_setup_derived_target(foldseek-framework)
+target_link_libraries(foldseek-framework gemmiwrapper 3di pulchra kerasify tmalign)
+
+if(HAVE_GCS)
+        find_package(google_cloud_cpp_storage REQUIRED)
+        target_link_libraries(foldseek-framework google-cloud-cpp::storage)
+endif()
 
 add_executable(foldseek
         LocalCommandDeclarations.h
         foldseek.cpp)
 
 mmseqs_setup_derived_target(foldseek)
-target_link_libraries(foldseek version gemmiwrapper 3di pulchra kerasify tmalign foldseek-framework)
-
-if(HAVE_GCS)
-        find_package(google_cloud_cpp_storage REQUIRED)
-        target_link_libraries(foldseek google-cloud-cpp::storage)
-endif()
+target_link_libraries(foldseek version foldseek-framework)
 
 add_dependencies(foldseek local-generated)
 
