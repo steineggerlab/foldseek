@@ -310,7 +310,11 @@ int createdb(int argc, const char **argv, const Command& command) {
     torsiondbw.open();
     DBWriter hdbw((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
     hdbw.open();
-    DBWriter cadbw((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA_F16);
+    int caDbtype = LocalParameters::DBTYPE_CA_ALPHA;
+    if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_HALF) {
+        caDbtype = LocalParameters::DBTYPE_CA_ALPHA_F16;
+    }
+    DBWriter cadbw((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, caDbtype);
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
