@@ -9,7 +9,7 @@
 #include "StructureUtil.h"
 #include "StructureSmithWaterman.h"
 #include "TMaligner.h"
-
+#include "Coordinate16.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -72,8 +72,6 @@ int tmalign(int argc, const char **argv, const Command& command) {
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
     dbw.open();
 
-
-
     Debug::Progress progress(resultReader.getSize());
 #pragma omp parallel
     {
@@ -87,6 +85,8 @@ int tmalign(int argc, const char **argv, const Command& command) {
         std::string backtrace;
         std::string resultBuffer;
         resultBuffer.reserve(1024*1024);
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
 
         char buffer[1024+32768];
 #pragma omp for schedule(dynamic, 1)
@@ -98,7 +98,12 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
-                float *qdata = (float *) qcadbr.sequenceReader->getData(queryId, thread_idx);
+                char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
+                float* qdata = (float*)qcadata;
+                if (qcadbr.getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                    qcoords.read(qcadata, queryLen);
+                    qdata = qcoords.getBuffer();
+                }
                 tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], querySeq, queryLen);
 
                 int passedNum = 0;
@@ -121,9 +126,15 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     }
                     char * targetSeq = tdbr->sequenceReader->getData(targetId, thread_idx);
                     int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
-                    float * tdata = (float*) tcadbr->sequenceReader->getData(targetId, thread_idx);
                     if(Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)==false){
                         continue;
+                    }
+
+                    char *tcadata = tcadbr->sequenceReader->getData(targetId, thread_idx);
+                    float* tdata = (float*)tcadata;
+                    if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                        tcoords.read(tcadata, targetLen);
+                        tdata = tcoords.getBuffer();
                     }
 
                     // align here

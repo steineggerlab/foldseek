@@ -18,8 +18,10 @@ LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 void updateValdiation(){
     DbValidator::allDb.push_back(LocalParameters::DBTYPE_CA_ALPHA);
+    DbValidator::allDb.push_back(LocalParameters::DBTYPE_CA_ALPHA_F16);
     DbValidator::allDb.push_back(LocalParameters::DBTYPE_TMSCORE);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_CA_ALPHA);
+    DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_CA_ALPHA_F16);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_TMSCORE);
 }
 

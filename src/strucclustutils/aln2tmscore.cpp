@@ -11,6 +11,7 @@
 #include "GemmiWrapper.h"
 #include "tmalign/TMalign.h"
 #include "TMaligner.h"
+#include "Coordinate16.h"
 #include <iostream>
 #include <dirent.h>
 
@@ -61,6 +62,9 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         results.reserve(300);
         std::string resultsStr;
         TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false);
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
+
 #pragma omp for schedule(dynamic, 1000)
         for (size_t i = 0; i < alndbr.getSize(); i++) {
             progress.updateProgress();
@@ -70,7 +74,12 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
 
             unsigned int queryId = qdbr.getId(queryKey);
             int queryLen = static_cast<int>((qdbr.getEntryLen(queryId)-1)/(3*sizeof(float)));
-            float *qdata = (float *) qdbr.getData(queryId, thread_idx);
+            char *qcadata = qdbr.getData(queryId, thread_idx);
+            float* qdata = (float*)qcadata;
+            if (qdbr.getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                qcoords.read(qcadata, queryLen);
+                qdata = qcoords.getBuffer();
+            }
             tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], NULL, queryLen);
 
             for (size_t j = 0; j < results.size(); j++) {
@@ -83,8 +92,12 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 const unsigned int dbKey = res.dbKey;
                 unsigned int targetId = tdbr->getId(dbKey);
                 int targetLen = static_cast<int>((tdbr->getEntryLen(targetId)-1)/(3*sizeof(float)));
-                float * tdata = (float*) tdbr->getData(targetId, thread_idx);
-
+                char *tcadata = tdbr->getData(targetId, thread_idx);
+                float* tdata = (float*)tcadata;
+                if (tdbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                    tcoords.read(tcadata, targetLen);
+                    tdata = tcoords.getBuffer();
+                }
 
                 // Matching residue index collection
                 TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen, res.qStartPos,

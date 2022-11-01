@@ -52,7 +52,7 @@ int structureto3didescriptor(int argc, const char **argv, const Command& command
     Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
     SORT_PARALLEL(filenames.begin(), filenames.end());
 
-    DBWriter vec3di((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
+    DBWriter vec3di((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_GENERIC_DB);
     vec3di.open();
 
     SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);

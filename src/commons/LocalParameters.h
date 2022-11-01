@@ -27,6 +27,7 @@ public:
     }
 
     static const int DBTYPE_CA_ALPHA;
+    static const int DBTYPE_CA_ALPHA_F16;
     static const int DBTYPE_TMSCORE;
 
     static const int ALIGNMENT_TYPE_3DI = 0;
@@ -45,6 +46,8 @@ public:
     static const int OUTFMT_LDDT_FULL = 46;
     static const int OUTFMT_RMSD = 47;
 
+    static const int COORD_STORE_MODE_CA_FLOAT = 1;
+    static const int COORD_STORE_MODE_CA_HALF  = 2;
 
     static const unsigned int INDEX_DB_CA_KEY = 500;
 
@@ -65,6 +68,7 @@ public:
     PARAMETER(PARAM_CHAIN_NAME_MODE)
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_N_SAMPLE)
+    PARAMETER(PARAM_COORD_STORE_MODE)
 
     float tmScoreThr;
     float maskBfactorThreshold;
@@ -72,6 +76,7 @@ public:
     int chainNameMode;
     int tmAlignFast;
     int nsample;
+    int coordStoreMode;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT);
