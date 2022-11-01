@@ -5,7 +5,7 @@
 ## Steps to Reproduce (for bugs)
 Please make sure to execute the reproduction steps with newly recreated and empty tmp folders.
 
-## Spacepharer Output (for bugs)
+## Foldssek Output (for bugs)
 Please make sure to also post the complete output of Spacepharer. You can use gist.github.com for large output.
 
 ## Context

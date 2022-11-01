@@ -53,6 +53,25 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     profile->profile_3di_word = (simd_int*)mem_align(ALIGN_INT, aaSize * segSize * sizeof(simd_int));
     profile->profile_3di_rev_byte = (simd_int*)mem_align(ALIGN_INT, aaSize * segSize * sizeof(simd_int));
     profile->profile_3di_rev_word = (simd_int*)mem_align(ALIGN_INT, aaSize * segSize * sizeof(simd_int));
+    // gap penalties
+    profile->profile_gDelOpen_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gDelOpen_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gDelClose_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gDelClose_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gIns_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gIns_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gDelOpen_rev_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gDelOpen_rev_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gDelClose_rev_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gDelClose_rev_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gIns_rev_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->profile_gIns_rev_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
+    profile->gDelOpen = new uint8_t[maxSequenceLength];
+    profile->gDelClose = new uint8_t[maxSequenceLength];
+    profile->gDelOpen_rev = new uint8_t[maxSequenceLength];
+    profile->gDelClose_rev = new uint8_t[maxSequenceLength];
+    profile->gIns_rev = new uint8_t[maxSequenceLength];
+    // remaining
     profile->query_aa_rev_sequence = new int8_t[maxSequenceLength];
     profile->query_aa_sequence     = new int8_t[maxSequenceLength];
     profile->query_3di_rev_sequence = new int8_t[maxSequenceLength];
@@ -102,6 +121,23 @@ StructureSmithWaterman::~StructureSmithWaterman(){
     free(profile->profile_3di_word);
     free(profile->profile_3di_rev_byte);
     free(profile->profile_3di_rev_word);
+    free(profile->profile_gDelOpen_byte);
+    free(profile->profile_gDelOpen_word);
+    free(profile->profile_gDelClose_byte);
+    free(profile->profile_gDelClose_word);
+    free(profile->profile_gIns_byte);
+    free(profile->profile_gIns_word);
+    free(profile->profile_gDelOpen_rev_byte);
+    free(profile->profile_gDelOpen_rev_word);
+    free(profile->profile_gDelClose_rev_byte);
+    free(profile->profile_gDelClose_rev_word);
+    free(profile->profile_gIns_rev_byte);
+    free(profile->profile_gIns_rev_word);
+    delete[] profile->gDelOpen;
+    delete[] profile->gDelClose;
+    delete[] profile->gDelOpen_rev;
+    delete[] profile->gDelClose_rev;
+    delete[] profile->gIns_rev;
     delete [] profile->query_aa_rev_sequence;
     delete [] profile->query_aa_sequence;
     delete [] profile->query_3di_rev_sequence;
@@ -149,9 +185,9 @@ void StructureSmithWaterman::createQueryProfile(simd_int *profile, const int8_t 
                     *t++ = ( j >= query_length) ? bias : mat[nt * aaSize + query_sequence[j + offset ]] + composition_bias[j + offset] + bias; // mat[nt][q[j]] mat eq 20*20
 //					printf("(%1d, %1d) ", query_sequence[j ], *(t-1));
 
-                } if(type == PROFILE) {
+                } if(type == PROFILE || type == PROFILE_HMM) {
                     // profile starts by 0
-                    *t++ = (j >= query_length) ? bias : mat[nt * entryLength + j + (offset-1)] + bias;
+                    *t++ = (j >= query_length) ? bias : mat[nt * entryLength + j + offset] + bias;
 //					printf("(%1d, %1d) ", j , *(t-1));
                 }
                 j += segLen;
@@ -163,6 +199,25 @@ void StructureSmithWaterman::createQueryProfile(simd_int *profile, const int8_t 
 //	printf("\n");
 //	std::flush(std::cout);
 
+}
+
+template <typename T, size_t Elements>
+void StructureSmithWaterman::createGapProfile(simd_int* profile_gDelOpen, simd_int* profile_gDelClose, simd_int* profile_gIns,
+                                              const uint8_t* gDelOpen, const uint8_t* gDelClose, const uint8_t* gIns,
+                                              const int32_t query_length, const int32_t offset) {
+    const int32_t segLen = (query_length - offset + Elements - 1) / Elements;
+    T* delOpen = (T*) profile_gDelOpen;
+    T* delClose = (T*) profile_gDelClose;
+    T* ins = (T*) profile_gIns;
+    for (int32_t i = 0; LIKELY(i < segLen); ++i) {
+        int32_t j = i;
+        for (size_t segNum = 0; LIKELY(segNum < Elements); ++segNum) {
+            *delOpen++ = (j < query_length) ? gDelOpen[j + offset + 1] : 0; // offset + 1 because it calculates F for the next column
+            *delClose++ = (j < query_length) ? gDelClose[j + offset + 1] : 0;
+            *ins++ = (j < query_length) ? gIns[j + offset] : 0;
+            j += segLen;
+        }
+    }
 }
 
 
@@ -187,10 +242,27 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
 
     std::pair<alignment_end, alignment_end> bests;
     // Find the alignment scores and ending positions
-    bests = sw_sse2_byte(db_aa_sequence, db_3di_sequence, 0, db_length, query_length, gap_open, gap_extend, profile->profile_aa_byte, profile->profile_3di_byte,UCHAR_MAX, profile->bias, maskLen);
+    if(profile->isProfile){
+        bests = sw_sse2_byte<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
+                                          gap_open, gap_extend, profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte,
+                                          profile->profile_gIns_byte, profile->profile_aa_byte, profile->profile_3di_byte,UCHAR_MAX, profile->bias, maskLen);
 
+    }else{
+        bests = sw_sse2_byte<SUBSTITUTIONMATRIX>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
+                                                 gap_open, gap_extend, NULL, NULL, NULL, profile->profile_aa_byte, profile->profile_3di_byte,UCHAR_MAX, profile->bias, maskLen);
+    }
     if (bests.first.score == 255) {
-        bests = sw_sse2_word(db_aa_sequence, db_3di_sequence, 0, db_length, query_length, gap_open, gap_extend, profile->profile_aa_word, profile->profile_3di_word,USHRT_MAX, maskLen);
+        if(profile->isProfile) {
+            bests = sw_sse2_word<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
+                                              gap_open, gap_extend, profile->profile_gDelOpen_word, profile->profile_gDelClose_word,
+                                              profile->profile_gIns_word, profile->profile_aa_word,
+                                              profile->profile_3di_word, USHRT_MAX, maskLen);
+
+        } else {
+            bests = sw_sse2_word<SUBSTITUTIONMATRIX>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
+                                                     gap_open, gap_extend, NULL, NULL, NULL, profile->profile_aa_word,
+                                                     profile->profile_3di_word, USHRT_MAX, maskLen);
+        }
         r.word = 1;
     } else if (bests.first.score == 255) {
         fprintf(stderr, "Please set 2 to the score_size parameter of the function ssw_init, otherwise the alignment results will be incorrect.\n");
@@ -231,39 +303,59 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
         const int covMode, const float covThr,
         const int32_t maskLen) {
     int32_t query_length = profile->query_length;
-    int32_t queryOffset = query_length - r.qEndPos1;
+    int32_t queryOffset = query_length - r.qEndPos1 - 1;
     std::pair<alignment_end, alignment_end> bests_reverse;
     // Find the beginning position of the best alignment.
     if (r.word == 0) {
 
         if (profile->isProfile) {
-            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, NULL, profile->rev_alignment_aa_profile,
-                                                                 r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
-            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, NULL, profile->rev_alignment_3di_profile,
-                                                                 r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
+            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE_HMM>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, NULL, profile->rev_alignment_aa_profile,
+                                                                     r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
+            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE_HMM>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, NULL, profile->rev_alignment_3di_profile,
+                                                                     r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
+            createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte, profile->profile_gIns_rev_byte,
+                                                      profile->gDelOpen_rev, profile->gDelClose_rev, profile->gIns_rev, profile->query_length, queryOffset);
+
+            bests_reverse = sw_sse2_byte<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
+                                                      gap_open, gap_extend, profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte,
+                                                      profile->profile_gIns_rev_byte,profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
+                                                      r.score1, profile->bias, maskLen);
         }else{
             createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
                                                                             r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
             createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
                                                                             r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
-
+            bests_reverse = sw_sse2_byte<SUBSTITUTIONMATRIX>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
+                                                             gap_open, gap_extend, NULL, NULL, NULL,
+                                                             profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
+                                                             r.score1, profile->bias, maskLen);
         }
-        bests_reverse = sw_sse2_byte(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1, gap_open, gap_extend, profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
-                                     r.score1, profile->bias, maskLen);
     } else {
-         if (profile->isProfile) {
-             createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_aa_rev_word,profile->query_aa_rev_sequence,NULL,profile->rev_alignment_aa_profile,
-                                                                   r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
-             createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_3di_rev_word,profile->query_3di_rev_sequence,NULL,profile->rev_alignment_3di_profile,
-                                                                 r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
+        if (profile->isProfile) {
+            createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE_HMM>(profile->profile_aa_rev_word,profile->query_aa_rev_sequence,NULL,profile->rev_alignment_aa_profile,
+                                                                      r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
+            createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE_HMM>(profile->profile_3di_rev_word,profile->query_3di_rev_sequence,NULL,profile->rev_alignment_3di_profile,
+                                                                      r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
+            createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_rev_word,
+                                                       profile->profile_gDelClose_rev_word,
+                                                       profile->profile_gIns_rev_word, profile->gDelOpen_rev,
+                                                       profile->gDelClose_rev, profile->gIns_rev,
+                                                       profile->query_length, queryOffset);
+            bests_reverse = sw_sse2_word<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
+                                                      gap_open, gap_extend, profile->profile_gDelOpen_rev_word, profile->profile_gDelClose_rev_word,
+                                                      profile->profile_gIns_rev_word,profile->profile_aa_rev_word, profile->profile_3di_rev_word,
+                                                      r.score1, maskLen);
         }else{
-             createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_word, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
-                                                                              r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
-             createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_word, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
-                                                                         r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
+            createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_word, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
+                                                                             r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
+            createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_word, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
+                                                                             r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
+            bests_reverse = sw_sse2_word<SUBSTITUTIONMATRIX>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
+                                                             gap_open, gap_extend, NULL, NULL, NULL,
+                                                             profile->profile_aa_rev_word, profile->profile_3di_rev_word,
+                                                             r.score1, maskLen);
         }
-        bests_reverse = sw_sse2_word(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1, gap_open, gap_extend, profile->profile_aa_rev_word, profile->profile_3di_rev_word,
-                                     r.score1, maskLen);
+
     }
     if(bests_reverse.first.score != r.score1){
         fprintf(stderr, "Score of forward/backward SW differ. This should not happen.\n");
@@ -293,27 +385,28 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
 
     cigar* path;
     if (profile->isProfile) {
-        path = banded_sw<PROFILE>(db_aa_sequence + r.dbStartPos1,
-                         db_3di_sequence + r.dbStartPos1,
-                         profile->query_aa_sequence + r.qStartPos1,
-                         profile->query_3di_sequence + r.qStartPos1,
-                         profile->composition_bias_aa + r.qStartPos1,
-                         profile->composition_bias_ss + r.qStartPos1,
-                         db_length, query_length, r.qStartPos1, r.score1,
-                         gap_open, gap_extend, band_width,
-                         profile->alignment_aa_profile,  profile->query_length,
-                         profile->alignment_3di_profile, profile->query_length);
+        path = banded_sw<PROFILE_HMM>(db_aa_sequence + r.dbStartPos1,
+                                      db_3di_sequence + r.dbStartPos1,
+                                      profile->query_aa_sequence + r.qStartPos1,
+                                      profile->query_3di_sequence + r.qStartPos1,
+                                      profile->composition_bias_aa + r.qStartPos1,
+                                      profile->composition_bias_ss + r.qStartPos1,
+                                      db_length, query_length, r.qStartPos1, r.score1,
+                                      gap_open, gap_extend, profile->gDelOpen + r.qStartPos1,
+                                      profile->gDelClose + r.qStartPos1, profile->gIns + r.qStartPos1,
+                                      band_width,profile->alignment_aa_profile,  profile->query_length,
+                                      profile->alignment_3di_profile, profile->query_length);
     } else {
         path = banded_sw<SUBSTITUTIONMATRIX>(db_aa_sequence + r.dbStartPos1,
-                    db_3di_sequence + r.dbStartPos1,
-                    profile->query_aa_sequence + r.qStartPos1,
-                    profile->query_3di_sequence + r.qStartPos1,
-                    profile->composition_bias_aa + r.qStartPos1,
-                    profile->composition_bias_ss + r.qStartPos1,
-                    db_length, query_length, r.qStartPos1, r.score1,
-                    gap_open, gap_extend, band_width,
-                    profile->mat_aa,  profile->alphabetSize,
-                    profile->mat_3di, profile->alphabetSize);
+                                             db_3di_sequence + r.dbStartPos1,
+                                             profile->query_aa_sequence + r.qStartPos1,
+                                             profile->query_3di_sequence + r.qStartPos1,
+                                             profile->composition_bias_aa + r.qStartPos1,
+                                             profile->composition_bias_ss + r.qStartPos1,
+                                             db_length, query_length, r.qStartPos1, r.score1,
+                                             gap_open, gap_extend, NULL, NULL, NULL,
+                                             band_width, profile->mat_aa,  profile->alphabetSize,
+                                             profile->mat_3di, profile->alphabetSize);
     }
     if (path != NULL) {
         r.cigar = path->seq;
@@ -332,8 +425,8 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
 }
 
 void StructureSmithWaterman::computerBacktrace(s_profile * query, const unsigned char * db_aa_sequence,
-                                      s_align & alignment, std::string & backtrace,
-                                      uint32_t & aaIds, size_t & mStatesCnt){
+                                               s_align & alignment, std::string & backtrace,
+                                               uint32_t & aaIds, size_t & mStatesCnt){
     int32_t targetPos = alignment.dbStartPos1, queryPos = alignment.qStartPos1;
     for (int32_t c = 0; c < alignment.cigarLen; ++c) {
         char letter = StructureSmithWaterman::cigar_int_to_op(alignment.cigar[c]);
@@ -389,6 +482,7 @@ uint32_t StructureSmithWaterman::cigar_int_to_len (uint32_t cigar_int)
     return res;
 }
 
+template <const unsigned int type>
 std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignment_end> StructureSmithWaterman::sw_sse2_byte (const unsigned char* db_aa_sequence,
                                                                                                                               const unsigned char* db_3di_sequence,
                                                                                                                               int8_t ref_dir,	// 0: forward ref; 1: reverse ref
@@ -396,12 +490,15 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
                                                                                                                               int32_t query_length,
                                                                                                                               const uint8_t gap_open, /* will be used as - */
                                                                                                                               const uint8_t gap_extend, /* will be used as - */
+                                                                                                                              const simd_int *gap_open_del,
+                                                                                                                              const simd_int *gap_close_del,
+                                                                                                                              const simd_int *gap_open_ins,
                                                                                                                               const simd_int* query_aa_profile_byte,
                                                                                                                               const simd_int* query_3di_profile_byte,
                                                                                                                               uint8_t terminate,	/* the best alignment score: used to terminate
-                                                         the matrix calculation when locating the
-                                                         alignment beginning point. If this score
-                                                         is set to 0, it will not be used */
+                                                                                                                                                     the matrix calculation when locating the
+                                                                                                                                                     alignment beginning point. If this score
+                                                                                                                                                     is set to 0, it will not be used */
                                                                                                                               uint8_t bias,  /* Shift 0 point to a positive value. */
                                                                                                                               int32_t maskLen) {
 #define max16(m, vm) ((m) = simdi8_hmax((vm)));
@@ -428,7 +525,10 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
 
     int32_t i, j;
     /* 16 byte insertion begin vector */
-    simd_int vGapO = simdi8_set(gap_open);
+    simd_int vGapO;
+    if (type != PROFILE_HMM) {
+        vGapO = simdi8_set(gap_open);
+    }
 
     /* 16 byte insertion extension vector */
     simd_int vGapE = simdi8_set(gap_extend);
@@ -475,18 +575,27 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
         /* inner loop to process the query sequence */
         for (j = 0; LIKELY(j < segLen); ++j) {
             simd_int score = simdui8_adds(simdi_load(vPAA + j), simdi_load(vP3Di + j));
+//            int8_t* t;
+//            int32_t ti;
+//            fprintf(stderr, "score: ");
+//            for (t = (int8_t*)&score, ti = 0; ti < 16; ++ti) fprintf(stderr, "%d\t", (*t++) - 2*bias);
+//            fprintf(stderr, "\n");
+
             vH = simdui8_adds(vH, score);
             vH = simdui8_subs(vH, vBias); /* vH will be always > 0 */
             //	max16(maxColumn[i], vH);
             //	fprintf(stderr, "H[%d]: %d\n", i, maxColumn[i]);
-            //	int8_t* t;
-            //	int32_t ti;
-            //for (t = (int8_t*)&vH, ti = 0; ti < 16; ++ti) fprintf(stderr, "%d\t", *t++);
-
+//            fprintf(stderr, "vh: ");
+//            for (t = (int8_t*)&vH, ti = 0; ti < 16; ++ti) fprintf(stderr, "%d\t", *t++);
+//            fprintf(stderr, "\n");
             /* Get max from vH, vE and vF. */
             e = simdi_load(pvE + j);
             vH = simdui8_max(vH, e);
-            vH = simdui8_max(vH, vF);
+            if (type == PROFILE_HMM) {
+                vH = simdui8_max(vH, simdui8_subs(vF, simdi_load(gap_close_del + j)));
+            } else {
+                vH = simdui8_max(vH, vF);
+            }
             vMaxColumn = simdui8_max(vMaxColumn, vH);
 
             //	max16(maxColumn[i], vMaxColumn);
@@ -497,14 +606,24 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
             simdi_store(pvHStore + j, vH);
 
             /* Update vE value. */
-            vH = simdui8_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
+            if (type == PROFILE_HMM) {
+                // copy vH for update of vF
+                vTemp = vH;
+                vH = simdui8_subs(vH, simdi_load(gap_open_ins + j)); /* saturation arithmetic, result >= 0 */
+            } else {
+                vH = simdui8_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
+            }
             e = simdui8_subs(e, vGapE);
             e = simdui8_max(e, vH);
             simdi_store(pvE + j, e);
 
             /* Update vF value. */
             vF = simdui8_subs(vF, vGapE);
-            vF = simdui8_max(vF, vH);
+            if (type == PROFILE_HMM) {
+                vF = simdui8_max(vF, simdui8_subs(vTemp, simdi_load(gap_open_del + j)));
+            } else {
+                vF = simdui8_max(vF, vH);
+            }
 
             /* Load the next vH. */
             vH = simdi_load(pvHLoad + j);
@@ -519,12 +638,21 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
         /*  we are at the end, we need to shift the vF value over */
         /*  to the next column. */
         vF = simdi8_shiftl (vF, 1);
-        vTemp = simdui8_subs (vH, vGapO);
+        if (type == PROFILE_HMM) {
+            vTemp = simdui8_subs(vH, simdi_load(gap_open_del + j));
+        } else {
+            vTemp = simdui8_subs(vH, vGapO);
+        }
         vTemp = simdui8_subs (vF, vTemp);
         vTemp = simdi8_eq (vTemp, vZero);
         uint32_t cmp = simdi8_movemask (vTemp);
         while (cmp != SIMD_MOVEMASK_MAX) {
-            vH = simdui8_max (vH, vF);
+            if (type == PROFILE_HMM) {
+                vH = simdui8_max (vH, simdui8_subs(vF, simdi_load(gap_close_del + j)));
+                simdi_store(pvE + j, simdui8_max(simdi_load(pvE + j), simdui8_subs(vH, simdi_load(gap_open_ins + j))));
+            } else {
+                vH = simdui8_max (vH, vF);
+            }
             vMaxColumn = simdui8_max(vMaxColumn, vH);
             simdi_store (pvHStore + j, vH);
             vF = simdui8_subs (vF, vGapE);
@@ -535,8 +663,11 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
                 vF = simdi8_shiftl (vF, 1);
             }
             vH = simdi_load (pvHStore + j);
-
-            vTemp = simdui8_subs (vH, vGapO);
+            if (type == PROFILE_HMM) {
+                vTemp = simdui8_subs(vH, simdi_load(gap_open_del + j));
+            } else {
+                vTemp = simdui8_subs(vH, vGapO);
+            }
             vTemp = simdui8_subs (vF, vTemp);
             vTemp = simdi8_eq (vTemp, vZero);
             cmp  = simdi8_movemask (vTemp);
@@ -610,7 +741,7 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
 #undef max16
 }
 
-
+template <const unsigned int type>
 std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignment_end> StructureSmithWaterman::sw_sse2_word (const unsigned char* db_aa_sequence,
                                                                                                                               const unsigned char* db_3di_sequence,
                                                                                                                               int8_t ref_dir,	// 0: forward ref; 1: reverse ref
@@ -618,6 +749,9 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
                                                                                                                               int32_t query_length,
                                                                                                                               const uint8_t gap_open, /* will be used as - */
                                                                                                                               const uint8_t gap_extend, /* will be used as - */
+                                                                                                                              const simd_int *gap_open_del,
+                                                                                                                              const simd_int *gap_close_del,
+                                                                                                                              const simd_int *gap_open_ins,
                                                                                                                               const simd_int*query_aa_profile_word,
                                                                                                                               const simd_int*query_3di_profile_word,
                                                                                                                               uint16_t terminate,
@@ -647,7 +781,10 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
 
     int32_t i, j, k;
     /* 16 byte insertion begin vector */
-    simd_int vGapO = simdi16_set(gap_open);
+    simd_int vGapO;
+    if (type != PROFILE_HMM) {
+        vGapO = simdi16_set(gap_open);
+    }
 
     /* 16 byte insertion extension vector */
     simd_int vGapE = simdi16_set(gap_extend);
@@ -689,21 +826,35 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
             /* Get max from vH, vE and vF. */
             e = simdi_load(pvE + j);
             vH = simdi16_max(vH, e);
-            vH = simdi16_max(vH, vF);
+            if (type == PROFILE_HMM) {
+                vH = simdi16_max(vH, simdui16_subs(vF, simdi_load(gap_close_del + j)));
+            } else {
+                vH = simdi16_max(vH, vF);
+            }
             vMaxColumn = simdi16_max(vMaxColumn, vH);
 
             /* Save vH values. */
             simdi_store(pvHStore + j, vH);
 
             /* Update vE value. */
-            vH = simdui16_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
+            if (type == PROFILE_HMM) {
+                // copy vH for update of vF
+                vTemp = vH;
+                vH = simdui16_subs(vH, simdi_load(gap_open_ins + j)); /* saturation arithmetic, result >= 0 */
+            } else {
+                vH = simdui16_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
+            }
             e = simdui16_subs(e, vGapE);
             e = simdi16_max(e, vH);
             simdi_store(pvE + j, e);
 
             /* Update vF value. */
             vF = simdui16_subs(vF, vGapE);
-            vF = simdi16_max(vF, vH);
+            if (type == PROFILE_HMM) {
+                vF = simdi16_max(vF, simdui16_subs(vTemp, simdi_load(gap_open_del + j)));
+            } else {
+                vF = simdi16_max(vF, vH);
+            }
 
             /* Load the next vH. */
             vH = simdi_load(pvHLoad + j);
@@ -714,10 +865,19 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
             vF = simdi8_shiftl (vF, 2);
             for (j = 0; LIKELY(j < segLen); ++j) {
                 vH = simdi_load(pvHStore + j);
-                vH = simdi16_max(vH, vF);
+                if (type == PROFILE_HMM) {
+                    vH = simdi16_max(vH, simdui16_subs(vF, simdi_load(gap_close_del + j)));
+                    simdi_store(pvE + j, simdi16_max(simdi_load(pvE + j), simdui16_subs(vH, simdi_load(gap_open_ins + j))));
+                } else {
+                    vH = simdi16_max(vH, vF);
+                }
                 vMaxColumn = simdi16_max(vMaxColumn, vH); //newly added line
                 simdi_store(pvHStore + j, vH);
-                vH = simdui16_subs(vH, vGapO);
+                if (type == PROFILE_HMM) {
+                    vH = simdui16_subs(vH, simdi_load(gap_open_del + j));
+                } else {
+                    vH = simdui16_subs(vH, vGapO);
+                }
                 vF = simdui16_subs(vF, vGapE);
                 if (UNLIKELY(! simdi8_movemask(simdi16_gt(vF, vH)))) goto end;
             }
@@ -808,7 +968,7 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
         compositionBias = std::min(compositionBias, 0);
     } else {
         memset(profile->composition_bias_aa, 0, q_aa->L * sizeof(int8_t));
-	    memset(profile->composition_bias_ss, 0, q_aa->L * sizeof(int8_t));
+        memset(profile->composition_bias_ss, 0, q_aa->L * sizeof(int8_t));
     }
     // copy memory to local memory todo: maybe change later
     memcpy(profile->mat_aa, mat_aa, alphabetSize * alphabetSize * sizeof(int8_t));
@@ -819,6 +979,18 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     bool isProfile = Parameters::isEqualDbtype(q_3di->getSequenceType(), Parameters::DBTYPE_HMM_PROFILE) &&
                      Parameters::isEqualDbtype(q_aa->getSequenceType(),  Parameters::DBTYPE_HMM_PROFILE);
     if(isProfile){
+        profile->gIns = q_3di->gIns;
+        // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
+        std::reverse_copy(q_3di->gIns, q_3di->gIns + q_3di->L - 1, profile->gIns_rev);
+        for (int32_t i = 0; i < q_3di->L; ++i) {
+            profile->gDelOpen[i] = q_3di->gDel[i] & 0xF;
+            profile->gDelClose[i] = q_3di->gDel[i] >> 4;
+        }
+        profile->gDelClose_rev[0] = 0;
+        profile->gDelOpen_rev[0] = 0;
+        std::reverse_copy(profile->gDelOpen + 1, profile->gDelOpen + q_3di->L, profile->gDelClose_rev + 1);
+        std::reverse_copy(profile->gDelClose + 1, profile->gDelClose + q_3di->L, profile->gDelOpen_rev + 1);
+
         memcpy(profile->alignment_aa_profile, q_aa->getAlignmentProfile(), q_aa->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
         memcpy(profile->alignment_3di_profile, q_3di->getAlignmentProfile(), q_3di->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
         // set neutral state 'X' (score=0)
@@ -855,13 +1027,17 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     if(isProfile){
         profile->isProfile = true;
         createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_aa_byte,profile->query_aa_sequence,NULL,
-                                                             profile->alignment_aa_profile, q_aa->L, alphabetSize, profile->bias, 1, q_aa->L);
+                                                             profile->alignment_aa_profile, q_aa->L, alphabetSize, profile->bias, 0, q_aa->L);
         createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_3di_byte, profile->query_3di_sequence, NULL,
-                                                             profile->alignment_3di_profile, q_3di->L, alphabetSize, profile->bias, 1, q_3di->L);
+                                                             profile->alignment_3di_profile, q_3di->L, alphabetSize, profile->bias, 0, q_3di->L);
         createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_aa_word,profile->query_aa_sequence,NULL,
-                                                              profile->alignment_aa_profile,q_aa->L, alphabetSize, 0, 1, q_aa->L);
+                                                              profile->alignment_aa_profile,q_aa->L, alphabetSize, 0, 0, q_aa->L);
         createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_3di_word,profile->query_3di_sequence,NULL,
-                                                              profile->alignment_3di_profile,q_3di->L, alphabetSize, 0, 1, q_3di->L);
+                                                              profile->alignment_3di_profile,q_3di->L, alphabetSize, 0, 0, q_3di->L);
+        createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte,
+                                                  profile->profile_gIns_byte, profile->gDelOpen, profile->gDelClose, q_3di->gIns, q_3di->L, 0);
+        createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_word, profile->profile_gDelClose_word, profile->profile_gIns_word,
+                                                   profile->gDelOpen, profile->gDelClose, q_3di->gIns, q_3di->L, 0);
 
     }else {
         createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_byte,
@@ -891,10 +1067,11 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     }
 
     // create reverse structures
-    seq_reverse( profile->query_aa_rev_sequence, profile->query_aa_sequence, q_aa->L);
-    seq_reverse( profile->query_3di_rev_sequence, profile->query_3di_sequence, q_3di->L);
-    seq_reverse(profile->composition_bias_aa_rev, profile->composition_bias_aa, q_aa->L);
-    seq_reverse(profile->composition_bias_ss_rev, profile->composition_bias_ss, q_3di->L);
+    std::reverse_copy(  profile->query_aa_sequence, profile->query_aa_sequence + q_aa->L, profile->query_aa_rev_sequence);
+    std::reverse_copy(  profile->query_3di_sequence, profile->query_3di_sequence + q_3di->L, profile->query_3di_rev_sequence);
+    std::reverse_copy(  profile->composition_bias_aa, profile->composition_bias_aa + q_aa->L, profile->composition_bias_aa_rev);
+    std::reverse_copy(  profile->composition_bias_ss, profile->composition_bias_ss + q_3di->L, profile->composition_bias_ss_rev);
+
     profile->query_length = q_aa->L;
     profile->alphabetSize = alphabetSize;
 
@@ -913,7 +1090,8 @@ template <const unsigned int type>
 StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                                                   const int8_t *query_aa_sequence, const int8_t *query_3di_sequence, const int8_t * compositionBiasAA,
                                                                   const int8_t * compositionBiasSS, int32_t db_length, int32_t query_length, int32_t queryStart, int32_t score, const uint32_t gap_open,
-                                                                  const uint32_t gap_extend, int32_t band_width, const int8_t *mat_aa, int32_t nAA, const int8_t *mat_3di, int32_t n3Di) {
+                                                                  const uint32_t gap_extend, uint8_t *gDelOpen, uint8_t *gDelClose, uint8_t *gIns,
+                                                                  int32_t band_width, const int8_t *mat_aa, int32_t nAA, const int8_t *mat_3di, int32_t n3Di) {
     /*! @function
      @abstract  Round an integer to the next closest power-2 integer.
      @param  x  integer to be rounded (in place)
@@ -978,24 +1156,36 @@ StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned
                 set_d(df, band_width, i, j, 1);
                 set_d(dh, band_width, i, j, 2);
 
-                temp1 = i == 0 ? -gap_open : h_b[e] - gap_open;
+                if (type == PROFILE_HMM) {
+                    temp1 = i == 0 ? -gap_open : h_b[e] - gDelOpen[i];
+                } else {
+                    temp1 = i == 0 ? -gap_open : h_b[e] - gap_open;
+                }
                 temp2 = i == 0 ? -gap_extend : e_b[e] - gap_extend;
                 e_b[u] = temp1 > temp2 ? temp1 : temp2;
                 direction_line[de] = temp1 > temp2 ? 3 : 2;
 
-                temp1 = h_c[b] - gap_open;
+                if (type == PROFILE_HMM) {
+                    temp1 = h_c[b] - gIns[i];
+                } else {
+                    temp1 = h_c[b] - gap_open;
+                }
                 temp2 = f - gap_extend;
                 f = temp1 > temp2 ? temp1 : temp2;
                 direction_line[df] = temp1 > temp2 ? 5 : 4;
 
-                e1 = e_b[u] > 0 ? e_b[u] : 0;
+                if (type == PROFILE_HMM) {
+                    e1 = std::max(0, e_b[u] - gDelClose[i + 1]);
+                } else {
+                    e1 = e_b[u] > 0 ? e_b[u] : 0;
+                }
                 f1 = f > 0 ? f : 0;
                 temp1 = e1 > f1 ? e1 : f1;
                 if(type == SUBSTITUTIONMATRIX){
                     temp2 = h_b[d] + mat_aa[query_aa_sequence[i] * nAA + db_aa_sequence[j]] + compositionBiasAA[i]
                             + mat_3di[query_3di_sequence[i] * n3Di + db_3di_sequence[j]] + compositionBiasSS[i];
                 }
-                if(type == PROFILE) {
+                if(type == PROFILE || type == PROFILE_HMM) {
                     temp2 = h_b[d] + mat_aa[db_aa_sequence[j] * nAA + (queryStart + i)]
                             + mat_3di[db_3di_sequence[j] * n3Di + (queryStart + i)];
                 }

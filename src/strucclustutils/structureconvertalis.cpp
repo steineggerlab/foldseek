@@ -19,6 +19,7 @@
 #include <zstd.h>
 #include "result_viz_prelude_fs.html.zst.h"
 #include "TMaligner.h"
+#include "LDDT.h"
 #include <map>
 
 #ifdef OPENMP
@@ -176,9 +177,10 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needCA = false;
     bool needTaxonomyMapping = false;
     bool needTMaligner = false;
+    bool needLDDT = false;
 
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner);
+                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
 
 
 
@@ -378,6 +380,10 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             tmaligner = new TMaligner(
                     std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false);
         }
+        LDDTCalculator *lddtcalculator = NULL;
+        if(needLDDT) {
+            lddtcalculator = new LDDTCalculator(qDbr.sequenceReader->getMaxSeqLen() + 1, tDbr->sequenceReader->getMaxSeqLen() + 1);
+        }
 
         std::string result;
         result.reserve(1024*1024);
@@ -521,6 +527,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     tmaligner->initQuery(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen], NULL, res.qLen);
                     tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                       res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
+                }
+                LDDTCalculator::LDDTScoreResult lddtres;
+                if(needLDDT) {
+                    lddtcalculator->initQuery(res.qLen, queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen]);
+                    lddtres = lddtcalculator->computeLDDTScore(res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace), targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen]);
                 }
                 switch (format) {
                     case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: {
@@ -745,6 +756,20 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                     case LocalParameters::OUTFMT_ALNTMSCORE:
                                         result.append(SSTR(tmres.tmscore));
                                         break;
+                                    case LocalParameters::OUTFMT_RMSD:
+                                        result.append(SSTR(tmres.rmsd));
+                                        break;
+                                    case LocalParameters::OUTFMT_LDDT:
+                                        // TODO: make SSTR_approx that outputs %2f, not %3f
+                                        result.append(SSTR(lddtres.avgLddtScore));
+                                        break;
+                                    case LocalParameters::OUTFMT_LDDT_FULL:
+                                        for(int i = 0; i < lddtres.scoreLength - 1; i++) {
+                                            result.append(SSTR(lddtres.perCaLddtScore[i]));
+                                            result.push_back(',');
+                                        }
+                                        result.append(SSTR(lddtres.perCaLddtScore[lddtres.scoreLength - 1]));
+                                        break;
                                 }
                                 if (i < outcodes.size() - 1) {
                                     result.push_back('\t');
@@ -873,6 +898,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         }
         if(tmaligner != NULL){
             delete tmaligner;
+        }
+        if(lddtcalculator != NULL) {
+            delete lddtcalculator;
         }
     }
     if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
