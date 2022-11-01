@@ -12,9 +12,10 @@
 #include "MemoryMapped.h"
 #include "NcbiTaxonomy.h"
 #include "MappingReader.h"
-#include "Coordinate16.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
+
+
 #include <zstd.h>
 #include "result_viz_prelude_fs.html.zst.h"
 #include "TMaligner.h"
@@ -407,9 +408,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
 
         const TaxonNode * taxonNode = NULL;
 
-        Coordinate16 qcoords;
-        Coordinate16 tcoords;
-
 #pragma omp  for schedule(dynamic, 10)
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
             progress.updateProgress();
@@ -435,14 +433,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             if (needCA) {
                 size_t qId = qcadbr->sequenceReader->getId(queryKey);
                 queryCaData = (float*) qcadbr->sequenceReader->getData(qId, thread_idx);
-                char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
-                size_t qcadataLen = qcadbr->sequenceReader->getEntryLen(qId);
-                size_t caLength = (qcadataLen - 1) / 3;
-                queryCaData = (float*)qcadata;
-                if (qcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                    qcoords.read(qcadata, caLength);
-                    queryCaData = qcoords.getBuffer();
-                }
+		querySeqLen =  (qcadbr->sequenceReader->getEntryLen(qId)-1)/(3*sizeof(float));
             }
             size_t qHeaderId = qDbrHeader.sequenceReader->getId(queryKey);
             const char *qHeader = qDbrHeader.sequenceReader->getData(qHeaderId, thread_idx);
@@ -452,8 +443,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 queryHeaderBuffer.assign(qHeader, qHeaderLen);
                 qHeader = (char*) queryHeaderBuffer.c_str();
             }
-
-            if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
+            
+            if(needLDDT){
+	        lddtcalculator->initQuery(querySeqLen, queryCaData, &queryCaData[querySeqLen], &queryCaData[querySeqLen+querySeqLen]);
+            }
+	    if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
                 const char* jsStart = "{\"query\": {\"accession\": \"%s\",\"sequence\": \"";
                 int count = snprintf(buffer, sizeof(buffer), jsStart, queryId.c_str(), querySeqData);
                 if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
@@ -491,14 +485,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 if (needCA) {
                     size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                     targetCaData = (float*) tcadbr->sequenceReader->getData(tId, thread_idx);
-                    char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
-                    size_t tcadataLen = tcadbr->sequenceReader->getEntryLen(tId);
-                    size_t caLength = (tcadataLen - 1) / 3;
-                    targetCaData = (float*)tcadata;
-                    if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                        tcoords.read(tcadata, caLength);
-                        targetCaData = tcoords.getBuffer();
-                    }
                 }
 
                 std::string targetId = Util::parseFastaHeader(tHeader);
@@ -548,7 +534,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 }
                 LDDTCalculator::LDDTScoreResult lddtres;
                 if(needLDDT) {
-                    lddtcalculator->initQuery(res.qLen, queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen]);
                     lddtres = lddtcalculator->computeLDDTScore(res.dbLen, res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace), targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen]);
                 }
                 switch (format) {
