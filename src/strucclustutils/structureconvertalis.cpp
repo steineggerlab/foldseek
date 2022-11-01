@@ -445,7 +445,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             }
             
             if(needLDDT){
-	        lddtcalculator->initQuery(querySeqLen, queryCaData, &queryCaData[querySeqLen], &queryCaData[querySeqLen+querySeqLen]);
+	            lddtcalculator->initQuery(querySeqLen, queryCaData, &queryCaData[querySeqLen], &queryCaData[querySeqLen+querySeqLen]);
             }
 	    if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
                 const char* jsStart = "{\"query\": {\"accession\": \"%s\",\"sequence\": \"";

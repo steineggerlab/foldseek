@@ -11,10 +11,22 @@
 #include "StructureUtil.h"
 #include "TMaligner.h"
 #include "Coordinate16.h"
+#include "LDDT.h"
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
+
+// need for sorting the results
+static bool compareHitsByStructureBits(const Matcher::result_t &first, const Matcher::result_t &second) {
+    if (first.score != second.score) {
+        return first.score > second.score;
+    }
+    if (first.dbLen != second.dbLen) {
+        return first.dbLen < second.dbLen;
+    }
+    return first.dbKey < second.dbKey;
+}
 
 int alignStructure(StructureSmithWaterman & structureSmithWaterman,
                    StructureSmithWaterman & reverseStructureSmithWaterman,
@@ -114,10 +126,17 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
     dbw.open();
+
     bool needTMaligner = (par.tmScoreThr > 0);
+    bool needLDDT = (par.lddtThr > 0);
+    if(par.sortByStructureBits){
+        needLDDT = true;
+        needTMaligner = true;
+    }
+    bool needCalpha = (needTMaligner || needLDDT);
     IndexReader *qcadbr = NULL;
     IndexReader *tcadbr = NULL;
-    if(needTMaligner){
+    if(needCalpha){
         qcadbr = new IndexReader(
                 par.db1,
                 par.threads,
@@ -185,6 +204,10 @@ int structurealign(int argc, const char **argv, const Command& command) {
             tmaligner = new TMaligner(
                     std::max(qdbr3Di.sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false);
         }
+        LDDTCalculator *lddtcalculator = NULL;
+        if(needLDDT) {
+            lddtcalculator = new LDDTCalculator(qdbr3Di.sequenceReader->getMaxSeqLen() + 1,  t3DiDbr->sequenceReader->getMaxSeqLen() + 1);
+        }
         Sequence qSeqAA(par.maxSeqLen, qdbrAA.getDbtype(), (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
         Sequence qSeq3Di(par.maxSeqLen, qdbr3Di.getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         Sequence tSeqAA(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
@@ -211,7 +234,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 unsigned int querySeqLen = qdbr3Di.sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
-                if(needTMaligner){
+                if(needCalpha){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
                     char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
                     float* queryCaData = (float*)qcadata;
@@ -219,7 +242,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
                         qcoords.read(qcadata, qSeq3Di.L);
                         queryCaData = qcoords.getBuffer();
                     }
-                    tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
+                    if(needTMaligner){
+                        tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
+                    }
+                    if(needLDDT){
+                        lddtcalculator->initQuery(qSeq3Di.L, queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L]);
+                    }
                 }
                 std::pair<double, double> muLambda = evaluer.predictMuLambda(qSeq3Di.numSequence, qSeq3Di.L);
                 structureSmithWaterman.ssw_init(&qSeqAA, &qSeq3Di, tinySubMatAA, tinySubMat3Di, &subMatAA);
@@ -253,22 +281,48 @@ int structurealign(int argc, const char **argv, const Command& command) {
                         rejected++;
                         continue;
                     }
-                    if(needTMaligner) {
-                        size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
-                        char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
-                        float* targetCaData = (float*)tcadata;
-                        if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                            tcoords.read(tcadata, res.dbLen);
-                            targetCaData = tcoords.getBuffer();
-                        }
-                        TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
-                        if(tmres.tmscore < par.tmScoreThr){
-                            continue;
-                        }
-                    }
 
                     if (Alignment::checkCriteria(res, isIdentity, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
+                        if(needCalpha) {
+                            size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
+                            char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
+                            float* targetCaData = (float*)tcadata;
+                            if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                                tcoords.read(tcadata, res.dbLen);
+                                targetCaData = tcoords.getBuffer();
+                            }
+                            TMaligner::TMscoreResult tmres;
+                            LDDTCalculator::LDDTScoreResult lddtres;
+                            if(needTMaligner) {
+                                tmres = tmaligner->computeTMscore(targetCaData,
+                                                                  &targetCaData[res.dbLen],
+                                                                  &targetCaData[res.dbLen +
+                                                                                res.dbLen],
+                                                                  res.dbLen,
+                                                                  res.qStartPos,
+                                                                  res.dbStartPos,
+                                                                          res.backtrace);
+                                if (tmres.tmscore < par.tmScoreThr) {
+                                    continue;
+                                }
+                            }
+                            if(needLDDT){
+                                lddtres = lddtcalculator->computeLDDTScore(res.dbLen, res.qStartPos, res.dbStartPos,
+                                                                           res.backtrace,
+                                                                           targetCaData, &targetCaData[res.dbLen],
+                                                                           &targetCaData[res.dbLen+res.dbLen]);
+
+                                if(lddtres.avgLddtScore < par.lddtThr){
+                                    continue;
+                                }
+                                res.dbcov = lddtres.avgLddtScore;
+                            }
+                            if(par.sortByStructureBits){
+                                res.score = res.score * sqrt(lddtres.avgLddtScore * tmres.tmscore);
+                            }
+                        }
+
+
                         alignmentResult.emplace_back(res);
                         int altAli = par.altAlignment;
                         bool moreAltAli = true;
@@ -295,7 +349,11 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
 
             if (alignmentResult.size() > 1) {
-                SORT_SERIAL(alignmentResult.begin(), alignmentResult.end(), Matcher::compareHits);
+                if(par.sortByStructureBits) {
+                    SORT_SERIAL(alignmentResult.begin(), alignmentResult.end(), compareHitsByStructureBits);
+                } else {
+                    SORT_SERIAL(alignmentResult.begin(), alignmentResult.end(), Matcher::compareHits);
+                }
             }
             for (size_t result = 0; result < alignmentResult.size(); result++) {
                 size_t len = Matcher::resultToBuffer(buffer, alignmentResult[result], par.addBacktrace);
@@ -307,6 +365,9 @@ int structurealign(int argc, const char **argv, const Command& command) {
         }
         if(needTMaligner){
             delete tmaligner;
+        }
+        if(needLDDT){
+            delete lddtcalculator;
         }
     }
 

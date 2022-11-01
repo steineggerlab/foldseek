@@ -63,6 +63,8 @@ public:
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
+    PARAMETER(PARAM_LDDT_THRESHOLD)
+    PARAMETER(PARAM_SORT_BY_STRUCTURE_BITS)
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
     PARAMETER(PARAM_CHAIN_NAME_MODE)
@@ -71,6 +73,8 @@ public:
     PARAMETER(PARAM_COORD_STORE_MODE)
 
     float tmScoreThr;
+    float lddtThr;
+    int sortByStructureBits;
     float maskBfactorThreshold;
     int alignmentType;
     int chainNameMode;
