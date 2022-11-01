@@ -226,6 +226,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             //     errorSum += error;
             //     Debug(Debug::ERROR) << "error: " << error << "\n";
             // }
+            cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(uint16_t), dbKey, thread_idx);
         } else {
             camol.reserve(chainLen * 3 * sizeof(float));
             float* camolf32 = reinterpret_cast<float*>(camol.data());
@@ -241,8 +242,8 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                 camolf32[(2 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].z))
                             ? 0.0 : readStructure.ca[chainStart+pos].z;
             }
+            cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(float), dbKey, thread_idx);
         }
-        cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(uint16_t), dbKey, thread_idx);
         alphabet3di.clear();
         alphabetAA.clear();
         camol.clear();
