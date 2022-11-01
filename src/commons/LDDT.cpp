@@ -1,12 +1,18 @@
 #include "LDDT.h"
 #include <string.h>
+#include <algorithm>
 
-float LDDTCalculator::dist(float* arr1, float* arr2) {
+
+static inline float dist(float* arr1, float* arr2) {
     float D2 = 0;
     for(int i = 0; i < 3; i++) {
         D2 += (arr1[i] - arr2[i]) * (arr1[i] - arr2[i]);
     }
     return sqrt(D2);
+}
+
+static bool compareByFirstKey(const std::pair<std::tuple<int, int, int>, int>& a, const std::pair<std::tuple<int, int, int>, int>& b) {
+    return a.first < b.first;
 }
 
 LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
@@ -158,7 +164,7 @@ void LDDTCalculator::calculateDistance() {
     int dx[DIR] = {0,1,1, 1,1,1, 1, 1, 1, 1,0,0, 0,0};
     int dy[DIR] = {0,1,1, 1,0,0, 0,-1,-1,-1,1,1, 1,0};
     int dz[DIR] = {0,1,0,-1,1,0,-1, 1, 0,-1,1,0,-1,1};
-    typedef std::multimap<std::tuple<int, int, int>, int>::const_iterator box_iterator;
+    typedef std::vector<std::pair<std::tuple<int, int, int>, int>>::const_iterator box_iterator;
     memset(reduce_score, 0, sizeof(float) * alignLength);
 
     // Iterate through query_grid
@@ -167,7 +173,11 @@ void LDDTCalculator::calculateDistance() {
         for(int j = 0; j <= query_grid.num_cells[1]; j++) {
             for(int k = 0; k <= query_grid.num_cells[2]; k++) {
                 // dir = 0 (same box)
-                std::pair<box_iterator, box_iterator> box_members = query_grid.box.equal_range(std::make_tuple(i, j, k));
+                std::pair<std::tuple<int, int, int>, int> ref;
+                ref.first = std::make_tuple(i, j, k);
+                ref.second = 0;
+
+                std::pair<box_iterator, box_iterator> box_members = std::equal_range(query_grid.box.begin(), query_grid.box.end(), ref, compareByFirstKey);
                 for(box_iterator it = box_members.first; it != box_members.second; it++) { // it->second contains query_idx corresponding to a "point"
                     int query_idx1 = it->second;
                     int align_idx1 = query_to_align[query_idx1];
@@ -192,7 +202,10 @@ void LDDTCalculator::calculateDistance() {
                 }
                 // different box
                 for(int dir = 1; dir < DIR; dir++) {
-                    std::pair<box_iterator, box_iterator> boxPrime_members = query_grid.box.equal_range(std::make_tuple(i+dx[dir], j+dy[dir], k+dz[dir]));
+                    std::pair<std::tuple<int, int, int>, int> ref;
+                    ref.first = std::make_tuple(i+dx[dir], j+dy[dir], k+dz[dir]);
+                    ref.second = 0;
+                    std::pair<box_iterator, box_iterator> boxPrime_members = std::equal_range(query_grid.box.begin(), query_grid.box.end(), ref, compareByFirstKey);
                     for(box_iterator it = box_members.first; it != box_members.second; it++) {
                         int query_idx1 = it->second;
                         int align_idx1 = query_to_align[query_idx1];

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <map>
 #include <limits>
+#include <vector>
+#include "FastSort.h"
 
 #ifndef LDDT_H
 #define LDDT_H
@@ -26,23 +28,26 @@ public:
                     if(m1[i][dim] > max[dim]) max[dim] = m1[i][dim];
                 }
             }
+            box.clear();
+
             for(int i = 0; i < (int)queryLength; i++) {
                 int box_coord[3];
                 for(int dim = 0; dim < 3; dim++) {
                     box_coord[dim] = (int)((m1[i][dim] - min[dim]) / CUTOFF);
                 }
-                box.insert(std::make_pair(std::make_tuple(box_coord[0], box_coord[1], box_coord[2]), i));
+                box.emplace_back(std::make_tuple(box_coord[0], box_coord[1], box_coord[2]), i);
             }
-
+            SORT_SERIAL(box.begin(), box.end());
             for(int dim = 0; dim < 3; dim++) {
                 num_cells[dim] = (int)((max[dim]-min[dim])/CUTOFF) + 1;
             }
+
         }
 
         float min[3] = {INF, INF, INF};
         float max[3] = {-INF, -INF, -INF};
         int num_cells[3];
-        std::multimap<std::tuple<int, int, int>, int> box; // bottleneck
+        std::vector<std::pair<std::tuple<int, int, int>, int>> box;
     };
 
     struct LDDTScoreResult {
@@ -113,7 +118,6 @@ private:
     float **query_coordinates, **target_coordinates, **score;
     bool **dists_to_score;
     LDDTCalculator::Grid query_grid;
-    float dist(float* arr1, float* arr2);
 };
 
 #endif
