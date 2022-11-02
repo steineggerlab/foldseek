@@ -288,6 +288,14 @@ std::vector<DatabaseDownload> externalDownloads = {
                 {}
         },
         {
+                "ESMAtlas30",
+                "ESM Metagenomic Atlas clustered at 30% sequence identity.",
+                "Lin et al. Evolutionary-scale prediction of atomic level protein structure with a language model. bioRxiv, (2022)",
+                "https://esmatlas.com",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
                 "PDB",
                 "The Protein Data Bank is the single worldwide archive of structural data of biological macromolecules.",
                 "Berman et al. The Protein Data Bank. Nucleic Acids Res, 28(1), 235-242 (2000)",
