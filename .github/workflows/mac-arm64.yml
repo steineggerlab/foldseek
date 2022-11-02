@@ -1,0 +1,24 @@
+name: Build macOS ARM64
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Build
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Test
+        run: ./regression/run_regression.sh ./build/src/foldseek SCRATCH
