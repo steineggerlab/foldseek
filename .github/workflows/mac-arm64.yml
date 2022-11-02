@@ -17,7 +17,15 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
+          LIBOMP=$(brew --prefix libomp)
+          cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP}/include" \
+            -DOpenMP_C_LIB_NAMES=omp \
+            -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP}/include" \
+            -DOpenMP_CXX_LIB_NAMES=omp \
+            -DOpenMP_omp_LIBRARY=${LIBOMP}/lib/libomp.a \
+            ..
           make -j$(sysctl -n hw.ncpu)
 
       - name: Test
