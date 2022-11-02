@@ -45,9 +45,16 @@ int structureindex(int argc, const char **argv, const Command& command) {
     par.filenames.pop_back();
     par.filenames.push_back(tmpDir);
 
+    std::vector<MMseqsParameter*> createIndexWithoutIndexSubset;
+    for (size_t i = 0; i < par.createindex.size(); i++) {
+        if (par.createindex[i]->uniqid != par.PARAM_INDEX_SUBSET.uniqid) {
+            createIndexWithoutIndexSubset.push_back(par.createindex[i]);
+        }
+    }
+
     CommandCaller cmd;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
-    cmd.addVariable("CREATEINDEX_PAR", par.createParameterString(par.createindex, true).c_str());
+    cmd.addVariable("CREATEINDEX_PAR", par.createParameterString(createIndexWithoutIndexSubset, true).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("INDEX_DB_CA_KEY", SSTR(LocalParameters::INDEX_DB_CA_KEY).c_str());
 
