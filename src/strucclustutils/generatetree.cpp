@@ -530,11 +530,11 @@ std::string fastamsa2profile(std::string & msa, PSSMCalculator &pssmCalculator, 
     // pssmRes.toBuffer((const unsigned char*)msaSequences[0], centerLength, subMat, result);
 
     if (externalMaskedColumns == NULL) {
-        delete[] maskedColumns;
         // Save mask if external mask not given
         result.push_back('\n');
         for (size_t z = 0; z < centerLengthWithGaps; ++z)
             result.push_back(maskedColumns[z] == false ? '0' : '1');
+        delete[] maskedColumns;
     }
     delete[] seqWeight;
     delete[] pNullBuffer;
@@ -1070,7 +1070,7 @@ int generatetree(int argc, const char **argv, const Command& command) {
     resultWriter.writeEnd(0, 0, false, 0);
     resultWriter.close(true);
     FileUtil::remove(par.db3Index.c_str());
-
+    
     // Cleanup
     seqDbrAA.close();
     seqDbr3Di.close();
