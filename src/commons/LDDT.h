@@ -102,13 +102,18 @@ public:
     LDDTScoreResult computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
 
 private:
-    unsigned int queryStart, targetStart, queryLength, targetLength, alignLength;
+    unsigned int queryLength, targetLength, alignLength;
     unsigned int maxQueryLength, maxTargetLength, maxAlignLength;
-    float *reduce_score, *norm, *norm_aligned;
-    std::unordered_map<int, int> query_to_align, target_to_align, align_to_query, align_to_target;
+    float *reduce_score, *norm;
+    int * query_to_align;
+    int * target_to_align;
+    int * align_to_query;
+    int * align_to_target;
     std::string cigar; // backtrace
-    float **query_pos, **target_pos, **dists_to_score, **aligned_dists_to_score, **dist_l1, **score;
+    float **query_coordinates, **target_coordinates, **score;
+    bool **dists_to_score;
     LDDTCalculator::Grid query_grid;
+    float dist(float* arr1, float* arr2);
 };
 
 #endif

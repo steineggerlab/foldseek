@@ -96,7 +96,12 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                 qSeq.mapSequence(id, queryKey, querySeq, querySeqLen);
 
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
-                float *qdata = (float *) qcadbr.sequenceReader->getData(queryId, thread_idx);
+                char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
+                float* qdata = (float*)qcadata;
+                if (qcadbr.getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                    qcoords.read(qcadata, queryLen);
+                    qdata = qcoords.getBuffer();
+                }
                 Coordinates queryCaCords;
                 memcpy(query_x, qdata, sizeof(float) * queryLen);
                 memcpy(query_y, &qdata[queryLen], sizeof(float) * queryLen);
@@ -133,7 +138,12 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
                     unsigned int targetSeqLen = tdbr->sequenceReader->getSeqLen(targetId);
 
                     int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
-                    float * tdata = (float*) tcadbr->sequenceReader->getData(targetId, thread_idx);
+                    char *tcadata = tcadbr->sequenceReader->getData(targetId, thread_idx);
+                    float* tdata = (float*)tcadata;
+                    if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                        tcoords.read(tcadata, targetLen);
+                        tdata = tcoords.getBuffer();
+                    }
                     tSeq.mapSequence(targetId, dbKey, targetSeq, targetSeqLen);
 
                     if(Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)==false){

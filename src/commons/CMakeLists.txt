@@ -1,4 +1,5 @@
 set(commons_source_files
+        commons/Coordinate16.h
         commons/LDDT.h
         commons/LDDT.cpp
         commons/LocalParameters.h

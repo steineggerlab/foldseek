@@ -10,6 +10,7 @@
 #include "StructureSmithWaterman.h"
 #include "StructureUtil.h"
 #include "TMaligner.h"
+#include "Coordinate16.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -192,6 +193,9 @@ int structurealign(int argc, const char **argv, const Command& command) {
         char buffer[1024+32768];
         std::string resultBuffer;
 
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
+
         // write output file
 
 #pragma omp for schedule(dynamic, 1)
@@ -209,7 +213,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
                 if(needTMaligner){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
-                    float * queryCaData = (float*) qcadbr->sequenceReader->getData(qId, thread_idx);
+                    char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
+                    float* queryCaData = (float*)qcadata;
+                    if (qcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                        qcoords.read(qcadata, qSeq3Di.L);
+                        queryCaData = qcoords.getBuffer();
+                    }
                     tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
                 }
                 std::pair<double, double> muLambda = evaluer.predictMuLambda(qSeq3Di.numSequence, qSeq3Di.L);
@@ -246,7 +255,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     }
                     if(needTMaligner) {
                         size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
-                        float * targetCaData = (float*) tcadbr->sequenceReader->getData(tId, thread_idx);
+                        char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
+                        float* targetCaData = (float*)tcadata;
+                        if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                            tcoords.read(tcadata, res.dbLen);
+                            targetCaData = tcoords.getBuffer();
+                        }
                         TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                           res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
                         if(tmres.tmscore < par.tmScoreThr){

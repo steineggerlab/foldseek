@@ -18,8 +18,10 @@ LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 void updateValdiation(){
     DbValidator::allDb.push_back(LocalParameters::DBTYPE_CA_ALPHA);
+    DbValidator::allDb.push_back(LocalParameters::DBTYPE_CA_ALPHA_F16);
     DbValidator::allDb.push_back(LocalParameters::DBTYPE_TMSCORE);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_CA_ALPHA);
+    DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_CA_ALPHA_F16);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_TMSCORE);
 }
 
@@ -310,6 +312,14 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
                 "https://alphafold.ebi.ac.uk/",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "ESMAtlas30",
+                "ESM Metagenomic Atlas clustered at 30% sequence identity.",
+                "Lin et al. Evolutionary-scale prediction of atomic level protein structure with a language model. bioRxiv, (2022)",
+                "https://esmatlas.com",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         },
         {
