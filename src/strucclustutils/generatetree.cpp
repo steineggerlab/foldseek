@@ -23,6 +23,7 @@
 #include "MSANode.h"
 #include "kseq.h"
 #include "KSeqBufferReader.h"
+#include "LDDT.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -86,7 +87,7 @@ int generatetree2(int argc, const char **argv, const Command& command) {
     IndexReader qdbr(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
     
     // Read in headers for mapping IDs back to source files
-    IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
+    IndexReader qdbrH(par.db1, par.threads, IndexReader::SRC_HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
 
     // Alignment database from structurealign
     DBReader<unsigned int> reader(par.db2.c_str(), par.db2Index.c_str(), 1, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
@@ -363,9 +364,9 @@ std::string fastamsa2profile(std::string & msa, PSSMCalculator &pssmCalculator, 
     bool fastaError = false;
     bool maskByFirst = false;
     kseq_t *seq = kseq_init(&d);
-    bool inHeader = false;
+    // bool inHeader = false;
     unsigned int setSize = 0;
-    unsigned int seqLength = 0;
+    // unsigned int seqLength = 0;
     size_t msaPos = 0;
     unsigned int centerLengthWithGaps = 0;
     unsigned int maskedCount = 0;
@@ -557,69 +558,6 @@ std::vector<int> maskToMapping(std::string mask, size_t length) {
     return mapping;
 }
 
-std::string parseMsa(std::string msa2, std::string backtrace, char btChar,
-                     int preGap, int preSequence, int endGap, int endSequence,
-                     std::vector<int> mapping) {
-    
-    assert(btChar == 'D' || btChar == 'I');
-    
-    std::string msa; 
-   
-    // Use kseq to parse FASTA
-    kseq_buffer_t d;
-    d.buffer = (char*)msa2.c_str();
-    d.length = msa2.size();
-    kseq_t *seq = kseq_init(&d);
-    while (kseq_read(seq) >= 0) {
-        
-        // Header
-        msa.push_back('>');
-        msa += seq->name.s;
-        msa.push_back('\n');
-        
-        // Pre-alignment
-        // In query, gaps before sequence
-        // In target, sequence before gaps
-        if (btChar == 'I') {
-            msa.append(mapping[preGap], '-');
-            msa.append(seq->seq.s, 0, mapping[preSequence]);
-        } else {
-            msa.append(seq->seq.s, 0, mapping[preSequence]);
-            msa.append(mapping[preGap], '-');
-        }
-        
-        // In query, add sequence on M or I, gap on D
-        // In target, on M or D, gap on I
-        size_t i = preSequence + 1;
-        size_t j = preSequence;
-        for (size_t b = 0; i < mapping.size() - endGap - endSequence, b < backtrace.length(); ++b) {
-            if (backtrace[b] == 'M' || backtrace[b] == btChar) {
-                msa.append(seq->seq.s, mapping[j], mapping[i] - mapping[j]);
-                j = i;
-                ++i;
-            } else {
-                msa.push_back('-');
-            }
-        }
-        
-        // Post-alignment
-        // In query, sequence before gaps
-        // In target, gaps before sequence
-        if (btChar == 'I') {
-            msa.append(seq->seq.s, mapping[j], endSequence);
-            msa.append(endGap, '-'); 
-        } else {
-            msa.append(endGap, '-'); 
-            msa.append(seq->seq.s, mapping[j], endSequence);
-        }
-
-        msa.push_back('\n');
-    }
-    
-    kseq_destroy(seq);
-    return msa;
-}
-
 /**
  * @brief Merges two MSAs
  * 
@@ -641,26 +579,6 @@ std::string mergeTwoMsa(std::string & msa1, std::string & msa2, Matcher::result_
     size_t tEndSequence = qEndGaps;
     size_t tEndGaps     = qEndSequence;
 
-    // {
-    //     std::cout << map1.size() - 1 << " " << map1.at(res.qEndPos) << std::endl;
-    //     std::cout << "       qStartPos: " << res.qStartPos << std::endl; 
-    //     std::cout << "         qEndPos: " << res.qEndPos << std::endl; 
-    //     std::cout << "      dbStartPos: " << res.dbStartPos << std::endl; 
-    //     std::cout << "        dbEndPos: " << res.dbEndPos << std::endl; 
-    //     std::cout << "            qLen: " << res.qLen << std::endl; 
-    //     std::cout << "           dbLen: " << res.dbLen << std::endl; 
-    //     std::cout << std::endl;
-    //     std::cout << "    qPreSequence: " << qPreSequence << std::endl; 
-    //     std::cout << "        qPreGaps: " << qPreGaps << std::endl; 
-    //     std::cout << "    qEndSequence: " << qEndSequence << std::endl; 
-    //     std::cout << "        qEndGaps: " << qEndGaps << std::endl; 
-    //     std::cout << "    tPreSequence: " << tPreSequence << std::endl; 
-    //     std::cout << "        tPreGaps: " << tPreGaps << std::endl; 
-    //     std::cout << "    tEndSequence: " << tEndSequence << std::endl; 
-    //     std::cout << "        tEndGaps: " << tEndGaps << std::endl; 
-    //     std::cout << std::endl;
-    // }
-    
     // String for merged MSA
     std::string msa; 
     
@@ -679,7 +597,7 @@ std::string mergeTwoMsa(std::string & msa1, std::string & msa2, Matcher::result_
         }
         char stateChar() { return (state == SEQ) ? 'S' : 'G'; }
     };
-
+    
     std::vector<Instruction> qBt;
     std::vector<Instruction> tBt;
     qBt.emplace_back(SEQ, 1);  // first match
@@ -823,12 +741,23 @@ int generatetree(int argc, const char **argv, const Command& command) {
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> alnDbr(par.db2.c_str(), par.db2Index.c_str(),par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::NOSORT);
+
+    IndexReader seqDbrCA(
+                par.db1,
+                par.threads,
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                "_ca");
     
     IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
     
     std::cout << "Got databases" << std::endl;
 
     // Substitution matrices
+    // TODO optimise on scoreBias in AA/3Di PSSMCalculators to make alignments more global
+    // 0 to 1
+    
     SubstitutionMatrix subMat_3di(par.scoringMatrixFile.values.aminoacid().c_str(), 2.1, par.scoreBias);
     std::string blosum;
     for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
@@ -866,7 +795,7 @@ int generatetree(int argc, const char **argv, const Command& command) {
         msa_3di[i] += seqDbr3Di.getData(i, 0);
         mappings[i] = std::string(seqDbrAA.getSeqLen(i), '0');
     }
-    
+       
     maxSeqLength = par.maxSeqLen;
     
     std::cout << "Initialised MSAs, Sequence objects" << std::endl;
@@ -874,6 +803,8 @@ int generatetree(int argc, const char **argv, const Command& command) {
     // Setup objects needed for profile calculation
     // TODO: set pca/pcb proper params
     
+    par.pca = 1.5;
+    par.pcb = 2.1;
     PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt +1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
 
@@ -884,6 +815,9 @@ int generatetree(int argc, const char **argv, const Command& command) {
     par.maskProfile = 0;
     par.evalProfile = 0.1;
     par.evalThr = 0.1;
+    
+    // Don't lose columns in pairwise alignments when less than 50% gaps
+    par.matchRatio = 0.51;
 
     PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
@@ -913,6 +847,12 @@ int generatetree(int argc, const char **argv, const Command& command) {
     memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
     std::vector<AlnSimple> hits = parseHits(alnDbr);
     int _i = 1;
+    
+    // Initialise Newick tree nodes
+    std::vector<std::string> treeNodes(sequenceCnt);
+    for (size_t i = 0; i < sequenceCnt; ++i)
+        treeNodes[i] = std::to_string(i);
+
     while(hits.size() > 0){
         std::cout << "While loop " << _i++ << std::endl; 
         
@@ -922,25 +862,23 @@ int generatetree(int argc, const char **argv, const Command& command) {
         std::cout << "  mergedId: " << mergedId << std::endl;
         std::cout << "  targetId: " << targetId << std::endl;
 
-        // std::cout << "  Score: " << hits[0].score << std::endl;
+        // Extend tree
+        // TODO: make this optional ?
+        // e.g. mergedId = 21, targetId = (3,6) --> (21,(3,6))
+        if (treeNodes[mergedId] == std::to_string(mergedId))
+            treeNodes[mergedId] = Util::parseFastaHeader(qdbrH.sequenceReader->getData(mergedId, 0));
+        if (treeNodes[targetId] == std::to_string(targetId))
+            treeNodes[targetId] = Util::parseFastaHeader(qdbrH.sequenceReader->getData(targetId, 0));
+        treeNodes[mergedId] = "(" + treeNodes[mergedId] + "," + treeNodes[targetId] + ")";
+        treeNodes[targetId] = "";
         
         structureSmithWaterman.ssw_init(allSeqs_aa[mergedId], allSeqs_3di[mergedId], tinySubMatAA, tinySubMat3Di, &subMat_aa);
-        // std::cout << allSeqs_aa[mergedId]->L << std::endl;
-        // std::cout << allSeqs_3di[mergedId]->L << std::endl;
-        
         std::cout << "  Initialised SW" << std::endl;
         
         Matcher::result_t res = pairwiseAlignment(structureSmithWaterman, allSeqs_aa[mergedId]->L, allSeqs_aa[targetId],
                                                   allSeqs_3di[targetId], par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-
         std::cout << "  Performed new alignments" << std::endl;
 
-        // std::cout << "  CIGAR: " << res.backtrace << std::endl;
-        // allSeqs_aa[mergedId]->print();
-        // allSeqs_aa[targetId]->print();
-        // std::cout << "  Mask 1: " << mappings[mergedId] << std::endl;
-        // std::cout << "  Mask 2: " << mappings[targetId] << std::endl;
-        
         // Convert 010101 mask to [ 0, 2, 4 ] index mapping
         std::vector<int> map1 = maskToMapping(mappings[mergedId], res.qLen);
         std::vector<int> map2 = maskToMapping(mappings[targetId], res.dbLen);
@@ -951,20 +889,15 @@ int generatetree(int argc, const char **argv, const Command& command) {
         msa_aa[targetId] = "";
         msa_3di[targetId] = "";
         assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
-        
-        // std::cout << "  Final alignment:\n";
-        // std::cout << msa_aa[mergedId] << std::endl;
-        // std::cout << msa_3di[mergedId] << std::endl;
-        
         std::cout << "  Merged AA/3Di MSAs" << std::endl;
 
-        par.matchRatio = 0.5;
         std::string profile_aa = fastamsa2profile(msa_aa[mergedId], calculator_aa, filter_aa, subMat_aa, maxSeqLength,
                                                   sequenceCnt + 1, par.matchRatio, par.filterMsa,
                                                   par.compBiasCorrection,
                                                   par.qid, par.filterMaxSeqId, par.Ndiff, 0,
                                                   par.qsc,
                                                   par.filterMinEnable, par.wg, NULL);
+        std::cout << "  Got AA profile" << std::endl;
        
         // Mapping is stored at the end of the profile (to \n), so save to mappings[]
         // Iterate backwards until newline to recover the full mask
@@ -982,19 +915,14 @@ int generatetree(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < mask.length(); ++i)
             maskBool[i] = (mask[i] == '1') ? true : false;
         
-        // std::cout << "  New mask: " << mappings[mergedId] << " " << mappings[mergedId].length() << std::endl;
-        std::cout << "  Got AA profile" << std::endl;
-        
         std::string profile_3di = fastamsa2profile(msa_3di[mergedId], calculator_3di, filter_3di, subMat_3di, maxSeqLength,
                                                    sequenceCnt + 1, par.matchRatio, par.filterMsa,
                                                    par.compBiasCorrection,
                                                    par.qid, par.filterMaxSeqId, par.Ndiff, par.covMSAThr,
                                                    par.qsc,
                                                    par.filterMinEnable, par.wg, maskBool);
-
         delete[] maskBool; 
         assert(profile_aa.length() == profile_3di.length());
-        
         std::cout << "  Got 3Di profile" << std::endl;
         
         if (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_AMINO_ACIDS)) {
@@ -1007,50 +935,43 @@ int generatetree(int argc, const char **argv, const Command& command) {
         
         allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
         allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
-        
-        // std::cout << "  New seq 2 profile:\n";
-        // allSeqs_aa[mergedId]->print();
-        // std::cout << std::endl;
-        // allSeqs_3di[mergedId]->print();
-        // std::cout << "  Mapped AA/3Di sequences" << std::endl;
-
-        // if (mergedId == 2) {
-        //     return EXIT_SUCCESS;
-        // }
 
         alreadyMerged[targetId] = true;
         
         hits = removeMergedHits(hits, mergedId, targetId);
-        
         std::cout << "  Removed old hits" << std::endl;
         
         structureSmithWaterman.ssw_init(allSeqs_aa[mergedId], allSeqs_3di[mergedId], tinySubMatAA, tinySubMat3Di, &subMat_aa);
-        
         std::cout << "  Re-init SW" << std::endl;
 
         //TODO add flag for reverse score correction
         std::vector<AlnSimple> newHits = updateScores(structureSmithWaterman, allSeqs_aa, allSeqs_3di, mergedId, alreadyMerged, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-        
         std::cout << "  Updated scores" << std::endl;
         
         hits.insert(hits.end(), newHits.begin(), newHits.end());
         sortHitsByScore(hits);
-        
+               
         std::cout << std::endl;
     }
     
     // Find the final MSA (only non-empty string left in msa vectors)
     int msaCnt = 0;
     std::string finalMSA;
+    std::string finalTree;
     for (size_t i = 0; i < msa_aa.size(); ++i) {
         if (msa_aa[i] != "" && msa_3di[i] != "") {
             finalMSA = msa_aa[i]; // + "\n\n" + msa_3di[i];
+            finalTree = treeNodes[i];
             ++msaCnt;
             continue;
         }
     }
     assert(msaCnt == 1);
     assert(finalMSA != "");
+    assert(finalTree != "");
+    
+    std::cout << "Tree: " << finalTree << std::endl;
+    // FIXME: includes info other than just id as well
 
     // Write final MSA to file with correct headers
     DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
@@ -1060,17 +981,33 @@ int generatetree(int argc, const char **argv, const Command& command) {
     d.length = finalMSA.length();
     kseq_t *seq = kseq_init(&d);
     resultWriter.writeStart(0);
+    int finalLength = 0;
+    int count = 0;
+    std::vector<int> seqStarts(seqDbrAA.getSize());
+    std::string buffer;
+    buffer.reserve(10 * 1024);
     while (kseq_read(seq) >= 0) {
-        char* source = qdbrH.sequenceReader->getDataByDBKey(std::stoi(seq->name.s), 0);
-        std::ostringstream oss;
-        oss << '>' << source << seq->seq.s << '\n';
-        std::string entry = oss.str();
-        resultWriter.writeAdd(entry.c_str(), entry.size(), 0);
+        // Save start position of each sequence on the fly
+        seqStarts[std::stoi(seq->name.s)] = 2 + seq->name.l + count;
+        count += seq->name.l + seq->seq.l + 3; 
+
+        // Write FASTA entry to file
+        unsigned int id = qdbrH.sequenceReader->getId(std::stoi(seq->name.s));
+        char* source = qdbrH.sequenceReader->getData(id, 0);
+        buffer.append(1, '>');
+        buffer.append(Util::parseFastaHeader(source));
+        buffer.append(1, '\n');
+        buffer.append(seq->seq.s, seq->seq.l);
+        buffer.append(1, '\n');
+        resultWriter.writeAdd(buffer.c_str(), buffer.size(), 0);
+        buffer.clear();
+
+        if (finalLength == 0) finalLength = (int)seq->seq.l;
     }
     resultWriter.writeEnd(0, 0, false, 0);
     resultWriter.close(true);
     FileUtil::remove(par.db3Index.c_str());
-    
+   
     // Cleanup
     seqDbrAA.close();
     seqDbr3Di.close();
