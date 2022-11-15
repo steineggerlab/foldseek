@@ -12,7 +12,7 @@ set(strucclustutils_source_files
         strucclustutils/PulchraWrapper.h
         strucclustutils/structurerescorediagonal.cpp
 	strucclustutils/generatetree.cpp
-	strucclustutils/traversetree.cpp
+	strucclustutils/msa2lddt.cpp
         PARENT_SCOPE
         )
 
