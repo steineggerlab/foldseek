@@ -313,28 +313,47 @@ std::vector<AlnSimple> removeMergedHits(std::vector<AlnSimple> & hits, unsigned 
     return newHits;
 }
 
-std::vector<AlnSimple> updateScores(StructureSmithWaterman& structureSmithWaterman, std::vector<Sequence*> & allSeqs_aa, std::vector<Sequence*> & allSeqs_3di,
-                                    unsigned int mergedId, bool * alreadyMerged, int gapOpen, int gapExtend) {
+std::vector<AlnSimple> updateAllScores(
+    StructureSmithWaterman & structureSmithWaterman,
+    int8_t * tinySubMatAA,
+    int8_t * tinySubMat3Di,
+    SubstitutionMatrix * subMat_aa,
+    std::vector<Sequence*> & allSeqs_aa,
+    std::vector<Sequence*> & allSeqs_3di,
+    bool * alreadyMerged,
+    int gapOpen,
+    int gapExtend
+) {
     std::vector<AlnSimple> newHits;
-    for (size_t i = 0; i < allSeqs_aa.size(); i++) {
-        if (alreadyMerged[i] == false && mergedId != i) {
+    for (unsigned int i = 0; i < allSeqs_aa.size(); i++) {
+        if (alreadyMerged[i])
+            continue;
+        structureSmithWaterman.ssw_init(
+            allSeqs_aa[i],
+            allSeqs_3di[i],
+            tinySubMatAA,
+            tinySubMat3Di,
+            subMat_aa
+        );
+        for (unsigned int j = 0; j < allSeqs_aa.size(); j++) {
+            if (alreadyMerged[j] || i == j)
+                continue;
             StructureSmithWaterman::s_align align;
-            // if (Parameters::isEqualDbtype(allSeqs_aa[i]->getSeqType(),Parameters::DBTYPE_HMM_PROFILE)) {
-            //     align = structureSmithWaterman.alignScoreEndPos(allSeqs_aa[i]->numConsensusSequence, allSeqs_3di[i]->numConsensusSequence,
-            //                                                     allSeqs_aa[i]->L,gapOpen, gapExtend, allSeqs_aa[mergedId]->L / 2);
-            // } else {
-            //     align = structureSmithWaterman.alignScoreEndPos(allSeqs_aa[i]->numSequence, allSeqs_3di[i]->numSequence,
-            //                                                     allSeqs_aa[i]->L,gapOpen, gapExtend, allSeqs_aa[mergedId]->L / 2);
-            // }
-            align = structureSmithWaterman.alignScoreEndPos(allSeqs_aa[i]->numSequence, allSeqs_3di[i]->numSequence,
-                                                            allSeqs_aa[i]->L,gapOpen, gapExtend, allSeqs_aa[mergedId]->L / 2);
+            align = structureSmithWaterman.alignScoreEndPos(
+                allSeqs_aa[j]->numSequence,
+                allSeqs_3di[j]->numSequence,
+                allSeqs_aa[j]->L,
+                gapOpen,
+                gapExtend,
+                allSeqs_aa[i]->L / 2
+            );
             AlnSimple aln;
-            aln.queryId = mergedId;
-            aln.targetId = i;
+            aln.queryId = i;
+            aln.targetId = j;
             aln.score = align.score1;
             newHits.emplace_back(aln);
         }
-    }
+    }    
     return newHits;
 }
 
@@ -753,11 +772,7 @@ int generatetree(int argc, const char **argv, const Command& command) {
     IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
     
     std::cout << "Got databases" << std::endl;
-
-    // Substitution matrices
-    // TODO optimise on scoreBias in AA/3Di PSSMCalculators to make alignments more global
-    // 0 to 1
-    
+   
     SubstitutionMatrix subMat_3di(par.scoringMatrixFile.values.aminoacid().c_str(), 2.1, par.scoreBias);
     std::string blosum;
     for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
@@ -796,15 +811,15 @@ int generatetree(int argc, const char **argv, const Command& command) {
         mappings[i] = std::string(seqDbrAA.getSeqLen(i), '0');
     }
        
+    // TODO: dynamically calculate and re-init PSSMCalculator/MsaFilter each iteration
     maxSeqLength = par.maxSeqLen;
     
     std::cout << "Initialised MSAs, Sequence objects" << std::endl;
 
     // Setup objects needed for profile calculation
-    // TODO: set pca/pcb proper params
-    
     par.pca = 1.5;
     par.pcb = 2.1;
+
     PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt +1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
 
@@ -824,7 +839,7 @@ int generatetree(int argc, const char **argv, const Command& command) {
     
     // Add aligner
     StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat_3di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
-
+    
     std::cout << "Initialised PSSMCalculators, MsaFilters, SW aligner" << std::endl;
 
     // Substitution matrices needed for query profile
@@ -845,9 +860,22 @@ int generatetree(int argc, const char **argv, const Command& command) {
 
     bool * alreadyMerged = new bool[sequenceCnt];
     memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
-    std::vector<AlnSimple> hits = parseHits(alnDbr);
     int _i = 1;
-    
+
+    // Initial alignments
+    std::vector<AlnSimple> hits = updateAllScores(
+        structureSmithWaterman,
+        tinySubMatAA,
+        tinySubMat3Di,
+        &subMat_aa,
+        allSeqs_aa,
+        allSeqs_3di,
+        alreadyMerged,
+        par.gapOpen.values.aminoacid(),
+        par.gapExtend.values.aminoacid()
+    );
+    std::cout << "Performed initial all vs all alignments" << std::endl;
+
     // Initialise Newick tree nodes
     std::vector<std::string> treeNodes(sequenceCnt);
     for (size_t i = 0; i < sequenceCnt; ++i)
@@ -932,25 +960,24 @@ int generatetree(int argc, const char **argv, const Command& command) {
             allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
             std::cout << "  Initalised new Sequence objects" << std::endl;
         }
-        
+
         allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
         allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
-
         alreadyMerged[targetId] = true;
         
-        hits = removeMergedHits(hits, mergedId, targetId);
-        std::cout << "  Removed old hits" << std::endl;
-        
-        structureSmithWaterman.ssw_init(allSeqs_aa[mergedId], allSeqs_3di[mergedId], tinySubMatAA, tinySubMat3Di, &subMat_aa);
-        std::cout << "  Re-init SW" << std::endl;
-
-        //TODO add flag for reverse score correction
-        std::vector<AlnSimple> newHits = updateScores(structureSmithWaterman, allSeqs_aa, allSeqs_3di, mergedId, alreadyMerged, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-        std::cout << "  Updated scores" << std::endl;
-        
-        hits.insert(hits.end(), newHits.begin(), newHits.end());
+        hits = updateAllScores(
+            structureSmithWaterman,
+            tinySubMatAA,
+            tinySubMat3Di,
+            &subMat_aa,
+            allSeqs_aa,
+            allSeqs_3di,
+            alreadyMerged,
+            par.gapOpen.values.aminoacid(),
+            par.gapExtend.values.aminoacid()
+        );
         sortHitsByScore(hits);
-               
+        std::cout << "  Updated scores" << std::endl;
         std::cout << std::endl;
     }
     
@@ -981,17 +1008,9 @@ int generatetree(int argc, const char **argv, const Command& command) {
     d.length = finalMSA.length();
     kseq_t *seq = kseq_init(&d);
     resultWriter.writeStart(0);
-    int finalLength = 0;
-    int count = 0;
-    std::vector<int> seqStarts(seqDbrAA.getSize());
     std::string buffer;
     buffer.reserve(10 * 1024);
     while (kseq_read(seq) >= 0) {
-        // Save start position of each sequence on the fly
-        seqStarts[std::stoi(seq->name.s)] = 2 + seq->name.l + count;
-        count += seq->name.l + seq->seq.l + 3; 
-
-        // Write FASTA entry to file
         unsigned int id = qdbrH.sequenceReader->getId(std::stoi(seq->name.s));
         char* source = qdbrH.sequenceReader->getData(id, 0);
         buffer.append(1, '>');
@@ -1001,8 +1020,6 @@ int generatetree(int argc, const char **argv, const Command& command) {
         buffer.append(1, '\n');
         resultWriter.writeAdd(buffer.c_str(), buffer.size(), 0);
         buffer.clear();
-
-        if (finalLength == 0) finalLength = (int)seq->seq.l;
     }
     resultWriter.writeEnd(0, 0, false, 0);
     resultWriter.close(true);
