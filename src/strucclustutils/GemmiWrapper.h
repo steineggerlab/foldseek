@@ -34,6 +34,7 @@ private:
     int modelIt;
     int chainIt;
 
+    bool loadFoldcompStructure(std::istream& stream);
     void updateStructure(void * structure, std::string & filename);
 };
 

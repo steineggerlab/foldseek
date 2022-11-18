@@ -5,8 +5,7 @@
 #include "mmread.hpp"
 #include "gz.hpp"
 #include "input.hpp"
-
-//#include "FileUtil.h"
+#include "foldcomp.h"
 
 GemmiWrapper::GemmiWrapper(){
     threeAA2oneAA = {{"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
@@ -27,7 +26,24 @@ gemmi::Structure openStructure(const std::string & filename){
     }
 }
 
-bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, std::string & name){
+// https://stackoverflow.com/questions/1448467/initializing-a-c-stdistringstream-from-an-in-memory-buffer/1449527
+struct OneShotReadBuf : public std::streambuf
+{
+    OneShotReadBuf(char* s, std::size_t n)
+    {
+        setg(s, s, s + n);
+    }
+};
+
+bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, std::string & name) {
+    if (gemmi::iends_with(name, ".fcz")) {
+        OneShotReadBuf buf((char *) buffer, bufferSize);
+        std::istream istr(&buf);
+        if (!istr) {
+            return false;
+        }
+        return loadFoldcompStructure(istr);
+    }
     try {
         gemmi::MaybeGzipped infile(name);
         gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
@@ -47,6 +63,60 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, std::s
     } catch (std::runtime_error& e) {
         return false;
     }
+    return true;
+}
+
+bool GemmiWrapper::loadFoldcompStructure(std::istream& stream) {
+    std::cout.setstate(std::ios_base::failbit);
+    Foldcomp fc;
+    int res = fc.read(stream);
+    if (res != 0) {
+        return false;
+    }
+    std::vector<AtomCoordinate> coordinates;
+    fc.useAltAtomOrder = false;
+    res = fc.decompress(coordinates);
+    if (res != 0) {
+        return false;
+    }
+    std::cout.clear();
+
+    title.clear();
+    chain.clear();
+    names.clear();
+    chainNames.clear();
+    ca.clear();
+    ca_bfactor.clear();
+    c.clear();
+    cb.clear();
+    n.clear();
+    ami.clear();
+    title.append(fc.strTitle);
+    names.push_back(fc.strTitle);
+    chainNames.push_back(coordinates.begin()->chain);
+    int residueIndex = INT_MAX;
+    for (std::vector<AtomCoordinate>::const_iterator it = coordinates.begin(); it != coordinates.end(); ++it) {
+        const AtomCoordinate& atom = *it;
+        if (atom.atom == "CA") {
+            ca.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
+            ca_bfactor.emplace_back(atom.tempFactor);
+        } else if (atom.atom == "CB") {
+            cb.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
+        } else if (atom.atom == "N") {
+            n.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
+        } else if (atom.atom == "C") {
+            c.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
+        }
+        if (atom.residue_index != residueIndex) {
+            if (threeAA2oneAA.find(atom.residue) == threeAA2oneAA.end()) {
+                ami.push_back('X');
+            } else {
+                ami.push_back(threeAA2oneAA[atom.residue]);
+            }
+            residueIndex = atom.residue_index;
+        }
+    }
+    chain.push_back(std::make_pair(0, ca.size()));
     return true;
 }
 
@@ -122,6 +192,13 @@ void GemmiWrapper::updateStructure(void * void_st, std::string & filename) {
 }
 
 bool GemmiWrapper::load(std::string & filename){
+    if (gemmi::iends_with(filename, ".fcz")) {
+        std::ifstream in(filename, std::ios::binary);
+        if (!in) {
+            return false;
+        }
+        return loadFoldcompStructure(in);
+    }
     try {
         gemmi::Structure st = openStructure(filename);
         updateStructure((void*) &st, filename);
