@@ -393,7 +393,6 @@ int createdb(int argc, const char **argv, const Command& command) {
             std::string name;
             std::string pdbFile;
             mtar_header_t tarHeader;
-            char buffer[4096];
             size_t bufferSize = 1024 * 1024;
             char *dataBuffer = (char *) malloc(bufferSize);
             size_t inflateSize = 1024 * 1024;
@@ -483,7 +482,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 EXIT(EXIT_FAILURE);
 #endif
                     } else {
-                        pdbFile.append(buffer, bufferSize);
+                        pdbFile.append(dataBuffer, tarHeader.size);
                     }
                     if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name) == false) {
                         incorrectFiles++;
