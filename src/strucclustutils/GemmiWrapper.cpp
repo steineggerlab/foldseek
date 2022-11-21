@@ -36,7 +36,8 @@ struct OneShotReadBuf : public std::streambuf
 };
 
 bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, std::string & name) {
-    if (gemmi::iends_with(name, ".fcz")) {
+bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name) {
+    if (bufferSize > MAGICNUMBER_LENGTH && strncmp(buffer, MAGICNUMBER, MAGICNUMBER_LENGTH) == 0) {
         OneShotReadBuf buf((char *) buffer, bufferSize);
         std::istream istr(&buf);
         if (!istr) {
