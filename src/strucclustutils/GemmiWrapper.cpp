@@ -80,6 +80,9 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream) {
         return false;
     }
     std::cout.clear();
+    if (coordinates.size() == 0) {
+        return false;
+    }
 
     title.clear();
     chain.clear();
@@ -93,21 +96,29 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream) {
     ami.clear();
     title.append(fc.strTitle);
     names.push_back(fc.strTitle);
-    chainNames.push_back(coordinates.begin()->chain);
+    const AtomCoordinate& first = coordinates[0];
+    chainNames.push_back(first.chain);
     int residueIndex = INT_MAX;
+    Vec3 ca_atom = {NAN, NAN, NAN};
+    Vec3 cb_atom = {NAN, NAN, NAN};
+    Vec3 n_atom  = {NAN, NAN, NAN};
+    Vec3 c_atom  = {NAN, NAN, NAN};
+    float ca_atom_bfactor = 0.0;
     for (std::vector<AtomCoordinate>::const_iterator it = coordinates.begin(); it != coordinates.end(); ++it) {
         const AtomCoordinate& atom = *it;
-        if (atom.atom == "CA") {
-            ca.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
-            ca_bfactor.emplace_back(atom.tempFactor);
-        } else if (atom.atom == "CB") {
-            cb.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
-        } else if (atom.atom == "N") {
-            n.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
-        } else if (atom.atom == "C") {
-            c.emplace_back(atom.coordinate.x, atom.coordinate.y, atom.coordinate.z);
-        }
         if (atom.residue_index != residueIndex) {
+            if (residueIndex != INT_MAX) {
+                ca.push_back(ca_atom);
+                cb.push_back(cb_atom);
+                n.push_back(n_atom);
+                c.push_back(c_atom);
+                ca_bfactor.push_back(ca_atom_bfactor);
+                ca_atom = {NAN, NAN, NAN};
+                cb_atom = {NAN, NAN, NAN};
+                n_atom  = {NAN, NAN, NAN};
+                c_atom  = {NAN, NAN, NAN};
+                ca_atom_bfactor = 0.0;
+            }
             if (threeAA2oneAA.find(atom.residue) == threeAA2oneAA.end()) {
                 ami.push_back('X');
             } else {
@@ -115,8 +126,24 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream) {
             }
             residueIndex = atom.residue_index;
         }
+
+        if (atom.atom == "CA") {
+            ca_atom = { atom.coordinate.x, atom.coordinate.y, atom.coordinate.z };
+            ca_atom_bfactor = atom.tempFactor;
+        } else if (atom.atom == "CB") {
+            cb_atom = { atom.coordinate.x, atom.coordinate.y, atom.coordinate.z };
+        } else if (atom.atom == "N") {
+            n_atom = { atom.coordinate.x, atom.coordinate.y, atom.coordinate.z };
+        } else if (atom.atom == "C") {
+            c_atom = { atom.coordinate.x, atom.coordinate.y, atom.coordinate.z };
+        }
     }
-    chain.push_back(std::make_pair(0, ca.size()));
+    ca.push_back(ca_atom);
+    cb.push_back(cb_atom);
+    n.push_back(n_atom);
+    c.push_back(c_atom);
+    ca_bfactor.push_back(ca_atom_bfactor);
+    chain.emplace_back(0, ca.size());
     return true;
 }
 
