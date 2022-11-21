@@ -30,11 +30,11 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 std::vector<struct Command> commands = {
         {"createdb",             createdb,            &localPar.structurecreatedb,    COMMAND_MAIN,
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
+                "Convert PDB/mmCIF/tar[.gz]/DB files to a db.",
+                "Convert PDB/mmCIF/tar[.gz]/DB files to a db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, 
+                "<i:PDB|mmCIF[.gz]|tar|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, 
 #ifdef HAVE_GCS
                         &DbValidator::flatfileStdinGenericUri
 #else
@@ -43,8 +43,8 @@ std::vector<struct Command> commands = {
                                           },
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"structureto3didescriptor",             structureto3didescriptor,            &localPar.structurecreatedb,    COMMAND_HIDDEN,
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
+                "Convert PDB/mmCIF/tar[.gz] files to a db.",
+                "Convert PDB/mmCIF/tar[.gz] files to a db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:3didescriptor>",
                 CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
