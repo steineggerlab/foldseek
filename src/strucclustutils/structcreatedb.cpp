@@ -636,6 +636,8 @@ int createdb(int argc, const char **argv, const Command& command) {
             std::string header;
             std::string name;
 
+            std::string dbname = reader.getDataFileName();
+
             unsigned int thread_idx = 0;
 #ifdef OPENMP
             thread_idx = static_cast<unsigned int>(omp_get_thread_num());
@@ -656,7 +658,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                     writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
                             alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
                             par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
-                            name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+                            dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
                 }
             }
         }

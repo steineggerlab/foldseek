@@ -35,7 +35,6 @@ struct OneShotReadBuf : public std::streambuf
     }
 };
 
-bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, std::string & name) {
 bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name) {
     if (bufferSize > MAGICNUMBER_LENGTH && strncmp(buffer, MAGICNUMBER, MAGICNUMBER_LENGTH) == 0) {
         OneShotReadBuf buf((char *) buffer, bufferSize);
@@ -43,7 +42,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         if (!istr) {
             return false;
         }
-        return loadFoldcompStructure(istr);
+        return loadFoldcompStructure(istr, name);
     }
     try {
         gemmi::MaybeGzipped infile(name);
@@ -67,7 +66,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
     return true;
 }
 
-bool GemmiWrapper::loadFoldcompStructure(std::istream& stream) {
+bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string& filename) {
     std::cout.setstate(std::ios_base::failbit);
     Foldcomp fc;
     int res = fc.read(stream);
@@ -96,7 +95,7 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream) {
     n.clear();
     ami.clear();
     title.append(fc.strTitle);
-    names.push_back(fc.strTitle);
+    names.push_back(filename);
     const AtomCoordinate& first = coordinates[0];
     chainNames.push_back(first.chain);
     int residueIndex = INT_MAX;
@@ -148,7 +147,7 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream) {
     return true;
 }
 
-void GemmiWrapper::updateStructure(void * void_st, std::string & filename) {
+void GemmiWrapper::updateStructure(void * void_st, const std::string& filename) {
     gemmi::Structure * st = (gemmi::Structure *) void_st;
 
     title.clear();
@@ -225,7 +224,7 @@ bool GemmiWrapper::load(std::string & filename){
         if (!in) {
             return false;
         }
-        return loadFoldcompStructure(in);
+        return loadFoldcompStructure(in, filename);
     }
     try {
         gemmi::Structure st = openStructure(filename);
