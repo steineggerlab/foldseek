@@ -23,6 +23,5 @@ include_directories(lib/3di)
 include_directories(lib/pulchra)
 include_directories(lib/kerasify)
 include_directories(lib/gemmi)
-include_directories(lib/foldcomp/src)
 
 add_subdirectory(src)
