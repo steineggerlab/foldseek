@@ -185,7 +185,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
 
         if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_HALF) {
             static_assert(sizeof(Vec3) == 3 * sizeof(double), "sizeof(Vec3) must be 3 * sizeof(double)");
-            camol.reserve(chainLen * 3 * sizeof(int16_t));
+            camol.resize(chainLen * 3 * sizeof(int16_t));
             int simdChainLen = chainLen - (chainLen % 4);
             int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
             convertToFloat16(simdChainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16);
@@ -228,7 +228,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             // }
             cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(uint16_t), dbKey, thread_idx);
         } else {
-            camol.reserve(chainLen * 3 * sizeof(float));
+            camol.resize(chainLen * 3 * sizeof(float));
             float* camolf32 = reinterpret_cast<float*>(camol.data());
             for(size_t pos = 0; pos < chainLen; pos++){
                 camolf32[(0 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].x))
