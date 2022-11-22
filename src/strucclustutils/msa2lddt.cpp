@@ -1,4 +1,5 @@
 #include "DBReader.h"
+#include "DBWriter.h"
 #include "IndexReader.h"
 #include "LocalParameters.h"
 #include "Matcher.h"
@@ -6,6 +7,11 @@
 #include "StructureUtil.h"
 #include "Util.h"
 #include <cassert>
+
+#define ZSTD_STATIC_LINKING_ONLY
+
+#include <zstd.h>
+#include "msa.html.zst.h"
 
 #include "kseq.h"
 #include "KSeqBufferReader.h"
@@ -36,15 +42,27 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
     int sequenceCnt = seqDbr3Di.getSize();
     std::vector<std::string> headers(sequenceCnt);
     std::vector<std::string> sequences(sequenceCnt);
+    std::vector<std::string> sequences3di(sequenceCnt);
     while (kseq->ReadEntry()) {
         const KSeqWrapper::KSeqEntry &entry = kseq->entry;
         size_t idx = seqDbrAA.getLookupIdByAccession(entry.name.s);
-        std::cout << entry.name.s << " " << idx << std::endl;
         headers[idx] = entry.name.s;
         sequences[idx] = entry.sequence.s;
+        sequences3di[idx] = seqDbr3Di.getData(idx, 0);
+        sequences3di[idx].pop_back();
+        for (size_t i = 0; i < entry.sequence.l; i++)
+            if (entry.sequence.s[i] == '-') sequences3di[idx].insert(i, "-");
         if (alnLength == 0)
             alnLength = (int)entry.sequence.l;
     }
+    
+    
+
+    
+    // Track per-column scores and no. non-gaps to avg
+    std::vector<float> perColumnScore(alnLength, 0.0);
+    std::vector<float> perColumnSOP(alnLength, 0.0);
+    std::vector<float> perColumnCount(alnLength, 0.0);
 
     std::vector<bool> ids(sequenceCnt);  
     std::fill(ids.end() - 2, ids.end(), true);
@@ -60,7 +78,11 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
             if (ids[i] && qId == -1) { qId = i; continue; }
             if (ids[i] && tId == -1) { tId = i; break; }
         }
-
+        
+        // lengths
+        // per column lddt idx <-> msa idx
+        std::vector<int> match_to_msa;
+        
         // Generate a CIGAR string from qId-tId sub-alignment, ignoring -- columns
         // e.g. --X-XX-X---XX-
         //      Y---YYYY---YYY
@@ -68,13 +90,12 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         Matcher::result_t res;
         res.backtrace = "";
         bool started = false;  // flag for first Match column in backtrace
-        int q  = 0;  // index in msa
+        int m  = 0;  // index in msa
         int qr = 0;  // index in seq
-        int t  = 0;
         int tr = 0;
-        while (q < alnLength && t < alnLength) {
-            char qc = sequences[qId][q];
-            char tc = sequences[tId][t];
+        while (m < alnLength) {
+            char qc = sequences[qId][m];
+            char tc = sequences[tId][m];
             if (qc == '-' && tc == '-') {
                 // Skip gap columns
             } else if (qc == '-') {
@@ -89,19 +110,15 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
                     res.qStartPos = qr;
                     res.dbStartPos = tr;
                 }
+                match_to_msa.push_back(m);
                 res.backtrace.push_back('M');
-                ++qr;
-                ++tr;
                 res.qEndPos = qr;
                 res.dbEndPos = tr;
+                ++qr;
+                ++tr;
             }
-            ++q;
-            ++t;
+            ++m;
         }
-
-        // These should be equal to qr/tr 
-        int qLen = seqDbrAA.getSeqLen(qId);
-        int tLen = seqDbr3Di.getSeqLen(tId);
         
         // Remove D/I from backtrace after last M
         res.backtrace.shrink_to_fit();
@@ -114,32 +131,89 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         float *targetCaData = (float*)seqDbrCA.sequenceReader->getData(tId, 0);
         
         // Calculate LDDT using created result_t object
-        LDDTCalculator *lddtcalculator = new LDDTCalculator(qLen, tLen);
-        lddtcalculator->initQuery(qLen, queryCaData, &queryCaData[qLen], &queryCaData[2 * qLen]);
+        LDDTCalculator *lddtcalculator = new LDDTCalculator(qr, tr);
+        lddtcalculator->initQuery(qr, queryCaData, &queryCaData[qr], &queryCaData[2 * qr]);
         LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator->computeLDDTScore(
-            tLen,
+            tr,
             res.qStartPos,
             res.dbStartPos,
             res.backtrace,
             targetCaData,
-            &targetCaData[tLen],
-            &targetCaData[2 * tLen]
+            &targetCaData[tr],
+            &targetCaData[2 * tr]
         );
         
-        // TODO: output per-column LDDT
-        // e.g. X   X   -   X
-        //      Y   Y   Y   Y
-        //      Z   Z   -   Z
-        //     0.4 0.7  0  0.6
-        // - Map perCaLddtScore values to MSA column indices
+        for (int i = 0; i < lddtres.scoreLength; i++) {
+            if (lddtres.perCaLddtScore[i] == 0.0) continue;
+            size_t idx = match_to_msa[i];
+            perColumnSOP[idx] += (sequences[qId][idx] == sequences[tId][idx]);
+            perColumnScore[idx] += lddtres.perCaLddtScore[i];
+            perColumnCount[idx]++;
+        }
         
-        std::cout << headers[qId] << " " << headers[tId] << " " << lddtres.avgLddtScore << std::endl;
-        // if (!std::isnan(lddtres.avgLddtScore))
         sum += lddtres.avgLddtScore;
-
         delete lddtcalculator;
+
     } while (std::next_permutation(ids.begin(), ids.end()));
-    
+   
     std::cout << "Average MSA LDDT: " << sum / (double)numPairs << std::endl;
+    
+    // Write clustal format MSA HTML
+    // TODO: make optional
+    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
+    resultWriter.open();
+    
+    // Read in template and write to .html
+    size_t dstSize = ZSTD_findDecompressedSize(msa_html_zst, msa_html_zst_len);
+    char* dst = (char*)malloc(sizeof(char) * dstSize);
+    size_t realSize = ZSTD_decompress(dst, dstSize, msa_html_zst, msa_html_zst_len);
+    resultWriter.writeData(dst, realSize, 0, 0, false, false);
+
+    // Aligned sequences, as [[header, sequence], [header, sequence], ...]
+    const char* scriptBlock = "<script>render([";
+    resultWriter.writeData(scriptBlock, strlen(scriptBlock), 0, 0, false, false);
+    for (size_t i = 0; i < sequences.size(); i++) {
+        std::string entry;
+        entry.append("['");
+        entry.append(headers[i]);
+        entry.append("','");
+        entry.append(sequences[i]);
+        entry.append("','");
+        entry.append(sequences3di[i]);
+        entry.append("'],");
+        resultWriter.writeData(entry.c_str(), entry.length(), 0, 0, false, false);
+    }
+    std::string middle = "],[";
+    resultWriter.writeData(middle.c_str(), middle.length(), 0, 0, false, false);
+    
+    // Per-column scores, as [[id, score], [id, score], ...]
+    // TODO: optionally save this as .csv
+    for (int i = 0; i < alnLength; i++) {
+        if (perColumnCount[i] == 0) continue;
+        std::string entry;
+        entry.append("[");
+        entry.append(std::to_string(i));
+        entry.append(",");
+        entry.append(std::to_string(perColumnScore[i] / (double)perColumnCount[i]));
+        entry.append(",");
+        entry.append(std::to_string(perColumnSOP[i] / (double)perColumnCount[i]));
+        entry.append("],");
+        resultWriter.writeData(entry.c_str(), entry.length(), 0, 0, false, false);
+    }
+    
+    std::string end = "],";
+    end.append("{'db':'");
+    end.append(par.db1);
+    end.append("','msa':'");
+    end.append(par.db2);
+    end.append("','lddt':");
+    end.append(std::to_string(sum / numPairs));
+    end.append("});</script>");
+
+    resultWriter.writeData(end.c_str(), end.length(), 0, 0, false, false);
+    resultWriter.writeEnd(0, 0, false, 0);
+    resultWriter.close(true);
+    FileUtil::remove(par.db3Index.c_str());
+
     return EXIT_SUCCESS;
 }
