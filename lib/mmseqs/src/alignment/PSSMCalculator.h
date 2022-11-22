@@ -39,8 +39,8 @@ public:
 
     ~PSSMCalculator();
 
-    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, bool wg);
-    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, const std::vector<Matcher::result_t> &alnResults, bool wg);
+    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, bool wg, float scoreBias);
+    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, const std::vector<Matcher::result_t> &alnResults, bool wg, float scoreBias);
 
     void printProfile(size_t queryLength);
     void printPSSM(size_t queryLength);

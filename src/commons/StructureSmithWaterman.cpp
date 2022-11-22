@@ -243,7 +243,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
     std::pair<alignment_end, alignment_end> bests;
     // Find the alignment scores and ending positions
     if(profile->isProfile){
-        bests = sw_sse2_byte<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
+        bests = sw_sse2_byte<PROFILE>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
                                           gap_open, gap_extend, profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte,
                                           profile->profile_gIns_byte, profile->profile_aa_byte, profile->profile_3di_byte,UCHAR_MAX, profile->bias, maskLen);
 
@@ -253,7 +253,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
     }
     if (bests.first.score == 255) {
         if(profile->isProfile) {
-            bests = sw_sse2_word<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
+            bests = sw_sse2_word<PROFILE>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
                                               gap_open, gap_extend, profile->profile_gDelOpen_word, profile->profile_gDelClose_word,
                                               profile->profile_gIns_word, profile->profile_aa_word,
                                               profile->profile_3di_word, USHRT_MAX, maskLen);
@@ -309,14 +309,14 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
     if (r.word == 0) {
 
         if (profile->isProfile) {
-            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE_HMM>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, NULL, profile->rev_alignment_aa_profile,
+            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, NULL, profile->rev_alignment_aa_profile,
                                                                      r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
-            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE_HMM>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, NULL, profile->rev_alignment_3di_profile,
+            createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, NULL, profile->rev_alignment_3di_profile,
                                                                      r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
             createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte, profile->profile_gIns_rev_byte,
                                                       profile->gDelOpen_rev, profile->gDelClose_rev, profile->gIns_rev, profile->query_length, queryOffset);
 
-            bests_reverse = sw_sse2_byte<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
+            bests_reverse = sw_sse2_byte<PROFILE>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
                                                       gap_open, gap_extend, profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte,
                                                       profile->profile_gIns_rev_byte,profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
                                                       r.score1, profile->bias, maskLen);
@@ -332,16 +332,16 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
         }
     } else {
         if (profile->isProfile) {
-            createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE_HMM>(profile->profile_aa_rev_word,profile->query_aa_rev_sequence,NULL,profile->rev_alignment_aa_profile,
+            createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_aa_rev_word,profile->query_aa_rev_sequence,NULL,profile->rev_alignment_aa_profile,
                                                                       r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
-            createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE_HMM>(profile->profile_3di_rev_word,profile->query_3di_rev_sequence,NULL,profile->rev_alignment_3di_profile,
+            createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_3di_rev_word,profile->query_3di_rev_sequence,NULL,profile->rev_alignment_3di_profile,
                                                                       r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
             createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_rev_word,
                                                        profile->profile_gDelClose_rev_word,
                                                        profile->profile_gIns_rev_word, profile->gDelOpen_rev,
                                                        profile->gDelClose_rev, profile->gIns_rev,
                                                        profile->query_length, queryOffset);
-            bests_reverse = sw_sse2_word<PROFILE_HMM>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
+            bests_reverse = sw_sse2_word<PROFILE>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
                                                       gap_open, gap_extend, profile->profile_gDelOpen_rev_word, profile->profile_gDelClose_rev_word,
                                                       profile->profile_gIns_rev_word,profile->profile_aa_rev_word, profile->profile_3di_rev_word,
                                                       r.score1, maskLen);
@@ -385,7 +385,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
 
     cigar* path;
     if (profile->isProfile) {
-        path = banded_sw<PROFILE_HMM>(db_aa_sequence + r.dbStartPos1,
+        path = banded_sw<PROFILE>(db_aa_sequence + r.dbStartPos1,
                                       db_3di_sequence + r.dbStartPos1,
                                       profile->query_aa_sequence + r.qStartPos1,
                                       profile->query_3di_sequence + r.qStartPos1,

@@ -445,7 +445,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                         }
                     }
 
-                    PSSMCalculator::Profile pssmRes = calculator.computePSSMFromMSA(filteredSetSize, res.centerLength, (const char **) res.msaSequence, alnResults, par.wg);
+                    PSSMCalculator::Profile pssmRes = calculator.computePSSMFromMSA(filteredSetSize, res.centerLength, (const char **) res.msaSequence, alnResults, par.wg, par.scoreBias);
                     result.append(">consensus_");
                     result.append(centerSequenceHeader, centerHeaderLength);
                     for (int pos = 0; pos < centerSequence.L; pos++) {

@@ -403,7 +403,7 @@ int msa2profile(int argc, const char **argv, const Command &command) {
 
             PSSMCalculator::Profile pssmRes =
                     calculator.computePSSMFromMSA(filteredSetSize, msaResult.centerLength,
-                                                  (const char **) msaResult.msaSequence, alnResults, par.wg);
+                                                  (const char **) msaResult.msaSequence, alnResults, par.wg, par.scoreBias);
             if (par.compBiasCorrection == true) {
                 SubstitutionMatrix::calcGlobalAaBiasCorrection(&subMat, pssmRes.pssm, pNullBuffer,
                                                                Sequence::PROFILE_AA_SIZE,
