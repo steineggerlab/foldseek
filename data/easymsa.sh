@@ -32,22 +32,10 @@ if notExists "${STRUCTUREDB}.dbtype"; then
         || fail "Structure createdb died"
 fi
 
-# # Generate a fake prefilter for all vs all alignment
-PREFILTER="${TMP_PATH}/prefilter"
-if notExists "${PREFILTER}.dbtype"; then
-	fake_pref "${STRUCTUREDB}" "${STRUCTUREDB}" "${PREFILTER}"
-fi
-
-# # Do all vs all alignment using structurealign
-ALIGNDB="${TMP_PATH}/align"
-if notExists "${ALIGNDB}.dbtype"; then
-	"$MMSEQS" structurealign "${STRUCTUREDB}" "${STRUCTUREDB}" "${PREFILTER}" "${ALIGNDB}" -e 1000000000000 --threads 1 -a
-fi
-
 if notExists "${TMP_PATH}/${TREE}"; then
     # shellcheck disable=SC2086
 	# Query DB, Alignment DB, temporary directory
-	"$MMSEQS" generatetree "${STRUCTUREDB}" "${ALIGNDB}" "${RESULTS}" \
+	"$MMSEQS" generatetree "${STRUCTUREDB}" "${RESULTS}" \
 		|| fail "Generate Tree died"
 fi
 

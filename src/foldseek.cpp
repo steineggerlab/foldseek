@@ -176,7 +176,6 @@ std::vector<struct Command> commands = {
                 "Cameron Gilchrist <gamcil@snu.ac.kr> & Charlotte Tumescheit <ch.tumescheit@gmail.com> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <o:alignmentFile>",
                 CITATION_FOLDSEEK, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                                    {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                     {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"msa2lddt",      msa2lddt,      &localPar.align,      COMMAND_ALIGNMENT,
                 "Calculate LDDT of a MSA",

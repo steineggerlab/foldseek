@@ -95,7 +95,7 @@ int generatetree2(int argc, const char **argv, const Command& command) {
     reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     
     // DBWriter for alignment results
-    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
+    DBWriter resultWriter(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
     resultWriter.open();
     
     size_t dbSize = reader.getSize();
@@ -243,7 +243,7 @@ int generatetree2(int argc, const char **argv, const Command& command) {
     
     resultWriter.writeEnd(0, 0, false, 0);
     resultWriter.close(true);
-    FileUtil::remove(par.db3Index.c_str());
+    FileUtil::remove(par.db2Index.c_str());
 
     return EXIT_SUCCESS;
 }
@@ -254,29 +254,6 @@ struct AlnSimple {
     unsigned int targetId;
     int score;
 };
-
-std::vector<AlnSimple> parseHits(DBReader<unsigned int> & alnDbr) {
-    std::vector<AlnSimple> ret;
-    std::vector<Matcher::result_t> result;
-    for(size_t i = 0; i < alnDbr.getSize(); i++) {
-        char *data = alnDbr.getData(i, 0);
-        unsigned int queryKey = alnDbr.getDbKey(i);
-        result.clear();
-        Matcher::readAlignmentResults(result, data, true);
-        for(size_t j = 0; j < result.size(); j++) {
-            if(queryKey == result[j].dbKey){
-                continue;
-            }
-            AlnSimple aln;
-            aln.queryId = i;
-            aln.targetId = result[j].dbKey;
-            aln.score = result[j].score;
-            ret.push_back(aln);
-        }
-    }
-    return ret;
-}
-
 
 Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned int querySeqLen,  Sequence *target_aa, Sequence *target_3di, int gapOpen,
                   int gapExtend) {
@@ -761,8 +738,6 @@ int generatetree(int argc, const char **argv, const Command& command) {
     seqDbrAA.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbr3Di((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
-    DBReader<unsigned int> alnDbr(par.db2.c_str(), par.db2Index.c_str(),par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    alnDbr.open(DBReader<unsigned int>::NOSORT);
 
     IndexReader seqDbrCA(
                 par.db1,
@@ -1008,7 +983,7 @@ int generatetree(int argc, const char **argv, const Command& command) {
     // FIXME: includes info other than just id as well
 
     // Write final MSA to file with correct headers
-    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
+    DBWriter resultWriter(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
     resultWriter.open();
     kseq_buffer_t d;
     d.buffer = (char*)finalMSA.c_str();
@@ -1030,12 +1005,11 @@ int generatetree(int argc, const char **argv, const Command& command) {
     }
     resultWriter.writeEnd(0, 0, false, 0);
     resultWriter.close(true);
-    FileUtil::remove(par.db3Index.c_str());
+    FileUtil::remove(par.db2Index.c_str());
    
     // Cleanup
     seqDbrAA.close();
     seqDbr3Di.close();
-    alnDbr.close();
     delete[] alreadyMerged;
     delete [] tinySubMatAA;
     delete [] tinySubMat3Di;
