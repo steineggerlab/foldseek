@@ -120,6 +120,10 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
             ++m;
         }
         
+        // If no alignment between the two sequences, skip
+        if (res.backtrace.length() == 0)
+            continue;
+        
         // Remove D/I from backtrace after last M
         res.backtrace.shrink_to_fit();
         size_t i;
