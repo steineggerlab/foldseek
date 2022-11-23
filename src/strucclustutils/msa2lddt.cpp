@@ -47,17 +47,18 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         const KSeqWrapper::KSeqEntry &entry = kseq->entry;
         size_t idx = seqDbrAA.getLookupIdByAccession(entry.name.s);
         headers[idx] = entry.name.s;
-        sequences[idx] = entry.sequence.s;
+        sequences[idx] = seqDbrAA.getData(idx, 0);
+        sequences[idx].pop_back();
         sequences3di[idx] = seqDbr3Di.getData(idx, 0);
         sequences3di[idx].pop_back();
         for (size_t i = 0; i < entry.sequence.l; i++)
-            if (entry.sequence.s[i] == '-') sequences3di[idx].insert(i, "-");
+            if (entry.sequence.s[i] == '-') {
+                sequences[idx].insert(i, "-");
+                sequences3di[idx].insert(i, "-");
+            }
         if (alnLength == 0)
             alnLength = (int)entry.sequence.l;
     }
-    
-    
-
     
     // Track per-column scores and no. non-gaps to avg
     std::vector<float> perColumnScore(alnLength, 0.0);
