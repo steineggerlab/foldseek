@@ -104,7 +104,11 @@ int computeAlternativeAlignment(StructureSmithWaterman & structureSmithWaterman,
 int structurealign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
-
+    if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
+        Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
+        Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
+        par.sortByStructureBits = false;
+    }
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
     IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
@@ -292,6 +296,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                 targetCaData = tcoords.getBuffer();
                             }
                             TMaligner::TMscoreResult tmres;
+                            tmres.tmscore = 0; // avoid warning about uninitialized variable
                             LDDTCalculator::LDDTScoreResult lddtres;
                             if(needTMaligner) {
                                 tmres = tmaligner->computeTMscore(targetCaData,
@@ -317,7 +322,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                 }
                                 res.dbcov = lddtres.avgLddtScore;
                             }
-                            if(par.sortByStructureBits){
+                            if(par.sortByStructureBits && needTMaligner && needLDDT){
                                 res.score = res.score * sqrt(lddtres.avgLddtScore * tmres.tmscore);
                             }
                         }

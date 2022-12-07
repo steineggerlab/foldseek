@@ -133,6 +133,7 @@ LocalParameters::LocalParameters() :
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
     lddtThr = 0.0;
+    evalThr = 10;
     sortByStructureBits = 1;
     maskBfactorThreshold = 0;
     chainNameMode = 0;
