@@ -51,6 +51,8 @@ public:
 
     static const unsigned int INDEX_DB_CA_KEY = 500;
 
+    static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
+
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
     std::vector<MMseqsParameter *> structurealign;
