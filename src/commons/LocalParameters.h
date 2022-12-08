@@ -45,6 +45,7 @@ public:
     static const int OUTFMT_LDDT = 45;
     static const int OUTFMT_LDDT_FULL = 46;
     static const int OUTFMT_RMSD = 47;
+    static const int OUTFMT_PROBTP = 48;
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_HALF  = 2;

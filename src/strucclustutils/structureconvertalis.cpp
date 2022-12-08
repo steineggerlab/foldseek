@@ -20,6 +20,7 @@
 #include "result_viz_prelude_fs.html.zst.h"
 #include "TMaligner.h"
 #include "LDDT.h"
+#include "CalcProbTP.h"
 #include <map>
 
 #ifdef OPENMP
@@ -772,6 +773,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                             result.push_back(',');
                                         }
                                         result.append(SSTR(lddtres.perCaLddtScore[lddtres.scoreLength - 1]));
+                                        break;
+                                    case LocalParameters::OUTFMT_PROBTP:
+                                        result.append(SSTR(CalcProbTP::calculate(res.score)));
                                         break;
                                 }
                                 if (i < outcodes.size() - 1) {
