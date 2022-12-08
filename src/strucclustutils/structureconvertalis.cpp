@@ -27,6 +27,58 @@
 #include <omp.h>
 #endif
 
+
+const char *singleLetterToThree(char singleLetterAminoacid) {
+    switch (singleLetterAminoacid) {
+        case 'A':
+            return "ALA";
+        case 'R':
+            return "ARG";
+        case 'N':
+            return "ASN";
+        case 'D':
+            return "ASP";
+        case 'C':
+            return "CYS";
+        case 'Q':
+            return "GLN";
+        case 'E':
+            return "GLU";
+        case 'G':
+            return "GLY";
+        case 'H':
+            return "HIS";
+        case 'I':
+            return "ILE";
+        case 'L':
+            return "LEU";
+        case 'K':
+            return "LYS";
+        case 'M':
+            return "MET";
+        case 'F':
+            return "PHE";
+        case 'P':
+            return "PRO";
+        case 'S':
+            return "SER";
+        case 'T':
+            return "THR";
+        case 'W':
+            return "TRP";
+        case 'Y':
+            return "TYR";
+        case 'V':
+            return "VAL";
+        default:
+            return "UNK";
+    }
+
+}
+
+
+
+
 void caToStr(float *ca, size_t len, std::string & ret) {
     for (size_t i = 0; i < len; i++) {
         ret.append(SSTR(ca[i]));
@@ -184,7 +236,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                                                   needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
 
 
-
+    if(LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED == format){
+        needTMaligner = true;
+        needCA = true;
+        needSequenceDB = true;
+    }
     NcbiTaxonomy* t = NULL;
     if(needTaxonomy){
         std::string db2NoIndexName = PrefilteringIndexReader::dbPathWithoutIndex(par.db2);
@@ -838,6 +894,41 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                             continue;
                         }
                         result.append(buffer, count);
+                        break;
+                    }
+                    case LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED:{
+                        // rotate and translate the target Calpha
+                        // and write the results as pdb file
+                        std::string filename = resultWriter.getDataFileName() + queryId+"_"+targetId+".pdb";
+                        FILE * fp = fopen(filename.c_str(), "w");
+                        result.append("MODEL\n");
+                        result.append("REMARK ");
+                        result.append(queryId);
+                        result.append(" ");
+                        result.append(targetId);
+                        result.append("\n");
+                        for(unsigned int tpos = 0; tpos < res.dbLen; tpos++){
+                            size_t tId = tDbr->sequenceReader->getId(res.dbKey);
+                            char* targetSeqData  = (char*) tDbr->sequenceReader->getData(tId, thread_idx);
+                            // printf for ATOM Calpha record pdb
+                            int count = snprintf(buffer, sizeof(buffer),
+                                   "ATOM  %5d %4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n",
+                                   tpos+1, "CA", singleLetterToThree(targetSeqData[tpos]), "A", tpos+1,
+                                   tmres.t[0] + targetCaData[tpos] * tmres.u[0][0] + targetCaData[res.dbLen+tpos] * tmres.u[0][1] + targetCaData[res.dbLen+res.dbLen+tpos] * tmres.u[0][2],
+                                   tmres.t[1] + targetCaData[tpos] * tmres.u[1][0] + targetCaData[res.dbLen+tpos] * tmres.u[1][1] + targetCaData[res.dbLen+res.dbLen+tpos] * tmres.u[1][2],
+                                   tmres.t[2] + targetCaData[tpos] * tmres.u[2][0] + targetCaData[res.dbLen+tpos] * tmres.u[2][1] + targetCaData[res.dbLen+res.dbLen+tpos] * tmres.u[2][2],
+                                   1.0, 0.0);
+                            if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
+                                Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
+                                continue;
+                            }
+                            result.append(buffer, count);
+                        }
+                        result.append("ENDMDL\n");
+                        // use result size to write to fp
+                        fwrite(result.c_str(), sizeof(char), result.size(), fp);
+                        fclose(fp);
+                        result.clear();
                         break;
                     }
                     case Parameters::FORMAT_ALIGNMENT_HTML: {

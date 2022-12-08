@@ -70,7 +70,9 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
                                     needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT);
     }
 
-    if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM || par.greedyBestHits) {
+    if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM ||
+        par.formatAlignmentMode == LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED  ||
+        par.greedyBestHits) {
         needBacktrace = true;
     }
     if (needBacktrace) {

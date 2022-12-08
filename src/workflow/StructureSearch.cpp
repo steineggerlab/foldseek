@@ -39,7 +39,11 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     setStructureSearchWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setStructureSearchMustPassAlong(&par);
-
+    if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
+        Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
+        Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
+        par.sortByStructureBits = false;
+    }
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
     if (par.reuseLatest) {

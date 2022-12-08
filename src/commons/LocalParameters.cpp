@@ -23,6 +23,15 @@ LocalParameters::LocalParameters() :
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
     PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
+
+    PARAM_FORMAT_MODE.description = "Output format:\n0: BLAST-TAB\n"
+                                    "1: SAM\n2: BLAST-TAB + query/db length\n"
+                                    "3: Pretty HTML\n4: BLAST-TAB + column headers\n"
+                                    "5: Calpha only PDB super-posed to query\n"
+                                    "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
+                                    "support custom output formats (--format-output)\n"
+                                    "(5) Superposed PDB files (Calpha only)";
+    PARAM_FORMAT_MODE.regex = "^[0-5]{1}$";
     PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
@@ -124,6 +133,7 @@ LocalParameters::LocalParameters() :
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
     lddtThr = 0.0;
+    evalThr = 10;
     sortByStructureBits = 1;
     maskBfactorThreshold = 0;
     chainNameMode = 0;
