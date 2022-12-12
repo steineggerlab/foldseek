@@ -721,7 +721,7 @@ std::string mergeTwoMsa(std::string & msa1, std::string & msa2, Matcher::result_
     return msa;
 }
 
-int generatetree(int argc, const char **argv, const Command& command) {
+int structuremsa(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     
     par.compBiasCorrection = 0;

@@ -7,7 +7,6 @@ add_subdirectory(strucclustutils)
 add_subdirectory(commons)
 add_subdirectory(version)
 add_subdirectory(workflow)
-add_subdirectory(test)
 
 add_library(foldseek-framework
         ${commons_source_files}
