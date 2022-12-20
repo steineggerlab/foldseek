@@ -380,9 +380,18 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
     dbw.close();
     resultReader.close();
+
+    if(needCalpha){
+        if (sameDB == false) {
+            delete tcadbr;
+        }
+        delete qcadbr;
+    }
+
     if (sameDB == false) {
         delete t3DiDbr;
         delete tAADbr;
     }
+
     return EXIT_SUCCESS;
 }
