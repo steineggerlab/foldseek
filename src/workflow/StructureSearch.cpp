@@ -111,6 +111,10 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+        par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_ONLY;
+        par.sortByStructureBits = 0;
+        par.evalThr = 10;
+        cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA){
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());

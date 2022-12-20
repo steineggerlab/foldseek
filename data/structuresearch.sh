@@ -16,11 +16,33 @@ if notExists "${TMP_PATH}/pref.dbtype"; then
         || fail "Kmer matching step died"
 fi
 
-# 2. tm alignment
-if notExists "${TMP_PATH}/aln.dbtype"; then
-    # shellcheck disable=SC2086
-    $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
-        || fail "Alignment step died"
+# check if $ALIGNMENT_ALGO is tmalign
+if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then
+    # 2. tm alignment
+    if notExists "${TMP_PATH}/strualn.dbtype"; then
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" structurealign "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${TMP_PATH}/strualn" ${STRUCTUREALIGN_PAR} \
+            || fail "Alignment step died"
+    fi
+
+    if notExists "${TMP_PATH}/aln.dbtype"; then
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/strualn" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+            || fail "Alignment step died"
+    fi
+
+    if [ -n "$REMOVE_TMP" ]; then
+        echo "Removing temporary files"
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/strualn" ${VERBOSITY}
+    fi
+else
+    # 2. Alignment
+    if notExists "${TMP_PATH}/aln.dbtype"; then
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+            || fail "Alignment step died"
+    fi
 fi
 
 # shellcheck disable=SC2086
