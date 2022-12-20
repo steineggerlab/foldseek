@@ -85,8 +85,8 @@ int tmalign(int argc, const char **argv, const Command& command) {
         std::string backtrace;
         std::string resultBuffer;
         resultBuffer.reserve(1024*1024);
-        Coordinate16 qcoords;
-        Coordinate16 tcoords;
+        Coordinate16 qcoords(qcadbr.getDbtype());
+        Coordinate16 tcoords(tcadbr->getDbtype());
 
         char buffer[1024+32768];
 #pragma omp for schedule(dynamic, 1)
@@ -99,11 +99,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
-                float* qdata = (float*)qcadata;
-                if (qcadbr.getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                    qcoords.read(qcadata, queryLen);
-                    qdata = qcoords.getBuffer();
-                }
+                float* qdata = qcoords.read(qcadata, queryLen);
                 tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], querySeq, queryLen);
 
                 int passedNum = 0;
@@ -131,11 +127,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     }
 
                     char *tcadata = tcadbr->sequenceReader->getData(targetId, thread_idx);
-                    float* tdata = (float*)tcadata;
-                    if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                        tcoords.read(tcadata, targetLen);
-                        tdata = tcoords.getBuffer();
-                    }
+                    float* tdata = tcoords.read(tcadata, targetLen);
 
                     // align here
                     float TMscore;

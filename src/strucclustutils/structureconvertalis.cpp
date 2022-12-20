@@ -467,8 +467,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         const TaxonNode * taxonNode = NULL;
         TMaligner::TMscoreResult tmres;
 
-        Coordinate16 qcoords;
-        Coordinate16 tcoords;
+        Coordinate16 qcoords(qcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : qcadbr->getDbtype());
+        Coordinate16 tcoords(tcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : tcadbr->getDbtype());
 
 #pragma omp  for schedule(dynamic, 10)
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
@@ -496,11 +496,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 size_t qId = qcadbr->sequenceReader->getId(queryKey);
 		        querySeqLen =  (qcadbr->sequenceReader->getEntryLen(qId)-1)/(3*sizeof(float));
                 char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
-                queryCaData = (float*)qcadata;
-                if (qcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                    qcoords.read(qcadata, querySeqLen);
-                    queryCaData = qcoords.getBuffer();
-                }
+                queryCaData = qcoords.read(qcadata, querySeqLen);
             }
             size_t qHeaderId = qDbrHeader.sequenceReader->getId(queryKey);
             const char *qHeader = qDbrHeader.sequenceReader->getData(qHeaderId, thread_idx);
@@ -552,11 +548,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 if (needCA) {
                     size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                     char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
-                    targetCaData = (float*)tcadata;
-                    if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                        tcoords.read(tcadata, res.dbLen);
-                        targetCaData = tcoords.getBuffer();
-                    }
+                    targetCaData = tcoords.read(tcadata, res.dbLen);
                 }
 
                 std::string targetId = Util::parseFastaHeader(tHeader);

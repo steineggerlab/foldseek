@@ -96,6 +96,17 @@ void convertToFloat16(size_t len, double *data, int16_t* out) {
     }
 }
 
+void convertToDiff16(size_t len, double *data, int16_t* out) {
+    int32_t last = (int)(data[0] * 1000);
+    memcpy(out, &last, sizeof(int32_t));
+    for (size_t i = 1; i < len; ++i) {
+        int32_t curr = (int32_t)(data[i * 3] * 1000);
+        int16_t diff = (curr - last);
+        out[i + 1] = diff;
+        last = curr;
+    }
+}
+
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
@@ -206,27 +217,22 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                             ? 0.0 : readStructure.ca[chainStart+pos].z;
                 camolf16[(2 * chainLen) + pos] = _mm_extract_epi16(_mm256_cvtps_ph(_mm256_set1_ps(val), SIMDE_MM_FROUND_NO_EXC), 0);
             }
-            // float errorSum = 0.0;
-            // for (size_t i = 0; i < chainLen; i++) {
-            //     int16_t val = camolf16[chainLen * 0 + i];
-            //     float x = _mm_cvtss_f32(_mm_cvtph_ps(_mm_set1_epi16(val)));
-            //     val = camolf16[chainLen * 1 + i];
-            //     float y = _mm_cvtss_f32(_mm_cvtph_ps(_mm_set1_epi16(val)));
-            //     val = camolf16[chainLen * 2 + i];
-            //     float z = _mm_cvtss_f32(_mm_cvtph_ps(_mm_set1_epi16(val)));
-
-            //     float realX = readStructure.ca[chainStart+i].x;
-            //     float realY = readStructure.ca[chainStart+i].y;
-            //     float realZ = readStructure.ca[chainStart+i].z;
-
-            //     Debug(Debug::ERROR) << "x: " << x << " y: " << y << " z: " << z << "\n";
-            //     Debug(Debug::ERROR) << "realX: " << realX << " realY: " << realY << " realZ: " << realZ << "\n";
-            //     // compute error between real and converted
-            //     float error = std::sqrt((x - realX) * (x - realX) + (y - realY) * (y - realY) + (z - realZ) * (z - realZ));
-            //     errorSum += error;
-            //     Debug(Debug::ERROR) << "error: " << error << "\n";
-            // }
             cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(uint16_t), dbKey, thread_idx);
+        } else if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
+            camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
+            int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
+            convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16);
+            convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1));
+            convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1));
+            cadbw.writeData((const char*)camol.data(), (chainLen - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float), dbKey, thread_idx);
+            // Coordinate16 coords(LocalParameters::DBTYPE_CA_ALPHA_DIFF);
+            // float* buffer = coords.read((const char*)camol.data(), chainLen);
+            // for (size_t i = 0; i < (chainLen + 1); i++) {
+            //     Debug(Debug::INFO) << "pos: " << i << " x: " << (camolf16[i]/1000.0f) << " y: " << (camolf16[(chainLen + 1) + i]/1000.0f) << " z: " << (camolf16[2*(chainLen + 1) + i]/1000.0f) << "\n";
+            // }
+            // for(size_t pos = 0; pos < chainLen; pos++){
+            //     Debug(Debug::INFO) << pos << " " << buffer[(0 * chainLen) + pos] << " " << buffer[(1 * chainLen) + pos] << " " << buffer[(2 * chainLen) + pos] << "\n";
+            // }
         } else {
             camol.resize(chainLen * 3 * sizeof(float));
             float* camolf32 = reinterpret_cast<float*>(camol.data());

@@ -263,8 +263,8 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                     std::max(t3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false);
         }
 
-        Coordinate16 qcoords;
-        Coordinate16 tcoords;
+        Coordinate16 qcoords(qcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : qcadbr->getDbtype());
+        Coordinate16 tcoords(tcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : tcadbr->getDbtype());
 
         std::string backtrace;
         char buffer[1024+32768];
@@ -289,11 +289,7 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                 if(needTMaligner){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
                     char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
-                    float* queryCaData = (float*)qcadata;
-                    if (qcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                        qcoords.read(qcadata, qSeq3Di.L);
-                        queryCaData = qcoords.getBuffer();
-                    }
+                    float* queryCaData = qcoords.read(qcadata, qSeq3Di.L);
                     tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
                 }
                 qRevSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
@@ -332,11 +328,7 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                     if(needTMaligner) {
                         size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                         char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
-                        float* targetCaData = (float*)tcadata;
-                        if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                            tcoords.read(tcadata, res.dbLen);
-                            targetCaData = tcoords.getBuffer();
-                        }
+                        float* targetCaData = tcoords.read(tcadata, res.dbLen);
                         TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                                                    res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
                         if(tmres.tmscore < par.tmScoreThr){

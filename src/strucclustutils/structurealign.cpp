@@ -220,8 +220,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
         char buffer[1024+32768];
         std::string resultBuffer;
 
-        Coordinate16 qcoords;
-        Coordinate16 tcoords;
+        Coordinate16 qcoords(qcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : qcadbr->getDbtype());
+        Coordinate16 tcoords(tcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : tcadbr->getDbtype());
 
         TMaligner::TMscoreResult tmres;
         LDDTCalculator::LDDTScoreResult lddtres;
@@ -243,11 +243,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 if(needCalpha){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
                     char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
-                    float* queryCaData = (float*)qcadata;
-                    if (qcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                        qcoords.read(qcadata, qSeq3Di.L);
-                        queryCaData = qcoords.getBuffer();
-                    }
+                    float* queryCaData = qcoords.read(qcadata, qSeq3Di.L);
                     if(needTMaligner){
                         tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
                     }
@@ -292,11 +288,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                         if(needCalpha) {
                             size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                             char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
-                            float* targetCaData = (float*)tcadata;
-                            if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                                tcoords.read(tcadata, res.dbLen);
-                                targetCaData = tcoords.getBuffer();
-                            }
+                            float* targetCaData = tcoords.read(tcadata, res.dbLen);
                             if(needTMaligner) {
                                 tmres = tmaligner->computeTMscore(targetCaData,
                                                                   &targetCaData[res.dbLen],
