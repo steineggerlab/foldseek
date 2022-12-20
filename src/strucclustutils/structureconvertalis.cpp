@@ -464,6 +464,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         newBacktrace.reserve(1024);
 
         const TaxonNode * taxonNode = NULL;
+        TMaligner::TMscoreResult tmres;
 
 #pragma omp  for schedule(dynamic, 10)
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
@@ -583,7 +584,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     const float bestMatchEstimate = static_cast<float>(std::min(abs(res.qEndPos - adjustQstart), abs(res.dbEndPos - adjustDBstart)));
                     missMatchCount = static_cast<unsigned int>(bestMatchEstimate * (1.0f - res.seqId) + 0.5);
                 }
-                TMaligner::TMscoreResult tmres;
                 if(needTMaligner){
                     tmaligner->initQuery(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen], NULL, res.qLen);
                     tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,

@@ -16,7 +16,13 @@ public:
     ~TMaligner();
 
     struct TMscoreResult{
-        TMscoreResult(){}
+        TMscoreResult(){
+            memset(&u, 0, 3*3*sizeof(float));
+            memset(&t, 0, 3*sizeof(float));
+            this->tmscore = 0.0;
+            this->rmsd = 0.0;
+        }
+
         TMscoreResult(float u[3][3], float t[3], double tmscore, double rmsd) {
             memcpy(this->u,u,3*3*sizeof(float));
             memcpy(this->t,t,3*sizeof(float));

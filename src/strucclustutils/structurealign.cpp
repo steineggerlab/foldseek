@@ -223,6 +223,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
         Coordinate16 qcoords;
         Coordinate16 tcoords;
 
+        TMaligner::TMscoreResult tmres;
+        LDDTCalculator::LDDTScoreResult lddtres;
         // write output file
 
 #pragma omp for schedule(dynamic, 1)
@@ -295,9 +297,6 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                 tcoords.read(tcadata, res.dbLen);
                                 targetCaData = tcoords.getBuffer();
                             }
-                            TMaligner::TMscoreResult tmres;
-                            tmres.tmscore = 0; // avoid warning about uninitialized variable
-                            LDDTCalculator::LDDTScoreResult lddtres;
                             if(needTMaligner) {
                                 tmres = tmaligner->computeTMscore(targetCaData,
                                                                   &targetCaData[res.dbLen],
