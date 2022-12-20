@@ -113,7 +113,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
         par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_ONLY;
         par.sortByStructureBits = 0;
-        par.evalThr = 10;
+        //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
         cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA){
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
