@@ -13,7 +13,7 @@ class GemmiWrapper {
 public:
     GemmiWrapper();
 
-    bool loadFromBuffer(const char * buffer, size_t bufferSize, std::string & name);
+    bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name);
 
     bool load(std::string & filename);
 
@@ -34,7 +34,8 @@ private:
     int modelIt;
     int chainIt;
 
-    void updateStructure(void * structure, std::string & filename);
+    bool loadFoldcompStructure(std::istream& stream, const std::string& filename);
+    void updateStructure(void * structure, const std::string & filename);
 };
 
 

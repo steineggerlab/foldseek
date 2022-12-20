@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh -ex
 fail() {
     echo "Error: $1"
     exit 1
@@ -51,6 +51,30 @@ downloadFile() {
         esac
     done
     set -e
+    fail "Could not download $URL to $OUTPUT"
+}
+
+downloadFileList() {
+    URL="$1"
+    OUTPUT_DIR="$2"
+    INPUT_FILE="$OUTPUT_DIR/input.txt"
+    downloadFile "$URL" "$INPUT_FILE"
+    set +e
+    for i in $STRATEGY; do
+        case "$i" in
+        ARIA)
+            aria2c -c --max-connection-per-server="$ARIA_NUM_CONN" --allow-overwrite=true --dir="$OUTPUT_DIR" --input-file="$INPUT_FILE" && return 0
+            ;;
+        CURL)
+            (cd "$OUTPUT_DIR"; xargs -n 1 curl -C - -L -O < "$INPUT_FILE") && return 0
+            ;;
+        WGET)
+            wget --continue -P "$OUTPUT_DIR" --input-file="$INPUT_FILE" && return 0
+            ;;
+        esac
+    done
+    set -e
+    rm -f "$OUTPUT/input.txt"
     fail "Could not download $URL to $OUTPUT"
 }
 
@@ -111,6 +135,12 @@ case "${SELECTION}" in
         fi
         tar xvfz "${TMP_PATH}/alphafold_swissprot.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/alphafold_swissprot"
+        INPUT_TYPE="FOLDSEEK_DB"
+    ;;
+    "ESMAtlas30")
+        downloadFileList "https://raw.githubusercontent.com/facebookresearch/esm/main/scripts/atlas/v0/highquality_clust30/foldseekdb.txt" "${TMP_PATH}/"
+        printf "v0 %s\n" "$(date "+%s")" > "${TMP_PATH}/version"
+        push_back "${TMP_PATH}/highquality_clust30"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "PDB")

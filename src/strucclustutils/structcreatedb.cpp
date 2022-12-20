@@ -185,7 +185,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
 
         if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_HALF) {
             static_assert(sizeof(Vec3) == 3 * sizeof(double), "sizeof(Vec3) must be 3 * sizeof(double)");
-            camol.reserve(chainLen * 3 * sizeof(int16_t));
+            camol.resize(chainLen * 3 * sizeof(int16_t));
             int simdChainLen = chainLen - (chainLen % 4);
             int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
             convertToFloat16(simdChainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16);
@@ -228,7 +228,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             // }
             cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(uint16_t), dbKey, thread_idx);
         } else {
-            camol.reserve(chainLen * 3 * sizeof(float));
+            camol.resize(chainLen * 3 * sizeof(float));
             float* camolf32 = reinterpret_cast<float*>(camol.data());
             for(size_t pos = 0; pos < chainLen; pos++){
                 camolf32[(0 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].x))
@@ -277,13 +277,12 @@ int createdb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_COMMON);
 
-    std::vector<std::string> filenames(par.filenames);
-    std::string outputName = filenames.back();
-    filenames.pop_back();
-    if (filenames.size() == 1 && FileUtil::directoryExists(filenames.back().c_str())) {
+    std::string outputName = par.filenames.back();
+    par.filenames.pop_back();
+    if (par.filenames.size() == 1 && FileUtil::directoryExists(par.filenames.back().c_str())) {
         std::vector<std::string> dirs;
-        dirs.push_back(filenames.back());
-        filenames.pop_back();
+        dirs.push_back(par.filenames.back());
+        par.filenames.pop_back();
         while(dirs.size() != 0){
             std::string dir = dirs.back();
             dirs.pop_back();
@@ -295,7 +294,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                         if (epdf->d_type == DT_DIR){
                             dirs.push_back(dir+"/"+filename);
                         }else{
-                            filenames.push_back(dir+"/"+filename);
+                            par.filenames.push_back(dir+"/"+filename);
                         }
                     }
                 }
@@ -305,7 +304,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     }
 
     Debug(Debug::INFO) << "Output file: " << outputName << "\n";
-    SORT_PARALLEL(filenames.begin(), filenames.end());
+    SORT_PARALLEL(par.filenames.begin(), par.filenames.end());
 
     DBWriter torsiondbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     torsiondbw.open();
@@ -320,10 +319,33 @@ int createdb(int argc, const char **argv, const Command& command) {
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
     SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
-    Debug::Progress progress(filenames.size());
+    Debug::Progress progress(par.filenames.size());
     std::map<std::string, size_t> entrynameToFileId;
     std::map<size_t, std::string> fileIdToName;
     std::map<std::string, size_t> filenameToFileId;
+
+    std::vector<std::string> tarFiles;
+    std::vector<std::string> looseFiles;
+    std::vector<std::string> gcsPaths;
+    std::vector<std::string> dbs;
+
+    for (size_t i = 0; i < par.filenames.size(); ++i) {
+        if (Util::endsWith(".tar.gz", par.filenames[i])
+                || Util::endsWith(".tgz", par.filenames[i])
+                || Util::endsWith(".tar", par.filenames[i])) {
+            tarFiles.push_back(par.filenames[i]);
+        }
+#ifdef HAVE_GCS
+        else if (Util::startWith("gcs://", par.filenames[i])) {
+            gcsPaths.push_back(par.filenames[i]);
+        }
+#endif
+        else if (FileUtil::fileExists((par.filenames[i] + ".dbtype").c_str())) {
+            dbs.push_back(par.filenames[i]);
+        } else {
+            looseFiles.push_back(par.filenames[i]);
+        }
+    }
 
     size_t globalCnt = 0;
     size_t globalFileidCnt = 0;
@@ -331,25 +353,23 @@ int createdb(int argc, const char **argv, const Command& command) {
     size_t tooShort = 0;
     bool needsReorderingAtTheEnd = false;
     // Process tar files!
-    for(size_t i = 0; i < filenames.size(); i++) {
+    for(size_t i = 0; i < tarFiles.size(); i++) {
         mtar_t tar;
-        if (Util::endsWith(".tar.gz", filenames[i]) || Util::endsWith(".tgz", filenames[i])) {
+        if (Util::endsWith(".tar.gz", tarFiles[i]) || Util::endsWith(".tgz", tarFiles[i])) {
 #ifdef HAVE_ZLIB
-            if (structure_mtar_gzopen(&tar, filenames[i].c_str()) != MTAR_ESUCCESS) {
-                Debug(Debug::ERROR) << "Cannot open file " << filenames[i] << "\n";
+            if (structure_mtar_gzopen(&tar, tarFiles[i].c_str()) != MTAR_ESUCCESS) {
+                Debug(Debug::ERROR) << "Cannot open file " << tarFiles[i] << "\n";
                 EXIT(EXIT_FAILURE);
             }
 #else
             Debug(Debug::ERROR) << "Foldseek was not compiled with zlib support. Cannot read compressed input.\n";
             EXIT(EXIT_FAILURE);
 #endif
-        } else if (Util::endsWith(".tar", filenames[i])) {
-            if (mtar_open(&tar, filenames[i].c_str(), "r") != MTAR_ESUCCESS) {
-                Debug(Debug::ERROR) << "Cannot open file " << filenames[i] << "\n";
+        } else {
+            if (mtar_open(&tar, tarFiles[i].c_str(), "r") != MTAR_ESUCCESS) {
+                Debug(Debug::ERROR) << "Cannot open file " << tarFiles[i] << "\n";
                 EXIT(EXIT_FAILURE);
             }
-        } else {
-            continue;
         }
         progress.updateProgress();
 #ifdef OPENMP
@@ -359,7 +379,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
 #endif
 
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName) num_threads(localThreads) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName) num_threads(localThreads) reduction(+:incorrectFiles, tooShort)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -393,7 +413,6 @@ int createdb(int argc, const char **argv, const Command& command) {
             std::string name;
             std::string pdbFile;
             mtar_header_t tarHeader;
-            char buffer[4096];
             size_t bufferSize = 1024 * 1024;
             char *dataBuffer = (char *) malloc(bufferSize);
             size_t inflateSize = 1024 * 1024;
@@ -483,7 +502,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 EXIT(EXIT_FAILURE);
 #endif
                     } else {
-                        pdbFile.append(buffer, bufferSize);
+                        pdbFile.append(dataBuffer, tarHeader.size);
                     }
                     if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name) == false) {
                         incorrectFiles++;
@@ -503,7 +522,7 @@ int createdb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName) reduction(+:incorrectFiles, tooShort)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -521,20 +540,10 @@ int createdb(int argc, const char **argv, const Command& command) {
 
 
 #pragma omp for schedule(static)
-        for (size_t i = 0; i < filenames.size(); i++) {
-            // skip tars since they were processed on top
-            if (Util::endsWith(".tar.gz", filenames[i])
-                || Util::endsWith(".tgz", filenames[i])
-                || Util::endsWith(".tar", filenames[i])
-#ifdef HAVE_GCS
-                || Util::startWith("gcs://", filenames[i])
-#endif
-                ) {
-                continue;
-            }
+        for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
 
-            if(readStructure.load(filenames[i]) == false){
+            if(readStructure.load(looseFiles[i]) == false){
                 incorrectFiles++;
                 continue;
             }
@@ -542,7 +551,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
                                 alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
                                 par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
-                                filenames[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+                                looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
         }
 
     }
@@ -553,13 +562,10 @@ int createdb(int argc, const char **argv, const Command& command) {
         .set<gcs::ConnectionPoolSizeOption>(par.threads)
         .set<google::cloud::storage_experimental::HttpVersionOption>("2.0");
     auto client = gcs::Client(options);
-    for (size_t i = 0; i < filenames.size(); i++) {
-        if (Util::startWith("gcs://", filenames[i]) == false) {
-            continue;
-        }
-        std::vector<std::string> parts = Util::split(filenames[i], "/");
+    for (size_t i = 0; i < gcsPaths.size(); i++) {
+        std::vector<std::string> parts = Util::split(gcsPaths[i], "/");
         if (parts.size() == 1) {
-            Debug(Debug::WARNING) << "Skipping invalid URI " << filenames[i] << "\n";
+            Debug(Debug::WARNING) << "Skipping invalid URI " << gcsPaths[i] << "\n";
             continue;
         }
         std::string bucket_name = parts[1];
@@ -569,14 +575,14 @@ int createdb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, filenames, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter) reduction(+:incorrectFiles, tooShort)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
             GemmiWrapper readStructure;
             std::vector<char> alphabet3di;
             std::vector<char> alphabetAA;
-            std::vector<int16_t> camol;
+            std::vector<int8_t> camol;
             std::string header;
             std::string name;
 
@@ -614,6 +620,50 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
     }
 #endif
+
+    for (size_t i = 0; i < dbs.size(); ++i) {
+        DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
+        reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+        progress.reset(reader.getSize());
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader) reduction(+:incorrectFiles, tooShort)
+        {
+            StructureTo3Di structureTo3Di;
+            PulchraWrapper pulchra;
+            GemmiWrapper readStructure;
+            std::vector<char> alphabet3di;
+            std::vector<char> alphabetAA;
+            std::vector<int8_t> camol;
+            std::string header;
+            std::string name;
+
+            std::string dbname = reader.getDataFileName();
+
+            unsigned int thread_idx = 0;
+#ifdef OPENMP
+            thread_idx = static_cast<unsigned int>(omp_get_thread_num());
+#endif
+#pragma omp for schedule(static)
+            for (size_t i = 0; i < reader.getSize(); i++) {
+                progress.updateProgress();
+
+                char* data = reader.getData(i, thread_idx);
+                size_t len = reader.getEntryLen(i);
+
+                size_t lookupId = reader.getLookupIdByKey(reader.getDbKey(i));
+                std::string name = reader.getLookupEntryName(lookupId);
+
+                if (readStructure.loadFromBuffer(data, len, name) == false) {
+                    incorrectFiles++;
+                } else {
+                    writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
+                            alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                            par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
+                            dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+                }
+            }
+        }
+        reader.close();
+    }
 
     torsiondbw.close(true);
     hdbw.close(true);

@@ -12,6 +12,7 @@
 #include "MemoryMapped.h"
 #include "NcbiTaxonomy.h"
 #include "MappingReader.h"
+#include "Coordinate16.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
 
@@ -466,6 +467,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         const TaxonNode * taxonNode = NULL;
         TMaligner::TMscoreResult tmres;
 
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
+
 #pragma omp  for schedule(dynamic, 10)
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
             progress.updateProgress();
@@ -490,8 +494,13 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             float *queryCaData = NULL;
             if (needCA) {
                 size_t qId = qcadbr->sequenceReader->getId(queryKey);
-                queryCaData = (float*) qcadbr->sequenceReader->getData(qId, thread_idx);
-		querySeqLen =  (qcadbr->sequenceReader->getEntryLen(qId)-1)/(3*sizeof(float));
+		        querySeqLen =  (qcadbr->sequenceReader->getEntryLen(qId)-1)/(3*sizeof(float));
+                char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
+                queryCaData = (float*)qcadata;
+                if (qcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                    qcoords.read(qcadata, querySeqLen);
+                    queryCaData = qcoords.getBuffer();
+                }
             }
             size_t qHeaderId = qDbrHeader.sequenceReader->getId(queryKey);
             const char *qHeader = qDbrHeader.sequenceReader->getData(qHeaderId, thread_idx);
@@ -542,7 +551,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 float *targetCaData = NULL;
                 if (needCA) {
                     size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
-                    targetCaData = (float*) tcadbr->sequenceReader->getData(tId, thread_idx);
+                    char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
+                    targetCaData = (float*)tcadata;
+                    if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
+                        tcoords.read(tcadata, res.dbLen);
+                        targetCaData = tcoords.getBuffer();
+                    }
                 }
 
                 std::string targetId = Util::parseFastaHeader(tHeader);

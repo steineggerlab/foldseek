@@ -1,0 +1,39 @@
+set(foldcomp_header_files
+    src/amino_acid.h
+    src/atom_coordinate.h
+    src/bond_info.h
+    src/execution_timer.h
+    src/database_reader.h
+    src/discretizer.h
+    src/float3d.h
+    src/foldcomp.h
+    src/nerf.h
+    src/sidechain.h
+    src/torsion_angle.h
+    src/utility.h
+    PARENT_SCOPE
+    )
+
+set(foldcomp_source_files
+    src/amino_acid.cpp
+    src/atom_coordinate.cpp
+    src/database_reader.cpp
+    src/discretizer.cpp
+    src/foldcomp.cpp
+    src/nerf.cpp
+    src/sidechain.cpp
+    src/torsion_angle.cpp
+    src/utility.cpp
+    PARENT_SCOPE
+    )
+
+set(foldcomp_exe_header_files
+    src/structure_reader.h
+    PARENT_SCOPE
+    )
+
+set(foldcomp_exe_source_files
+    src/structure_reader.cpp
+    src/main.cpp
+    PARENT_SCOPE
+    )
