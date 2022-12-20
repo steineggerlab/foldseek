@@ -44,6 +44,40 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
         par.sortByStructureBits = false;
     }
+
+
+    {
+        bool needBacktrace = false;
+        bool needTaxonomy = false;
+        bool needTaxonomyMapping = false;
+        bool needLookup = false;
+        bool needSequenceDB = false;
+        bool needFullHeaders = false;
+        bool needSource = false;
+        bool needCA = false;
+        bool needTMalign = false;
+        bool needLDDT = false;
+        LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
+                                         needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT);
+
+        // check if databases have Calpha coordinates
+        if (needCA) {
+            std::string caDB = par.db2 + "_ca.dbtype";
+            if (!FileUtil::fileExists(caDB.c_str())) {
+                Debug(Debug::ERROR)
+                        << "Target database does not contain Calpha coordinates. Please recreate the database.";
+                EXIT(EXIT_FAILURE);
+            }
+            caDB = par.db1 + "_ca.dbtype";
+            if (!FileUtil::fileExists(caDB.c_str())) {
+                Debug(Debug::ERROR)
+                        << "Query database does not contain Calpha coordinates. Please recreate the database.";
+                EXIT(EXIT_FAILURE);
+            }
+        }
+    }
+
+
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
     if (par.reuseLatest) {

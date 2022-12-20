@@ -34,6 +34,12 @@ public:
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
 
+    static const int TMALIGN_HIT_ORDER_AVG = 0;
+    static const int TMALIGN_HIT_ORDER_QUERY = 1;
+    static const int TMALIGN_HIT_ORDER_TARGET = 2;
+    static const int TMALIGN_HIT_ORDER_MIN = 3;
+    static const int TMALIGN_HIT_ORDER_MAX = 4;
+
     static const int CHAIN_MODE_AUTO = 0;
     static const int CHAIN_MODE_ADD = 1;
 
@@ -66,6 +72,7 @@ public:
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
+    PARAMETER(PARAM_TMALIGN_HIT_ORDER)
     PARAMETER(PARAM_LDDT_THRESHOLD)
     PARAMETER(PARAM_SORT_BY_STRUCTURE_BITS)
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)
@@ -76,6 +83,7 @@ public:
     PARAMETER(PARAM_COORD_STORE_MODE)
 
     float tmScoreThr;
+    int tmAlignHitOrder;
     float lddtThr;
     int sortByStructureBits;
     float maskBfactorThreshold;

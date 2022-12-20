@@ -11,6 +11,7 @@ const int LocalParameters::DBTYPE_CA_ALPHA_F16 = 103;
 LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_TMALIGN_HIT_ORDER(PARAM_TMALIGN_HIT_ORDER_ID,"--tmalign-hit-order", "TMalign hit order", "order hits by 0: (qTM+tTM)/2, 1: qTM, 2: tTM, 3: min(qTM,tTM) 4: max(qTM,tTM)",typeid(float), (void *) &tmAlignHitOrder, "^[0-4]{1}$"),
         PARAM_LDDT_THRESHOLD(PARAM_LDDT_THRESHOLD_ID,"--lddt-threshold", "LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &lddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_SORT_BY_STRUCTURE_BITS(PARAM_SORT_BY_STRUCTURE_BITS_ID,"--sort-by-structure-bits", "Sort by structure bit score", "sort by bits*sqrt(alnlddt*alntmscore)",typeid(int), (void *) &sortByStructureBits, "^[0-1]{1}$"),
         PARAM_MASK_BFACTOR_THRESHOLD(PARAM_MASK_BFACTOR_THRESHOLD_ID,"--mask-bfactor-threshold", "Mask b-factor threshold", "mask residues for seeding if b-factor < thr [0,100]",typeid(float), (void *) &maskBfactorThreshold, "^[0-9]*(\\.[0-9]+)?$"),
@@ -68,6 +69,7 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_ADD_BACKTRACE);
     tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    tmalign.push_back(&PARAM_TMALIGN_HIT_ORDER);
     tmalign.push_back(&PARAM_TMALIGN_FAST);
     tmalign.push_back(&PARAM_PRELOAD_MODE);
     tmalign.push_back(&PARAM_THREADS);
@@ -132,6 +134,7 @@ LocalParameters::LocalParameters() :
 
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
+    tmAlignHitOrder = TMALIGN_HIT_ORDER_AVG;
     lddtThr = 0.0;
     evalThr = 10;
     sortByStructureBits = 1;
@@ -206,7 +209,7 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("empty") == 0){ code = Parameters::OUTFMT_EMPTY;}
         else if (outformatSplit[i].compare("lddt") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT; }
         else if (outformatSplit[i].compare("lddtfull") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
-        else if (outformatSplit[i].compare("prob") == 0) { code = LocalParameters::OUTFMT_PROBTP; }
+        else if (outformatSplit[i].compare("prob") == 0) { needCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

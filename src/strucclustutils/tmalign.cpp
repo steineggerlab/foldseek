@@ -140,7 +140,26 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     // align here
                     float TMscore;
                     Matcher::result_t result = tmaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen+targetLen], targetSeq, targetLen, TMscore);
-
+                    float qTM = (static_cast<float>(result.score) / 100000);
+                    float tTM = result.eval;
+                    switch(par.tmAlignHitOrder){
+                        case LocalParameters::TMALIGN_HIT_ORDER_AVG:
+                            result.eval = (qTM + tTM) / 2.0;
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_QUERY:
+                            result.eval = qTM;
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_TARGET:
+                            result.eval = tTM;
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_MIN:
+                            result.eval = std::min(qTM, tTM);
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_MAX:
+                            result.eval = std::max(qTM, tTM);
+                            break;
+                    }
+                    result.score = static_cast<int>(qTM * 100);
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
                     bool hasSeqId = result.seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
                     bool hasTMscore = (TMscore >= par.tmScoreThr);

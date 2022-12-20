@@ -202,5 +202,5 @@ Matcher::result_t TMaligner::align(unsigned int dbKey, float *x, float *y, float
 
     float qCov = StructureSmithWaterman::computeCov(shiftQ, queryLen-endQ-1, queryLen);
     float tCov = StructureSmithWaterman::computeCov(shiftT, targetLen-endT-1, targetLen);
-    return Matcher::result_t(dbKey, static_cast<int>(TM_0*100) , qCov, tCov, seqId, (TM_0+TM2)/2, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
+    return Matcher::result_t(dbKey, TM_0*100000 , qCov, tCov, seqId, TM2, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
 }
