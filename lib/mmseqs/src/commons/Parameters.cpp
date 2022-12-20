@@ -141,7 +141,7 @@ Parameters::Parameters():
         PARAM_IDX_SEQ_SRC(PARAM_IDX_SEQ_SRC_ID, "--idx-seq-src", "Sequence source", "0: auto, 1: split/translated sequences, 2: input sequences", typeid(int), (void *) &idxSeqSrc, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
 
         // result2stats
-        PARAM_STAT(PARAM_STAT_ID, "--stat", "Statistics to be computed", "One of: linecount, mean, doolittle, charges, seqlen, firstline", typeid(std::string), (void *) &stat, ""),
+        PARAM_STAT(PARAM_STAT_ID, "--stat", "Statistics to be computed", "One of: linecount, mean, min, max, doolittle, charges, seqlen, firstline", typeid(std::string), (void *) &stat, ""),
         // linearcluster
         PARAM_KMER_PER_SEQ(PARAM_KMER_PER_SEQ_ID, "--kmer-per-seq", "k-mers per sequence", "k-mers per sequence", typeid(int), (void *) &kmersPerSequence, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUSTLINEAR),
         PARAM_KMER_PER_SEQ_SCALE(PARAM_KMER_PER_SEQ_SCALE_ID, "--kmer-per-seq-scale", "Scale k-mers per sequence", "Scale k-mer per sequence based on sequence length as kmer-per-seq val + scale x seqlen", typeid(MultiParam<NuclAA<float>>), (void *) &kmersPerSequenceScale, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUSTLINEAR),
@@ -151,7 +151,8 @@ Parameters::Parameters():
         PARAM_PICK_N_SIMILAR(PARAM_PICK_N_SIMILAR_ID, "--pick-n-sim-kmer", "Add N similar to search", "Add N similar k-mers to search", typeid(int), (void *) &pickNbest, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
         PARAM_ADJUST_KMER_LEN(PARAM_ADJUST_KMER_LEN_ID, "--adjust-kmer-len", "Adjust k-mer length", "Adjust k-mer length based on specificity (only for nucleotides)", typeid(bool), (void *) &adjustKmerLength, "", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
         PARAM_RESULT_DIRECTION(PARAM_RESULT_DIRECTION_ID, "--result-direction", "Result direction", "result is 0: query, 1: target centric", typeid(int), (void *) &resultDirection, "^[0-1]{1}$", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
-
+        PARAM_WEIGHT_FILE(PARAM_WEIGHT_FILE_ID, "--weights", "Weight file name", "Weights used for cluster priorization", typeid(std::string), (void*) &weightFile, "", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT ),
+        PARAM_WEIGHT_THR(PARAM_WEIGHT_THR_ID, "--cluster-weight-threshold", "Cluster Weight threshold", "Weight threshold used for cluster priorization", typeid(float), (void*) &weightThr, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT ),
         // workflow
         PARAM_RUNNER(PARAM_RUNNER_ID, "--mpi-runner", "MPI runner", "Use MPI on compute cluster with this MPI command (e.g. \"mpirun -np 42\")", typeid(std::string), (void *) &runner, "", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
         PARAM_REUSELATEST(PARAM_REUSELATEST_ID, "--force-reuse", "Force restart with latest tmp", "Reuse tmp filse in tmp/latest folder ignoring parameters and version changes", typeid(bool), (void *) &reuseLatest, "", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
@@ -184,6 +185,7 @@ Parameters::Parameters():
         // indexdb
         PARAM_CHECK_COMPATIBLE(PARAM_CHECK_COMPATIBLE_ID, "--check-compatible", "Check compatible", "0: Always recreate index, 1: Check if recreating index is needed, 2: Fail if index is incompatible", typeid(int), (void *) &checkCompatible, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_SEARCH_TYPE(PARAM_SEARCH_TYPE_ID, "--search-type", "Search type", "Search type 0: auto 1: amino acid, 2: translated, 3: nucleotide, 4: translated nucleotide alignment", typeid(int), (void *) &searchType, "^[0-4]{1}"),
+        PARAM_INDEX_SUBSET(PARAM_INDEX_SUBSET_ID, "--index-subset", "Index subset", "Create specialized index with subset of entries 0: normal index 1: index without headers 1: index without prefiltering data", typeid(int), (void *) &indexSubset, "^[0-2]{1}", MMseqsParameter::COMMAND_EXPERT),
         // createdb
         PARAM_USE_HEADER(PARAM_USE_HEADER_ID, "--use-fasta-header", "Use fasta header", "Use the id parsed from the fasta header as the index key instead of using incrementing numeric identifiers", typeid(bool), (void *) &useHeader, ""),
         PARAM_ID_OFFSET(PARAM_ID_OFFSET_ID, "--id-offset", "Offset of numeric ids", "Numeric ids in index file are offset by this value", typeid(int), (void *) &identifierOffset, "^(0|[1-9]{1}[0-9]*)$"),
@@ -434,6 +436,8 @@ Parameters::Parameters():
     clust.push_back(&PARAM_THREADS);
     clust.push_back(&PARAM_COMPRESSED);
     clust.push_back(&PARAM_V);
+    clust.push_back(&PARAM_WEIGHT_FILE);
+    clust.push_back(&PARAM_WEIGHT_THR);
 
     // rescorediagonal
     rescorediagonal.push_back(&PARAM_SUB_MAT);
@@ -725,6 +729,7 @@ Parameters::Parameters():
     indexdb.push_back(&PARAM_SEARCH_TYPE);
     indexdb.push_back(&PARAM_SPLIT);
     indexdb.push_back(&PARAM_SPLIT_MEMORY_LIMIT);
+    indexdb.push_back(&PARAM_INDEX_SUBSET);
     indexdb.push_back(&PARAM_V);
     indexdb.push_back(&PARAM_THREADS);
 
@@ -912,6 +917,8 @@ Parameters::Parameters():
     kmermatcher.push_back(&PARAM_THREADS);
     kmermatcher.push_back(&PARAM_COMPRESSED);
     kmermatcher.push_back(&PARAM_V);
+    kmermatcher.push_back(&PARAM_WEIGHT_FILE);
+    kmermatcher.push_back(&PARAM_WEIGHT_THR);
 
     // kmermatcher
     kmersearch.push_back(&PARAM_SEED_SUB_MAT);
@@ -2275,6 +2282,7 @@ void Parameters::setDefaults() {
     // indexdb
     checkCompatible = 0;
     searchType = SEARCH_TYPE_AUTO;
+    indexSubset = INDEX_SUBSET_NORMAL;
 
     // createdb
     createdbMode = SEQUENCE_SPLIT_MODE_HARD;
@@ -2428,6 +2436,9 @@ void Parameters::setDefaults() {
     pickNbest = 1;
     adjustKmerLength = false;
     resultDirection = Parameters::PARAM_RESULT_DIRECTION_TARGET;
+    weightThr = 0.9;
+    weightFile = "";
+
     // result2stats
     stat = "";
 
