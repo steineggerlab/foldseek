@@ -66,15 +66,20 @@ int structure_mtar_gzopen(mtar_t *tar, const char *filename) {
 }
 #endif
 
-void convertToDiff16(size_t len, double *data, int16_t* out) {
+bool convertToDiff16(size_t len, double *data, int16_t* out) {
     int32_t last = (int)(data[0] * 1000);
     memcpy(out, &last, sizeof(int32_t));
     for (size_t i = 1; i < len; ++i) {
         int32_t curr = (int32_t)(data[i * 3] * 1000);
-        int16_t diff = (curr - last);
+        int16_t diff;
+        bool overflow = __builtin_sub_overflow(curr, last, &diff);
+        if (overflow == 1) {
+            return true;
+        }
         out[i + 1] = diff;
         last = curr;
     }
+    return false;
 }
 
 size_t
@@ -164,38 +169,43 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
         name.clear();
 
+        size_t skipBytes = 0;
+        float* camolf32;
         if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
-            camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
-            int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
-            convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16);
-            convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1));
-            convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1));
-            cadbw.writeData((const char*)camol.data(), (chainLen - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float), dbKey, thread_idx);
-            // Coordinate16 coords(LocalParameters::DBTYPE_CA_ALPHA_DIFF);
-            // float* buffer = coords.read((const char*)camol.data(), chainLen);
-            // for (size_t i = 0; i < (chainLen + 1); i++) {
-            //     Debug(Debug::INFO) << "pos: " << i << " x: " << (camolf16[i]/1000.0f) << " y: " << (camolf16[(chainLen + 1) + i]/1000.0f) << " z: " << (camolf16[2*(chainLen + 1) + i]/1000.0f) << "\n";
-            // }
-            // for(size_t pos = 0; pos < chainLen; pos++){
-            //     Debug(Debug::INFO) << pos << " " << buffer[(0 * chainLen) + pos] << " " << buffer[(1 * chainLen) + pos] << " " << buffer[(2 * chainLen) + pos] << "\n";
-            // }
-        } else {
-            camol.resize(chainLen * 3 * sizeof(float));
-            float* camolf32 = reinterpret_cast<float*>(camol.data());
-            for(size_t pos = 0; pos < chainLen; pos++){
-                camolf32[(0 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].x))
-                            ? 0.0 : readStructure.ca[chainStart+pos].x;
+            skipBytes = 1 * sizeof(uint8_t);
+            camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + skipBytes);
+            int8_t* camolf8 = reinterpret_cast<int8_t*>(camol.data());
+            // save a flag to indicate if the coordinates are stored as int16_t or float
+            camolf8[0] = 0;
+            int16_t* camolf16 = reinterpret_cast<int16_t*>(camolf8 + skipBytes);
+            // check if any of the coordinates is too large to be stored as int16_t
+            if (convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16)
+             || convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1))
+             || convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1))) {
+                // store all coordinates as float instead
+                camolf8[0] = 1;
+                goto overflow;
             }
-            for(size_t pos = 0; pos < chainLen; pos++){
-                camolf32[(1 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].y))
-                            ? 0.0 : readStructure.ca[chainStart+pos].y;
-            }
-            for(size_t pos = 0; pos < chainLen; pos++){
-                camolf32[(2 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].z))
-                            ? 0.0 : readStructure.ca[chainStart+pos].z;
-            }
-            cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(float), dbKey, thread_idx);
+            cadbw.writeData((const char*)camol.data(), (chainLen - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), dbKey, thread_idx);
+            goto cleanup;
         }
+overflow:
+        camol.resize(chainLen * 3 * sizeof(float) + skipBytes);
+        camolf32 = reinterpret_cast<float*>(camol.data() + skipBytes);
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            camolf32[(0 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].x))
+                        ? 0.0 : readStructure.ca[chainStart+pos].x;
+        }
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            camolf32[(1 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].y))
+                        ? 0.0 : readStructure.ca[chainStart+pos].y;
+        }
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            camolf32[(2 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].z))
+                        ? 0.0 : readStructure.ca[chainStart+pos].z;
+        }
+        cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(float) + skipBytes, dbKey, thread_idx);
+cleanup:
         alphabet3di.clear();
         alphabetAA.clear();
         camol.clear();

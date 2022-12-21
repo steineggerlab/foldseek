@@ -14,9 +14,15 @@ public:
         }
         if (type == LocalParameters::DBTYPE_CA_ALPHA_DIFF) {
             buffer.reserve(chainLength * 3);
+            const char* data = mem;
+            uint8_t actualType;
+            memcpy(&actualType, data, sizeof(uint8_t));
+            data += sizeof(uint8_t);
+            if (actualType == 1) {
+                return (float*) data;
+            }
             int32_t diffSum = 0;
             int32_t start;
-            const char* data = mem;
             memcpy(&start, data, sizeof(int32_t));
             data += sizeof(int32_t);
             buffer[0] = start / 1000.0f;
