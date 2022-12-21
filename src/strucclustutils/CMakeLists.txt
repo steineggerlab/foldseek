@@ -11,6 +11,7 @@ set(strucclustutils_source_files
         strucclustutils/PulchraWrapper.cpp
         strucclustutils/PulchraWrapper.h
         strucclustutils/structurerescorediagonal.cpp
+        strucclustutils/convert2pdb.cpp
         PARENT_SCOPE
         )
 
