@@ -30,7 +30,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
         EXIT(EXIT_FAILURE);
     }
 
-    Coordinate16 coords(db_ca.getDbtype());
+    Coordinate16 coords;
     Debug(Debug::INFO) << "Start writing file to " << par.db2 << "\n";
     for(size_t i = 0; i < db.getSize(); i++){
         unsigned int key = db.getDbKey(i);
@@ -44,9 +44,9 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
 
         unsigned int caId = db_ca.getId(key);
         const char* caData = db_ca.getData(caId, 0);
-        // const size_t caLen = db_ca.getEntryLen(caId);
+        const size_t caLen = db_ca.getEntryLen(caId);
 
-        float* ca = coords.read(caData, seqLen);
+        float* ca = coords.read(caData, seqLen, caLen);
 
         fprintf(handle, "MODEL % 8d\n", key);
         int remainingHeader = headerLen;

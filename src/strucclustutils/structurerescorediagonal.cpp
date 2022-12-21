@@ -263,8 +263,8 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                     std::max(t3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false);
         }
 
-        Coordinate16 qcoords(qcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : qcadbr->getDbtype());
-        Coordinate16 tcoords(tcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : tcadbr->getDbtype());
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
 
         std::string backtrace;
         char buffer[1024+32768];
@@ -289,7 +289,8 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                 if(needTMaligner){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
                     char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
-                    float* queryCaData = qcoords.read(qcadata, qSeq3Di.L);
+                    size_t qCaLength = qcadbr->sequenceReader->getEntryLen(qId);
+                    float* queryCaData = qcoords.read(qcadata, qSeq3Di.L, qCaLength);
                     tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
                 }
                 qRevSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
@@ -328,7 +329,8 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                     if(needTMaligner) {
                         size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                         char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
-                        float* targetCaData = tcoords.read(tcadata, res.dbLen);
+                        size_t tCaLength = tcadbr->sequenceReader->getEntryLen(tId);
+                        float* targetCaData = tcoords.read(tcadata, res.dbLen, tCaLength);
                         TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                                                    res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
                         if(tmres.tmscore < par.tmScoreThr){

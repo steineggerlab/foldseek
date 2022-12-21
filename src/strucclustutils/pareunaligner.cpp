@@ -83,8 +83,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
         //int gapOpen = 15; int gapExtend = 3; // 3di gap optimization
         EvalueComputation evaluer(tdbr->sequenceReader->getAminoAcidDBSize(), &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
         // write output file
-        Coordinate16 qcoords(qcadbr.getDbtype());
-        Coordinate16 tcoords(tcadbr->getDbtype());
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
 
 #pragma omp for schedule(dynamic, 1)
         for (size_t id = 0; id < resultReader.getSize(); id++) {
@@ -99,7 +99,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
-                float* qdata = qcoords.read(qcadata, queryLen);
+                size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
+                float* qdata = qcoords.read(qcadata, queryLen, qCaLength);
 
                 Coordinates queryCaCords;
                 memcpy(query_x, qdata, sizeof(float) * queryLen);
@@ -138,7 +139,8 @@ int pareunaligner(int argc, const char **argv, const Command& command) {
 
                     int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
                     char *tcadata = tcadbr->sequenceReader->getData(targetId, thread_idx);
-                    float* tdata = tcoords.read(tcadata, targetLen);
+                    size_t tCaLength = tcadbr->sequenceReader->getEntryLen(targetId);
+                    float* tdata = tcoords.read(tcadata, targetLen, tCaLength);
                     tSeq.mapSequence(targetId, dbKey, targetSeq, targetSeqLen);
 
                     if(Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)==false){

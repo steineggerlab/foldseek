@@ -62,8 +62,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         results.reserve(300);
         std::string resultsStr;
         TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false);
-        Coordinate16 qcoords(qdbr.getDbtype());
-        Coordinate16 tcoords(tdbr->getDbtype());
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
 
 #pragma omp for schedule(dynamic, 1000)
         for (size_t i = 0; i < alndbr.getSize(); i++) {
@@ -75,7 +75,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             unsigned int queryId = qdbr.getId(queryKey);
             int queryLen = static_cast<int>((qdbr.getEntryLen(queryId)-1)/(3*sizeof(float)));
             char *qcadata = qdbr.getData(queryId, thread_idx);
-            float* qdata = qcoords.read(qcadata, queryLen);
+            size_t qCaLength = qdbr.getEntryLen(queryId);
+            float* qdata = qcoords.read(qcadata, queryLen, qCaLength);
             tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], NULL, queryLen);
 
             for (size_t j = 0; j < results.size(); j++) {
@@ -89,7 +90,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 unsigned int targetId = tdbr->getId(dbKey);
                 int targetLen = static_cast<int>((tdbr->getEntryLen(targetId)-1)/(3*sizeof(float)));
                 char *tcadata = tdbr->getData(targetId, thread_idx);
-                float* tdata = tcoords.read(tcadata, targetLen);
+                size_t tCaLength = tdbr->getEntryLen(targetId);
+                float* tdata = tcoords.read(tcadata, targetLen, tCaLength);
 
                 // Matching residue index collection
                 TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen, res.qStartPos,

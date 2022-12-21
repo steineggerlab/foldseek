@@ -169,29 +169,23 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
         name.clear();
 
-        size_t skipBytes = 0;
         float* camolf32;
         if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
-            skipBytes = 1 * sizeof(uint8_t);
-            camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + skipBytes);
-            int8_t* camolf8 = reinterpret_cast<int8_t*>(camol.data());
-            // save a flag to indicate if the coordinates are stored as int16_t or float
-            camolf8[0] = 0;
-            int16_t* camolf16 = reinterpret_cast<int16_t*>(camolf8 + skipBytes);
+            camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
+            int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
             // check if any of the coordinates is too large to be stored as int16_t
             if (convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16)
              || convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1))
              || convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1))) {
                 // store all coordinates as float instead
-                camolf8[0] = 1;
                 goto overflow;
             }
             cadbw.writeData((const char*)camol.data(), (chainLen - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), dbKey, thread_idx);
             goto cleanup;
         }
 overflow:
-        camol.resize(chainLen * 3 * sizeof(float) + skipBytes);
-        camolf32 = reinterpret_cast<float*>(camol.data() + skipBytes);
+        camol.resize(chainLen * 3 * sizeof(float));
+        camolf32 = reinterpret_cast<float*>(camol.data());
         for (size_t pos = 0; pos < chainLen; pos++) {
             camolf32[(0 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].x))
                         ? 0.0 : readStructure.ca[chainStart+pos].x;
@@ -204,7 +198,7 @@ overflow:
             camolf32[(2 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].z))
                         ? 0.0 : readStructure.ca[chainStart+pos].z;
         }
-        cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(float) + skipBytes, dbKey, thread_idx);
+        cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(float), dbKey, thread_idx);
 cleanup:
         alphabet3di.clear();
         alphabetAA.clear();
@@ -272,11 +266,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     torsiondbw.open();
     DBWriter hdbw((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
     hdbw.open();
-    int caDbtype = LocalParameters::DBTYPE_CA_ALPHA;
-    if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
-        caDbtype = LocalParameters::DBTYPE_CA_ALPHA_DIFF;
-    }
-    DBWriter cadbw((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, caDbtype);
+    DBWriter cadbw((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
@@ -689,7 +679,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> cadbr_reorder((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
         cadbr_reorder.open(DBReader<unsigned int>::NOSORT);
         cadbr_reorder.readMmapedDataInMemory();
-        DBWriter cadbw_reorder((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, caDbtype);
+        DBWriter cadbw_reorder((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
         cadbw_reorder.open();
         sortDatafileByIdOrder(cadbw_reorder, cadbr_reorder, mappingOrder);
         cadbw_reorder.close(true);

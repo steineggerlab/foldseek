@@ -27,7 +27,6 @@ public:
     }
 
     static const int DBTYPE_CA_ALPHA;
-    static const int DBTYPE_CA_ALPHA_DIFF;
     static const int DBTYPE_TMSCORE;
 
     static const int ALIGNMENT_TYPE_3DI = 0;

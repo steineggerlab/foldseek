@@ -6,7 +6,6 @@
 
 const int LocalParameters::DBTYPE_CA_ALPHA = 101;
 const int LocalParameters::DBTYPE_TMSCORE = 102;
-const int LocalParameters::DBTYPE_CA_ALPHA_DIFF = 103;
 
 LocalParameters::LocalParameters() :
         Parameters(),
@@ -221,6 +220,6 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
 
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
-std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA, LocalParameters::DBTYPE_CA_ALPHA_DIFF};
+std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};
 std::vector<int> FoldSeekDbValidator::flatfileStdinAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_STDIN,LocalParameters::DBTYPE_DIRECTORY};
 std::vector<int> FoldSeekDbValidator::flatfileAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_DIRECTORY};

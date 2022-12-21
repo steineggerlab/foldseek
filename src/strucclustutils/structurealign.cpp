@@ -220,8 +220,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
         char buffer[1024+32768];
         std::string resultBuffer;
 
-        Coordinate16 qcoords(qcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : qcadbr->getDbtype());
-        Coordinate16 tcoords(tcadbr == NULL ? LocalParameters::DBTYPE_CA_ALPHA : tcadbr->getDbtype());
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
 
         TMaligner::TMscoreResult tmres;
         LDDTCalculator::LDDTScoreResult lddtres;
@@ -243,7 +243,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 if(needCalpha){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
                     char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
-                    float* queryCaData = qcoords.read(qcadata, qSeq3Di.L);
+                    size_t qCaLength = qcadbr->sequenceReader->getEntryLen(qId);
+                    float* queryCaData = qcoords.read(qcadata, qSeq3Di.L, qCaLength);
                     if(needTMaligner){
                         tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
                     }
@@ -288,7 +289,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
                         if(needCalpha) {
                             size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                             char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
-                            float* targetCaData = tcoords.read(tcadata, res.dbLen);
+                            size_t tCaLength = tcadbr->sequenceReader->getEntryLen(tId);
+                            float* targetCaData = tcoords.read(tcadata, res.dbLen, tCaLength);
                             if(needTMaligner) {
                                 tmres = tmaligner->computeTMscore(targetCaData,
                                                                   &targetCaData[res.dbLen],
