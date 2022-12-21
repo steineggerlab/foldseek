@@ -13,9 +13,6 @@
 #include "PulchraWrapper.h"
 #include "microtar.h"
 #include "PatternCompiler.h"
-#include "simd.h"
-#include "simde/x86/avx2.h"
-#include "simde/x86/f16c.h"
 
 #include <iostream>
 #include <dirent.h>
@@ -68,33 +65,6 @@ int structure_mtar_gzopen(mtar_t *tar, const char *filename) {
     return MTAR_ESUCCESS;
 }
 #endif
-
-void convertToFloat16(size_t len, double *data, int16_t* out) {
-    const __m128i offset = _mm_setr_epi32(0 * 3, 1 * 3, 2 * 3, 3 * 3);
-    const __m256d fltMax = _mm256_set1_pd(FLT_MAX);
-    for(size_t pos = 0; pos < len; pos += 4){
-        // Vec3* orig = (Vec3*) data + pos;
-        // Debug(Debug::INFO) << orig[0].x << "\n";
-        // Debug(Debug::INFO) << orig[1].x << "\n";
-        // Debug(Debug::INFO) << orig[2].x << "\n";
-        // Debug(Debug::INFO) << orig[3].x << "\n";
-        __m256d res = _mm256_i32gather_pd(data + pos * 3, offset, 8);
-        // eliminate nans, min replaces NANs with second argument
-        res = _mm256_min_pd(res, fltMax);
-        __m256d mask = _mm256_cmp_pd(res, fltMax, _CMP_EQ_OQ);
-        res = _mm256_blendv_pd(res, _mm256_set1_pd(0.0f), mask);
-        // convert to float32
-        __m128 res_float = _mm256_cvtpd_ps(res);
-        // convert to float16
-        __m128i f16 = _mm_cvtps_ph(res_float, SIMDE_MM_FROUND_NO_EXC);
-        _mm_storeu_si128((__m128i*)(out + pos), f16);
-        // for (size_t i = 0; i < 4; i++) {
-        //     uint16_t in = out[pos + i];
-        //     float validate = _mm_cvtss_f32(_mm_cvtph_ps(_mm_set1_epi16(in)));
-        //     Debug(Debug::INFO) << "float: " << validate << "\n";
-        // }
-    }
-}
 
 void convertToDiff16(size_t len, double *data, int16_t* out) {
     int32_t last = (int)(data[0] * 1000);
@@ -194,31 +164,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
         name.clear();
 
-        if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_HALF) {
-            static_assert(sizeof(Vec3) == 3 * sizeof(double), "sizeof(Vec3) must be 3 * sizeof(double)");
-            camol.resize(chainLen * 3 * sizeof(int16_t));
-            int simdChainLen = chainLen - (chainLen % 4);
-            int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
-            convertToFloat16(simdChainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16);
-            for(size_t pos = simdChainLen; pos < chainLen; pos++){
-                float val = (std::isnan(readStructure.ca[chainStart+pos].x))
-                            ? 0.0 : readStructure.ca[chainStart+pos].x;
-                camolf16[(0 * chainLen) + pos] = _mm_extract_epi16(_mm256_cvtps_ph(_mm256_set1_ps(val), SIMDE_MM_FROUND_NO_EXC), 0);
-            }
-            convertToFloat16(simdChainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * chainLen);
-            for(size_t pos = simdChainLen; pos < chainLen; pos++){
-                float val = (std::isnan(readStructure.ca[chainStart+pos].y))
-                            ? 0.0 : readStructure.ca[chainStart+pos].y;
-                camolf16[(1 * chainLen) + pos] = _mm_extract_epi16(_mm256_cvtps_ph(_mm256_set1_ps(val), SIMDE_MM_FROUND_NO_EXC), 0);
-            }
-            convertToFloat16(simdChainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * chainLen);
-            for(size_t pos = simdChainLen; pos < chainLen; pos++){
-                float val = (std::isnan(readStructure.ca[chainStart+pos].z))
-                            ? 0.0 : readStructure.ca[chainStart+pos].z;
-                camolf16[(2 * chainLen) + pos] = _mm_extract_epi16(_mm256_cvtps_ph(_mm256_set1_ps(val), SIMDE_MM_FROUND_NO_EXC), 0);
-            }
-            cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(uint16_t), dbKey, thread_idx);
-        } else if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
+        if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
             camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
             int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
             convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16);
@@ -317,8 +263,8 @@ int createdb(int argc, const char **argv, const Command& command) {
     DBWriter hdbw((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
     hdbw.open();
     int caDbtype = LocalParameters::DBTYPE_CA_ALPHA;
-    if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_HALF) {
-        caDbtype = LocalParameters::DBTYPE_CA_ALPHA_F16;
+    if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
+        caDbtype = LocalParameters::DBTYPE_CA_ALPHA_DIFF;
     }
     DBWriter cadbw((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, caDbtype);
     cadbw.open();
@@ -733,7 +679,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> cadbr_reorder((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
         cadbr_reorder.open(DBReader<unsigned int>::NOSORT);
         cadbr_reorder.readMmapedDataInMemory();
-        DBWriter cadbw_reorder((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA_F16);
+        DBWriter cadbw_reorder((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, caDbtype);
         cadbw_reorder.open();
         sortDatafileByIdOrder(cadbw_reorder, cadbr_reorder, mappingOrder);
         cadbw_reorder.close(true);

@@ -27,7 +27,6 @@ public:
     }
 
     static const int DBTYPE_CA_ALPHA;
-    static const int DBTYPE_CA_ALPHA_F16;
     static const int DBTYPE_CA_ALPHA_DIFF;
     static const int DBTYPE_TMSCORE;
 
@@ -55,8 +54,7 @@ public:
     static const int OUTFMT_PROBTP = 48;
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
-    static const int COORD_STORE_MODE_CA_HALF  = 2;
-    static const int COORD_STORE_MODE_CA_DIFF  = 3;
+    static const int COORD_STORE_MODE_CA_DIFF  = 2;
 
     static const unsigned int INDEX_DB_CA_KEY = 500;
 

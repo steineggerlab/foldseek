@@ -2,11 +2,6 @@
 #define COORDINATE16_H
 
 #include "LocalParameters.h"
-
-#include "simd.h"
-#include "simde/x86/avx2.h"
-#include "simde/x86/f16c.h"
-
 #include <vector>
 
 class Coordinate16 {
@@ -51,27 +46,6 @@ public:
                 data += sizeof(int16_t);
                 diffSum += intDiff;
                 buffer[i] = (start + diffSum) / 1000.0f;
-            }
-            return buffer.data();
-        }
-        if (type == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-            size_t xyzLength = chainLength * 3;
-            size_t simdXyzLength = xyzLength - (chainLength % 8);
-            buffer.reserve(chainLength * 3);
-
-            const int16_t* mem16 = (const int16_t*) mem;
-            for (size_t i = 0; i < simdXyzLength; i += VECSIZE_FLOAT) {
-                __m128i res = _mm_loadu_epi16((const __m128i*)(mem16 + i));
-    #ifdef AVX2
-                __m256 res2 = _mm256_cvtph_ps(res);
-                _mm256_storeu_ps(buffer.data() + i, res2);
-    #else
-                __m128 res2 = _mm_cvtph_ps(res);
-                _mm_storeu_ps(buffer.data() + i, res2);
-    #endif
-            }
-            for (size_t i = simdXyzLength; i < xyzLength; i++) {
-                buffer[i] = _mm_cvtss_f32(_mm_cvtph_ps(_mm_set1_epi16(*(mem16 + i))));
             }
             return buffer.data();
         }

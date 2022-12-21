@@ -32,7 +32,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
       make -j $(nproc --all); \
       mv src/${APP} /opt/build/${APP}_sse41; \
       cd /opt/build/build_avx2; \
-      cmake -DHAVE_AVX2=1 -DHAVE_F16C=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=. ..; \
+      cmake -DHAVE_AVX2=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=. ..; \
       make -j $(nproc --all); \
       mv src/${APP} /opt/build/${APP}_avx2; \
       touch /opt/build/${APP}_arch; \
