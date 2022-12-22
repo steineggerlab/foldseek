@@ -48,6 +48,23 @@ public:
 
     }
 
+    template <typename T>
+    static bool convertToDiff16(size_t len, T* data, int16_t* out, int stride = 3) {
+        int32_t last = (int)(data[0] * 1000);
+        memcpy(out, &last, sizeof(int32_t));
+        for (size_t i = 1; i < len; ++i) {
+            int32_t curr = (int32_t)(data[i * stride] * 1000);
+            int16_t diff;
+            bool overflow = __builtin_sub_overflow(curr, last, &diff);
+            if (overflow == 1) {
+                return true;
+            }
+            out[i + 1] = diff;
+            last = curr;
+        }
+        return false;
+    }
+
 private:
     std::vector<float> buffer;
 };
