@@ -41,7 +41,8 @@ int compressca(int argc, const char **argv, const Command& command) {
             unsigned int key = caDb.getDbKey(i);
             char *data = caDb.getData(i, thread_idx);
             size_t length = caDb.getEntryLen(i) -1;
-            size_t chainLen = seqDb.getSeqLen(key);
+            unsigned int seqId = seqDb.getId(key);
+            size_t chainLen = seqDb.getSeqLen(seqId);
 
             if (length >= (chainLen * (3 * sizeof(float)))) {
                 camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
