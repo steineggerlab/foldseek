@@ -18,4 +18,6 @@ extern int structurerbh(int argc, const char** argv, const Command &command);
 extern int structureeasyrbh(int argc, const char** argv, const Command &command);
 extern int structureungappedalign(int argc, const char** argv, const Command &command);
 extern int convert2pdb(int argc, const char** argv, const Command &command);
+extern int compressca(int argc, const char** argv, const Command &command);
+
 #endif

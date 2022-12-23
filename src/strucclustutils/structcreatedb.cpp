@@ -13,6 +13,7 @@
 #include "PulchraWrapper.h"
 #include "microtar.h"
 #include "PatternCompiler.h"
+#include "Coordinate16.h"
 
 #include <iostream>
 #include <dirent.h>
@@ -65,22 +66,6 @@ int structure_mtar_gzopen(mtar_t *tar, const char *filename) {
     return MTAR_ESUCCESS;
 }
 #endif
-
-bool convertToDiff16(size_t len, double *data, int16_t* out) {
-    int32_t last = (int)(data[0] * 1000);
-    memcpy(out, &last, sizeof(int32_t));
-    for (size_t i = 1; i < len; ++i) {
-        int32_t curr = (int32_t)(data[i * 3] * 1000);
-        int16_t diff;
-        bool overflow = __builtin_sub_overflow(curr, last, &diff);
-        if (overflow == 1) {
-            return true;
-        }
-        out[i + 1] = diff;
-        last = curr;
-    }
-    return false;
-}
 
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
@@ -174,9 +159,9 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
             int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
             // check if any of the coordinates is too large to be stored as int16_t
-            if (convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16)
-             || convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1))
-             || convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1))) {
+            if (Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16)
+             || Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1))
+             || Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1))) {
                 // store all coordinates as float instead
                 goto overflow;
             }
