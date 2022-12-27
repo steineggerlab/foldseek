@@ -17,7 +17,7 @@ int compressca(int argc, const char **argv, const Command& command) {
     std::string caDbData = par.db1 + "_ca";
     std::string caDbIndex = par.db1 + "_ca.index";
     DBReader<unsigned int> caDb(caDbData.c_str(), caDbIndex.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    caDb.open(DBReader<unsigned int>::NOSORT);
+    caDb.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
     DBReader<unsigned int> seqDb(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX);
     seqDb.open(DBReader<unsigned int>::NOSORT);
