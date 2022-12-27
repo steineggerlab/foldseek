@@ -57,6 +57,8 @@ public:
     std::vector<MMseqsParameter *> structurerescorediagonal;
     std::vector<MMseqsParameter *> structuresearchworkflow;
     std::vector<MMseqsParameter *> structureclusterworkflow;
+    std::vector<MMseqsParameter *> structuremsa;
+    std::vector<MMseqsParameter *> msa2lddt;
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
@@ -71,6 +73,9 @@ public:
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
 
+    // PARAMETER(PARAM_NEWICK_OUTPUT)
+    PARAMETER(PARAM_LDDT_HTML)
+
     float tmScoreThr;
     float maskBfactorThreshold;
     int alignmentType;
@@ -78,6 +83,8 @@ public:
     int tmAlignFast;
     int nsample;
     int coordStoreMode;
+
+    std::string lddtHtml;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT);

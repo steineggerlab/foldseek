@@ -165,60 +165,63 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
     
     // Write clustal format MSA HTML
     // TODO: make optional
-    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
-    resultWriter.open();
-    
-    // Read in template and write to .html
-    size_t dstSize = ZSTD_findDecompressedSize(msa_html_zst, msa_html_zst_len);
-    char* dst = (char*)malloc(sizeof(char) * dstSize);
-    size_t realSize = ZSTD_decompress(dst, dstSize, msa_html_zst, msa_html_zst_len);
-    resultWriter.writeData(dst, realSize, 0, 0, false, false);
+    if (par.lddtHtml != "") {
+        std::string lddtHtmlIdx = par.lddtHtml + ".index";
+        DBWriter resultWriter(par.lddtHtml.c_str(), lddtHtmlIdx.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
+        resultWriter.open();
+        
+        // Read in template and write to .html
+        size_t dstSize = ZSTD_findDecompressedSize(msa_html_zst, msa_html_zst_len);
+        char* dst = (char*)malloc(sizeof(char) * dstSize);
+        size_t realSize = ZSTD_decompress(dst, dstSize, msa_html_zst, msa_html_zst_len);
+        resultWriter.writeData(dst, realSize, 0, 0, false, false);
 
-    // Aligned sequences, as [[header, sequence], [header, sequence], ...]
-    const char* scriptBlock = "<script>render([";
-    resultWriter.writeData(scriptBlock, strlen(scriptBlock), 0, 0, false, false);
-    for (size_t i = 0; i < sequences.size(); i++) {
-        std::string entry;
-        entry.append("['");
-        entry.append(headers[i]);
-        entry.append("','");
-        entry.append(sequences[i]);
-        entry.append("','");
-        entry.append(sequences3di[i]);
-        entry.append("'],");
-        resultWriter.writeData(entry.c_str(), entry.length(), 0, 0, false, false);
-    }
-    std::string middle = "],[";
-    resultWriter.writeData(middle.c_str(), middle.length(), 0, 0, false, false);
-    
-    // Per-column scores, as [[id, score], [id, score], ...]
-    // TODO: optionally save this as .csv
-    for (int i = 0; i < alnLength; i++) {
-        if (perColumnCount[i] == 0) continue;
-        std::string entry;
-        entry.append("[");
-        entry.append(std::to_string(i));
-        entry.append(",");
-        entry.append(std::to_string(perColumnScore[i] / (double)perColumnCount[i]));
-        entry.append(",");
-        entry.append(std::to_string(perColumnSOP[i] / (double)perColumnCount[i]));
-        entry.append("],");
-        resultWriter.writeData(entry.c_str(), entry.length(), 0, 0, false, false);
-    }
-    
-    std::string end = "],";
-    end.append("{'db':'");
-    end.append(par.db1);
-    end.append("','msa':'");
-    end.append(par.db2);
-    end.append("','lddt':");
-    end.append(std::to_string(sum / numPairs));
-    end.append("});</script>");
+        // Aligned sequences, as [[header, sequence], [header, sequence], ...]
+        const char* scriptBlock = "<script>render([";
+        resultWriter.writeData(scriptBlock, strlen(scriptBlock), 0, 0, false, false);
+        for (size_t i = 0; i < sequences.size(); i++) {
+            std::string entry;
+            entry.append("['");
+            entry.append(headers[i]);
+            entry.append("','");
+            entry.append(sequences[i]);
+            entry.append("','");
+            entry.append(sequences3di[i]);
+            entry.append("'],");
+            resultWriter.writeData(entry.c_str(), entry.length(), 0, 0, false, false);
+        }
+        std::string middle = "],[";
+        resultWriter.writeData(middle.c_str(), middle.length(), 0, 0, false, false);
+        
+        // Per-column scores, as [[id, score], [id, score], ...]
+        // TODO: optionally save this as .csv
+        for (int i = 0; i < alnLength; i++) {
+            if (perColumnCount[i] == 0) continue;
+            std::string entry;
+            entry.append("[");
+            entry.append(std::to_string(i));
+            entry.append(",");
+            entry.append(std::to_string(perColumnScore[i] / (double)perColumnCount[i]));
+            entry.append(",");
+            entry.append(std::to_string(perColumnSOP[i] / (double)perColumnCount[i]));
+            entry.append("],");
+            resultWriter.writeData(entry.c_str(), entry.length(), 0, 0, false, false);
+        }
+        
+        std::string end = "],";
+        end.append("{'db':'");
+        end.append(par.db1);
+        end.append("','msa':'");
+        end.append(par.db2);
+        end.append("','lddt':");
+        end.append(std::to_string(sum / numPairs));
+        end.append("});</script>");
 
-    resultWriter.writeData(end.c_str(), end.length(), 0, 0, false, false);
-    resultWriter.writeEnd(0, 0, false, 0);
-    resultWriter.close(true);
-    FileUtil::remove(par.db3Index.c_str());
+        resultWriter.writeData(end.c_str(), end.length(), 0, 0, false, false);
+        resultWriter.writeEnd(0, 0, false, 0);
+        resultWriter.close(true);
+        FileUtil::remove(lddtHtmlIdx.c_str());
+    }
 
     return EXIT_SUCCESS;
 }
