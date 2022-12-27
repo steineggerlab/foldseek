@@ -258,8 +258,16 @@ struct AlnSimple {
 Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned int querySeqLen,  Sequence *target_aa, Sequence *target_3di, int gapOpen,
                   int gapExtend) {
     std::string backtrace;
+    
+    bool targetIsProfile = (Parameters::isEqualDbtype(target_aa->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+
     unsigned char * target_aa_seq = target_aa->numSequence;
     unsigned char * target_3di_seq = target_3di->numSequence;
+    
+    if (targetIsProfile) {
+        target_aa_seq = target_aa->numConsensusSequence;
+        target_3di_seq = target_3di->numConsensusSequence;
+    }
 
     StructureSmithWaterman::s_align align = aligner.alignScoreEndPos(target_aa_seq, target_3di_seq, target_aa->L, gapOpen,
                                                                      gapExtend, querySeqLen / 2);
@@ -316,10 +324,17 @@ std::vector<AlnSimple> updateAllScores(
         for (unsigned int j = 0; j < allSeqs_aa.size(); j++) {
             if (alreadyMerged[j] || i == j)
                 continue;
+            bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[j]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+            unsigned char * target_aa_seq = allSeqs_aa[j]->numSequence;
+            unsigned char * target_3di_seq = allSeqs_3di[j]->numSequence;
+            if (targetIsProfile) {
+                target_aa_seq = allSeqs_aa[j]->numConsensusSequence;
+                target_3di_seq = allSeqs_3di[j]->numConsensusSequence;
+            }
             StructureSmithWaterman::s_align align;
             align = structureSmithWaterman.alignScoreEndPos(
-                allSeqs_aa[j]->numSequence,
-                allSeqs_3di[j]->numSequence,
+                target_aa_seq,
+                target_3di_seq,
                 allSeqs_aa[j]->L,
                 gapOpen,
                 gapExtend,
@@ -331,7 +346,7 @@ std::vector<AlnSimple> updateAllScores(
             aln.score = align.score1;
             newHits.emplace_back(aln);
         }
-    }    
+    }
     return newHits;
 }
 
@@ -814,7 +829,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     par.evalThr = 0.1;
     
     // Don't lose columns in pairwise alignments when less than 50% gaps
-    par.matchRatio = 0.51;
+    par.matchRatio = 0.9;
 
     PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
@@ -856,6 +871,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         par.gapOpen.values.aminoacid(),
         par.gapExtend.values.aminoacid()
     );
+    sortHitsByScore(hits);
     std::cout << "Performed initial all vs all alignments" << std::endl;
 
     // Initialise Newick tree nodes
@@ -869,6 +885,32 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
         unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
         
+        bool queryIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[hits[0].queryId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+        bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[hits[0].targetId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+        
+        // Always merge onto sequence with most information
+        if (targetIsProfile && !queryIsProfile) {
+            mergedId = hits[0].targetId;
+            targetId = hits[0].queryId;
+        } if(targetIsProfile && queryIsProfile){
+            float q_neff_sum = 0.0;
+            float t_neff_sum = 0.0;
+            for (size_t i = 0; i < allSeqs_3di[hits[0].queryId]->L; i++)
+                q_neff_sum += allSeqs_3di[hits[0].queryId]->neffM[i];
+            for (size_t i = 0; i < allSeqs_3di[hits[0].targetId]->L; i++)
+                t_neff_sum += allSeqs_3di[hits[0].targetId]->neffM[i];
+            if (q_neff_sum > t_neff_sum) {
+                mergedId = hits[0].queryId;
+                targetId = hits[0].targetId;
+            } else {
+                mergedId = hits[0].targetId;
+                targetId = hits[0].queryId;
+            }
+        }else {
+            mergedId = hits[0].queryId;
+            targetId = hits[0].targetId;
+        }
+
         std::cout << "  mergedId: " << mergedId << std::endl;
         std::cout << "  targetId: " << targetId << std::endl;
 
