@@ -14,7 +14,7 @@ QUERYDB="$1"
 STEP=0
 # processing
 [ -z "$NUM_IT" ] && NUM_IT=3;
-while [ $STEP -lt $NUM_IT ]; do
+while [ "$STEP" -lt "$NUM_IT" ]; do
     # call prefilter module
     if notExists "$TMP_PATH/pref_tmp_${STEP}.done"; then
         PARAM="PREFILTER_PAR_$STEP"
@@ -84,6 +84,9 @@ while [ $STEP -lt $NUM_IT ]; do
             # shellcheck disable=SC2086
             $RUNNER "$MMSEQS" result2profile "${QUERYDB}_ss" "${TARGET_PREFILTER}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}_ss" ${PROFILE_SS_PAR} \
                 || fail "Create profile ss died"
+            # shellcheck disable=SC2086
+            $RUNNER "$MMSEQS" lndb "${QUERYDB}_ca"  "$TMP_PATH/profile_${STEP}_ca" ${VERBOSITY} \
+                || fail "Create lndb died"
         fi
     fi
 	QUERYDB="$TMP_PATH/profile_${STEP}"

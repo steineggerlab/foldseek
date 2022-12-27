@@ -18,10 +18,8 @@ LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 void updateValdiation(){
     DbValidator::allDb.push_back(LocalParameters::DBTYPE_CA_ALPHA);
-    DbValidator::allDb.push_back(LocalParameters::DBTYPE_CA_ALPHA_F16);
     DbValidator::allDb.push_back(LocalParameters::DBTYPE_TMSCORE);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_CA_ALPHA);
-    DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_CA_ALPHA_F16);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_TMSCORE);
 }
 
@@ -29,12 +27,12 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 
 std::vector<struct Command> commands = {
-        {"createdb",             structcreatedb,            &localPar.structurecreatedb,    COMMAND_MAIN,
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
+        {"createdb",             createdb,            &localPar.structurecreatedb,    COMMAND_MAIN,
+                "Convert PDB/mmCIF/tar[.gz]/DB files to a db.",
+                "Convert PDB/mmCIF/tar[.gz]/DB files to a db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, 
+                "<i:PDB|mmCIF[.gz]|tar|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, 
 #ifdef HAVE_GCS
                         &DbValidator::flatfileStdinGenericUri
 #else
@@ -43,8 +41,8 @@ std::vector<struct Command> commands = {
                                           },
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"structureto3didescriptor",             structureto3didescriptor,            &localPar.structurecreatedb,    COMMAND_HIDDEN,
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
-                "Convert PDB/mmCIF/tar[.gz] files to an db.",
+                "Convert PDB/mmCIF/tar[.gz] files to a db.",
+                "Convert PDB/mmCIF/tar[.gz] files to a db.",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:3didescriptor>",
                 CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
@@ -255,7 +253,20 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                           {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
-
+        {"compressca",           compressca,             &localPar.onlythreads,           COMMAND_FORMAT_CONVERSION,
+                "Create a new compressed C-alpha DB with 16-bit diff encoding where possible from a sequence DB",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:DB> <o:caDB>",
+                CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::sequenceDb },
+                                          {"caDb", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::cadb }}},
+        {"convert2pdb",          convert2pdb,             &localPar.onlyverbosity,        COMMAND_FORMAT_CONVERSION,
+                "Convert a foldseek structure db to a multi model PDB file",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:Db> <o:pdbFile>",
+                CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                          {"pdbFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,
@@ -275,14 +286,6 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "Alphafold/UniProt",
                 "AlphaFold UniProt Protein Structure Database (including C-alpha, ~700GB download, ~950GB extracted).",
-                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
-                "https://alphafold.ebi.ac.uk/",
-                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
-                {}
-        },
-        {
-                "Alphafold/UniProt-NO-CA",
-                "AlphaFold UniProt Protein Structure Database (excluding C-alpha, ~70GB download, ~170GB extracted).",
                 "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
                 "https://alphafold.ebi.ac.uk/",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,

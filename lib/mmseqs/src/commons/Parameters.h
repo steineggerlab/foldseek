@@ -182,8 +182,9 @@ public:
     static const int OUTFMT_TORFEND = 38;
     static const int OUTFMT_FIDENT = 39;
 
-
-
+    static const int INDEX_SUBSET_NORMAL = 0;
+    static const int INDEX_SUBSET_NO_HEADERS = 1;
+    static const int INDEX_SUBSET_NO_PREFILTER = 2;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy);
@@ -399,6 +400,7 @@ public:
     std::string spacedKmerPattern;       // User-specified kmer pattern
     std::string localTmp;                // Local temporary path
 
+
     // ALIGNMENT
     int alignmentMode;                   // alignment mode 0=fastest on parameters,
                                          // 1=score only, 2=score, cov, start/end pos, 3=score, cov, start/end pos, seq.id,
@@ -525,10 +527,13 @@ public:
     int pickNbest;
     int adjustKmerLength;
     int resultDirection;
+    float weightThr;
+    std::string weightFile;
 
     // indexdb
     int checkCompatible;
     int searchType;
+    int indexSubset;
 
     // createdb
     int identifierOffset;
@@ -826,6 +831,9 @@ public:
     PARAMETER(PARAM_PICK_N_SIMILAR)
     PARAMETER(PARAM_ADJUST_KMER_LEN)
     PARAMETER(PARAM_RESULT_DIRECTION)
+    PARAMETER(PARAM_WEIGHT_FILE)
+    PARAMETER(PARAM_WEIGHT_THR)
+
     // workflow
     PARAMETER(PARAM_RUNNER)
     PARAMETER(PARAM_REUSELATEST)
@@ -861,6 +869,7 @@ public:
     // indexdb
     PARAMETER(PARAM_CHECK_COMPATIBLE)
     PARAMETER(PARAM_SEARCH_TYPE)
+    PARAMETER(PARAM_INDEX_SUBSET)
 
     // createdb
     PARAMETER(PARAM_USE_HEADER) // also used by extractorfs

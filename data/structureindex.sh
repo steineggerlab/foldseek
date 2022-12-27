@@ -8,7 +8,7 @@ DB="$1"
 TMP_PATH="$2"
 
 # shellcheck disable=SC2086
-"$MMSEQS" mmcreateindex "${DB}" "${TMP_PATH}" ${CREATEINDEX_PAR} \
+"$MMSEQS" mmcreateindex "${DB}" "${TMP_PATH}" ${CREATEINDEX_PAR} --index-subset 2 \
     || fail "createindex died"
 
 # shellcheck disable=SC2086
@@ -16,7 +16,7 @@ TMP_PATH="$2"
     || fail "lndb died"
 
 # shellcheck disable=SC2086
-"$MMSEQS" mmcreateindex "${DB}_ss" "${TMP_PATH}" ${CREATEINDEX_PAR} \
+"$MMSEQS" mmcreateindex "${DB}_ss" "${TMP_PATH}" ${CREATEINDEX_PAR} --index-subset 1 \
     || fail "createindex died"
 
 # shellcheck disable=SC2086

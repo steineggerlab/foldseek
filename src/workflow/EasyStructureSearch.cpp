@@ -70,7 +70,9 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
                                     needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT);
     }
 
-    if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM || par.greedyBestHits) {
+    if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM ||
+        par.formatAlignmentMode == LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED  ||
+        par.greedyBestHits) {
         needBacktrace = true;
     }
     if (needBacktrace) {
@@ -111,6 +113,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
+    cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("GREEDY_BEST_HITS", par.greedyBestHits ? "TRUE" : NULL);

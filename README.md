@@ -27,6 +27,8 @@ Other precompiled binaries for ARM64, PPC64LE amd SSE2 are available at [https:/
 `easy-search` can search single or multiple query structures formatted in PDB/mmCIF format (flat or `.gz`) against a target database (`example/`) of protein structures. It outputs a tab-separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
 
     foldseek easy-search example/d1asha_ example/ aln.m8 tmpFolder
+
+#### Output: Customize fields of tab seperated output
     
 The output can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different output columns.
 
@@ -72,9 +74,15 @@ u           Rotation matrix (computed to by TM-score)
 t           Translation vector (computed to by TM-score)
 ```
 
+#### Output: Superpositioned Cα only PDB files
+Foldseek's `--format-mode 5` generates PDB files with all Cα atoms superimposed based on the aligned coordinates on to the query structure. 
+For each pairwise alignment it will write a single PDB files, so be carefull when using this options for large searches. 
+
+#### Create reusable databases and indexes
 The target database can be pre-processed by `createdb`. This make sense if searched multiple times. 
  
     foldseek createdb example/ targetDB
+    foldseek createindex targetDB tmp  #OPTIONAL generates and stores the index on disk
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
 
 ### Important search parameters

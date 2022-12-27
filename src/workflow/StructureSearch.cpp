@@ -39,6 +39,44 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     setStructureSearchWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setStructureSearchMustPassAlong(&par);
+    if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
+        Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
+        Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
+        par.sortByStructureBits = false;
+    }
+
+
+    {
+        bool needBacktrace = false;
+        bool needTaxonomy = false;
+        bool needTaxonomyMapping = false;
+        bool needLookup = false;
+        bool needSequenceDB = false;
+        bool needFullHeaders = false;
+        bool needSource = false;
+        bool needCA = false;
+        bool needTMalign = false;
+        bool needLDDT = false;
+        LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
+                                         needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT);
+
+        // check if databases have Calpha coordinates
+        if (needCA) {
+            std::string caDB = par.db2 + "_ca.dbtype";
+            if (!FileUtil::fileExists(caDB.c_str())) {
+                Debug(Debug::ERROR)
+                        << "Target database does not contain Calpha coordinates. Please recreate the database.";
+                EXIT(EXIT_FAILURE);
+            }
+            caDB = par.db1 + "_ca.dbtype";
+            if (!FileUtil::fileExists(caDB.c_str())) {
+                Debug(Debug::ERROR)
+                        << "Query database does not contain Calpha coordinates. Please recreate the database.";
+                EXIT(EXIT_FAILURE);
+            }
+        }
+    }
+
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
@@ -73,6 +111,10 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+        par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_ONLY;
+        par.sortByStructureBits = 0;
+        //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
+        cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA){
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());

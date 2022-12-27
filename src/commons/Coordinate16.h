@@ -1,37 +1,68 @@
 #ifndef COORDINATE16_H
 #define COORDINATE16_H
 
-#include "simd.h"
-#include "simde/x86/avx2.h"
-#include "simde/x86/f16c.h"
-
+#include "LocalParameters.h"
 #include <vector>
 
 class Coordinate16 {
 public:
-    void read(const char* mem, size_t chainLength) {
-        size_t xyzLength = chainLength * 3;
-        size_t simdXyzLength = xyzLength - (chainLength % 8);
+    float* read(const char* mem, size_t chainLength, size_t entryLength) {
+        if (entryLength >= (chainLength * 3) * sizeof(float)) {
+            return (float*) mem;
+        }
         buffer.reserve(chainLength * 3);
+        const char* data = mem;
+        int32_t diffSum = 0;
+        int32_t start;
+        memcpy(&start, data, sizeof(int32_t));
+        data += sizeof(int32_t);
+        buffer[0] = start / 1000.0f;
+        int16_t intDiff = 0;
+        for (size_t i = 1; i < chainLength; ++i) {
+            memcpy(&intDiff, data, sizeof(int16_t));
+            data += sizeof(int16_t);
+            diffSum += intDiff;
+            buffer[i] = (start + diffSum) / 1000.0f;
+        }
+        diffSum = 0;
+        memcpy(&start, data, sizeof(int32_t));
+        data += sizeof(int32_t);
+        buffer[chainLength] = start / 1000.0f;
+        for (size_t i = chainLength + 1; i < 2 * chainLength; ++i) {
+            memcpy(&intDiff, data, sizeof(int16_t));
+            data += sizeof(int16_t);
+            diffSum += intDiff;
+            buffer[i] = (start + diffSum) / 1000.0f;
+        }
+        diffSum = 0;
+        memcpy(&start, data, sizeof(int32_t));
+        data += sizeof(int32_t);
+        buffer[2 * chainLength] = start / 1000.0f;
+        for (size_t i = 2 * chainLength + 1; i < 3 * chainLength; ++i) {
+            memcpy(&intDiff, data, sizeof(int16_t));
+            data += sizeof(int16_t);
+            diffSum += intDiff;
+            buffer[i] = (start + diffSum) / 1000.0f;
+        }
+        return buffer.data();
 
-        const int16_t* mem16 = (const int16_t*) mem;
-        for (size_t i = 0; i < simdXyzLength; i += VECSIZE_FLOAT) {
-            __m128i res = _mm_loadu_epi16((const __m128i*)(mem16 + i));
-#ifdef AVX2
-            __m256 res2 = _mm256_cvtph_ps(res);
-            _mm256_storeu_ps(buffer.data() + i, res2);
-#else
-            __m128 res2 = _mm_cvtph_ps(res);
-            _mm_storeu_ps(buffer.data() + i, res2);
-#endif
-        }
-        for (size_t i = simdXyzLength; i < xyzLength; i++) {
-            buffer[i] = _mm_cvtss_f32(_mm_cvtph_ps(_mm_set1_epi16(*(mem16 + i))));
-        }
     }
 
-    float* getBuffer() {
-        return buffer.data();
+    template <typename T>
+    static bool convertToDiff16(size_t len, T* data, int16_t* out, int stride = 3) {
+        int32_t last = (int)(data[0] * 1000);
+        memcpy(out, &last, sizeof(int32_t));
+        for (size_t i = 1; i < len; ++i) {
+            int32_t curr = (int32_t)(data[i * stride] * 1000);
+            int16_t diff;
+            bool overflow = __builtin_sub_overflow(curr, last, &diff);
+            if (overflow == 1) {
+                return true;
+            }
+            out[i + 1] = diff;
+            last = curr;
+        }
+        return false;
     }
 
 private:

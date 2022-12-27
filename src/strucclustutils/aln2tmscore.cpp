@@ -75,11 +75,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             unsigned int queryId = qdbr.getId(queryKey);
             int queryLen = static_cast<int>((qdbr.getEntryLen(queryId)-1)/(3*sizeof(float)));
             char *qcadata = qdbr.getData(queryId, thread_idx);
-            float* qdata = (float*)qcadata;
-            if (qdbr.getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                qcoords.read(qcadata, queryLen);
-                qdata = qcoords.getBuffer();
-            }
+            size_t qCaLength = qdbr.getEntryLen(queryId);
+            float* qdata = qcoords.read(qcadata, queryLen, qCaLength);
             tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], NULL, queryLen);
 
             for (size_t j = 0; j < results.size(); j++) {
@@ -93,11 +90,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 unsigned int targetId = tdbr->getId(dbKey);
                 int targetLen = static_cast<int>((tdbr->getEntryLen(targetId)-1)/(3*sizeof(float)));
                 char *tcadata = tdbr->getData(targetId, thread_idx);
-                float* tdata = (float*)tcadata;
-                if (tdbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                    tcoords.read(tcadata, targetLen);
-                    tdata = tcoords.getBuffer();
-                }
+                size_t tCaLength = tdbr->getEntryLen(targetId);
+                float* tdata = tcoords.read(tcadata, targetLen, tCaLength);
 
                 // Matching residue index collection
                 TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen, res.qStartPos,

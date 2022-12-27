@@ -99,11 +99,8 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
-                float* qdata = (float*)qcadata;
-                if (qcadbr.getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                    qcoords.read(qcadata, queryLen);
-                    qdata = qcoords.getBuffer();
-                }
+                size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
+                float* qdata = qcoords.read(qcadata, queryLen, qCaLength);
                 tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], querySeq, queryLen);
 
                 int passedNum = 0;
@@ -131,16 +128,32 @@ int tmalign(int argc, const char **argv, const Command& command) {
                     }
 
                     char *tcadata = tcadbr->sequenceReader->getData(targetId, thread_idx);
-                    float* tdata = (float*)tcadata;
-                    if (tcadbr->getDbtype() == LocalParameters::DBTYPE_CA_ALPHA_F16) {
-                        tcoords.read(tcadata, targetLen);
-                        tdata = tcoords.getBuffer();
-                    }
+                    size_t tCaLength = tcadbr->sequenceReader->getEntryLen(targetId);
+                    float* tdata = tcoords.read(tcadata, targetLen, tCaLength);
 
                     // align here
                     float TMscore;
                     Matcher::result_t result = tmaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen+targetLen], targetSeq, targetLen, TMscore);
-
+                    float qTM = (static_cast<float>(result.score) / 100000);
+                    float tTM = result.eval;
+                    switch(par.tmAlignHitOrder){
+                        case LocalParameters::TMALIGN_HIT_ORDER_AVG:
+                            result.eval = (qTM + tTM) / 2.0;
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_QUERY:
+                            result.eval = qTM;
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_TARGET:
+                            result.eval = tTM;
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_MIN:
+                            result.eval = std::min(qTM, tTM);
+                            break;
+                        case LocalParameters::TMALIGN_HIT_ORDER_MAX:
+                            result.eval = std::max(qTM, tTM);
+                            break;
+                    }
+                    result.score = static_cast<int>(qTM * 100);
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
                     bool hasSeqId = result.seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
                     bool hasTMscore = (TMscore >= par.tmScoreThr);

@@ -6,23 +6,33 @@
 
 const int LocalParameters::DBTYPE_CA_ALPHA = 101;
 const int LocalParameters::DBTYPE_TMSCORE = 102;
-const int LocalParameters::DBTYPE_CA_ALPHA_F16 = 103;
 
 LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_TMALIGN_HIT_ORDER(PARAM_TMALIGN_HIT_ORDER_ID,"--tmalign-hit-order", "TMalign hit order", "order hits by 0: (qTM+tTM)/2, 1: qTM, 2: tTM, 3: min(qTM,tTM) 4: max(qTM,tTM)",typeid(float), (void *) &tmAlignHitOrder, "^[0-4]{1}$"),
+        PARAM_LDDT_THRESHOLD(PARAM_LDDT_THRESHOLD_ID,"--lddt-threshold", "LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &lddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_SORT_BY_STRUCTURE_BITS(PARAM_SORT_BY_STRUCTURE_BITS_ID,"--sort-by-structure-bits", "Sort by structure bit score", "sort by bits*sqrt(alnlddt*alntmscore)",typeid(int), (void *) &sortByStructureBits, "^[0-1]{1}$"),
         PARAM_MASK_BFACTOR_THRESHOLD(PARAM_MASK_BFACTOR_THRESHOLD_ID,"--mask-bfactor-threshold", "Mask b-factor threshold", "mask residues for seeding if b-factor < thr [0,100]",typeid(float), (void *) &maskBfactorThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
-        PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as half (float16)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$"),
+        PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$")
         PARAM_LDDT_HTML(PARAM_LDDT_HTML_ID, "--lddt-html", "LDDT HTML file", "File to write LDDT MSA HTML visualisation to", typeid(std::string), (void *) &lddtHtml, "")
-        // PARAM_NEWICK_OUTPUT()
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
     PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
+
+    PARAM_FORMAT_MODE.description = "Output format:\n0: BLAST-TAB\n"
+                                    "1: SAM\n2: BLAST-TAB + query/db length\n"
+                                    "3: Pretty HTML\n4: BLAST-TAB + column headers\n"
+                                    "5: Calpha only PDB super-posed to query\n"
+                                    "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
+                                    "support custom output formats (--format-output)\n"
+                                    "(5) Superposed PDB files (Calpha only)";
+    PARAM_FORMAT_MODE.regex = "^[0-5]{1}$";
     PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
@@ -61,6 +71,7 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_ADD_BACKTRACE);
     tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    tmalign.push_back(&PARAM_TMALIGN_HIT_ORDER);
     tmalign.push_back(&PARAM_TMALIGN_FAST);
     tmalign.push_back(&PARAM_PRELOAD_MODE);
     tmalign.push_back(&PARAM_THREADS);
@@ -70,6 +81,8 @@ LocalParameters::LocalParameters() :
     structurerescorediagonal = combineList(structurerescorediagonal, align);
 
     structurealign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurealign.push_back(&PARAM_LDDT_THRESHOLD);
+    structurealign.push_back(&PARAM_SORT_BY_STRUCTURE_BITS);
     structurealign = combineList(structurealign, align);
 //    tmalign.push_back(&PARAM_GAP_OPEN);
 //    tmalign.push_back(&PARAM_GAP_EXTEND);
@@ -134,6 +147,10 @@ LocalParameters::LocalParameters() :
 
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
+    tmAlignHitOrder = TMALIGN_HIT_ORDER_AVG;
+    lddtThr = 0.0;
+    evalThr = 10;
+    sortByStructureBits = 1;
     maskBfactorThreshold = 0;
     chainNameMode = 0;
     tmAlignFast = 1;
@@ -205,6 +222,7 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("empty") == 0){ code = Parameters::OUTFMT_EMPTY;}
         else if (outformatSplit[i].compare("lddt") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT; }
         else if (outformatSplit[i].compare("lddtfull") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
+        else if (outformatSplit[i].compare("prob") == 0) { needCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);
@@ -216,6 +234,6 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
 
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
-std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA, LocalParameters::DBTYPE_CA_ALPHA_F16};
+std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};
 std::vector<int> FoldSeekDbValidator::flatfileStdinAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_STDIN,LocalParameters::DBTYPE_DIRECTORY};
 std::vector<int> FoldSeekDbValidator::flatfileAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_DIRECTORY};

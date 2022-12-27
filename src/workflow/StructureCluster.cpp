@@ -8,10 +8,11 @@
 #include <cassert>
 #include <LocalParameters.h>
 
-void setStructureClusterWorkflowDefaults(Parameters *p) {
+void setStructureClusterWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = true;
     p->covThr = 0.8;
     p->evalThr = 0.01;
+    p->sortByStructureBits = 0;
     p->maxResListLen = 1000;
     p->kmersPerSequence = 300;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;

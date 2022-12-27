@@ -27,12 +27,17 @@ public:
     }
 
     static const int DBTYPE_CA_ALPHA;
-    static const int DBTYPE_CA_ALPHA_F16;
     static const int DBTYPE_TMSCORE;
 
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
+
+    static const int TMALIGN_HIT_ORDER_AVG = 0;
+    static const int TMALIGN_HIT_ORDER_QUERY = 1;
+    static const int TMALIGN_HIT_ORDER_TARGET = 2;
+    static const int TMALIGN_HIT_ORDER_MIN = 3;
+    static const int TMALIGN_HIT_ORDER_MAX = 4;
 
     static const int CHAIN_MODE_AUTO = 0;
     static const int CHAIN_MODE_ADD = 1;
@@ -45,11 +50,14 @@ public:
     static const int OUTFMT_LDDT = 45;
     static const int OUTFMT_LDDT_FULL = 46;
     static const int OUTFMT_RMSD = 47;
+    static const int OUTFMT_PROBTP = 48;
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
-    static const int COORD_STORE_MODE_CA_HALF  = 2;
+    static const int COORD_STORE_MODE_CA_DIFF  = 2;
 
     static const unsigned int INDEX_DB_CA_KEY = 500;
+
+    static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
 
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
@@ -66,6 +74,9 @@ public:
     std::vector<MMseqsParameter *> easymsaworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
+    PARAMETER(PARAM_TMALIGN_HIT_ORDER)
+    PARAMETER(PARAM_LDDT_THRESHOLD)
+    PARAMETER(PARAM_SORT_BY_STRUCTURE_BITS)
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
     PARAMETER(PARAM_CHAIN_NAME_MODE)
@@ -77,6 +88,9 @@ public:
     PARAMETER(PARAM_LDDT_HTML)
 
     float tmScoreThr;
+    int tmAlignHitOrder;
+    float lddtThr;
+    int sortByStructureBits;
     float maskBfactorThreshold;
     int alignmentType;
     int chainNameMode;

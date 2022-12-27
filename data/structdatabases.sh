@@ -93,19 +93,6 @@ case "${SELECTION}" in
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb.tar.gz" "${TMP_PATH}/afdb.tar.gz"
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb.version" "${TMP_PATH}/version"
         fi
-        if notExists "${TMP_PATH}/afdb_ca.tar.gz"; then
-            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_ca.tar.gz" "${TMP_PATH}/afdb_ca.tar.gz"
-        fi
-        tar xvfz "${TMP_PATH}/afdb.tar.gz" -C "${TMP_PATH}"
-        tar xvfz "${TMP_PATH}/afdb_ca.tar.gz" -C "${TMP_PATH}"
-        push_back "${TMP_PATH}/afdb"
-        INPUT_TYPE="FOLDSEEK_DB"
-    ;;
-    "Alphafold/UniProt-NO-CA")
-        if notExists "${TMP_PATH}/afdb.tar.gz"; then
-            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb.tar.gz" "${TMP_PATH}/afdb.tar.gz"
-            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb.version" "${TMP_PATH}/version"
-        fi
         tar xvfz "${TMP_PATH}/afdb.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/afdb"
         INPUT_TYPE="FOLDSEEK_DB"
