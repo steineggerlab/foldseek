@@ -790,38 +790,31 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::vector<std::string> msa_3di(sequenceCnt);
     std::vector<std::string> mappings(sequenceCnt);
     int maxSeqLength = 0;
-    for(size_t i = 0; i < sequenceCnt; i++){
+    for (size_t i = 0; i < sequenceCnt; i++) {
+        unsigned int seqKeyAA = seqDbrAA.getDbKey(i);
+        unsigned int seqKey3Di = seqDbr3Di.getDbKey(i);
         allSeqs_aa[i] = new Sequence(par.maxSeqLen, seqDbrAA.getDbtype(), (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
-        allSeqs_aa[i]->mapSequence(i, seqDbrAA.getDbKey(i), seqDbrAA.getData(i,0), seqDbrAA.getSeqLen(i));
+        allSeqs_aa[i]->mapSequence(i, seqKeyAA, seqDbrAA.getData(i, 0), seqDbrAA.getSeqLen(i));
         allSeqs_3di[i] = new Sequence(par.maxSeqLen, seqDbr3Di.getDbtype(), (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
-        allSeqs_3di[i]->mapSequence(i, seqDbr3Di.getDbKey(i), seqDbr3Di.getData(i,0), seqDbr3Di.getSeqLen(i));
+        allSeqs_3di[i]->mapSequence(i, seqKey3Di, seqDbr3Di.getData(i, 0), seqDbr3Di.getSeqLen(i));
         maxSeqLength = std::max(maxSeqLength, allSeqs_aa[i]->L);
         std::string aaSeq = seqDbrAA.getData(i, 0);
-        msa_aa[i] += ">" + SSTR(i) + "\n";
+        msa_aa[i] += ">" + SSTR(seqKeyAA) + "\n";
         msa_aa[i] += aaSeq;
-        msa_3di[i] += ">" +  SSTR(i) + "\n";
+        msa_3di[i] += ">" +  SSTR(seqKey3Di) + "\n";
         msa_3di[i] += seqDbr3Di.getData(i, 0);
         mappings[i] = std::string(seqDbrAA.getSeqLen(i), '0');
     }
-       
+    
     // TODO: dynamically calculate and re-init PSSMCalculator/MsaFilter each iteration
     maxSeqLength = par.maxSeqLen;
     
     std::cout << "Initialised MSAs, Sequence objects" << std::endl;
 
     // Setup objects needed for profile calculation
-    // par.pca = 1.5;
-    // par.pcb = 2.1;
-    // par.gapOpen = 15;
-    // par.gapExtend = 5;
-
     PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt +1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
 
-    // par.pca = 1;
-    // par.pcb = 3;
-    // par.gapOpen = 12;
-    // par.gapExtend = 1;
     par.scoringMatrixFile = "3di.out";
     par.seedScoringMatrixFile = "3di.out";
     par.maskProfile = 0;
@@ -829,7 +822,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     par.evalThr = 0.1;
     
     // Don't lose columns in pairwise alignments when less than 50% gaps
-    par.matchRatio = 0.9;
+    // par.matchRatio = 0.81;
 
     PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());

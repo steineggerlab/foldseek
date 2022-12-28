@@ -17,6 +17,7 @@
 #include "KSeqBufferReader.h"
 #include "KSeqWrapper.h"
 #include "LDDT.h"
+#include "Coordinate16.h"
 
 // LDDT scoring
 // - Iterate unique pairs of sequences in MSA
@@ -46,16 +47,24 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
     while (kseq->ReadEntry()) {
         const KSeqWrapper::KSeqEntry &entry = kseq->entry;
         size_t idx = seqDbrAA.getLookupIdByAccession(entry.name.s);
+        unsigned int key = seqDbrAA.getLookupKey(idx);
+        size_t seqIdAA = seqDbrAA.getId(key);
+        if (seqIdAA == UINT_MAX)
+            Debug(Debug::WARNING) << "Key not found in seqDbrAA: " << key << "\n";
+        size_t seqId3Di = seqDbr3Di.getId(key);
+        if (seqId3Di == UINT_MAX)
+            Debug(Debug::WARNING) << "Key not found in seqDbr3di: " << key << "\n";
         headers[idx] = entry.name.s;
-        sequences[idx] = seqDbrAA.getData(idx, 0);
+        sequences[idx] = seqDbrAA.getData(seqIdAA, 0);
         sequences[idx].pop_back();
-        sequences3di[idx] = seqDbr3Di.getData(idx, 0);
+        sequences3di[idx] = seqDbr3Di.getData(seqId3Di, 0);
         sequences3di[idx].pop_back();
-        for (size_t i = 0; i < entry.sequence.l; i++)
+        for (size_t i = 0; i < entry.sequence.l; i++) {
             if (entry.sequence.s[i] == '-') {
                 sequences[idx].insert(i, "-");
                 sequences3di[idx].insert(i, "-");
             }
+        }
         if (alnLength == 0)
             alnLength = (int)entry.sequence.l;
     }
@@ -132,11 +141,23 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         res.backtrace.erase(i + 1, res.backtrace.length() - i);
 
         // Get c-alpha info from _ca db for q and t
-        float *queryCaData  = (float*)seqDbrCA.sequenceReader->getData(qId, 0);
-        float *targetCaData = (float*)seqDbrCA.sequenceReader->getData(tId, 0);
-        
+        unsigned int qKey = seqDbrAA.getLookupKey(qId);
+        unsigned int tKey = seqDbrAA.getLookupKey(tId);
+        unsigned int qIdx = seqDbrAA.getId(qKey);
+        unsigned int tIdx = seqDbrAA.getId(tKey);
+
+        Coordinate16 qcoords;
+        char *qcadata = seqDbrCA.sequenceReader->getData(qIdx, 0);
+        size_t qCaLength = seqDbrCA.sequenceReader->getEntryLen(qIdx);
+        float *queryCaData = qcoords.read(qcadata, qr, qCaLength);
+
+        Coordinate16 tcoords;
+        char *tcadata = seqDbrCA.sequenceReader->getData(tIdx, 0);
+        size_t tCaLength = seqDbrCA.sequenceReader->getEntryLen(tIdx);
+        float *targetCaData = tcoords.read(tcadata, tr, tCaLength);
+
         // Calculate LDDT using created result_t object
-        LDDTCalculator *lddtcalculator = new LDDTCalculator(qr, tr);
+        LDDTCalculator *lddtcalculator = new LDDTCalculator(qr + 1, tr + 1);
         lddtcalculator->initQuery(qr, queryCaData, &queryCaData[qr], &queryCaData[2 * qr]);
         LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator->computeLDDTScore(
             tr,
