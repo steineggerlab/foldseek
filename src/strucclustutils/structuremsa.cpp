@@ -21,7 +21,6 @@
 #include <tuple>
 #include <set>
 
-#include "MSANode.h"
 #include "kseq.h"
 #include "KSeqBufferReader.h"
 #include "LDDT.h"
@@ -608,7 +607,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     par.evalThr = 0.1;
     
     // Don't lose columns in pairwise alignments when less than 50% gaps
-    // par.matchRatio = 0.81;
+    par.matchRatio = 0.51;
 
     PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
