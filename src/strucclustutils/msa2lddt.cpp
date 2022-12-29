@@ -42,7 +42,6 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
     int alnLength = 0;
     int numSequences = 0;
     int maxSeqLength = 0;
-    int sequenceCnt = seqDbr3Di.getSize();
     std::vector<std::string> headers;
     std::vector<size_t> indices;
     std::vector<std::string> sequences;
@@ -96,7 +95,7 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         // Get the qId/tId of this permutation
         int qId = -1;
         int tId = -1;
-        for (int i = 0; i < sequenceCnt; ++i) {
+        for (int i = 0; i < numSequences; ++i) {
             if (ids[i] && qId == -1) { qId = i; continue; }
             if (ids[i] && tId == -1) { tId = i; break; }
         }
