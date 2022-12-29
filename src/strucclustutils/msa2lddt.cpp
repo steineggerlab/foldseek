@@ -40,10 +40,13 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
     // Read in MSA, mapping headers to database indices
     KSeqWrapper* kseq = KSeqFactory(par.db2.c_str());
     int alnLength = 0;
+    int numSequences = 0;
+    int maxSeqLength = 0;
     int sequenceCnt = seqDbr3Di.getSize();
-    std::vector<std::string> headers(sequenceCnt);
-    std::vector<std::string> sequences(sequenceCnt);
-    std::vector<std::string> sequences3di(sequenceCnt);
+    std::vector<std::string> headers;
+    std::vector<size_t> indices;
+    std::vector<std::string> sequences;
+    std::vector<std::string> sequences3di;
     while (kseq->ReadEntry()) {
         const KSeqWrapper::KSeqEntry &entry = kseq->entry;
         size_t idx = seqDbrAA.getLookupIdByAccession(entry.name.s);
@@ -54,19 +57,25 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         size_t seqId3Di = seqDbr3Di.getId(key);
         if (seqId3Di == UINT_MAX)
             Debug(Debug::WARNING) << "Key not found in seqDbr3di: " << key << "\n";
-        headers[idx] = entry.name.s;
-        sequences[idx] = seqDbrAA.getData(seqIdAA, 0);
-        sequences[idx].pop_back();
-        sequences3di[idx] = seqDbr3Di.getData(seqId3Di, 0);
-        sequences3di[idx].pop_back();
+        headers.push_back(entry.name.s);
+        indices.push_back(seqIdAA);
+        std::string seqAA = seqDbrAA.getData(seqIdAA, 0);
+        seqAA.pop_back();
+        std::string seq3Di = seqDbr3Di.getData(seqId3Di, 0);
+        seq3Di.pop_back();
         for (size_t i = 0; i < entry.sequence.l; i++) {
             if (entry.sequence.s[i] == '-') {
-                sequences[idx].insert(i, "-");
-                sequences3di[idx].insert(i, "-");
+                seqAA.insert(i, "-");
+                seq3Di.insert(i, "-");
             }
         }
+        sequences.push_back(seqAA);
+        sequences.push_back(seq3Di);
         if (alnLength == 0)
             alnLength = (int)entry.sequence.l;
+        if (seqAA.length() > maxSeqLength)
+            maxSeqLength = seqAA.length();
+        numSequences++;
     }
     
     // Track per-column scores and no. non-gaps to avg
@@ -74,10 +83,13 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
     std::vector<float> perColumnSOP(alnLength, 0.0);
     std::vector<float> perColumnCount(alnLength, 0.0);
 
-    std::vector<bool> ids(sequenceCnt);  
+    std::vector<bool> ids(numSequences);  
     std::fill(ids.end() - 2, ids.end(), true);
     double sum = 0.0;
     int numPairs = 0;
+
+    LDDTCalculator *lddtcalculator = new LDDTCalculator(maxSeqLength + 1, maxSeqLength + 1);
+    int prevqId = -1;
     do {
         numPairs++;
         
@@ -141,24 +153,22 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         res.backtrace.erase(i + 1, res.backtrace.length() - i);
 
         // Get c-alpha info from _ca db for q and t
-        unsigned int qKey = seqDbrAA.getLookupKey(qId);
-        unsigned int tKey = seqDbrAA.getLookupKey(tId);
-        unsigned int qIdx = seqDbrAA.getId(qKey);
-        unsigned int tIdx = seqDbrAA.getId(tKey);
-
         Coordinate16 qcoords;
-        char *qcadata = seqDbrCA.sequenceReader->getData(qIdx, 0);
-        size_t qCaLength = seqDbrCA.sequenceReader->getEntryLen(qIdx);
+        char *qcadata = seqDbrCA.sequenceReader->getData(indices[qId], 0);
+        size_t qCaLength = seqDbrCA.sequenceReader->getEntryLen(indices[qId]);
         float *queryCaData = qcoords.read(qcadata, qr, qCaLength);
 
         Coordinate16 tcoords;
-        char *tcadata = seqDbrCA.sequenceReader->getData(tIdx, 0);
-        size_t tCaLength = seqDbrCA.sequenceReader->getEntryLen(tIdx);
+        char *tcadata = seqDbrCA.sequenceReader->getData(indices[tId], 0);
+        size_t tCaLength = seqDbrCA.sequenceReader->getEntryLen(indices[tId]);
         float *targetCaData = tcoords.read(tcadata, tr, tCaLength);
 
         // Calculate LDDT using created result_t object
-        LDDTCalculator *lddtcalculator = new LDDTCalculator(qr + 1, tr + 1);
-        lddtcalculator->initQuery(qr, queryCaData, &queryCaData[qr], &queryCaData[2 * qr]);
+        // Only re-initialise when query actually changes
+        if (prevqId != qId)
+            lddtcalculator->initQuery(qr, queryCaData, &queryCaData[qr], &queryCaData[2 * qr]);
+        prevqId = qId;
+
         LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator->computeLDDTScore(
             tr,
             res.qStartPos,
@@ -178,9 +188,8 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         }
         
         sum += lddtres.avgLddtScore;
-        delete lddtcalculator;
-
     } while (std::next_permutation(ids.begin(), ids.end()));
+    delete lddtcalculator;
    
     std::cout << "Average MSA LDDT: " << sum / (double)numPairs << std::endl;
     
