@@ -34,7 +34,8 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
     seqDbrAA.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbr3Di((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
-    IndexReader seqDbrCA(par.db1, par.threads, IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY), touch ? IndexReader::PRELOAD_INDEX : 0, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA, "_ca");
+    DBReader<unsigned int> seqDbrCA((par.db1+"_ca").c_str(), (par.db1+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+    seqDbrCA.open(DBReader<unsigned int>::NOSORT);
     IndexReader headerDB(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
     
     // Read in MSA, mapping headers to database indices
@@ -69,7 +70,7 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
             }
         }
         sequences.push_back(seqAA);
-        sequences.push_back(seq3Di);
+        sequences3di.push_back(seq3Di);
         if (alnLength == 0)
             alnLength = (int)entry.sequence.l;
         if (seqAA.length() > maxSeqLength)
@@ -153,13 +154,13 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
 
         // Get c-alpha info from _ca db for q and t
         Coordinate16 qcoords;
-        char *qcadata = seqDbrCA.sequenceReader->getData(indices[qId], 0);
-        size_t qCaLength = seqDbrCA.sequenceReader->getEntryLen(indices[qId]);
+        char *qcadata = seqDbrCA.getData(indices[qId], 0);
+        size_t qCaLength = seqDbrCA.getEntryLen(indices[qId]);
         float *queryCaData = qcoords.read(qcadata, qr, qCaLength);
 
         Coordinate16 tcoords;
-        char *tcadata = seqDbrCA.sequenceReader->getData(indices[tId], 0);
-        size_t tCaLength = seqDbrCA.sequenceReader->getEntryLen(indices[tId]);
+        char *tcadata = seqDbrCA.getData(indices[tId], 0);
+        size_t tCaLength = seqDbrCA.getEntryLen(indices[tId]);
         float *targetCaData = tcoords.read(tcadata, tr, tCaLength);
 
         // Calculate LDDT using created result_t object
