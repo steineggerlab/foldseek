@@ -538,15 +538,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     seqDbrAA.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbr3Di((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
-
-    IndexReader seqDbrCA(
-                par.db1,
-                par.threads,
-                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
-                touch ? IndexReader::PRELOAD_INDEX : 0,
-                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-                "_ca");
-    
+   
     IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
     
     std::cout << "Got databases" << std::endl;
