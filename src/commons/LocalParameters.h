@@ -83,6 +83,14 @@ public:
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
+    
+    PARAMETER(PARAM_PCA_AA)
+    PARAMETER(PARAM_PCB_AA)
+    PARAMETER(PARAM_PCA_3DI)
+    PARAMETER(PARAM_PCB_3DI)
+
+    PARAMETER(PARAM_SCORE_BIAS_AA)
+    PARAMETER(PARAM_SCORE_BIAS_3DI)
 
     // PARAMETER(PARAM_NEWICK_OUTPUT)
     PARAMETER(PARAM_LDDT_HTML)
@@ -98,6 +106,12 @@ public:
     int nsample;
     int coordStoreMode;
 
+    float scoreBiasAa;
+    float scoreBias3di;
+    MultiParam<PseudoCounts> pcaAa;
+    MultiParam<PseudoCounts> pcbAa;
+    MultiParam<PseudoCounts> pca3di;
+    MultiParam<PseudoCounts> pcb3di;
     std::string lddtHtml;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,

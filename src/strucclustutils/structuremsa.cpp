@@ -525,12 +525,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     
     par.compBiasCorrection = 0;
-    
-    float scoreBiasAA = par.scoreBias;
-    float scoreBias3Di = par.scoreBias;
-    // float scoreBiasAA = 0.6;
-    // float scoreBias3Di = 1;
-    
+   
     // Databases
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
@@ -543,7 +538,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     
     std::cout << "Got databases" << std::endl;
    
-    SubstitutionMatrix subMat_3di(par.scoringMatrixFile.values.aminoacid().c_str(), 2.1, scoreBias3Di);
+    SubstitutionMatrix subMat_3di(par.scoringMatrixFile.values.aminoacid().c_str(), 2.1, par.scoreBias3di);
     std::string blosum;
     for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
         if (par.substitutionMatrices[i].name == "blosum62.out") {
@@ -555,7 +550,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             break;
         }
     }
-    SubstitutionMatrix subMat_aa(blosum.c_str(), 1.4, scoreBiasAA);
+    SubstitutionMatrix subMat_aa(blosum.c_str(), 1.4, par.scoreBiasAa);
 
     std::cout << "Got substitution matrices" << std::endl;
     
@@ -589,19 +584,13 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::cout << "Initialised MSAs, Sequence objects" << std::endl;
 
     // Setup objects needed for profile calculation
-    PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+    PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt +1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
 
     par.scoringMatrixFile = "3di.out";
     par.seedScoringMatrixFile = "3di.out";
-    par.maskProfile = 0;
-    par.evalProfile = 0.1;
-    par.evalThr = 0.1;
     
-    // Don't lose columns in pairwise alignments when less than 50% gaps
-    par.matchRatio = 0.51;
-
-    PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+    PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
     
     // Add aligner
@@ -627,7 +616,6 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
     bool * alreadyMerged = new bool[sequenceCnt];
     memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
-    int _i = 1;
 
     // Initial alignments
     std::vector<AlnSimple> hits = updateAllScores(
@@ -649,12 +637,10 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     for (size_t i = 0; i < sequenceCnt; ++i)
         treeNodes[i] = std::to_string(i);
 
+    std::cout << "Merging:\n";
     while(hits.size() > 0){
-        std::cout << "While loop " << _i++ << std::endl; 
-        
         unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
         unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
-        
         bool queryIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[hits[0].queryId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
         bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[hits[0].targetId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
         
@@ -665,9 +651,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         } if(targetIsProfile && queryIsProfile){
             float q_neff_sum = 0.0;
             float t_neff_sum = 0.0;
-            for (size_t i = 0; i < allSeqs_3di[hits[0].queryId]->L; i++)
+            for (int i = 0; i < allSeqs_3di[hits[0].queryId]->L; i++)
                 q_neff_sum += allSeqs_3di[hits[0].queryId]->neffM[i];
-            for (size_t i = 0; i < allSeqs_3di[hits[0].targetId]->L; i++)
+            for (int i = 0; i < allSeqs_3di[hits[0].targetId]->L; i++)
                 t_neff_sum += allSeqs_3di[hits[0].targetId]->neffM[i];
             if (q_neff_sum > t_neff_sum) {
                 mergedId = hits[0].queryId;
@@ -681,8 +667,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             targetId = hits[0].targetId;
         }
 
-        std::cout << "  mergedId: " << mergedId << std::endl;
-        std::cout << "  targetId: " << targetId << std::endl;
+        std::cout << "  Q=" << mergedId << ", T=" << targetId << "\n";
 
         // Extend tree
         // TODO: make this optional ?
@@ -695,11 +680,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         treeNodes[targetId] = "";
         
         structureSmithWaterman.ssw_init(allSeqs_aa[mergedId], allSeqs_3di[mergedId], tinySubMatAA, tinySubMat3Di, &subMat_aa);
-        std::cout << "  Initialised SW" << std::endl;
         
         Matcher::result_t res = pairwiseAlignment(structureSmithWaterman, allSeqs_aa[mergedId]->L, allSeqs_aa[targetId],
                                                   allSeqs_3di[targetId], par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-        std::cout << "  Performed new alignments" << std::endl;
 
         // Convert 010101 mask to [ 0, 2, 4 ] index mapping
         std::vector<int> map1 = maskToMapping(mappings[mergedId], res.qLen);
@@ -711,15 +694,13 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         msa_aa[targetId] = "";
         msa_3di[targetId] = "";
         assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
-        std::cout << "  Merged AA/3Di MSAs" << std::endl;
 
         std::string profile_aa = fastamsa2profile(msa_aa[mergedId], calculator_aa, filter_aa, subMat_aa, maxSeqLength,
                                                   sequenceCnt + 1, par.matchRatio, par.filterMsa,
                                                   par.compBiasCorrection,
                                                   par.qid, par.filterMaxSeqId, par.Ndiff, 0,
                                                   par.qsc,
-                                                  par.filterMinEnable, par.wg, NULL, scoreBiasAA);
-        std::cout << "  Got AA profile" << std::endl;
+                                                  par.filterMinEnable, par.wg, NULL, par.scoreBiasAa);
        
         // Mapping is stored at the end of the profile (to \n), so save to mappings[]
         // Iterate backwards until newline to recover the full mask
@@ -742,17 +723,15 @@ int structuremsa(int argc, const char **argv, const Command& command) {
                                                    par.compBiasCorrection,
                                                    par.qid, par.filterMaxSeqId, par.Ndiff, par.covMSAThr,
                                                    par.qsc,
-                                                   par.filterMinEnable, par.wg, maskBool, scoreBias3Di);
+                                                   par.filterMinEnable, par.wg, maskBool, par.scoreBias3di);
         delete[] maskBool; 
         assert(profile_aa.length() == profile_3di.length());
-        std::cout << "  Got 3Di profile" << std::endl;
         
         if (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_AMINO_ACIDS)) {
             delete allSeqs_aa[mergedId];
             delete allSeqs_3di[mergedId];
             allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
             allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
-            std::cout << "  Initalised new Sequence objects" << std::endl;
         }
 
         allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
@@ -771,8 +750,6 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             par.gapExtend.values.aminoacid()
         );
         sortHitsByScore(hits);
-        std::cout << "  Updated scores" << std::endl;
-        std::cout << std::endl;
     }
     
     // Find the final MSA (only non-empty string left in msa vectors)

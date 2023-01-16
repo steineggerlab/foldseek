@@ -19,7 +19,13 @@ LocalParameters::LocalParameters() :
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$"),
-        PARAM_LDDT_HTML(PARAM_LDDT_HTML_ID, "--lddt-html", "LDDT HTML file", "File to write LDDT MSA HTML visualisation to", typeid(std::string), (void *) &lddtHtml, "")
+        PARAM_LDDT_HTML(PARAM_LDDT_HTML_ID, "--lddt-html", "LDDT HTML file", "File to write LDDT MSA HTML visualisation to", typeid(std::string), (void *) &lddtHtml, ""),
+        PARAM_PCA_AA(PARAM_PCA_AA_ID, "--pca-aa", "AA alignment PCA", "", typeid(float), (void *) &pcaAa, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_PCB_AA(PARAM_PCB_AA_ID, "--pcb-aa", "AA alignment PCB", "", typeid(float), (void *) &pcbAa, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_PCA_3DI(PARAM_PCA_3DI_ID, "--pca-3di", "3Di alignment PCA", "", typeid(float), (void *) &pca3di, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_PCB_3DI(PARAM_PCB_3DI_ID, "--pcb-3di", "3Di alignment PCB", "", typeid(float), (void *) &pcb3di, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_SCORE_BIAS_AA(PARAM_SCORE_BIAS_AA_ID, "--score-bias-aa", "AA alignment score bias", "", typeid(float), (void *) &scoreBiasAa, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_SCORE_BIAS_3DI(PARAM_SCORE_BIAS_3DI_ID, "--score-bias-3di", "3Di alignment score bias", "", typeid(float), (void *) &scoreBias3di, "^([0-9]*\\.[0-9]*)$")
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -36,14 +42,14 @@ LocalParameters::LocalParameters() :
     PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
-    PARAM_PCA.category = MMseqsParameter::COMMAND_HIDDEN;
-    PARAM_PCB.category = MMseqsParameter::COMMAND_HIDDEN;
+    //PARAM_PCA.category = MMseqsParameter::COMMAND_HIDDEN;
+    //PARAM_PCB.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_ZDROP.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_CORR_SCORE_WEIGHT.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN_MAX_SEQS.category = MMseqsParameter::COMMAND_HIDDEN;
-    PARAM_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
+    //PARAM_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_WRAPPED_SCORING.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_ALPH_SIZE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_INCLUDE_IDENTITY.category = MMseqsParameter::COMMAND_HIDDEN;
@@ -139,7 +145,30 @@ LocalParameters::LocalParameters() :
     samplemulambda.push_back(&PARAM_V);
     
     // structuremsa
-    structuremsa = combineList(structuremsa, align);
+    structuremsa.push_back(&PARAM_MATCH_RATIO);
+    structuremsa.push_back(&PARAM_FILTER_MSA);
+    structuremsa.push_back(&PARAM_FILTER_NDIFF);
+    structuremsa.push_back(&PARAM_FILTER_QSC);
+    structuremsa.push_back(&PARAM_SCORE_BIAS);
+    structuremsa.push_back(&PARAM_GAP_OPEN);
+    structuremsa.push_back(&PARAM_GAP_EXTEND);
+    structuremsa.push_back(&PARAM_MASK_PROFILE);
+    structuremsa.push_back(&PARAM_GAP_PSEUDOCOUNT);
+    structuremsa.push_back(&PARAM_PC_MODE);
+    structuremsa.push_back(&PARAM_PCA_AA);
+    structuremsa.push_back(&PARAM_PCB_AA);
+    structuremsa.push_back(&PARAM_PCA_3DI);
+    structuremsa.push_back(&PARAM_PCB_3DI);
+    structuremsa.push_back(&PARAM_SCORE_BIAS_AA);
+    structuremsa.push_back(&PARAM_SCORE_BIAS_3DI);
+    
+    pcaAa = 1.1;
+    pcbAa = 4.1;
+    pca3di = 1.1;
+    pcb3di = 4.1;
+    scoreBiasAa = 0.6;
+    scoreBias3di = 0.6;
+    matchRatio = 0.51;
 
     // msa2lddt
     msa2lddt.push_back(&PARAM_HELP);
