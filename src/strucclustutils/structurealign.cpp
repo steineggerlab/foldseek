@@ -28,6 +28,11 @@ static bool compareHitsByStructureBits(const Matcher::result_t &first, const Mat
     return first.dbKey < second.dbKey;
 }
 
+
+static bool structureAlignDefault(LocalParameters & par) {
+    par.compBiasCorrectionScale = 0.5;
+}
+
 int alignStructure(StructureSmithWaterman & structureSmithWaterman,
                    StructureSmithWaterman & reverseStructureSmithWaterman,
                    Sequence & tSeqAA, Sequence & tSeq3Di,
@@ -103,6 +108,7 @@ int computeAlternativeAlignment(StructureSmithWaterman & structureSmithWaterman,
 
 int structurealign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
+    structureAlignDefault(par);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
     if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
         Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
