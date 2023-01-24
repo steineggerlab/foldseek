@@ -186,51 +186,6 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
 //    return n_cut;
 //}
 
-int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
-                        int i_ali[], float *score1, int score_sum_method,
-                        float score_d8, float d0)
-{
-    float score_sum = 0, di;
-    float d_tmp = d*d;
-    float d02 = d0*d0;
-    float score_d8_cut = score_d8*score_d8;
-
-    int i, n_cut, inc = 0;
-    while (1)
-    {
-        n_cut = 0;
-        score_sum = 0;
-        for (i = 0; i<n_ali; i++)
-        {
-            di = BasicFunction::BasicFunction::dist(xa.x[i], xa.y[i], xa.z[i],
-                      ya.x[i], ya.y[i], ya.z[i]);
-            if (di<d_tmp)
-            {
-                i_ali[n_cut] = i;
-                n_cut++;
-            }
-            if (score_sum_method == 8)
-            {
-                if (di <= score_d8_cut) score_sum += 1 / (1 + di / d02);
-            }
-            else
-            {
-                score_sum += 1 / (1 + di / d02);
-            }
-        }
-        //there are not enough feasible pairs, reliefe the threshold
-        if (n_cut<3 && n_ali>3)
-        {
-            inc++;
-            double dinc = (d + inc*0.5);
-            d_tmp = dinc * dinc;
-        }
-        else break;
-    }
-
-    *score1 = score_sum / n_ali;
-    return n_cut;
-}
 
 
 bool KabschFast(Coordinates & x,
@@ -552,8 +507,8 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                 //extract rotation matrix based on the fragment
                 KabschFast(r1, r2, n_cut, &rmsd, t, u, mem);
                 BasicFunction::do_rotation(xtm, xt, Lali, t, u);
-                n_cut = score_fun8_standard(xt, ytm, Lali, d, i_ali, &score,
-                                            score_sum_method, score_d8, d0);
+                n_cut = score_fun8(xt, ytm, Lali, d, i_ali, &score,
+                                   Lali, score_d8, d0, mem);
                 if (score>score_max)
                 {
                     score_max = score;
