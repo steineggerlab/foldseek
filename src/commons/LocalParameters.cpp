@@ -153,7 +153,8 @@ LocalParameters::LocalParameters() :
     gapExtend = 1;
     nsample = 5000;
     maskLowerCaseMode = 1;
-    coordStoreMode = COORD_STORE_MODE_CA_FLOAT;
+    coordStoreMode = COORD_STORE_MODE_CA_DIFF;
+
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S, Tumescheit C, Mirdita M, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2022)");
 

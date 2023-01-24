@@ -156,7 +156,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
 
         float* camolf32;
         if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
-            camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
+            camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t));
             int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
             // check if any of the coordinates is too large to be stored as int16_t
             if (Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16)

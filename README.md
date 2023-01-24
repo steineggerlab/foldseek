@@ -89,6 +89,7 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     # sensitivity and speed
     -s                       adjust the sensitivity to speed trade-off.
                              lower is faster, higher more sensitive (fast: 7.5, highest sensitivity (default): 9.5)
+    --exhaustive-search      skips the prefilter and performs an all-vs-all alignment (more sensitive but much slower)                         
     --max-seqs               adjust the amount of prefilter that are handed to the alignment. 
                              Increasing it can lead to more hits (default: 1000)
     -e                       List matches below this E-value (range 0.0-inf, default: 0.001)

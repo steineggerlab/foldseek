@@ -9,8 +9,11 @@ namespace structureRbh{
 
 #include <cassert>
 
-void setStructureRbhDefaults(Parameters *p) {
+
+void setStructureRbhDefaults(LocalParameters *p) {
     p->maskMode = 0;
+    p->compBiasCorrection = 0;
+    p->sortByStructureBits = 0;
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;

@@ -1459,7 +1459,7 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
     if(u[0][0]==NAN){
         return 0;
     }
-    RMSD = sqrt( RMSD/(1.0*n_al) );
+    //RMSD = sqrt( RMSD/(1.0*n_al) );  // see rmsd_uncentered_avx
 
     int temp_simplify_step = 40;
     int temp_score_sum_method = 0;
