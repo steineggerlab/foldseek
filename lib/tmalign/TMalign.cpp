@@ -511,8 +511,10 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
 
             //get subsegment of this fragment
             d = local_d0_search - 1;
-            n_cut = score_fun8_standard(xt, ytm, Lali, d, i_ali, &score,
-                                        score_sum_method, score_d8, d0);
+            //n_cut = score_fun8_standard(xt, ytm, Lali, d, i_ali, &score,
+            //                            score_sum_method, score_d8, d0);
+            n_cut = score_fun8(xt, ytm, Lali, d, i_ali, &score,
+                             Lali, score_d8, d0, mem);
 
             if (score>score_max)
             {
