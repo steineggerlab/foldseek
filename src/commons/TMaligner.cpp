@@ -86,7 +86,7 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
     Lnorm = prevLnorm;
     d0 = prevd0;
     double TM = detailed_search_standard(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen,
-                                         invmap, t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0, mem);
+                                         invmap, t, u, 40, local_d0_search, true, Lnorm, score_d8, d0, mem);
     TM = std::max(TM, TMalnScore);
     return TMaligner::TMscoreResult(u, t, TM, rmsd0);
 }
