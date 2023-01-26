@@ -393,7 +393,7 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
 
 double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                                 Coordinates &xtm, Coordinates &ytm, Coordinates &xt, int Lali,
-                                float t0[3], float u0[3][3], int simplify_step, int score_sum_method,
+                                float t0[3], float u0[3][3], int simplify_step,
                                 float *Rcomm, float local_d0_search, float score_d8, float d0, float * mem)
 {
     int i, m;
@@ -590,7 +590,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
                                  Coordinates &xtm, Coordinates &ytm, Coordinates &xt,
                                  const Coordinates &x, const Coordinates &y,
                                  int ylen, int invmap0[], float t[3], float u[3][3],
-                                 int simplify_step, int score_sum_method, double local_d0_search,
+                                 int simplify_step, double local_d0_search,
                                  const bool& bNormalize, float Lnorm, float score_d8, float d0, float * mem)
 {
     //x is model, y is template, try to superpose onto y
@@ -617,7 +617,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
 
     //detailed search 40-->1
     tmscore = TMscore8_search_standard( r1, r2, xtm, ytm, xt, k, t, u,
-                                        simplify_step, score_sum_method, &rmsd, local_d0_search, score_d8, d0, mem);
+                                        simplify_step, &rmsd, local_d0_search, score_d8, d0, mem);
     if (bNormalize)// "-i", to use standard_TMscore, then bNormalize=true, else bNormalize=false;
         tmscore = tmscore * k / Lnorm;
 
@@ -1417,10 +1417,9 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
     //RMSD = sqrt( RMSD/(1.0*n_al) );  // see rmsd_uncentered_avx
 
     int temp_simplify_step = 40;
-    int temp_score_sum_method = 0;
     float rms = 0.0;
     tmscore = TMscore8_search_standard(r1, r2, xtm, ytm, xt, n_al, t, u,
-                                       temp_simplify_step, temp_score_sum_method, &rms, d0_input,
+                                       temp_simplify_step, &rms, d0_input,
                                        score_d8, d0, mem);
     tmscore = tmscore * n_al / (1.0*Lnorm);
 
@@ -1454,7 +1453,6 @@ int TMalign_main(
     parameter_set4search(xlen, ylen, D0_MIN, Lnorm,
                          score_d8, d0, d0_search, dcu0);
     int simplify_step    = 40; //for similified search engine
-    int score_sum_method = 8;  //for scoring method, whether only sum over pairs with dis<score_d8
 
     int i;
     int *invmap0         = new int[ylen+1];
@@ -1626,9 +1624,8 @@ int TMalign_main(
     //extract the best rotation matrix (t, u) for the best alginment
     simplify_step=1;
     if (fast_opt) simplify_step=40;
-    score_sum_method=8;
     TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya, ylen,
-                                  invmap0, t, u, simplify_step, score_sum_method, local_d0_search,
+                                  invmap0, t, u, simplify_step, local_d0_search,
                                   false, Lnorm, score_d8, d0, mem);
 
     //select pairs with dis<d8 for final TMscore computation and output alignment
@@ -1680,7 +1677,6 @@ int TMalign_main(
     //****************************************//
     float rmsd;
     simplify_step=1;
-    score_sum_method=0;
     float Lnorm_0=ylen;
 
 
