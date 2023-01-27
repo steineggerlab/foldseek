@@ -25,7 +25,8 @@ LocalParameters::LocalParameters() :
         PARAM_PCA_3DI(PARAM_PCA_3DI_ID, "--pca-3di", "3Di alignment PCA", "", typeid(float), (void *) &pca3di, "^([0-9]*\\.[0-9]*)$"),
         PARAM_PCB_3DI(PARAM_PCB_3DI_ID, "--pcb-3di", "3Di alignment PCB", "", typeid(float), (void *) &pcb3di, "^([0-9]*\\.[0-9]*)$"),
         PARAM_SCORE_BIAS_AA(PARAM_SCORE_BIAS_AA_ID, "--score-bias-aa", "AA alignment score bias", "", typeid(float), (void *) &scoreBiasAa, "^([0-9]*\\.[0-9]*)$"),
-        PARAM_SCORE_BIAS_3DI(PARAM_SCORE_BIAS_3DI_ID, "--score-bias-3di", "3Di alignment score bias", "", typeid(float), (void *) &scoreBias3di, "^([0-9]*\\.[0-9]*)$")
+        PARAM_SCORE_BIAS_3DI(PARAM_SCORE_BIAS_3DI_ID, "--score-bias-3di", "3Di alignment score bias", "", typeid(float), (void *) &scoreBias3di, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_GUIDE_TREE(PARAM_GUIDE_TREE_ID, "--guide-tree", "Input Newick guide tree", "Guide tree in Newick format", typeid(std::string), (void *) &guideTree, ".*\.nw")
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -149,7 +150,6 @@ LocalParameters::LocalParameters() :
     structuremsa.push_back(&PARAM_FILTER_MSA);
     structuremsa.push_back(&PARAM_FILTER_NDIFF);
     structuremsa.push_back(&PARAM_FILTER_QSC);
-    structuremsa.push_back(&PARAM_SCORE_BIAS);
     structuremsa.push_back(&PARAM_GAP_OPEN);
     structuremsa.push_back(&PARAM_GAP_EXTEND);
     structuremsa.push_back(&PARAM_MASK_PROFILE);
@@ -161,6 +161,7 @@ LocalParameters::LocalParameters() :
     structuremsa.push_back(&PARAM_PCB_3DI);
     structuremsa.push_back(&PARAM_SCORE_BIAS_AA);
     structuremsa.push_back(&PARAM_SCORE_BIAS_3DI);
+    structuremsa.push_back(&PARAM_GUIDE_TREE);
     
     pcaAa = 1.1;
     pcbAa = 4.1;
@@ -169,6 +170,7 @@ LocalParameters::LocalParameters() :
     scoreBiasAa = 0.6;
     scoreBias3di = 0.6;
     matchRatio = 0.51;
+    guideTree = "";
 
     // msa2lddt
     msa2lddt.push_back(&PARAM_HELP);
@@ -190,8 +192,6 @@ LocalParameters::LocalParameters() :
     coordStoreMode = COORD_STORE_MODE_CA_FLOAT;
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S, Tumescheit C, Mirdita M, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2022)");
-
-    //rewrite param vals.
 
     PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineagebla,qca,tca,t,u,alntmscore\n";
 }

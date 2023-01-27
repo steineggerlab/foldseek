@@ -9,6 +9,7 @@
 #include "MathUtil.h"
 #include "MsaFilter.h"
 #include "MultipleAlignment.h"
+#include "Newick.h"
 #include "PSSMCalculator.h"
 #include "Parameters.h"
 #include "Sequence.h"
@@ -20,6 +21,10 @@
 #include <cassert>
 #include <tuple>
 #include <set>
+#include <fstream>
+#include <iostream>
+#include <regex>
+#include <stack>
 
 #include "kseq.h"
 #include "KSeqBufferReader.h"
@@ -521,6 +526,145 @@ std::string mergeTwoMsa(std::string & msa1, std::string & msa2, Matcher::result_
     return msa;
 }
 
+struct TNode {
+    int id;
+    int dbId;
+    std::string name;
+    float length;
+    std::vector<TNode *> children;
+    TNode *parent;
+};
+
+void printTree(TNode *node, int depth) {
+    std::string gap(depth * 2, ' ');
+    std::cout << gap << node->id;
+    if (node->name != "") {
+        std::cout << "=" << node->name;
+        std::cout << " (parent " << node->parent->id << ", length " << node->length;
+        if (node->dbId != -1) {
+            std::cout << ", dbId " << node->dbId;
+        }
+        std::cout << ")";
+    }
+    std::cout << '\n';
+    for (size_t i = 0; i < node->children.size(); i++) {
+        TNode *child = node->children[i];
+        printTree(child, depth + 1);
+    }
+}
+
+/**
+ * @brief Post-order traversal of a parsed Tree.
+ * Generates the merging order for structuremsa
+ * 
+ * @param node Pointer to root TNode of the tree
+ */
+void postOrder(TNode *node, std::vector<int> *linkage) {
+    for (TNode *child : node->children) {
+        postOrder(child, linkage);
+    }
+    if (node->children.size() > 0) {
+        for (TNode *child : node->children) {
+            linkage->push_back(child->dbId);
+            
+            // Propagate child dbId from leaf to root, so we
+            // always have a reference during alignment stage
+            node->dbId = child->dbId;
+        }
+    }
+}
+
+std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int> &headers) {
+    // Should know this from number of structures in database
+    int total = std::count(newick.begin(), newick.end(), '(');
+
+    // Tokenize tree on ; | ( ) , :
+    // Use {-1, 0} on sregex_token_iterator to get matches AND inbetween (i.e. names)
+    std::regex pattern("\\s*(;|\\(|\\)|,|:)\\s*");
+    auto words_begin = std::sregex_token_iterator(newick.begin(), newick.end(), pattern, {-1, 0});
+    auto words_end = std::sregex_token_iterator();
+    
+    // Initialise TNode array (2n+1 but a +1 for the root)
+    TNode nodes[total * 2 + 2];
+    std::vector<TNode *> parents;
+    TNode *tree;
+    TNode *subtree;
+    
+    // Initialise the root node (the +1)
+    TNode root;
+    root.id = 0;
+    nodes[0] = root;
+    tree = &nodes[0];
+    
+    int count = 1;
+    std::string prevToken;
+    
+    for (std::sregex_token_iterator i = words_begin; i != words_end; ++i) {
+        std::string match_str = *i;
+
+        if (match_str == "(") {
+            // add new node, set it as new subtree
+            TNode newNode;
+            newNode.id = count;
+            newNode.dbId = -1;
+            newNode.length = 1;
+            nodes[count] = newNode;
+            subtree = &nodes[count];
+            count++;
+            
+            // add it as child to current tree
+            tree->children.push_back(subtree);
+            subtree->parent = tree;
+            
+            // add the tree as parent, set subtree as tree
+            parents.push_back(tree);
+            tree = subtree;
+        } else if (match_str == ",") {
+            TNode newNode;
+            newNode.id = count;
+            newNode.dbId = -1;
+            newNode.length = 1;
+            nodes[count] = newNode;
+            subtree = &nodes[count];
+            count++;
+            parents.back()->children.push_back(subtree);
+            subtree->parent = parents.back();
+            tree = subtree;
+        } else if (match_str == ")") {
+            tree = parents[parents.size() - 1];
+            parents.pop_back();
+        } else if (match_str == ":") {
+            // Don't do anything here, just catch it in case there are
+            // branch lengths to set in else
+        } else {
+            if (match_str != "" && (prevToken == ")" || prevToken == "(" || prevToken == ",")) {
+                tree->name = match_str;
+                tree->dbId = headers[match_str];
+            } else if (prevToken == ":") {
+                tree->length = std::stof(match_str);
+            }
+        }
+        prevToken = match_str;
+    }
+   
+    // printTree(tree, 0);
+    
+    // Get (flat) linkage matrix, 2(2n+1)
+    // node 1, node 2
+    std::vector<int> linkage;
+    std::vector<AlnSimple> hits;
+    postOrder(tree, &linkage);
+    for (size_t i = 0; i < linkage.size(); i += 2) {
+        AlnSimple hit;
+        hit.queryId = linkage[i + 0];
+        hit.targetId = linkage[i + 1];
+        hits.push_back(hit);
+    }
+
+    return hits;
+}
+
+
 int structuremsa(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     
@@ -561,6 +705,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::vector<std::string> msa_aa(sequenceCnt);
     std::vector<std::string> msa_3di(sequenceCnt);
     std::vector<std::string> mappings(sequenceCnt);
+    std::vector<unsigned int> idMappings(sequenceCnt);
+    std::map<std::string, int> headers;
+
     int maxSeqLength = 0;
     for (size_t i = 0; i < sequenceCnt; i++) {
         unsigned int seqKeyAA = seqDbrAA.getDbKey(i);
@@ -576,6 +723,13 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         msa_3di[i] += ">" +  SSTR(seqKey3Di) + "\n";
         msa_3di[i] += seqDbr3Di.getData(i, 0);
         mappings[i] = std::string(seqDbrAA.getSeqLen(i), '0');
+        
+        // Map each sequence id to itself for now
+        idMappings[i] = i;
+        
+        // Grab headers, remove \0
+        std::string header = qdbrH.sequenceReader->getData(seqKeyAA, 0);
+        headers[header.substr(0, header.length() - 1)] = seqKeyAA;
     }
     
     // TODO: dynamically calculate and re-init PSSMCalculator/MsaFilter each iteration
@@ -616,21 +770,39 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
     bool * alreadyMerged = new bool[sequenceCnt];
     memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
-
-    // Initial alignments
-    std::vector<AlnSimple> hits = updateAllScores(
-        structureSmithWaterman,
-        tinySubMatAA,
-        tinySubMat3Di,
-        &subMat_aa,
-        allSeqs_aa,
-        allSeqs_3di,
-        alreadyMerged,
-        par.gapOpen.values.aminoacid(),
-        par.gapExtend.values.aminoacid()
-    );
-    sortHitsByScore(hits);
-    std::cout << "Performed initial all vs all alignments" << std::endl;
+    
+    //
+    std::vector<AlnSimple> hits;
+    
+    // TODO
+    // Read in guide tree if given
+    if (par.guideTree != "") {
+        std::cout << "Loading guide tree: " << par.guideTree << "\n"; 
+        std::string tree;
+        std::string line;
+        std::ifstream newick(par.guideTree);
+        if (newick.is_open()) {
+            while (std::getline(newick, line))
+                tree += line;
+            newick.close();
+        }
+        hits = parseNewick(tree, headers);
+    } else {
+        // Initial alignments
+        hits = updateAllScores(
+            structureSmithWaterman,
+            tinySubMatAA,
+            tinySubMat3Di,
+            &subMat_aa,
+            allSeqs_aa,
+            allSeqs_3di,
+            alreadyMerged,
+            par.gapOpen.values.aminoacid(),
+            par.gapExtend.values.aminoacid()
+        );
+        sortHitsByScore(hits);
+        std::cout << "Performed initial all vs all alignments" << std::endl;
+    }
 
     // Initialise Newick tree nodes
     std::vector<std::string> treeNodes(sequenceCnt);
@@ -641,31 +813,30 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     while(hits.size() > 0){
         unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
         unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
-        bool queryIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[hits[0].queryId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
-        bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[hits[0].targetId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+        mergedId = idMappings[mergedId];
+        targetId = idMappings[targetId];
+        bool queryIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+        bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[targetId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
         
         // Always merge onto sequence with most information
         if (targetIsProfile && !queryIsProfile) {
-            mergedId = hits[0].targetId;
-            targetId = hits[0].queryId;
-        } if(targetIsProfile && queryIsProfile){
+            std::swap(mergedId, targetId);
+        } else if (targetIsProfile && queryIsProfile) {
             float q_neff_sum = 0.0;
             float t_neff_sum = 0.0;
-            for (int i = 0; i < allSeqs_3di[hits[0].queryId]->L; i++)
-                q_neff_sum += allSeqs_3di[hits[0].queryId]->neffM[i];
-            for (int i = 0; i < allSeqs_3di[hits[0].targetId]->L; i++)
-                t_neff_sum += allSeqs_3di[hits[0].targetId]->neffM[i];
-            if (q_neff_sum > t_neff_sum) {
-                mergedId = hits[0].queryId;
-                targetId = hits[0].targetId;
-            } else {
-                mergedId = hits[0].targetId;
-                targetId = hits[0].queryId;
-            }
-        }else {
-            mergedId = hits[0].queryId;
-            targetId = hits[0].targetId;
+            for (int i = 0; i < allSeqs_3di[mergedId]->L; i++)
+                q_neff_sum += allSeqs_3di[mergedId]->neffM[i];
+            for (int i = 0; i < allSeqs_3di[targetId]->L; i++)
+                t_neff_sum += allSeqs_3di[targetId]->neffM[i];
+            if (q_neff_sum <= t_neff_sum)
+                std::swap(mergedId, targetId);
         }
+
+        // Make sure all relevant ids are updated
+        idMappings[targetId] = mergedId;
+        idMappings[mergedId] = mergedId;
+        idMappings[hits[0].queryId] = mergedId;
+        idMappings[hits[0].targetId] = mergedId;
 
         std::cout << "  Q=" << mergedId << ", T=" << targetId << "\n";
 
@@ -738,18 +909,32 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
         alreadyMerged[targetId] = true;
         
-        hits = updateAllScores(
-            structureSmithWaterman,
-            tinySubMatAA,
-            tinySubMat3Di,
-            &subMat_aa,
-            allSeqs_aa,
-            allSeqs_3di,
-            alreadyMerged,
-            par.gapOpen.values.aminoacid(),
-            par.gapExtend.values.aminoacid()
-        );
-        sortHitsByScore(hits);
+        // TODO
+        // only updateAllScores when next hit contains previous query/target ?
+        // maybe functional difference between re-aligning against MSA profile vs similarities of unaligned individual structures
+        // if (hits[1].queryId != mergedId && hits[1].targetId != mergedId && hits[1].queryId != targetId && hits[1].targetId != targetId) {
+        //     std::cout << "next hit contains id from previous hit\n";
+        //     hits.erase(hits.begin());
+        //     continue;
+        // }
+        
+        if (par.guideTree == "") {
+            hits = updateAllScores(
+                structureSmithWaterman,
+                tinySubMatAA,
+                tinySubMat3Di,
+                &subMat_aa,
+                allSeqs_aa,
+                allSeqs_3di,
+                alreadyMerged,
+                par.gapOpen.values.aminoacid(),
+                par.gapExtend.values.aminoacid()
+            );
+            sortHitsByScore(hits);
+        } else {
+            if (hits.size() > 0)
+                hits.erase(hits.begin());
+        }
     }
     
     // Find the final MSA (only non-empty string left in msa vectors)
