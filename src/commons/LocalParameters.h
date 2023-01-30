@@ -92,6 +92,7 @@ public:
     PARAMETER(PARAM_SCORE_BIAS_AA)
     PARAMETER(PARAM_SCORE_BIAS_3DI)
     PARAMETER(PARAM_GUIDE_TREE)
+    PARAMETER(PARAM_RECOMPUTE_SCORES)
 
     // PARAMETER(PARAM_NEWICK_OUTPUT)
     PARAMETER(PARAM_LDDT_HTML)
@@ -108,6 +109,7 @@ public:
     int coordStoreMode;
 
     std::string guideTree;
+    bool recomputeScores;
     float scoreBiasAa;
     float scoreBias3di;
     MultiParam<PseudoCounts> pcaAa;

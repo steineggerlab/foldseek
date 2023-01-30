@@ -26,7 +26,8 @@ LocalParameters::LocalParameters() :
         PARAM_PCB_3DI(PARAM_PCB_3DI_ID, "--pcb-3di", "3Di alignment PCB", "", typeid(float), (void *) &pcb3di, "^([0-9]*\\.[0-9]*)$"),
         PARAM_SCORE_BIAS_AA(PARAM_SCORE_BIAS_AA_ID, "--score-bias-aa", "AA alignment score bias", "", typeid(float), (void *) &scoreBiasAa, "^([0-9]*\\.[0-9]*)$"),
         PARAM_SCORE_BIAS_3DI(PARAM_SCORE_BIAS_3DI_ID, "--score-bias-3di", "3Di alignment score bias", "", typeid(float), (void *) &scoreBias3di, "^([0-9]*\\.[0-9]*)$"),
-        PARAM_GUIDE_TREE(PARAM_GUIDE_TREE_ID, "--guide-tree", "Input Newick guide tree", "Guide tree in Newick format", typeid(std::string), (void *) &guideTree, ".*\.nw")
+        PARAM_GUIDE_TREE(PARAM_GUIDE_TREE_ID, "--guide-tree", "Input Newick guide tree", "Guide tree in Newick format", typeid(std::string), (void *) &guideTree, ".*\.nw"),
+        PARAM_RECOMPUTE_SCORES(PARAM_RECOMPUTE_SCORES_ID, "--recompute-scores", "Recompute scores", "Recompute all-vs-all alignment scores every iteration", typeid(bool), (void *) &recomputeScores, "")
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -162,6 +163,7 @@ LocalParameters::LocalParameters() :
     structuremsa.push_back(&PARAM_SCORE_BIAS_AA);
     structuremsa.push_back(&PARAM_SCORE_BIAS_3DI);
     structuremsa.push_back(&PARAM_GUIDE_TREE);
+    structuremsa.push_back(&PARAM_RECOMPUTE_SCORES);
     
     pcaAa = 1.1;
     pcbAa = 4.1;
@@ -171,6 +173,7 @@ LocalParameters::LocalParameters() :
     scoreBias3di = 0.6;
     matchRatio = 0.51;
     guideTree = "";
+    recomputeScores = false;
 
     // msa2lddt
     msa2lddt.push_back(&PARAM_HELP);

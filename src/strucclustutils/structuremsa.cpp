@@ -566,7 +566,7 @@ void postOrder(TNode *node, std::vector<int> *linkage) {
     if (node->children.size() > 0) {
         for (TNode *child : node->children) {
             linkage->push_back(child->dbId);
-            
+
             // Propagate child dbId from leaf to root, so we
             // always have a reference during alignment stage
             node->dbId = child->dbId;
@@ -651,9 +651,12 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
     
     // Get (flat) linkage matrix, 2(2n+1)
     // node 1, node 2
+    // NOTE: postOrder will trip up when no. children != 2
+    //       will get duplicate rows which cause errors
     std::vector<int> linkage;
     std::vector<AlnSimple> hits;
     postOrder(tree, &linkage);
+
     for (size_t i = 0; i < linkage.size(); i += 2) {
         AlnSimple hit;
         hit.queryId = linkage[i + 0];
@@ -810,7 +813,8 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         treeNodes[i] = std::to_string(i);
 
     std::cout << "Merging:\n";
-    while(hits.size() > 0){
+    size_t merged = 0;
+    while (hits.size() > 0) { //&& merged < sequenceCnt){
         unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
         unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
         mergedId = idMappings[mergedId];
@@ -831,7 +835,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             if (q_neff_sum <= t_neff_sum)
                 std::swap(mergedId, targetId);
         }
-
+        
+        assert(mergedId != targetId);
+        
         // Make sure all relevant ids are updated
         idMappings[targetId] = mergedId;
         idMappings[mergedId] = mergedId;
@@ -839,7 +845,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         idMappings[hits[0].targetId] = mergedId;
 
         std::cout << "  Q=" << mergedId << ", T=" << targetId << "\n";
-
+        
         // Extend tree
         // TODO: make this optional ?
         // e.g. mergedId = 21, targetId = (3,6) --> (21,(3,6))
@@ -847,7 +853,11 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             treeNodes[mergedId] = Util::parseFastaHeader(qdbrH.sequenceReader->getData(mergedId, 0));
         if (treeNodes[targetId] == std::to_string(targetId))
             treeNodes[targetId] = Util::parseFastaHeader(qdbrH.sequenceReader->getData(targetId, 0));
-        treeNodes[mergedId] = "(" + treeNodes[mergedId] + "," + treeNodes[targetId] + ")";
+        treeNodes[mergedId] = "(" + treeNodes[mergedId];
+        if (treeNodes[targetId] != "") {
+            treeNodes[mergedId] += "," + treeNodes[targetId];   
+        }
+        treeNodes[mergedId] += ")";
         treeNodes[targetId] = "";
         
         structureSmithWaterman.ssw_init(allSeqs_aa[mergedId], allSeqs_3di[mergedId], tinySubMatAA, tinySubMat3Di, &subMat_aa);
@@ -908,17 +918,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
         allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
         alreadyMerged[targetId] = true;
+        merged++;
         
-        // TODO
-        // only updateAllScores when next hit contains previous query/target ?
-        // maybe functional difference between re-aligning against MSA profile vs similarities of unaligned individual structures
-        // if (hits[1].queryId != mergedId && hits[1].targetId != mergedId && hits[1].queryId != targetId && hits[1].targetId != targetId) {
-        //     std::cout << "next hit contains id from previous hit\n";
-        //     hits.erase(hits.begin());
-        //     continue;
-        // }
-        
-        if (par.guideTree == "") {
+        if (par.guideTree == "" && par.recomputeScores) {
             hits = updateAllScores(
                 structureSmithWaterman,
                 tinySubMatAA,
@@ -932,8 +934,34 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             );
             sortHitsByScore(hits);
         } else {
-            if (hits.size() > 0)
+            // If guide tree, just get rid of the top hit so we look at next pair next round
+            // Otherwise, we are just not recomputing - remove any hit causing a cycle
+            if (par.guideTree != "") {
                 hits.erase(hits.begin());
+            } else {
+                // TODO: UPGMA-like hit updating
+                //       merge A and B => AB. for hit A/B to every other sequence, combine scores and average
+                //  use mergedId and targetId
+                // 2x array[N], sorted by id
+                // once you remove A and B in both, order of remaining hits should be same
+                // then just iterate pairwise, make AlnSimple objects with new score = sum/2
+                // filter hits to remove any A/B as q/t, add new AlnSimple objects to end
+                // sort by score
+                bool averaging = false;
+                if (averaging) {
+                    // ...
+                }
+                
+                // FIXME: problem when feeding tree made by structuremsa back with --guide-tree
+                
+                // Is this functionally equivalent to just skipping hits on this condition
+                // at the start of the while loop?
+                hits.erase(std::remove_if(
+                    hits.begin(),
+                    hits.end(),
+                    [&](AlnSimple hit){ return idMappings[hit.queryId] == idMappings[hit.targetId]; }
+                ), hits.end());
+            }
         }
     }
     
