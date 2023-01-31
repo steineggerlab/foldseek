@@ -61,9 +61,9 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        std::vector<Matcher::result_t> results;
-        results.reserve(300);
         std::string resultsStr;
+        resultsStr.reserve(10 * 1024);
+
         TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false);
         Coordinate16 qcoords;
         Coordinate16 tcoords;
@@ -72,8 +72,6 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < alndbr.getSize(); i++) {
             progress.updateProgress();
             unsigned int queryKey = alndbr.getDbKey(i);
-            char *data = alndbr.getData(i, thread_idx);
-            Matcher::readAlignmentResults(results, data, false);
 
             unsigned int qSeqId = qSeqReader.getId(queryKey);
             int queryLen = qSeqReader.getSeqLen(qSeqId);
@@ -83,8 +81,12 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             float* qdata = qcoords.read(qcadata, queryLen, qCaLength);
 
             tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], NULL, queryLen);
-            for (size_t j = 0; j < results.size(); j++) {
-                const Matcher::result_t& res = results[j];
+
+            char *data = alndbr.getData(i, thread_idx);
+            while (*data != '\0') {
+                Matcher::result_t res = Matcher::parseAlignmentRecord(data, false);
+                data = Util::skipLine(data);
+
                 if (res.backtrace.empty()) {
                     Debug(Debug::ERROR) << "Backtrace cigar is missing in the alignment result. Please recompute the alignment with the -a flag.\n"
                                            "Command: foldseek structurealign " << par.db1 << " " << par.db2 << " " << par.db3 << " " << "alnNew -a\n";
@@ -133,7 +135,6 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             }
             dbw.writeData(resultsStr.c_str(), resultsStr.size(), queryKey, thread_idx);
 
-            results.clear();
             resultsStr.clear();
         }
     }
