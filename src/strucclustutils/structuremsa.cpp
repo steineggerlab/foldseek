@@ -357,49 +357,38 @@ std::vector<int> maskToMapping(std::string mask, size_t length) {
     return mapping;
 }
 
-// TODO: factor out instructions so calculate once and use same set to merge aa/3di
+enum State {
+    SEQ = 0,
+    GAP = 1
+};
+
+struct Instruction {
+    int state;
+    int count;
+    Instruction(int i_state, int i_count) : state(i_state), count(i_count) {};
+    void print() {
+        char state_char = (state == SEQ) ? 'S' : 'G';
+        std::cout << state_char << " " << count << std::endl;
+    }
+    char stateChar() { return (state == SEQ) ? 'S' : 'G'; }
+};
+
 /**
- * @brief Merges two MSAs
+ * @brief Get merge instructions for two MSAs
  * 
- * @param msa1 - query MSA
- * @param msa2 - target MSA
  * @param res  - alignment result
  * @param map1 - ungapped->gapped mapping for msa1
  * @param map2 - ungapped->gapped mapping for msa2
- * @return std::string - merged MSA
+ * @param qBt  - vector to store query merge instructions
+ * @param tBt  - vector to store target merge instructions
  */
-std::string mergeTwoMsa(std::string & msa1, std::string & msa2, Matcher::result_t & res, std::vector<int> map1, std::vector<int> map2) {
-    // Calculate pre/end gaps/sequences from backtrace
-    size_t qPreSequence = map1[res.qStartPos];
-    size_t qPreGaps     = map2[res.dbStartPos];
-    size_t qEndSequence = map1[map1.size() - 1] - map1.at(res.qEndPos);
-    size_t qEndGaps     = map2[map2.size() - 1] - map2.at(res.dbEndPos);
-    size_t tPreSequence = qPreGaps;
-    size_t tPreGaps     = qPreSequence;
-    size_t tEndSequence = qEndGaps;
-    size_t tEndGaps     = qEndSequence;
-
-    // String for merged MSA
-    std::string msa; 
-    
-    enum State {
-        SEQ = 0,
-        GAP = 1
-    };
-
-    struct Instruction {
-        int state;
-        int count;
-        Instruction(int i_state, int i_count) : state(i_state), count(i_count) {};
-        void print() {
-            char state_char = (state == SEQ) ? 'S' : 'G';
-            std::cout << state_char << " " << count << std::endl;
-        }
-        char stateChar() { return (state == SEQ) ? 'S' : 'G'; }
-    };
-    
-    std::vector<Instruction> qBt;
-    std::vector<Instruction> tBt;
+void getMergeInstructions(
+    Matcher::result_t &res,
+    std::vector<int> map1,
+    std::vector<int> map2,
+    std::vector<Instruction> &qBt,
+    std::vector<Instruction> &tBt
+) {
     qBt.emplace_back(SEQ, 1);  // first match
     tBt.emplace_back(SEQ, 1);
     int new_q, dq;
@@ -455,7 +444,44 @@ std::string mergeTwoMsa(std::string & msa1, std::string & msa2, Matcher::result_
             }
         }
     }
+}
 
+/**
+ * @brief Merges two MSAs
+ * 
+ * @param msa1 - query MSA
+ * @param msa2 - target MSA
+ * @param res  - alignment result
+ * @param map1 - ungapped->gapped mapping for msa1
+ * @param map2 - ungapped->gapped mapping for msa2
+ * @param qBt  - query merge instructions
+ * @param tBt  - target merge instructions
+ * @return std::string - merged MSA
+ */
+std::string mergeTwoMsa(
+    std::string &msa1,
+    std::string &msa2,
+    Matcher::result_t &res,
+    std::vector<int> map1,
+    std::vector<int> map2,
+    std::vector<Instruction> &qBt,
+    std::vector<Instruction> &tBt
+) {
+    // Calculate pre/end gaps/sequences from backtrace
+    size_t qPreSequence = map1[res.qStartPos];
+    size_t qPreGaps     = map2[res.dbStartPos];
+    size_t qEndSequence = map1[map1.size() - 1] - map1.at(res.qEndPos);
+    size_t qEndGaps     = map2[map2.size() - 1] - map2.at(res.dbEndPos);
+    size_t tPreSequence = qPreGaps;
+    size_t tPreGaps     = qPreSequence;
+    size_t tEndSequence = qEndGaps;
+    size_t tEndGaps     = qEndSequence;
+    
+    int q, t;
+
+    // String for merged MSA
+    std::string msa; 
+    
     // Query msa (msa1) first
     kseq_buffer_t d;
     d.buffer = (char*)msa1.c_str();
@@ -702,7 +728,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::cout << "Got substitution matrices" << std::endl;
     
     // Initialise MSAs, Sequence objects
-    size_t sequenceCnt = seqDbrAA.getSize();
+    int sequenceCnt = seqDbrAA.getSize();
     std::vector<Sequence*> allSeqs_aa(sequenceCnt);
     std::vector<Sequence*> allSeqs_3di(sequenceCnt);
     std::vector<std::string> msa_aa(sequenceCnt);
@@ -713,7 +739,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::map<std::string, int> headers_rev;
 
     int maxSeqLength = 0;
-    for (size_t i = 0; i < sequenceCnt; i++) {
+    for (int i = 0; i < sequenceCnt; i++) {
         unsigned int seqKeyAA = seqDbrAA.getDbKey(i);
         unsigned int seqKey3Di = seqDbr3Di.getDbKey(i);
         allSeqs_aa[i] = new Sequence(par.maxSeqLen, seqDbrAA.getDbtype(), (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
@@ -809,7 +835,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
     // Initialise Newick tree nodes
     std::vector<std::string> treeNodes(sequenceCnt);
-    for (size_t i = 0; i < sequenceCnt; ++i)
+    for (int i = 0; i < sequenceCnt; ++i)
         treeNodes[i] = std::to_string(i);
 
     std::cout << "Merging:\n";
@@ -850,7 +876,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         std::cout << "  Q=" << mergedId << ", T=" << targetId << "\n";
         
         for (int i = 0; i < sequenceCnt; i++) {
-            if (idMappings[i] == targetId)
+            if (idMappings[i] == (int)targetId)
                 idMappings[i] = mergedId;
         }
         
@@ -878,9 +904,12 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         std::vector<int> map2 = maskToMapping(mappings[targetId], res.dbLen);
 
         // Save new MSAs and remove targetId MSAs
-        msa_aa[mergedId] = mergeTwoMsa(msa_aa[mergedId], msa_aa[targetId], res, map1, map2);
+        std::vector<Instruction> qBt;
+        std::vector<Instruction> tBt;
+        getMergeInstructions(res, map1, map2, qBt, tBt);
+        msa_aa[mergedId] = mergeTwoMsa(msa_aa[mergedId], msa_aa[targetId], res, map1, map2, qBt, tBt);
         msa_aa[targetId] = "";
-        msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2);
+        msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2, qBt, tBt);
         msa_3di[targetId] = "";
         assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
 
