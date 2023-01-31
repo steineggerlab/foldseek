@@ -1029,10 +1029,8 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::string buffer;
     buffer.reserve(10 * 1024);
     while (kseq_read(seq) >= 0) {
-        unsigned int id = qdbrH.sequenceReader->getId(std::stoi(seq->name.s));
-        char* source = qdbrH.sequenceReader->getData(id, 0);
         buffer.append(1, '>');
-        buffer.append(Util::parseFastaHeader(source));
+        buffer.append(headers[std::stoi(seq->name.s)]);
         buffer.append(1, '\n');
         buffer.append(seq->seq.s, seq->seq.l);
         buffer.append(1, '\n');
