@@ -6,14 +6,9 @@
 #include "Debug.h"
 #include "DBWriter.h"
 #include "Matcher.h"
-#include "structureto3di.h"
-#include "SubstitutionMatrix.h"
-#include "GemmiWrapper.h"
 #include "tmalign/TMalign.h"
 #include "TMaligner.h"
 #include "Coordinate16.h"
-#include <iostream>
-#include <dirent.h>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -30,11 +25,17 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                                 par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     qdbr.open(DBReader<unsigned int>::NOSORT);
 
+
+    DBReader<unsigned int> qSeqReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX);
+    qSeqReader.open(DBReader<unsigned int>::NOSORT);
+
     bool sameDB = false;
     DBReader<unsigned int> *tdbr = NULL;
+    DBReader<unsigned int> *tSeqReader = NULL;
     if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
         tdbr = &qdbr;
+        tSeqReader = &qSeqReader;
     } else {
         tdbr = new DBReader<unsigned int>((par.db2 + "_ca").c_str(), (par.db2 + "_ca.index").c_str(),
                                           par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
@@ -42,6 +43,9 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
             tdbr->readMmapedDataInMemory();
         }
+
+        tSeqReader = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX);
+        tSeqReader->open(DBReader<unsigned int>::NOSORT);
     }
 
     DBReader<unsigned int> alndbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
@@ -49,9 +53,8 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
 
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_TMSCORE);
     dbw.open();
+
     Debug::Progress progress(alndbr.getSize());
-
-
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
@@ -72,30 +75,31 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
             char *data = alndbr.getData(i, thread_idx);
             Matcher::readAlignmentResults(results, data, false);
 
+            unsigned int qSeqId = qSeqReader.getId(queryKey);
+            int queryLen = qSeqReader.getSeqLen(qSeqId);
             unsigned int queryId = qdbr.getId(queryKey);
-            int queryLen = static_cast<int>((qdbr.getEntryLen(queryId)-1)/(3*sizeof(float)));
             char *qcadata = qdbr.getData(queryId, thread_idx);
             size_t qCaLength = qdbr.getEntryLen(queryId);
             float* qdata = qcoords.read(qcadata, queryLen, qCaLength);
-            tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], NULL, queryLen);
 
+            tmaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen+queryLen], NULL, queryLen);
             for (size_t j = 0; j < results.size(); j++) {
-                Matcher::result_t& res = results[j];
+                const Matcher::result_t& res = results[j];
                 if (res.backtrace.empty()) {
                     Debug(Debug::ERROR) << "Backtrace cigar is missing in the alignment result. Please recompute the alignment with the -a flag.\n"
                                            "Command: foldseek structurealign " << par.db1 << " " << par.db2 << " " << par.db3 << " " << "alnNew -a\n";
                     EXIT(EXIT_FAILURE);
                 }
                 const unsigned int dbKey = res.dbKey;
+                unsigned int tSeqId = tSeqReader->getId(dbKey);
+                int targetLen = tSeqReader->getSeqLen(tSeqId);
                 unsigned int targetId = tdbr->getId(dbKey);
-                int targetLen = static_cast<int>((tdbr->getEntryLen(targetId)-1)/(3*sizeof(float)));
                 char *tcadata = tdbr->getData(targetId, thread_idx);
                 size_t tCaLength = tdbr->getEntryLen(targetId);
                 float* tdata = tcoords.read(tcadata, targetLen, tCaLength);
 
                 // Matching residue index collection
-                TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen, res.qStartPos,
-                                     res.dbStartPos, res.backtrace);
+                TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen, res.qStartPos, res.dbStartPos, res.backtrace);
 
                 //std::cout << TMalnScore << std::endl;
                 resultsStr.append(SSTR(dbKey));
@@ -135,10 +139,12 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
     }
     dbw.close();
 
-
     alndbr.close();
+    qSeqReader.close();
     qdbr.close();
     if (sameDB == false) {
+        tSeqReader->close();
+        delete tSeqReader;
         tdbr->close();
         delete tdbr;
     }
