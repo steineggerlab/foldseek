@@ -93,6 +93,7 @@ public:
     PARAMETER(PARAM_SCORE_BIAS_3DI)
     PARAMETER(PARAM_GUIDE_TREE)
     PARAMETER(PARAM_RECOMPUTE_SCORES)
+    PARAMETER(PARAM_REGRESSIVE)
 
     // PARAMETER(PARAM_NEWICK_OUTPUT)
     PARAMETER(PARAM_LDDT_HTML)
@@ -110,6 +111,7 @@ public:
 
     std::string guideTree;
     bool recomputeScores;
+    bool regressive;
     float scoreBiasAa;
     float scoreBias3di;
     MultiParam<PseudoCounts> pcaAa;

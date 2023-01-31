@@ -357,6 +357,7 @@ std::vector<int> maskToMapping(std::string mask, size_t length) {
     return mapping;
 }
 
+// TODO: factor out instructions so calculate once and use same set to merge aa/3di
 /**
  * @brief Merges two MSAs
  * 
@@ -656,7 +657,6 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
     std::vector<int> linkage;
     std::vector<AlnSimple> hits;
     postOrder(tree, &linkage);
-
     for (size_t i = 0; i < linkage.size(); i += 2) {
         AlnSimple hit;
         hit.queryId = linkage[i + 0];
@@ -774,11 +774,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     bool * alreadyMerged = new bool[sequenceCnt];
     memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
     
-    //
     std::vector<AlnSimple> hits;
-    
-    // TODO
-    // Read in guide tree if given
     if (par.guideTree != "") {
         std::cout << "Loading guide tree: " << par.guideTree << "\n"; 
         std::string tree;
@@ -790,6 +786,8 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             newick.close();
         }
         hits = parseNewick(tree, headers);
+        if (par.regressive)
+            std::reverse(hits.begin(), hits.end());
     } else {
         // Initial alignments
         hits = updateAllScores(
@@ -814,7 +812,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
     std::cout << "Merging:\n";
     size_t merged = 0;
-    while (hits.size() > 0) { //&& merged < sequenceCnt){
+    while (hits.size() > 0) {
         unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
         unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
         mergedId = idMappings[mergedId];
@@ -951,9 +949,6 @@ int structuremsa(int argc, const char **argv, const Command& command) {
                 if (averaging) {
                     // ...
                 }
-                
-                // FIXME: problem when feeding tree made by structuremsa back with --guide-tree
-                
                 // Is this functionally equivalent to just skipping hits on this condition
                 // at the start of the while loop?
                 hits.erase(std::remove_if(
