@@ -708,8 +708,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::vector<std::string> msa_aa(sequenceCnt);
     std::vector<std::string> msa_3di(sequenceCnt);
     std::vector<std::string> mappings(sequenceCnt);
-    std::vector<unsigned int> idMappings(sequenceCnt);
-    std::map<std::string, int> headers;
+    std::vector<int> idMappings(sequenceCnt);
+    std::vector<std::string> headers(sequenceCnt);
+    std::map<std::string, int> headers_rev;
 
     int maxSeqLength = 0;
     for (size_t i = 0; i < sequenceCnt; i++) {
@@ -720,10 +721,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         allSeqs_3di[i] = new Sequence(par.maxSeqLen, seqDbr3Di.getDbtype(), (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
         allSeqs_3di[i]->mapSequence(i, seqKey3Di, seqDbr3Di.getData(i, 0), seqDbr3Di.getSeqLen(i));
         maxSeqLength = std::max(maxSeqLength, allSeqs_aa[i]->L);
-        std::string aaSeq = seqDbrAA.getData(i, 0);
-        msa_aa[i] += ">" + SSTR(seqKeyAA) + "\n";
-        msa_aa[i] += aaSeq;
-        msa_3di[i] += ">" +  SSTR(seqKey3Di) + "\n";
+        msa_aa[i] += ">" + SSTR(i) + "\n";
+        msa_aa[i] += seqDbrAA.getData(i, 0);
+        msa_3di[i] += ">" +  SSTR(i) + "\n";
         msa_3di[i] += seqDbr3Di.getData(i, 0);
         mappings[i] = std::string(seqDbrAA.getSeqLen(i), '0');
         
@@ -732,7 +732,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         
         // Grab headers, remove \0
         std::string header = qdbrH.sequenceReader->getData(seqKeyAA, 0);
-        headers[header.substr(0, header.length() - 1)] = seqKeyAA;
+        header = header.substr(0, std::min(header.length() - 1, header.find(' ', 0)));
+        headers[i] = header;
+        headers_rev[header] = i;
     }
     
     // TODO: dynamically calculate and re-init PSSMCalculator/MsaFilter each iteration
@@ -742,7 +744,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
     // Setup objects needed for profile calculation
     PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
-    MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt +1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
+    MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
 
     par.scoringMatrixFile = "3di.out";
     par.seedScoringMatrixFile = "3di.out";
@@ -785,7 +787,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
                 tree += line;
             newick.close();
         }
-        hits = parseNewick(tree, headers);
+        hits = parseNewick(tree, headers_rev);
         if (par.regressive)
             std::reverse(hits.begin(), hits.end());
     } else {
@@ -813,6 +815,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::cout << "Merging:\n";
     size_t merged = 0;
     while (hits.size() > 0) {
+        if (idMappings[hits[0].queryId] == idMappings[hits[0].targetId]) 
+            continue;
+
         unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
         unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
         mergedId = idMappings[mergedId];
@@ -844,13 +849,18 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
         std::cout << "  Q=" << mergedId << ", T=" << targetId << "\n";
         
+        for (int i = 0; i < sequenceCnt; i++) {
+            if (idMappings[i] == targetId)
+                idMappings[i] = mergedId;
+        }
+        
         // Extend tree
         // TODO: make this optional ?
         // e.g. mergedId = 21, targetId = (3,6) --> (21,(3,6))
         if (treeNodes[mergedId] == std::to_string(mergedId))
-            treeNodes[mergedId] = Util::parseFastaHeader(qdbrH.sequenceReader->getData(mergedId, 0));
+            treeNodes[mergedId] = headers[mergedId];
         if (treeNodes[targetId] == std::to_string(targetId))
-            treeNodes[targetId] = Util::parseFastaHeader(qdbrH.sequenceReader->getData(targetId, 0));
+            treeNodes[targetId] = headers[targetId];
         treeNodes[mergedId] = "(" + treeNodes[mergedId];
         if (treeNodes[targetId] != "") {
             treeNodes[mergedId] += "," + treeNodes[targetId];   
@@ -869,8 +879,8 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
         // Save new MSAs and remove targetId MSAs
         msa_aa[mergedId] = mergeTwoMsa(msa_aa[mergedId], msa_aa[targetId], res, map1, map2);
-        msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2);
         msa_aa[targetId] = "";
+        msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2);
         msa_3di[targetId] = "";
         assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
 
