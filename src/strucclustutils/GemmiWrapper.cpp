@@ -190,10 +190,21 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename) 
             chainNames.push_back(ch.name);
             names.push_back(name);
             for (gemmi::Residue &res : ch.residues) {
-                if(res.het_flag != 'H' && res.het_flag != 'A')
+                bool isHetAtomInList = res.het_flag == 'H' && threeAA2oneAA.find(res.name) != threeAA2oneAA.end();
+                if(isHetAtomInList == false && res.het_flag != 'A')
                     continue;
-                if (res.het_flag == 'H' && threeAA2oneAA.find(res.name) == threeAA2oneAA.end())
-                    continue;
+                if(isHetAtomInList){
+                    bool hasCA = false;
+                    for(gemmi::Atom &atom : res.atoms){
+                        if(atom.name == "CA"){
+                            hasCA = true;
+                            break;
+                        }
+                    }
+                    if(hasCA == false){
+                        continue;
+                    }
+                }
                 Vec3 ca_atom = {NAN, NAN, NAN};
                 Vec3 cb_atom = {NAN, NAN, NAN};
                 Vec3 n_atom  = {NAN, NAN, NAN};
