@@ -21,7 +21,6 @@ void setStructureRbhDefaults(LocalParameters *p) {
     p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
 }
 
 int structurerbh(int argc, const char **argv, const Command &command) {
