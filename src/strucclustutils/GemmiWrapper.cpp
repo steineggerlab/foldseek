@@ -13,6 +13,22 @@ GemmiWrapper::GemmiWrapper(){
                      {"HIS",'H'},  {"ILE",'I'},  {"LEU",'L'}, {"LYS",'K'},
                      {"MET",'M'},  {"PHE",'F'},  {"PRO",'P'}, {"SER",'S'},
                      {"THR",'T'},  {"TRP",'W'},  {"TYR",'Y'}, {"VAL",'V'},
+                     // modified res
+                     {"MSE",'M'}, {"MLY",'K'}, {"FME",'M'}, {"HYP",'P'},
+                     {"TPO",'T'}, {"CSO",'C'}, {"SEP",'S'}, {"M3L",'K'},
+                     {"HSK",'H'}, {"SAC",'S'}, {"PCA",'E'}, {"DAL",'A'},
+                     {"CME",'C'}, {"CSD",'C'}, {"OCS",'C'}, {"DPR",'P'},
+                     {"B3K",'K'}, {"ALY",'K'}, {"YCM",'C'}, {"MLZ",'K'},
+                     {"4BF",'Y'}, {"KCX",'K'}, {"B3E",'E'}, {"B3D",'D'},
+                     {"HZP",'P'}, {"CSX",'C'}, {"BAL",'A'}, {"HIC",'H'},
+                     {"DBZ",'A'}, {"DCY",'C'}, {"DVA",'V'}, {"NLE",'L'},
+                     {"SMC",'C'}, {"AGM",'R'}, {"B3A",'A'}, {"DAS",'D'},
+                     {"DLY",'K'}, {"DSN",'S'}, {"DTH",'T'}, {"GL3",'G'},
+                     {"HY3",'P'}, {"LLP",'K'}, {"MGN",'Q'}, {"MHS",'H'},
+                     {"TRQ",'W'}, {"B3Y",'Y'}, {"PHI",'F'}, {"PTR",'Y'},
+                     {"TYS",'Y'}, {"IAS",'D'}, {"GPL",'K'}, {"KYN",'W'},
+                     {"CSD",'C'}, {"SEC",'C'},
+                     // unknown
                      {"UNK",'X'}};
 }
 
@@ -174,7 +190,9 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename) 
             chainNames.push_back(ch.name);
             names.push_back(name);
             for (gemmi::Residue &res : ch.residues) {
-                if (res.het_flag != 'A')
+                if(res.het_flag != 'H' && res.het_flag != 'A')
+                    continue;
+                if (res.het_flag == 'H' && threeAA2oneAA.find(res.name) == threeAA2oneAA.end())
                     continue;
                 Vec3 ca_atom = {NAN, NAN, NAN};
                 Vec3 cb_atom = {NAN, NAN, NAN};
