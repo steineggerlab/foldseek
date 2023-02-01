@@ -493,8 +493,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             }
             float *queryCaData = NULL;
             if (needCA) {
+                size_t qSeqId = qDbr.sequenceReader->getId(queryKey);
+		        querySeqLen = qDbr.sequenceReader->getSeqLen(qSeqId);
                 size_t qId = qcadbr->sequenceReader->getId(queryKey);
-		        querySeqLen =  (qcadbr->sequenceReader->getEntryLen(qId)-1)/(3*sizeof(float));
                 char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
                 size_t qCaLength = qcadbr->sequenceReader->getEntryLen(qId);
                 queryCaData = qcoords.read(qcadata, querySeqLen, qCaLength);

@@ -29,7 +29,7 @@ static bool compareHitsByStructureBits(const Matcher::result_t &first, const Mat
 }
 
 
-static bool structureAlignDefault(LocalParameters & par) {
+static void structureAlignDefault(LocalParameters & par) {
     par.compBiasCorrectionScale = 0.5;
 }
 
