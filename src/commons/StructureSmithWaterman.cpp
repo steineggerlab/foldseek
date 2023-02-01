@@ -1012,13 +1012,16 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
         }
     }else{
         int32_t mat3DiSize = q_3di->subMat->alphabetSize * q_3di->subMat->alphabetSize;
+        int8_t bias3Di = 0;
         for (int32_t i = 0; i < mat3DiSize; i++) {
-            bias = std::min(mat_3di[i], bias);
+            bias3Di = std::min(bias3Di, mat_3di[i]);
         }
         int32_t matAASize =  q_aa->subMat->alphabetSize * q_aa->subMat->alphabetSize;
+        int8_t biasAA = 0;
         for (int32_t i = 0; i < matAASize; i++){
-            bias = std::min(bias, mat_aa[i]);
+            biasAA = std::min(biasAA, mat_aa[i]);
         }
+        bias = bias3Di + biasAA;
     }
 
     bias = abs(bias) + abs(compositionBias);
