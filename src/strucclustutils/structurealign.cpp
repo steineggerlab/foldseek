@@ -44,7 +44,7 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     float seqId = 0.0;
     backtrace.clear();
     // align only score and end pos
-    StructureSmithWaterman::s_align align = structureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+    StructureSmithWaterman::s_align align = structureSmithWaterman.alignScoreEndPos<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
                                                                                     par.gapExtend.values.aminoacid(), querySeqLen / 2);
     bool hasLowerCoverage = !(Util::hasCoverage(par.covThr, par.covMode, align.qCov, align.tCov));
     if(hasLowerCoverage){
@@ -54,7 +54,7 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     if(structureSmithWaterman.isProfileSearch()){
         revAlign.score1 = 0;
     } else {
-        revAlign = reverseStructureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence,
+        revAlign = reverseStructureSmithWaterman.alignScoreEndPos<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence,
                                                                   targetSeqLen, par.gapOpen.values.aminoacid(),
                                                                   par.gapExtend.values.aminoacid(), querySeqLen / 2);
     }
@@ -65,7 +65,7 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
         return -1;
     }
 
-    align = structureSmithWaterman.alignStartPosBacktrace(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+    align = structureSmithWaterman.alignStartPosBacktrace<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
                                                           par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
 
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);

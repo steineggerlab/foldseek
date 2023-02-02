@@ -115,6 +115,7 @@ public:
      while bit 8 is not, the function will return cigar only when both criteria are fulfilled. All returned positions are
      0-based coordinate.
      */
+    template <unsigned int profile_type>
     s_align alignScoreEndPos (
             const unsigned char *db_aa_sequence,
             const unsigned char *db_3di_sequence,
@@ -123,6 +124,7 @@ public:
             const uint8_t gap_extend,
             const int32_t maskLen);
 
+    template <unsigned int profile_type>
     s_align alignStartPosBacktrace (
             const unsigned char *db_aa_sequence,
             const unsigned char *db_3di_sequence,
