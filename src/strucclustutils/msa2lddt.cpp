@@ -141,7 +141,7 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
             }
             ++m;
         }
-        
+       
         // If no alignment between the two sequences, skip
         if (res.backtrace.length() == 0)
             continue;
@@ -151,13 +151,13 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
         size_t i;
         for (i = res.backtrace.length() - 1; res.backtrace[i] != 'M'; i--);
         res.backtrace.erase(i + 1, res.backtrace.length() - i);
-
+        
         // Get c-alpha info from _ca db for q and t
         Coordinate16 qcoords;
         char *qcadata = seqDbrCA.getData(indices[qId], 0);
         size_t qCaLength = seqDbrCA.getEntryLen(indices[qId]);
         float *queryCaData = qcoords.read(qcadata, qr, qCaLength);
-
+        
         Coordinate16 tcoords;
         char *tcadata = seqDbrCA.getData(indices[tId], 0);
         size_t tCaLength = seqDbrCA.getEntryLen(indices[tId]);
@@ -186,7 +186,7 @@ int msa2lddt(int argc, const char **argv, const Command& command) {
             perColumnScore[idx] += lddtres.perCaLddtScore[i];
             perColumnCount[idx]++;
         }
-        
+       
         sum += lddtres.avgLddtScore;
     } while (std::next_permutation(ids.begin(), ids.end()));
     delete lddtcalculator;
