@@ -134,7 +134,8 @@ public:
             StructureSmithWaterman::s_align r,
             const int covMode, const float covThr,
             const int32_t maskLen);
-
+    
+    int ungapped_alignment(const unsigned char *db_sequence, int32_t db_length);
 
     /*!	@function	Create the query profile using the query sequence.
      @param	read	pointer to the query sequence; the query sequence needs to be numbers
