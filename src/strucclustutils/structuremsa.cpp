@@ -96,11 +96,11 @@ std::vector<AlnSimple> updateAllScores(
     SubstitutionMatrix * subMat_aa,
     std::vector<Sequence*> & allSeqs_aa,
     std::vector<Sequence*> & allSeqs_3di,
-    bool * alreadyMerged,
-    int gapOpen,
-    int gapExtend
+    bool * alreadyMerged
 ) {
     std::vector<AlnSimple> newHits;
+    
+    // TODO omp on the outer loop
     for (unsigned int i = 0; i < allSeqs_aa.size(); i++) {
         if (alreadyMerged[i])
             continue;
@@ -115,25 +115,16 @@ std::vector<AlnSimple> updateAllScores(
             if (alreadyMerged[j] || i == j)
                 continue;
             bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[j]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
-            unsigned char * target_aa_seq = allSeqs_aa[j]->numSequence;
-            unsigned char * target_3di_seq = allSeqs_3di[j]->numSequence;
+            unsigned char *target_aa_seq = allSeqs_aa[j]->numSequence;
+            unsigned char *target_3di_seq = allSeqs_3di[j]->numSequence;
             if (targetIsProfile) {
                 target_aa_seq = allSeqs_aa[j]->numConsensusSequence;
                 target_3di_seq = allSeqs_3di[j]->numConsensusSequence;
             }
-            StructureSmithWaterman::s_align align;
-            align = structureSmithWaterman.alignScoreEndPos(
-                target_aa_seq,
-                target_3di_seq,
-                allSeqs_aa[j]->L,
-                gapOpen,
-                gapExtend,
-                allSeqs_aa[i]->L / 2
-            );
             AlnSimple aln;
             aln.queryId = i;
             aln.targetId = j;
-            aln.score = align.score1;
+            aln.score = structureSmithWaterman.ungapped_alignment(target_aa_seq, target_3di_seq, allSeqs_aa[j]->L);
             newHits.emplace_back(aln);
         }
     }
@@ -771,10 +762,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     // Setup objects needed for profile calculation
     PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-
-    par.scoringMatrixFile = "3di.out";
-    par.seedScoringMatrixFile = "3di.out";
-    
+   
     PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
     
@@ -825,9 +813,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             &subMat_aa,
             allSeqs_aa,
             allSeqs_3di,
-            alreadyMerged,
-            par.gapOpen.values.aminoacid(),
-            par.gapExtend.values.aminoacid()
+            alreadyMerged
         );
         sortHitsByScore(hits);
         std::cout << "Performed initial all vs all alignments" << std::endl;
@@ -965,9 +951,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
                 &subMat_aa,
                 allSeqs_aa,
                 allSeqs_3di,
-                alreadyMerged,
-                par.gapOpen.values.aminoacid(),
-                par.gapExtend.values.aminoacid()
+                alreadyMerged
             );
             sortHitsByScore(hits);
         } else {
