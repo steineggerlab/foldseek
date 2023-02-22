@@ -73,7 +73,7 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
 }
 
 void sortHitsByScore(std::vector<AlnSimple> &hits) {
-    std::sort(hits.begin(), hits.end(), [](const AlnSimple & a, const AlnSimple & b) {
+    std::stable_sort(hits.begin(), hits.end(), [](const AlnSimple & a, const AlnSimple & b) {
         return a.score > b.score;
     });
 }
@@ -122,7 +122,7 @@ std::vector<AlnSimple> updateAllScores(
             tinySubMat3Di,
             subMat_aa
         );
-        for (unsigned int j = 0; j < N; j++) {
+        for (unsigned int j = i + 1; j < N; j++) {
             if (alreadyMerged[j] || i == j)
                 continue;
             bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[j]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
@@ -710,8 +710,6 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     seqDbrAA.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbr3Di((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
-    DBReader<unsigned int> seqDbr3Di40((par.db1+"_40").c_str(), (par.db1+"_40.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    seqDbr3Di40.open(DBReader<unsigned int>::NOSORT);
    
     IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
     
@@ -953,6 +951,78 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         assert(profile_aa.length() == profile_3di.length());
         
         if (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_AMINO_ACIDS)) {
+            delete allSeqs_aa[mergedId];
+            delete allSeqs_3di[mergedId];
+            allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
+            allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
+        }
+
+        allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
+        allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
+        alreadyMerged[targetId] = true;
+        merged++;
+        
+        if (par.guideTree == "" && par.recomputeScores) {
+            hits = updateAllScores(
+                tinySubMatAA,
+                tinySubMat3Di,
+                &subMat_aa,
+                allSeqs_aa,
+                allSeqs_3di,
+                alreadyMerged,
+                par.maxSeqLen,
+                subMat_3di.alphabetSize,
+                par.compBiasCorrection,
+                par.compBiasCorrectionScale
+            );
+            delete allSeqs_aa[mergedId];
+            delete allSeqs_3di[mergedId];
+            allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
+            allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
+        }
+
+        allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
+        allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
+        alreadyMerged[targetId] = true;
+        merged++;
+        
+        if (par.guideTree == "" && par.recomputeScores) {
+            hits = updateAllScores(
+                tinySubMatAA,
+                tinySubMat3Di,
+                &subMat_aa,
+                allSeqs_aa,
+                allSeqs_3di,
+                alreadyMerged,
+                par.maxSeqLen,
+                subMat_3di.alphabetSize,
+                par.compBiasCorrection,
+                par.compBiasCorrectionScale
+            );
+            delete allSeqs_aa[mergedId];
+            delete allSeqs_3di[mergedId];
+            allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
+            allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
+        }
+
+        allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
+        allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
+        alreadyMerged[targetId] = true;
+        merged++;
+        
+        if (par.guideTree == "" && par.recomputeScores) {
+            hits = updateAllScores(
+                tinySubMatAA,
+                tinySubMat3Di,
+                &subMat_aa,
+                allSeqs_aa,
+                allSeqs_3di,
+                alreadyMerged,
+                par.maxSeqLen,
+                subMat_3di.alphabetSize,
+                par.compBiasCorrection,
+                par.compBiasCorrectionScale
+            );
             delete allSeqs_aa[mergedId];
             delete allSeqs_3di[mergedId];
             allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
