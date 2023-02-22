@@ -166,6 +166,8 @@ LocalParameters::LocalParameters() :
     structuremsa.push_back(&PARAM_GUIDE_TREE);
     structuremsa.push_back(&PARAM_RECOMPUTE_SCORES);
     structuremsa.push_back(&PARAM_REGRESSIVE);
+    structuremsa.push_back(&PARAM_SUB_MAT);
+    structuremsa.push_back(&PARAM_THREADS);
     
     pcaAa = 1.1;
     pcbAa = 4.1;

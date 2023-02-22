@@ -72,7 +72,7 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
                              align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, target_aa->L, backtrace);
 }
 
-void sortHitsByScore(std::vector<AlnSimple> & hits) {
+void sortHitsByScore(std::vector<AlnSimple> &hits) {
     std::sort(hits.begin(), hits.end(), [](const AlnSimple & a, const AlnSimple & b) {
         return a.score > b.score;
     });
@@ -89,19 +89,30 @@ std::vector<AlnSimple> removeMergedHits(std::vector<AlnSimple> & hits, unsigned 
     return newHits;
 }
 
+
+inline int get1dIndex(int i, int j, int N) {
+    return j + i * (2 * N - i - 1) / 2 - i - 1;
+}
+
 std::vector<AlnSimple> updateAllScores(
-    StructureSmithWaterman & structureSmithWaterman,
     int8_t * tinySubMatAA,
     int8_t * tinySubMat3Di,
     SubstitutionMatrix * subMat_aa,
     std::vector<Sequence*> & allSeqs_aa,
     std::vector<Sequence*> & allSeqs_3di,
-    bool * alreadyMerged
+    bool * alreadyMerged,
+    int maxSeqLen,
+    int alphabetSize,
+    int compBiasCorrection,
+    int compBiasCorrectionScale
 ) {
-    std::vector<AlnSimple> newHits;
-    
-    // TODO omp on the outer loop
-    for (unsigned int i = 0; i < allSeqs_aa.size(); i++) {
+    unsigned int N = allSeqs_aa.size();
+    std::vector<AlnSimple> newHits((N * N - N) / 2);
+#pragma omp parallel
+{
+    StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale);
+#pragma omp for
+    for (unsigned int i = 0; i < N; i++) {
         if (alreadyMerged[i])
             continue;
         structureSmithWaterman.ssw_init(
@@ -111,7 +122,7 @@ std::vector<AlnSimple> updateAllScores(
             tinySubMat3Di,
             subMat_aa
         );
-        for (unsigned int j = 0; j < allSeqs_aa.size(); j++) {
+        for (unsigned int j = 0; j < N; j++) {
             if (alreadyMerged[j] || i == j)
                 continue;
             bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[j]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
@@ -125,9 +136,11 @@ std::vector<AlnSimple> updateAllScores(
             aln.queryId = i;
             aln.targetId = j;
             aln.score = structureSmithWaterman.ungapped_alignment(target_aa_seq, target_3di_seq, allSeqs_aa[j]->L);
-            newHits.emplace_back(aln);
+            int ij = get1dIndex(i, j, N);
+            newHits[ij] = aln;
         }
     }
+}
     return newHits;
 }
 
@@ -697,6 +710,8 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     seqDbrAA.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbr3Di((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
+    DBReader<unsigned int> seqDbr3Di40((par.db1+"_40").c_str(), (par.db1+"_40.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+    seqDbr3Di40.open(DBReader<unsigned int>::NOSORT);
    
     IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
     
@@ -807,13 +822,16 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     } else {
         // Initial alignments
         hits = updateAllScores(
-            structureSmithWaterman,
             tinySubMatAA,
             tinySubMat3Di,
             &subMat_aa,
             allSeqs_aa,
             allSeqs_3di,
-            alreadyMerged
+            alreadyMerged,
+            par.maxSeqLen,
+            subMat_3di.alphabetSize,
+            par.compBiasCorrection,
+            par.compBiasCorrectionScale
         );
         sortHitsByScore(hits);
         std::cout << "Performed initial all vs all alignments" << std::endl;
@@ -898,6 +916,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2, qBt, tBt);
         msa_3di[targetId] = "";
         assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
+        
+        // std::cout << msa_aa[mergedId];
+        // std::cout << msa_3di[mergedId];
 
         std::string profile_aa = fastamsa2profile(msa_aa[mergedId], calculator_aa, filter_aa, subMat_aa, maxSeqLength,
                                                   sequenceCnt + 1, par.matchRatio, par.filterMsa,
@@ -945,13 +966,16 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         
         if (par.guideTree == "" && par.recomputeScores) {
             hits = updateAllScores(
-                structureSmithWaterman,
                 tinySubMatAA,
                 tinySubMat3Di,
                 &subMat_aa,
                 allSeqs_aa,
                 allSeqs_3di,
-                alreadyMerged
+                alreadyMerged,
+                par.maxSeqLen,
+                subMat_3di.alphabetSize,
+                par.compBiasCorrection,
+                par.compBiasCorrectionScale
             );
             sortHitsByScore(hits);
         } else {
