@@ -35,8 +35,8 @@ fi
 if notExists "${TMP_PATH}/${TREE}"; then
     # shellcheck disable=SC2086
 	# Query DB, Alignment DB, temporary directory
-	"$MMSEQS" generatetree "${STRUCTUREDB}" "${RESULTS}" \
-		|| fail "Generate Tree died"
+	"$MMSEQS" structuremsa "${STRUCTUREDB}" "${RESULTS}" \
+		|| fail "structuremsa died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
