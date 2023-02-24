@@ -168,6 +168,9 @@ LocalParameters::LocalParameters() :
     structuremsa.push_back(&PARAM_REGRESSIVE);
     structuremsa.push_back(&PARAM_SUB_MAT);
     structuremsa.push_back(&PARAM_THREADS);
+
+    easymsaworkflow = combineList(easymsaworkflow, structurecreatedb);
+    easymsaworkflow = combineList(easymsaworkflow, structuremsa);
     
     pcaAa = 1.1;
     pcbAa = 4.1;

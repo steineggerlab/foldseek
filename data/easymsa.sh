@@ -35,7 +35,7 @@ fi
 if notExists "${TMP_PATH}/${TREE}"; then
     # shellcheck disable=SC2086
 	# Query DB, Alignment DB, temporary directory
-	"$MMSEQS" structuremsa "${STRUCTUREDB}" "${RESULTS}" \
+	"$MMSEQS" structuremsa "${STRUCTUREDB}" "${RESULTS}" ${STRUCTUREMSA_PAR} \
 		|| fail "structuremsa died"
 fi
 

@@ -111,7 +111,7 @@ std::vector<AlnSimple> updateAllScores(
 #pragma omp parallel
 {
     StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale);
-#pragma omp for
+#pragma omp for schedule(dynamic)
     for (unsigned int i = 0; i < N; i++) {
         if (alreadyMerged[i])
             continue;

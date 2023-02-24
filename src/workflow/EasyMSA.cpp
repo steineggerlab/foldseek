@@ -40,7 +40,6 @@ int easymsa(int argc, const char **argv, const Command &command) {
     bool needTaxonomy = false;
     bool needTaxonomyMapping = false;
     bool needLookup = false;
-
     {
         bool needSequenceDB = false;
         bool needFullHeaders = false;
@@ -70,6 +69,7 @@ int easymsa(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     CommandCaller cmd;
+    cmd.addVariable("STRUCTUREMSA_PAR", par.createParameterString(par.structuremsa).c_str());
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("RESULTS", par.filenames.back().c_str());
     par.filenames.pop_back();
