@@ -362,7 +362,7 @@ Structure read_pdb_from_stream(Stream&& stream, const std::string& source,
       resi->atoms.emplace_back(atom);
 
     } else if (is_record_type(line, "ANISOU")) {
-      if (!model || !chain || !resi || resi->atoms.empty())
+      /*if (!model || !chain || !resi || resi->atoms.empty())
         wrong("ANISOU record not directly after ATOM/HETATM.");
       // We assume that ANISOU refers to the last atom.
       // Can it not be the case?
@@ -374,7 +374,7 @@ Structure read_pdb_from_stream(Stream&& stream, const std::string& source,
       atom.aniso.u33 = read_int(line+42, 7) * 1e-4f;
       atom.aniso.u12 = read_int(line+49, 7) * 1e-4f;
       atom.aniso.u13 = read_int(line+56, 7) * 1e-4f;
-      atom.aniso.u23 = read_int(line+63, 7) * 1e-4f;
+      atom.aniso.u23 = read_int(line+63, 7) * 1e-4f;*/
 
     } else if (is_record_type(line, "REMARK")) {
       if (line[len-1] == '\n')
