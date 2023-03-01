@@ -116,12 +116,12 @@ The `databases` command downloads pre-generated databases like PDB or AlphaFoldD
 We currently support the following databases: 
 ```
   Name                   	Type     	Taxonomy	Url
-- Alphafold/UniProt      	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/UniProt-NO-CA	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/UniProt50    	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/Proteome     	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/Swiss-Prot   	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- PDB                    	Aminoacid	     yes	https://www.rcsb.org
+- Alphafold/UniProt   	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/UniProt50 	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/Proteome  	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/Swiss-Prot	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- ESMAtlas30          	Aminoacid	       -	https://esmatlas.com
+- PDB                 	Aminoacid	     yes	https://www.rcsb.org
 ```
 
 ### Main Modules
