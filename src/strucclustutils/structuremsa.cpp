@@ -25,6 +25,7 @@
 #include <iostream>
 #include <regex>
 #include <stack>
+#include <deque>
 
 #include "kseq.h"
 #include "KSeqBufferReader.h"
@@ -58,21 +59,49 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
         target_aa_seq = target_aa->numConsensusSequence;
         target_3di_seq = target_3di->numConsensusSequence;
     }
-
-    StructureSmithWaterman::s_align align = aligner.alignScoreEndPos(target_aa_seq, target_3di_seq, target_aa->L, gapOpen,
-                                                                     gapExtend, querySeqLen / 2);
-
-    align = aligner.alignStartPosBacktrace(target_aa_seq, target_3di_seq, target_aa->L, gapOpen,
-                                       gapExtend, 3, backtrace,  align, 0, 0.0, querySeqLen / 2);
-
+    StructureSmithWaterman::s_align align = aligner.alignScoreEndPos(
+        target_aa_seq,
+        target_3di_seq,
+        target_aa->L,
+        gapOpen,
+        gapExtend,
+        querySeqLen / 2
+    );
+    align = aligner.alignStartPosBacktrace(
+        target_aa_seq,
+        target_3di_seq,
+        target_aa->L,
+        gapOpen,
+        gapExtend,
+        3,
+        backtrace,
+        align,
+        0,
+        0.0,
+        querySeqLen / 2
+    );
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
     alnLength = backtrace.size();
     float seqId = Util::computeSeqId(Parameters::SEQ_ID_ALN_LEN, align.identicalAACnt, querySeqLen, target_aa->L, alnLength);
-    return Matcher::result_t(target_aa->getDbKey(), align.score1, align.qCov, align.tCov, seqId, align.evalue, alnLength,
-                             align.qStartPos1, align.qEndPos1, querySeqLen, align.dbStartPos1, align.dbEndPos1, target_aa->L, backtrace);
+    return Matcher::result_t(
+        target_aa->getDbKey(),
+        align.score1,
+        align.qCov,
+        align.tCov,
+        seqId,
+        align.evalue,
+        alnLength,
+        align.qStartPos1,
+        align.qEndPos1,
+        querySeqLen,
+        align.dbStartPos1,
+        align.dbEndPos1,
+        target_aa->L,
+        backtrace
+    );
 }
 
-void sortHitsByScore(std::vector<AlnSimple> &hits) {
+void sortHitsByScore(std::deque<AlnSimple> &hits) {
     std::stable_sort(hits.begin(), hits.end(), [](const AlnSimple & a, const AlnSimple & b) {
         return a.score > b.score;
     });
@@ -94,7 +123,7 @@ inline int get1dIndex(int i, int j, int N) {
     return j + i * (2 * N - i - 1) / 2 - i - 1;
 }
 
-std::vector<AlnSimple> updateAllScores(
+std::deque<AlnSimple> updateAllScores(
     int8_t * tinySubMatAA,
     int8_t * tinySubMat3Di,
     SubstitutionMatrix * subMat_aa,
@@ -107,7 +136,7 @@ std::vector<AlnSimple> updateAllScores(
     int compBiasCorrectionScale
 ) {
     unsigned int N = allSeqs_aa.size();
-    std::vector<AlnSimple> newHits((N * N - N) / 2);
+    std::deque<AlnSimple> newHits((N * N - N) / 2);
 #pragma omp parallel
 {
     StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale);
@@ -605,7 +634,7 @@ void postOrder(TNode *node, std::vector<int> *linkage) {
     }
 }
 
-std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int> &headers) {
+std::deque<AlnSimple> parseNewick(std::string newick, std::map<std::string, int> &headers) {
     // Should know this from number of structures in database
     int total = std::count(newick.begin(), newick.end(), '(');
 
@@ -685,7 +714,7 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
     // NOTE: postOrder will trip up when no. children != 2
     //       will get duplicate rows which cause errors
     std::vector<int> linkage;
-    std::vector<AlnSimple> hits;
+    std::deque<AlnSimple> hits;
     postOrder(tree, &linkage);
     for (size_t i = 0; i < linkage.size(); i += 2) {
         AlnSimple hit;
@@ -700,9 +729,9 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
 
 int structuremsa(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    
+
     par.compBiasCorrection = 0;
-   
+
     // Databases
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
@@ -803,7 +832,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     bool * alreadyMerged = new bool[sequenceCnt];
     memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
     
-    std::vector<AlnSimple> hits;
+    std::deque<AlnSimple> hits;
     if (par.guideTree != "") {
         std::cout << "Loading guide tree: " << par.guideTree << "\n"; 
         std::string tree;
@@ -843,8 +872,10 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::cout << "Merging:\n";
     size_t merged = 0;
     while (hits.size() > 0) {
-        if (idMappings[hits[0].queryId] == idMappings[hits[0].targetId]) 
+        if (idMappings[hits[0].queryId] == idMappings[hits[0].targetId])  {
+            hits.pop_front();
             continue;
+        }
 
         unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
         unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
@@ -915,9 +946,6 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         msa_3di[targetId] = "";
         assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
         
-        // std::cout << msa_aa[mergedId];
-        // std::cout << msa_3di[mergedId];
-
         std::string profile_aa = fastamsa2profile(msa_aa[mergedId], calculator_aa, filter_aa, subMat_aa, maxSeqLength,
                                                   sequenceCnt + 1, par.matchRatio, par.filterMsa,
                                                   par.compBiasCorrection,
@@ -975,105 +1003,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
                 par.compBiasCorrection,
                 par.compBiasCorrectionScale
             );
-            delete allSeqs_aa[mergedId];
-            delete allSeqs_3di[mergedId];
-            allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
-            allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
-        }
-
-        allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
-        allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
-        alreadyMerged[targetId] = true;
-        merged++;
-        
-        if (par.guideTree == "" && par.recomputeScores) {
-            hits = updateAllScores(
-                tinySubMatAA,
-                tinySubMat3Di,
-                &subMat_aa,
-                allSeqs_aa,
-                allSeqs_3di,
-                alreadyMerged,
-                par.maxSeqLen,
-                subMat_3di.alphabetSize,
-                par.compBiasCorrection,
-                par.compBiasCorrectionScale
-            );
-            delete allSeqs_aa[mergedId];
-            delete allSeqs_3di[mergedId];
-            allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
-            allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
-        }
-
-        allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
-        allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
-        alreadyMerged[targetId] = true;
-        merged++;
-        
-        if (par.guideTree == "" && par.recomputeScores) {
-            hits = updateAllScores(
-                tinySubMatAA,
-                tinySubMat3Di,
-                &subMat_aa,
-                allSeqs_aa,
-                allSeqs_3di,
-                alreadyMerged,
-                par.maxSeqLen,
-                subMat_3di.alphabetSize,
-                par.compBiasCorrection,
-                par.compBiasCorrectionScale
-            );
-            delete allSeqs_aa[mergedId];
-            delete allSeqs_3di[mergedId];
-            allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
-            allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
-        }
-
-        allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
-        allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
-        alreadyMerged[targetId] = true;
-        merged++;
-        
-        if (par.guideTree == "" && par.recomputeScores) {
-            hits = updateAllScores(
-                tinySubMatAA,
-                tinySubMat3Di,
-                &subMat_aa,
-                allSeqs_aa,
-                allSeqs_3di,
-                alreadyMerged,
-                par.maxSeqLen,
-                subMat_3di.alphabetSize,
-                par.compBiasCorrection,
-                par.compBiasCorrectionScale
-            );
             sortHitsByScore(hits);
         } else {
-            // If guide tree, just get rid of the top hit so we look at next pair next round
-            // Otherwise, we are just not recomputing - remove any hit causing a cycle
-            if (par.guideTree != "") {
-                hits.erase(hits.begin());
-            } else {
-                // TODO: UPGMA-like hit updating
-                //       merge A and B => AB. for hit A/B to every other sequence, combine scores and average
-                //  use mergedId and targetId
-                // 2x array[N], sorted by id
-                // once you remove A and B in both, order of remaining hits should be same
-                // then just iterate pairwise, make AlnSimple objects with new score = sum/2
-                // filter hits to remove any A/B as q/t, add new AlnSimple objects to end
-                // sort by score
-                bool averaging = false;
-                if (averaging) {
-                    // ...
-                }
-                // Is this functionally equivalent to just skipping hits on this condition
-                // at the start of the while loop?
-                hits.erase(std::remove_if(
-                    hits.begin(),
-                    hits.end(),
-                    [&](AlnSimple hit){ return idMappings[hit.queryId] == idMappings[hit.targetId]; }
-                ), hits.end());
-            }
+            hits.pop_front();
         }
     }
     
