@@ -148,6 +148,7 @@ LocalParameters::LocalParameters() :
     samplemulambda.push_back(&PARAM_V);
     
     // structuremsa
+    structuremsa.push_back(&PARAM_WG);
     structuremsa.push_back(&PARAM_MATCH_RATIO);
     structuremsa.push_back(&PARAM_FILTER_MSA);
     structuremsa.push_back(&PARAM_FILTER_NDIFF);

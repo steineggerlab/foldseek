@@ -25,7 +25,6 @@
 #include <iostream>
 #include <regex>
 #include <stack>
-#include <deque>
 
 #include "kseq.h"
 #include "KSeqBufferReader.h"
@@ -45,6 +44,146 @@ struct AlnSimple {
     unsigned int targetId;
     int score;
 };
+
+struct TNode {
+    int id;
+    int dbId;
+    std::string name;
+    float length;
+    std::vector<TNode *> children;
+    TNode *parent;
+};
+
+void printTree(TNode *node, int depth) {
+    std::string gap(depth * 2, ' ');
+    std::cout << gap << node->id;
+    if (node->name != "") {
+        std::cout << "=" << node->name;
+        std::cout << " (parent " << node->parent->id << ", length " << node->length;
+        if (node->dbId != -1) {
+            std::cout << ", dbId " << node->dbId;
+        }
+        std::cout << ")";
+    }
+    std::cout << '\n';
+    for (size_t i = 0; i < node->children.size(); i++) {
+        TNode *child = node->children[i];
+        printTree(child, depth + 1);
+    }
+}
+
+/**
+ * @brief Post-order traversal of a parsed Tree.
+ * Generates the merging order for structuremsa
+ * 
+ * @param node Pointer to root TNode of the tree
+ */
+void postOrder(TNode *node, std::vector<int> *linkage) {
+    for (TNode *child : node->children) {
+        postOrder(child, linkage);
+    }
+    if (node->children.size() > 0) {
+        for (TNode *child : node->children) {
+            linkage->push_back(child->dbId);
+
+            // Propagate child dbId from leaf to root, so we
+            // always have a reference during alignment stage
+            node->dbId = child->dbId;
+        }
+    }
+}
+
+std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int> &headers) {
+    // Should know this from number of structures in database
+    int total = std::count(newick.begin(), newick.end(), '(');
+
+    // Tokenize tree on ; | ( ) , :
+    // Use {-1, 0} on sregex_token_iterator to get matches AND inbetween (i.e. names)
+    std::regex pattern("\\s*(;|\\(|\\)|,|:)\\s*");
+    auto words_begin = std::sregex_token_iterator(newick.begin(), newick.end(), pattern, {-1, 0});
+    auto words_end = std::sregex_token_iterator();
+    
+    // Initialise TNode array (2n+1 but a +1 for the root)
+    TNode nodes[total * 2 + 2];
+    std::vector<TNode *> parents;
+    TNode *tree;
+    TNode *subtree;
+    
+    // Initialise the root node (the +1)
+    TNode root;
+    root.id = 0;
+    nodes[0] = root;
+    tree = &nodes[0];
+    
+    int count = 1;
+    std::string prevToken;
+    
+    for (std::sregex_token_iterator i = words_begin; i != words_end; ++i) {
+        std::string match_str = *i;
+
+        if (match_str == "(") {
+            // add new node, set it as new subtree
+            TNode newNode;
+            newNode.id = count;
+            newNode.dbId = -1;
+            newNode.length = 1;
+            nodes[count] = newNode;
+            subtree = &nodes[count];
+            count++;
+            
+            // add it as child to current tree
+            tree->children.push_back(subtree);
+            subtree->parent = tree;
+            
+            // add the tree as parent, set subtree as tree
+            parents.push_back(tree);
+            tree = subtree;
+        } else if (match_str == ",") {
+            TNode newNode;
+            newNode.id = count;
+            newNode.dbId = -1;
+            newNode.length = 1;
+            nodes[count] = newNode;
+            subtree = &nodes[count];
+            count++;
+            parents.back()->children.push_back(subtree);
+            subtree->parent = parents.back();
+            tree = subtree;
+        } else if (match_str == ")") {
+            tree = parents[parents.size() - 1];
+            parents.pop_back();
+        } else if (match_str == ":") {
+            // Don't do anything here, just catch it in case there are
+            // branch lengths to set in else
+        } else {
+            if (match_str != "" && (prevToken == ")" || prevToken == "(" || prevToken == ",")) {
+                tree->name = match_str;
+                tree->dbId = headers[match_str];
+            } else if (prevToken == ":") {
+                tree->length = std::stof(match_str);
+            }
+        }
+        prevToken = match_str;
+    }
+   
+    // printTree(tree, 0);
+    
+    // Get (flat) linkage matrix, 2(2n+1)
+    // node 1, node 2
+    // NOTE: postOrder will trip up when no. children != 2
+    //       will get duplicate rows which cause errors
+    std::vector<int> linkage;
+    std::vector<AlnSimple> hits;
+    postOrder(tree, &linkage);
+    for (size_t i = 0; i < linkage.size(); i += 2) {
+        AlnSimple hit;
+        hit.queryId = linkage[i + 0];
+        hit.targetId = linkage[i + 1];
+        hits.push_back(hit);
+    }
+
+    return hits;
+}
 
 Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned int querySeqLen,  Sequence *target_aa, Sequence *target_3di, int gapOpen,
                   int gapExtend) {
@@ -101,7 +240,7 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
     );
 }
 
-void sortHitsByScore(std::deque<AlnSimple> &hits) {
+void sortHitsByScore(std::vector<AlnSimple> &hits) {
     std::stable_sort(hits.begin(), hits.end(), [](const AlnSimple & a, const AlnSimple & b) {
         return a.score > b.score;
     });
@@ -123,7 +262,7 @@ inline int get1dIndex(int i, int j, int N) {
     return j + i * (2 * N - i - 1) / 2 - i - 1;
 }
 
-std::deque<AlnSimple> updateAllScores(
+std::vector<AlnSimple> updateAllScores(
     int8_t * tinySubMatAA,
     int8_t * tinySubMat3Di,
     SubstitutionMatrix * subMat_aa,
@@ -136,7 +275,7 @@ std::deque<AlnSimple> updateAllScores(
     int compBiasCorrectionScale
 ) {
     unsigned int N = allSeqs_aa.size();
-    std::deque<AlnSimple> newHits((N * N - N) / 2);
+    std::vector<AlnSimple> newHits((N * N - N) / 2);
 #pragma omp parallel
 {
     StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale);
@@ -172,6 +311,144 @@ std::deque<AlnSimple> updateAllScores(
 }
     return newHits;
 }
+
+int findRoot(int vertex, std::vector<int>& parent) {
+    while (parent[vertex] != vertex) {
+        parent[vertex] = parent[parent[vertex]];
+        vertex = parent[vertex];
+    }
+    return vertex;
+}
+
+TNode* findRoot(TNode *node) {
+    TNode* root = node;
+    while (root->id != root->parent->id)
+        root = root->parent;
+    return root;
+}
+
+std::string getNewick(TNode* node) {
+    if (node->children.empty()) {
+        return node->name;
+    } else {
+        std::string s = "(";
+        for (size_t i = 0; i < node->children.size(); i++) {
+            if (i > 0)
+                s += ",";
+            s += getNewick(node->children[i]);
+        }
+        s += ")";
+        return s;
+    }
+}
+
+/**
+ * @brief Generates a Newick format string from a linkage matrix.
+ * 
+ * @param hits linkage matrix
+ * @param headers structure headers
+ * @param n number of structures
+ * @return std::string 
+ */
+std::string orderToTree(std::vector<AlnSimple> hits, std::string *headers, int n) {
+    std::string nwk = "";
+    int totalNodes = n * 2 + 2;
+    TNode nodes[totalNodes];
+    TNode *root = &nodes[0];
+    for (int i = 0; i < totalNodes; i++) {
+        nodes[i].id = i;
+        nodes[i].parent = &nodes[i];
+        if (i < n) {
+            nodes[i].name = headers[i];
+        }
+    }
+    int newId = n + 1;
+    for (AlnSimple aln : hits) {
+        TNode *u = findRoot(&nodes[aln.queryId]);
+        TNode *v = findRoot(&nodes[aln.targetId]);
+        TNode *newNode = &nodes[newId];
+        newNode->id = newId;
+        newNode->length = aln.score;
+        newNode->children.push_back(u);            
+        newNode->children.push_back(v);            
+        u->parent = newNode;
+        v->parent = newNode;
+        newId++;
+        root = newNode;
+    }
+    // printTree(root, 0);
+    return getNewick(root);
+}
+
+/**
+ * @brief Get minimum spanning tree as linkage matrix (Kruskal algorithm).
+ * 
+ * @param hits all hits from UpdateAllScores
+ * @param n number of structures
+ * @return std::vector<AlnSimple> 
+ */
+std::vector<AlnSimple> mst(std::vector<AlnSimple> hits, int n) {
+    std::vector<AlnSimple> result;
+    std::vector<int> parent(n);  // parent node IDs
+    std::vector<int> counts(n);  // how many times we have seen this id
+    for (int i = 0; i < n; i++)
+        parent[i] = i;
+    for (AlnSimple aln : hits) {
+        int u = findRoot(aln.queryId, parent);
+        int v = findRoot(aln.targetId, parent);
+        if (u != v) {
+            result.push_back(aln);
+            parent[u] = v;
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief Reorder linkage matrix to maximize unique merges per iteration for multithreading.
+ * 
+ * @param linkage linkage matrix generated by `mst`
+ * @param merges number of unique merges per iteration
+ * @param n number of structures
+ * @return std::vector<AlnSimple> 
+ */
+std::vector<AlnSimple> reorderLinkage(std::vector<AlnSimple> linkage, std::vector<int> &merges, int n) {
+    std::vector<int> parent(n); 
+    std::vector<int> counts(n);
+    for (int i = 0; i < n; i++) {
+        parent[i] = i;
+        counts[i] = 0;
+    }
+    std::vector<AlnSimple> result(linkage.size());
+    std::vector<bool> merged(linkage.size());
+    int index = 0;
+    int mergeCount = 0; // no. total merges
+    int mergeTally = 0; // count per round
+    while (mergeCount < (int)linkage.size()) {
+        for (int i = 0; i < n; i++)
+            counts[i] = 0;
+        for (size_t i = 0; i < linkage.size(); i++) {
+            if (merged[i])
+                continue;
+            AlnSimple aln = linkage[i];
+            int u = findRoot(aln.queryId, parent);
+            int v = findRoot(aln.targetId, parent);
+            if (counts[u] > 0 || counts[v] > 0)
+                continue;
+            result[index++] = aln;
+            parent[u] = v;
+            merged[i] = true;
+            counts[u]++;
+            counts[v]++;
+            mergeTally++;
+        }
+        merges.push_back(mergeTally);
+        mergeCount += mergeTally;
+        mergeTally = 0;
+    }
+    return result;
+}
+
 
 std::string fastamsa2profile(std::string & msa, PSSMCalculator &pssmCalculator, MsaFilter &filter, SubstitutionMatrix &subMat, size_t maxSeqLength, size_t maxSetSize,
                              float matchRatio, bool filterMsa, bool compBiasCorrection, std::string & qid, float filterMaxSeqId, float Ndiff, float covMSAThr,
@@ -586,147 +863,6 @@ std::string mergeTwoMsa(
     return msa;
 }
 
-struct TNode {
-    int id;
-    int dbId;
-    std::string name;
-    float length;
-    std::vector<TNode *> children;
-    TNode *parent;
-};
-
-void printTree(TNode *node, int depth) {
-    std::string gap(depth * 2, ' ');
-    std::cout << gap << node->id;
-    if (node->name != "") {
-        std::cout << "=" << node->name;
-        std::cout << " (parent " << node->parent->id << ", length " << node->length;
-        if (node->dbId != -1) {
-            std::cout << ", dbId " << node->dbId;
-        }
-        std::cout << ")";
-    }
-    std::cout << '\n';
-    for (size_t i = 0; i < node->children.size(); i++) {
-        TNode *child = node->children[i];
-        printTree(child, depth + 1);
-    }
-}
-
-/**
- * @brief Post-order traversal of a parsed Tree.
- * Generates the merging order for structuremsa
- * 
- * @param node Pointer to root TNode of the tree
- */
-void postOrder(TNode *node, std::vector<int> *linkage) {
-    for (TNode *child : node->children) {
-        postOrder(child, linkage);
-    }
-    if (node->children.size() > 0) {
-        for (TNode *child : node->children) {
-            linkage->push_back(child->dbId);
-
-            // Propagate child dbId from leaf to root, so we
-            // always have a reference during alignment stage
-            node->dbId = child->dbId;
-        }
-    }
-}
-
-std::deque<AlnSimple> parseNewick(std::string newick, std::map<std::string, int> &headers) {
-    // Should know this from number of structures in database
-    int total = std::count(newick.begin(), newick.end(), '(');
-
-    // Tokenize tree on ; | ( ) , :
-    // Use {-1, 0} on sregex_token_iterator to get matches AND inbetween (i.e. names)
-    std::regex pattern("\\s*(;|\\(|\\)|,|:)\\s*");
-    auto words_begin = std::sregex_token_iterator(newick.begin(), newick.end(), pattern, {-1, 0});
-    auto words_end = std::sregex_token_iterator();
-    
-    // Initialise TNode array (2n+1 but a +1 for the root)
-    TNode nodes[total * 2 + 2];
-    std::vector<TNode *> parents;
-    TNode *tree;
-    TNode *subtree;
-    
-    // Initialise the root node (the +1)
-    TNode root;
-    root.id = 0;
-    nodes[0] = root;
-    tree = &nodes[0];
-    
-    int count = 1;
-    std::string prevToken;
-    
-    for (std::sregex_token_iterator i = words_begin; i != words_end; ++i) {
-        std::string match_str = *i;
-
-        if (match_str == "(") {
-            // add new node, set it as new subtree
-            TNode newNode;
-            newNode.id = count;
-            newNode.dbId = -1;
-            newNode.length = 1;
-            nodes[count] = newNode;
-            subtree = &nodes[count];
-            count++;
-            
-            // add it as child to current tree
-            tree->children.push_back(subtree);
-            subtree->parent = tree;
-            
-            // add the tree as parent, set subtree as tree
-            parents.push_back(tree);
-            tree = subtree;
-        } else if (match_str == ",") {
-            TNode newNode;
-            newNode.id = count;
-            newNode.dbId = -1;
-            newNode.length = 1;
-            nodes[count] = newNode;
-            subtree = &nodes[count];
-            count++;
-            parents.back()->children.push_back(subtree);
-            subtree->parent = parents.back();
-            tree = subtree;
-        } else if (match_str == ")") {
-            tree = parents[parents.size() - 1];
-            parents.pop_back();
-        } else if (match_str == ":") {
-            // Don't do anything here, just catch it in case there are
-            // branch lengths to set in else
-        } else {
-            if (match_str != "" && (prevToken == ")" || prevToken == "(" || prevToken == ",")) {
-                tree->name = match_str;
-                tree->dbId = headers[match_str];
-            } else if (prevToken == ":") {
-                tree->length = std::stof(match_str);
-            }
-        }
-        prevToken = match_str;
-    }
-   
-    // printTree(tree, 0);
-    
-    // Get (flat) linkage matrix, 2(2n+1)
-    // node 1, node 2
-    // NOTE: postOrder will trip up when no. children != 2
-    //       will get duplicate rows which cause errors
-    std::vector<int> linkage;
-    std::deque<AlnSimple> hits;
-    postOrder(tree, &linkage);
-    for (size_t i = 0; i < linkage.size(); i += 2) {
-        AlnSimple hit;
-        hit.queryId = linkage[i + 0];
-        hit.targetId = linkage[i + 1];
-        hits.push_back(hit);
-    }
-
-    return hits;
-}
-
-
 int structuremsa(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
 
@@ -764,11 +900,11 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     int sequenceCnt = seqDbrAA.getSize();
     std::vector<Sequence*> allSeqs_aa(sequenceCnt);
     std::vector<Sequence*> allSeqs_3di(sequenceCnt);
-    std::vector<std::string> msa_aa(sequenceCnt);
-    std::vector<std::string> msa_3di(sequenceCnt);
-    std::vector<std::string> mappings(sequenceCnt);
-    std::vector<int> idMappings(sequenceCnt);
-    std::vector<std::string> headers(sequenceCnt);
+    std::string msa_aa[sequenceCnt];
+    std::string msa_3di[sequenceCnt];
+    std::string headers[sequenceCnt];
+    std::string mappings[sequenceCnt];
+    int idMappings[sequenceCnt];
     std::map<std::string, int> headers_rev;
 
     int maxSeqLength = 0;
@@ -798,41 +934,23 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     
     // TODO: dynamically calculate and re-init PSSMCalculator/MsaFilter each iteration
     maxSeqLength = par.maxSeqLen;
-    
     std::cout << "Initialised MSAs, Sequence objects" << std::endl;
 
-    // Setup objects needed for profile calculation
-    PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
-    MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-   
-    PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
-    MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-    
-    // Add aligner
-    StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat_3di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
-    
-    std::cout << "Initialised PSSMCalculators, MsaFilters, SW aligner" << std::endl;
-
     // Substitution matrices needed for query profile
-    int8_t * tinySubMatAA = (int8_t*) mem_align(ALIGN_INT, subMat_aa.alphabetSize * 32);
-    int8_t * tinySubMat3Di = (int8_t*) mem_align(ALIGN_INT, subMat_3di.alphabetSize * 32);
-    for (int i = 0; i < subMat_3di.alphabetSize; i++) {
-        for (int j = 0; j < subMat_3di.alphabetSize; j++) {
+    int8_t *tinySubMatAA  = (int8_t*) mem_align(ALIGN_INT, subMat_aa.alphabetSize * 32);
+    int8_t *tinySubMat3Di = (int8_t*) mem_align(ALIGN_INT, subMat_3di.alphabetSize * 32);
+    for (int i = 0; i < subMat_3di.alphabetSize; i++)
+        for (int j = 0; j < subMat_3di.alphabetSize; j++)
             tinySubMat3Di[i * subMat_3di.alphabetSize + j] = subMat_3di.subMatrix[i][j]; // for farrar profile
-        }
-    }
-    for (int i = 0; i < subMat_aa.alphabetSize; i++) {
-        for (int j = 0; j < subMat_aa.alphabetSize; j++) {
+    for (int i = 0; i < subMat_aa.alphabetSize; i++)
+        for (int j = 0; j < subMat_aa.alphabetSize; j++)
             tinySubMatAA[i * subMat_aa.alphabetSize + j] = subMat_aa.subMatrix[i][j];
-        }
-    }
-
     std::cout << "Set up tiny substitution matrices" << std::endl;
 
     bool * alreadyMerged = new bool[sequenceCnt];
     memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
     
-    std::deque<AlnSimple> hits;
+    std::vector<AlnSimple> hits;
     if (par.guideTree != "") {
         std::cout << "Loading guide tree: " << par.guideTree << "\n"; 
         std::string tree;
@@ -847,7 +965,6 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         if (par.regressive)
             std::reverse(hits.begin(), hits.end());
     } else {
-        // Initial alignments
         hits = updateAllScores(
             tinySubMatAA,
             tinySubMat3Di,
@@ -861,172 +978,178 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             par.compBiasCorrectionScale
         );
         sortHitsByScore(hits);
-        std::cout << "Performed initial all vs all alignments" << std::endl;
+        std::cout << "Performed initial all vs all alignments\n";
+        
+        hits = mst(hits, sequenceCnt);
+        std::cout << "Generated guide tree\n";
     }
 
-    // Initialise Newick tree nodes
-    std::vector<std::string> treeNodes(sequenceCnt);
-    for (int i = 0; i < sequenceCnt; ++i)
-        treeNodes[i] = std::to_string(i);
+    std::vector<int> merges;
+
+    std::cout << "Optimising merge order\n";
+    hits = reorderLinkage(hits, merges, sequenceCnt);
+    
+    int idx = 0;
+    for (size_t i = 0; i < merges.size(); i++) {
+        std::cout << "Merging " << merges[i] << " sequences\n";
+        for (size_t j = 0; j < merges[i]; j++) {
+            std::cout << "  " << hits[idx + j].queryId << "\t" << hits[idx + j].targetId << '\n';
+        }
+        idx += merges[i];
+    }
+
+    std::string nw = orderToTree(hits, headers, sequenceCnt);
+    std::cout << "Tree: " << nw << ";\n";
 
     std::cout << "Merging:\n";
     size_t merged = 0;
-    while (hits.size() > 0) {
-        if (idMappings[hits[0].queryId] == idMappings[hits[0].targetId])  {
-            hits.pop_front();
-            continue;
-        }
 
-        unsigned int mergedId = std::min(hits[0].queryId, hits[0].targetId);
-        unsigned int targetId = std::max(hits[0].queryId, hits[0].targetId);
-        mergedId = idMappings[mergedId];
-        targetId = idMappings[targetId];
-        bool queryIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
-        bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[targetId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
-        
-        // Always merge onto sequence with most information
-        if (targetIsProfile && !queryIsProfile) {
-            std::swap(mergedId, targetId);
-        } else if (targetIsProfile && queryIsProfile) {
-            float q_neff_sum = 0.0;
-            float t_neff_sum = 0.0;
-            for (int i = 0; i < allSeqs_3di[mergedId]->L; i++)
-                q_neff_sum += allSeqs_3di[mergedId]->neffM[i];
-            for (int i = 0; i < allSeqs_3di[targetId]->L; i++)
-                t_neff_sum += allSeqs_3di[targetId]->neffM[i];
-            if (q_neff_sum <= t_neff_sum)
+#pragma omp parallel
+{
+    // Initialise alignment objects per thread
+    StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat_3di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
+    PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+    MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
+    PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+    MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid()); 
+
+    int index = 0; // in hit list
+    for (size_t i = 0; i < merges.size(); i++) {
+
+#pragma omp for schedule(dynamic, 1)
+        for (int j = 0; j < merges[i]; j++) {
+            unsigned int mergedId = std::min(hits[index + j].queryId, hits[index + j].targetId);
+            unsigned int targetId = std::max(hits[index + j].queryId, hits[index + j].targetId);
+            mergedId = idMappings[mergedId];
+            targetId = idMappings[targetId];
+            bool queryIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+            bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[targetId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+ 
+            // Always merge onto sequence with most information
+            if (targetIsProfile && !queryIsProfile) {
                 std::swap(mergedId, targetId);
-        }
-        
-        assert(mergedId != targetId);
-        
-        // Make sure all relevant ids are updated
-        idMappings[targetId] = mergedId;
-        idMappings[mergedId] = mergedId;
-        idMappings[hits[0].queryId] = mergedId;
-        idMappings[hits[0].targetId] = mergedId;
+            } else if (targetIsProfile && queryIsProfile) {
+                float q_neff_sum = 0.0;
+                float t_neff_sum = 0.0;
+                for (int i = 0; i < allSeqs_3di[mergedId]->L; i++)
+                    q_neff_sum += allSeqs_3di[mergedId]->neffM[i];
+                for (int i = 0; i < allSeqs_3di[targetId]->L; i++)
+                    t_neff_sum += allSeqs_3di[targetId]->neffM[i];
+                if (q_neff_sum <= t_neff_sum)
+                    std::swap(mergedId, targetId);
+            }
+ 
+            assert(mergedId != targetId);
 
-        std::cout << "  Q=" << mergedId << ", T=" << targetId << "\n";
-        
-        for (int i = 0; i < sequenceCnt; i++) {
-            if (idMappings[i] == (int)targetId)
-                idMappings[i] = mergedId;
-        }
-        
-        // Extend tree
-        // TODO: make this optional ?
-        // e.g. mergedId = 21, targetId = (3,6) --> (21,(3,6))
-        if (treeNodes[mergedId] == std::to_string(mergedId))
-            treeNodes[mergedId] = headers[mergedId];
-        if (treeNodes[targetId] == std::to_string(targetId))
-            treeNodes[targetId] = headers[targetId];
-        treeNodes[mergedId] = "(" + treeNodes[mergedId];
-        if (treeNodes[targetId] != "") {
-            treeNodes[mergedId] += "," + treeNodes[targetId];   
-        }
-        treeNodes[mergedId] += ")";
-        treeNodes[targetId] = "";
-        
-        structureSmithWaterman.ssw_init(allSeqs_aa[mergedId], allSeqs_3di[mergedId], tinySubMatAA, tinySubMat3Di, &subMat_aa);
-        
-        Matcher::result_t res = pairwiseAlignment(structureSmithWaterman, allSeqs_aa[mergedId]->L, allSeqs_aa[targetId],
-                                                  allSeqs_3di[targetId], par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
+            // Make sure all relevant ids are updated
+            for (int k = 0; k < sequenceCnt; k++) {
+                if (idMappings[k] == (int)targetId || idMappings[k] == (int)mergedId)
+                    idMappings[k] = mergedId;
+            }
 
-        // Convert 010101 mask to [ 0, 2, 4 ] index mapping
-        std::vector<int> map1 = maskToMapping(mappings[mergedId], res.qLen);
-        std::vector<int> map2 = maskToMapping(mappings[targetId], res.dbLen);
-
-        // Save new MSAs and remove targetId MSAs
-        std::vector<Instruction> qBt;
-        std::vector<Instruction> tBt;
-        getMergeInstructions(res, map1, map2, qBt, tBt);
-        msa_aa[mergedId] = mergeTwoMsa(msa_aa[mergedId], msa_aa[targetId], res, map1, map2, qBt, tBt);
-        msa_aa[targetId] = "";
-        msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2, qBt, tBt);
-        msa_3di[targetId] = "";
-        assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
-        
-        std::string profile_aa = fastamsa2profile(msa_aa[mergedId], calculator_aa, filter_aa, subMat_aa, maxSeqLength,
-                                                  sequenceCnt + 1, par.matchRatio, par.filterMsa,
-                                                  par.compBiasCorrection,
-                                                  par.qid, par.filterMaxSeqId, par.Ndiff, 0,
-                                                  par.qsc,
-                                                  par.filterMinEnable, par.wg, NULL, par.scoreBiasAa);
-       
-        // Mapping is stored at the end of the profile (to \n), so save to mappings[]
-        // Iterate backwards until newline to recover the full mask
-        std::string mask;
-        for (size_t i = profile_aa.length() - 1; profile_aa[i] != '\n'; i--)
-            mask.push_back(profile_aa[i]);
-        std::reverse(mask.begin(), mask.end());
-        mappings[mergedId] = mask;
-        
-        // Remove mask from the profile itself, -1 for \n
-        profile_aa.erase(profile_aa.length() - mappings[mergedId].length() - 1);
-        
-        // Convert back to bool array to pass to 3di fastamsa2profile
-        bool *maskBool = new bool[mask.length()];
-        for (size_t i = 0; i < mask.length(); ++i)
-            maskBool[i] = (mask[i] == '1') ? true : false;
-        
-        std::string profile_3di = fastamsa2profile(msa_3di[mergedId], calculator_3di, filter_3di, subMat_3di, maxSeqLength,
-                                                   sequenceCnt + 1, par.matchRatio, par.filterMsa,
-                                                   par.compBiasCorrection,
-                                                   par.qid, par.filterMaxSeqId, par.Ndiff, par.covMSAThr,
-                                                   par.qsc,
-                                                   par.filterMinEnable, par.wg, maskBool, par.scoreBias3di);
-        delete[] maskBool; 
-        assert(profile_aa.length() == profile_3di.length());
-        
-        if (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_AMINO_ACIDS)) {
-            delete allSeqs_aa[mergedId];
-            delete allSeqs_3di[mergedId];
-            allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
-            allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
-        }
-
-        allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
-        allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
-        alreadyMerged[targetId] = true;
-        merged++;
-        
-        if (par.guideTree == "" && par.recomputeScores) {
-            hits = updateAllScores(
+            structureSmithWaterman.ssw_init(
+                allSeqs_aa[mergedId],
+                allSeqs_3di[mergedId],
                 tinySubMatAA,
                 tinySubMat3Di,
-                &subMat_aa,
-                allSeqs_aa,
-                allSeqs_3di,
-                alreadyMerged,
-                par.maxSeqLen,
-                subMat_3di.alphabetSize,
-                par.compBiasCorrection,
-                par.compBiasCorrectionScale
+                &subMat_aa
             );
-            sortHitsByScore(hits);
-        } else {
-            hits.pop_front();
+            Matcher::result_t res = pairwiseAlignment(
+                structureSmithWaterman,
+                allSeqs_aa[mergedId]->L,
+                allSeqs_aa[targetId],
+                allSeqs_3di[targetId],
+                par.gapOpen.values.aminoacid(),
+                par.gapExtend.values.aminoacid()
+            );
+            
+            // Convert 010101 mask to [ 0, 2, 4 ] index mapping
+            std::vector<int> map1 = maskToMapping(mappings[mergedId], res.qLen);
+            std::vector<int> map2 = maskToMapping(mappings[targetId], res.dbLen);
+            
+            // Save new MSAs and remove targetId MSAs
+            std::vector<Instruction> qBt;
+            std::vector<Instruction> tBt;
+            getMergeInstructions(res, map1, map2, qBt, tBt);
+            msa_aa[mergedId] = mergeTwoMsa(msa_aa[mergedId], msa_aa[targetId], res, map1, map2, qBt, tBt);
+            msa_aa[targetId] = "";
+            msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2, qBt, tBt);
+            msa_3di[targetId] = "";
+            assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
+
+            std::string profile_aa = fastamsa2profile(
+                msa_aa[mergedId], calculator_aa, filter_aa, subMat_aa, maxSeqLength,
+                sequenceCnt + 1, par.matchRatio, par.filterMsa,
+                par.compBiasCorrection,
+                par.qid, par.filterMaxSeqId, par.Ndiff, 0,
+                par.qsc, par.filterMinEnable, par.wg, NULL, par.scoreBiasAa
+            );
+            // Mapping is stored at the end of the profile (to \n), so save to mappings[]
+            // Iterate backwards until newline to recover the full mask
+            std::string mask;
+            for (size_t k = profile_aa.length() - 1; profile_aa[k] != '\n'; k--)
+                mask.push_back(profile_aa[k]);
+            std::reverse(mask.begin(), mask.end());
+            mappings[mergedId] = mask;
+            
+            // Remove mask from the profile itself, -1 for \n
+            profile_aa.erase(profile_aa.length() - mappings[mergedId].length() - 1);
+            
+            // Convert back to bool array to pass to 3di fastamsa2profile
+            bool *maskBool = new bool[mask.length()];
+            for (size_t k = 0; k < mask.length(); ++k)
+                maskBool[k] = (mask[k] == '1') ? true : false;
+            
+            std::string profile_3di = fastamsa2profile(
+                msa_3di[mergedId], calculator_3di, filter_3di, subMat_3di, maxSeqLength,
+                sequenceCnt + 1, par.matchRatio, par.filterMsa,
+                par.compBiasCorrection,
+                par.qid, par.filterMaxSeqId, par.Ndiff, par.covMSAThr,
+                par.qsc,
+                par.filterMinEnable, par.wg, maskBool, par.scoreBias3di
+            );
+            delete[] maskBool; 
+            assert(profile_aa.length() == profile_3di.length());
+            
+            if (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_AMINO_ACIDS)) {
+                delete allSeqs_aa[mergedId];
+                delete allSeqs_3di[mergedId];
+                allSeqs_aa[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
+                allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
+            }
+
+            allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
+            allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
+            alreadyMerged[targetId] = true;
         }
+        index += merges[i];
+        merged += merges[i];
     }
-    
+}
+    // Cleanup
+    seqDbrAA.close();
+    seqDbr3Di.close();
+    delete[] alreadyMerged;
+    delete [] tinySubMatAA;
+    delete [] tinySubMat3Di;
+    for(size_t i = 0; i < allSeqs_aa.size(); i++){
+        delete allSeqs_aa[i];
+        delete allSeqs_3di[i];
+    }
+
     // Find the final MSA (only non-empty string left in msa vectors)
     int msaCnt = 0;
     std::string finalMSA;
-    std::string finalTree;
-    for (size_t i = 0; i < msa_aa.size(); ++i) {
+    for (int i = 0; i < sequenceCnt; ++i) {
         if (msa_aa[i] != "" && msa_3di[i] != "") {
-            finalMSA = msa_aa[i]; // + "\n\n" + msa_3di[i];
-            finalTree = treeNodes[i];
+            finalMSA = msa_aa[i];
             ++msaCnt;
             continue;
         }
     }
+    // std::cout << finalMSA << '\n';
     assert(msaCnt == 1);
     assert(finalMSA != "");
-    assert(finalTree != "");
-    
-    std::cout << "Tree: " << finalTree << std::endl;
-    // FIXME: includes info other than just id as well
 
     // Write final MSA to file with correct headers
     DBWriter resultWriter(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
@@ -1051,16 +1174,5 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     resultWriter.close(true);
     FileUtil::remove(par.db2Index.c_str());
    
-    // Cleanup
-    seqDbrAA.close();
-    seqDbr3Di.close();
-    delete[] alreadyMerged;
-    delete [] tinySubMatAA;
-    delete [] tinySubMat3Di;
-    for(size_t i = 0; i < allSeqs_aa.size(); i++){
-        delete allSeqs_aa[i];
-        delete allSeqs_3di[i];
-    }
-    
     return EXIT_SUCCESS;
 }
