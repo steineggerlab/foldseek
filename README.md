@@ -7,6 +7,12 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 
 [van Kempen M, Kim S, Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398  (2022)](https://www.biorxiv.org/content/10.1101/2022.02.07.479398)
 
+## Tutorial Video
+We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
+Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
+
+<a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
+
 ## Webserver 
 Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
 
@@ -186,12 +192,6 @@ foldseek search queryDB targetDB aln tmpFolder -a
 foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
 foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
-
-## Tutorial Video
-We presented a Foldseek tutorial at SBGrid where we demonstrate the webserver and command line interface of foldseek. 
-Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
-
-<a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
 
 ### Compile from source
 Compiling `foldseek` from source has the advantage of system-specific optimizations, which should improve its performance. To compile it `git`, `g++` (4.9 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the foldseek binary will be located in the `build/bin` directory.
