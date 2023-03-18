@@ -70,6 +70,8 @@ tsetid      Numeric identifier for target filename
 qca         Calpha corrdinates of the query
 tca         Calpha corrdinates of the target
 alntmscore  TM-score of the alignment 
+qtmscore    TM-score normalized by the query length
+ttmscore    TM-score normalized by the target length
 u           Rotation matrix (computed to by TM-score)
 t           Translation vector (computed to by TM-score)
 lddt        Average LDDT of the alignment    
