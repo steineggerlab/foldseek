@@ -305,7 +305,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                                                   res.dbLen,
                                                                   res.qStartPos,
                                                                   res.dbStartPos,
-                                                                          res.backtrace);
+                                                                  res.backtrace,
+                                                                  std::min(static_cast<unsigned int>(res.backtrace.size()), std::min(res.dbLen, res.qLen)));
                                 if (tmres.tmscore < par.tmScoreThr) {
                                     continue;
                                 }
