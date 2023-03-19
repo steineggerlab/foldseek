@@ -306,11 +306,8 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
         int32_t db_length,
         const uint8_t gap_open,
         const uint8_t gap_extend,
-        const uint8_t alignmentMode,	//  (from high to low) bit 5: return the best alignment beginning position; 6: if (ref_end1 - ref_begin1 <= filterd) && (read_end1 - read_begin1 <= filterd), return cigar; 7: if max score >= filters, return cigar; 8: always return cigar; if 6 & 7 are both setted, only return cigar when both filter fulfilled
         std::string & backtrace,
-        StructureSmithWaterman::s_align r,
-        const int covMode, const float covThr,
-        const int32_t maskLen) {
+        StructureSmithWaterman::s_align r) {
 #define MAX_SIZE 4096 //TODO
     size_t query_len = profile->query_length;
     size_t target_len = db_length;
@@ -395,7 +392,9 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
     // exponential search on min_size until either max_size is reached or target_score is reached
     while (min_size <= MAX_SIZE && res.score < target_score) {
         // allow max block size to grow
-        SizeRange range = {.min = min_size, .max = MAX_SIZE};
+        SizeRange range;
+        range.min = min_size;
+        range.max = MAX_SIZE;
         // estimated x-drop threshold
         int32_t x_drop = -(min_size * gaps.extend + gaps.open);
         block_align_3di_aa_trace_xdrop(block, query_aa, query_3di, query_bias, target_aa, target_3di, target_bias,
@@ -422,11 +421,10 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
     size_t cigar_len = block_len_cigar(cigar);
 
     // Note: 'M' signals either query_aa match or mismatch
-    char ops_char[] = {' ', 'M', '=', 'X', 'I', 'D'};
     uint32_t aaIds = 0;
     size_t queryPos = 0;
     size_t targetPos = 0;
-    for (int i = 0; i < cigar_len; i++) {
+    for (size_t i = 0; i < cigar_len; i++) {
         OpLen o = block_get_cigar(cigar, i);
         //printf("%lu%c", o.len, ops_char[o.op]);
         if(o.op == 1){

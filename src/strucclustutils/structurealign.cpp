@@ -83,7 +83,7 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
                                                                                                querySeqLen / 2);
     }else{
         align = structureSmithWaterman.alignStartPosBacktraceBlock(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
-                                                                   par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
+                                                                   par.gapExtend.values.aminoacid(), backtrace, align);
     }
 
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);

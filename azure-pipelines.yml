@@ -45,7 +45,7 @@ jobs:
       - script: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get update
-          sudo apt-get install -y g++-10
+          sudo apt-get install -y g++-10 rustc cargo
         condition: eq(variables['BUILD_TYPE'], 'ASanOpt')
         displayName: Install newer GCC
       - script: |
