@@ -24,8 +24,6 @@ include_directories(lib/pulchra)
 include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
-
-set(Rust_TOOLCHAIN nightly)
 add_subdirectory(lib/corrosion)
 if (X64)
         set(RUST_FEATURE simd_avx2)
