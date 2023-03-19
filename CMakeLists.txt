@@ -24,4 +24,20 @@ include_directories(lib/pulchra)
 include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
+
+set(Rust_TOOLCHAIN nightly)
+add_subdirectory(lib/corrosion)
+if (X64)
+        set(RUST_FEATURE simd_avx2)
+elseif (ARM)
+        set(RUST_FEATURE simd_neon)
+else()
+        message(FATAL_ERROR "No SIMD support for this architecture")
+endif()
+message("-- Rust Feature: ${RUST_FEATURE}")
+corrosion_import_crate(MANIFEST_PATH lib/block-aligner/Cargo.toml FEATURES ${RUST_FEATURE})
+corrosion_set_env_vars(block-aligner BLOCK_ALIGNER_C=1)
+include_directories(lib/block-aligner/c)
+
+
 add_subdirectory(src)

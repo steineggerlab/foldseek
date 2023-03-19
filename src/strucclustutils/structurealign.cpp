@@ -50,6 +50,13 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     if(hasLowerCoverage){
         return -1;
     }
+    // we can already stop if this e-value isn't good enough, it wont be any better in the next step
+    align.evalue = evaluer.computeEvalueCorr(align.score1, muLambda.first, muLambda.second);
+    bool hasLowerEvalue = align.evalue > par.evalThr;
+    if(hasLowerEvalue){
+        return -1;
+    }
+
     StructureSmithWaterman::s_align revAlign;
     if(structureSmithWaterman.isProfileSearch()){
         revAlign.score1 = 0;
@@ -60,13 +67,24 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     }
     int32_t score = static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1);
     align.evalue = evaluer.computeEvalueCorr(score, muLambda.first, muLambda.second);
-    bool hasLowerEvalue = align.evalue > par.evalThr;
+    hasLowerEvalue = align.evalue > par.evalThr;
     if (hasLowerEvalue) {
         return -1;
     }
-
-    align = structureSmithWaterman.alignStartPosBacktrace<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
-                                                          par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
+    if (structureSmithWaterman.isProfileSearch()) {
+        align = structureSmithWaterman.alignStartPosBacktrace<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence,
+                                                                                               tSeq3Di.numSequence,
+                                                                                               targetSeqLen,
+                                                                                               par.gapOpen.values.aminoacid(),
+                                                                                               par.gapExtend.values.aminoacid(),
+                                                                                               par.alignmentMode,
+                                                                                               backtrace, align,
+                                                                                               par.covMode, par.covThr,
+                                                                                               querySeqLen / 2);
+    }else{
+        align = structureSmithWaterman.alignStartPosBacktraceBlock(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+                                                                   par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
+    }
 
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
     if(backtrace.size() > 0){
@@ -207,8 +225,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
 #endif
         EvalueNeuralNet evaluer(tAADbr->sequenceReader->getAminoAcidDBSize(), &subMat3Di);
         std::vector<Matcher::result_t> alignmentResult;
-        StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
-        StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
+        StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMatAA, &subMat3Di);
+        StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMatAA, &subMat3Di);
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
