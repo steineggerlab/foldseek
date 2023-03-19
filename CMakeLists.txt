@@ -35,8 +35,7 @@ else()
         message(FATAL_ERROR "No SIMD support for this architecture")
 endif()
 message("-- Rust Feature: ${RUST_FEATURE}")
-corrosion_import_crate(MANIFEST_PATH lib/block-aligner/Cargo.toml FEATURES ${RUST_FEATURE})
-corrosion_set_env_vars(block-aligner BLOCK_ALIGNER_C=1)
+corrosion_import_crate(MANIFEST_PATH lib/block-aligner/c/Cargo.toml FEATURES "${RUST_FEATURE}")
 include_directories(lib/block-aligner/c)
 
 
