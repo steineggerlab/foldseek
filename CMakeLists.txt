@@ -25,6 +25,8 @@ include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
 add_subdirectory(lib/corrosion)
+message(STATUS "X64: ${X64}")
+message(STATUS "ARM: ${ARM}")
 if (X64)
         set(RUST_FEATURE simd_avx2)
 elseif (ARM)
