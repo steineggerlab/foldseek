@@ -129,6 +129,10 @@ jobs:
       - checkout: self
         submodules: true
       - script: |
+          rustup target install x86_64-apple-darwin
+          rustup target install aarch64-apple-darwin
+        displayName: Install Rust Toolchain
+      - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build foldseek
         displayName: Build foldseek
