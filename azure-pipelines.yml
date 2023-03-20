@@ -45,8 +45,7 @@ jobs:
       - script: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get update
-          sudo apt-get install -y g++-10 rustc cargo
-        condition: eq(variables['BUILD_TYPE'], 'ASanOpt')
+          sudo apt-get install -y gcc-11 g++-11 libgcc-11-dev rustc cargo
         displayName: Install newer GCC
       - script: |
           sudo apt-get update
@@ -55,9 +54,7 @@ jobs:
         condition: eq(variables['MPI'], 1)
       - script: |
           mkdir build && cd build
-          if [ "${BUILD_TYPE}" = "ASanOpt" ]; then
-              export CC=gcc-10 ; export CXX=g++-10
-          fi
+          export CC=gcc-11 ; export CXX=g++-11
           if [ "${STATIC}" -eq "1" ]; then
               cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_SHARED_LIBS=OFF \
                 -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
