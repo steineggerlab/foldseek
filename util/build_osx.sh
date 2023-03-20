@@ -67,6 +67,7 @@ cmake \
     "$REPO"
 make -j${CPUS}
 
+otool -L "src/${BINARY_NAME}"
 if [ "$(echo $(otool -L "src/${BINARY_NAME}" | wc -l))" != 6 ]; then
     echo "Too many linked libraries found in ${BINARY_NAME} binary. Build is not static!"
     exit 1
@@ -94,6 +95,8 @@ cmake \
     -DRust_CARGO_TARGET=aarch64-apple-darwin \
     "$REPO"
 make -j${CPUS}
+
+otool -L "src/${BINARY_NAME}"
 if [ "$(echo $(otool -L "src/${BINARY_NAME}" | wc -l))" != 6 ]; then
     echo "Too many linked libraries found in ${BINARY_NAME} binary. Build is not static!"
     exit 1
