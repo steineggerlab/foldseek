@@ -19,16 +19,16 @@ jobs:
           STATIC: 1
           MPI: 0
           BUILD_TYPE: RelWithDebInfo
-        sse41:
-          SIMD: 'SSE4_1'
-          STATIC: 1
-          MPI: 0
-          BUILD_TYPE: RelWithDebInfo
-        sse2:
-          SIMD: 'SSE2'
-          STATIC: 1
-          MPI: 0
-          BUILD_TYPE: RelWithDebInfo
+        # sse41:
+        #   SIMD: 'SSE4_1'
+        #   STATIC: 1
+        #   MPI: 0
+        #   BUILD_TYPE: RelWithDebInfo
+        # sse2:
+        #   SIMD: 'SSE2'
+        #   STATIC: 1
+        #   MPI: 0
+        #   BUILD_TYPE: RelWithDebInfo
         avx2_mpi:
           SIMD: 'AVX2'
           STATIC: 0
@@ -84,14 +84,6 @@ jobs:
       vmImage: 'Ubuntu-20.04'
     strategy:
       matrix:
-        power8:
-          SIMD: POWER8
-          ARCH: ppc64el
-          CPREF: powerpc64le
-        power9:
-          SIMD: POWER9
-          ARCH: ppc64el
-          CPREF: powerpc64le
         arm64:
           SIMD: ARM8
           ARCH: arm64
@@ -111,6 +103,7 @@ jobs:
           HEREDOC
           sudo apt-get update
           sudo apt-get -y install -o APT::Immediate-Configure=false crossbuild-essential-$ARCH zlib1g-dev:$ARCH libbz2-dev:$ARCH
+          rustup target add ${CPREF}-unknown-linux-gnu
         displayName: Install Toolchain
       - script: |
           mkdir build && cd build
@@ -119,6 +112,7 @@ jobs:
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
             -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+            -DRust_TOOLCHAIN=${CPREF}-unknown-linux-gnu \
             -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 ..
           make -j $(nproc --all)
         displayName: Build foldseek
@@ -134,6 +128,10 @@ jobs:
     steps:
       - checkout: self
         submodules: true
+      - script: |
+          rustup target install x86_64-apple-darwin
+          rustup target install aarch64-apple-darwin
+        displayName: Install Rust Toolchain
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build foldseek
@@ -175,30 +173,30 @@ jobs:
           archiveFile: $(Build.SourcesDirectory)/foldseek-osx-universal.tar.gz
           includeRootFolder: true
           archiveType: tar
-      - task: DownloadPipelineArtifact@1
-        inputs:
-          artifactName: foldseek-linux-SSE2
-          targetPath: $(Build.SourcesDirectory)/foldseek/bin
-      - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
-      - task: ArchiveFiles@2
-        inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
-          includeRootFolder: true
-          archiveType: tar
-      - task: DownloadPipelineArtifact@1
-        inputs:
-          artifactName: foldseek-linux-SSE4_1
-          targetPath: $(Build.SourcesDirectory)/foldseek/bin
-      - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
-      - task: ArchiveFiles@2
-        inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse41.tar.gz
-          includeRootFolder: true
-          archiveType: tar
+      # - task: DownloadPipelineArtifact@1
+      #   inputs:
+      #     artifactName: foldseek-linux-SSE2
+      #     targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      # - script:
+      #     chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      # - task: ArchiveFiles@2
+      #   inputs:
+      #     rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
+      #     includeRootFolder: true
+      #     archiveType: tar
+      # - task: DownloadPipelineArtifact@1
+      #   inputs:
+      #     artifactName: foldseek-linux-SSE4_1
+      #     targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      # - script:
+      #     chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      # - task: ArchiveFiles@2
+      #   inputs:
+      #     rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse41.tar.gz
+      #     includeRootFolder: true
+      #     archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
           artifactName: foldseek-linux-AVX2
@@ -223,30 +221,30 @@ jobs:
           archiveFile: $(Build.SourcesDirectory)/foldseek-linux-arm64.tar.gz
           includeRootFolder: true
           archiveType: tar
-      - task: DownloadPipelineArtifact@1
-        inputs:
-          artifactName: foldseek-linux-POWER8
-          targetPath: $(Build.SourcesDirectory)/foldseek/bin
-      - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
-      - task: ArchiveFiles@2
-        inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-ppc64le-POWER8.tar.gz
-          includeRootFolder: true
-          archiveType: tar
-      - task: DownloadPipelineArtifact@1
-        inputs:
-          artifactName: foldseek-linux-POWER9
-          targetPath: $(Build.SourcesDirectory)/foldseek/bin
-      - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
-      - task: ArchiveFiles@2
-        inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-ppc64le-POWER9.tar.gz
-          includeRootFolder: true
-          archiveType: tar
+      # - task: DownloadPipelineArtifact@1
+      #   inputs:
+      #     artifactName: foldseek-linux-POWER8
+      #     targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      # - script:
+      #     chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      # - task: ArchiveFiles@2
+      #   inputs:
+      #     rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-ppc64le-POWER8.tar.gz
+      #     includeRootFolder: true
+      #     archiveType: tar
+      # - task: DownloadPipelineArtifact@1
+      #   inputs:
+      #     artifactName: foldseek-linux-POWER9
+      #     targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      # - script:
+      #     chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      # - task: ArchiveFiles@2
+      #   inputs:
+      #     rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-ppc64le-POWER9.tar.gz
+      #     includeRootFolder: true
+      #     archiveType: tar
       - task: DownloadSecureFile@1
         inputs:
           secureFile: azure_upload_foldseek
@@ -257,6 +255,7 @@ jobs:
           ssh-keyscan -t rsa uniclust.mmseqs.com >> ~/.ssh/known_hosts
           cd "${BUILD_SOURCESDIRECTORY}"
           ssh codeship@uniclust.mmseqs.com "mkdir -p \"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}\""
-          scp foldseek-osx-universal.tar.gz foldseek-linux-sse2.tar.gz foldseek-linux-sse41.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
+          # disabled: foldseek-linux-sse2.tar.gz foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
+          scp foldseek-osx-universal.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
           ssh codeship@uniclust.mmseqs.com "update-latest-foldseek.sh \"${BUILD_SOURCEVERSION}\""
 
