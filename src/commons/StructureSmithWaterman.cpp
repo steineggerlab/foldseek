@@ -466,6 +466,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
     block_free_padded_aa(target_3di);
     block_free_pos_bias(target_bias);
     block_free_aamatrix(matrix_3di);
+    block_free_aamatrix(matrix_aa);
     delete [] query_bias_arr;
     delete [] target_bias_arr;
     return r;
