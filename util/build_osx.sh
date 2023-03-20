@@ -36,7 +36,7 @@ cmake \
     -DLIBOMP_ENABLE_SHARED=OFF \
     -DLIBOMP_INSTALL_ALIASES=OFF \
     -DLIBOMP_ARCH=x86_64 -DCMAKE_CXX_FLAGS="-arch x86_64" \
-    -DRust_TOOLCHAIN=x86_64-apple-darwin \
+    -DRust_CARGO_TARGET=x86_64-apple-darwin \
     ..
 make -j${CPUS}
 export LIBOMP_AMD64="$BUILD/build_libomp/openmp-11.0.0.src/build-amd64/runtime/src"
@@ -48,7 +48,7 @@ cmake \
     -DCMAKE_C_FLAGS="-arch x86_64" -DCMAKE_CXX_FLAGS="-arch x86_64" \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_C_LIB_NAMES=omp -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=${LIBOMP_AMD64}/libomp.a \
-    -DRust_TOOLCHAIN=x86_64-apple-darwin \
+    -DRust_CARGO_TARGET=x86_64-apple-darwin \
     "$REPO"
 make -j${CPUS}
 
@@ -64,7 +64,7 @@ cmake \
     -DCMAKE_C_FLAGS="-arch x86_64h" -DCMAKE_CXX_FLAGS="-arch x86_64h" \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_C_LIB_NAMES=omp -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=${LIBOMP_AMD64}/libomp.a \
-    -DRust_TOOLCHAIN=x86_64-apple-darwin \
+    -DRust_CARGO_TARGET=x86_64-apple-darwin \
     "$REPO"
 make -j${CPUS}
 
@@ -81,7 +81,7 @@ cmake \
     -DLIBOMP_INSTALL_ALIASES=OFF \
     -DLIBOMP_ARCH=aarch64 -DCMAKE_CXX_FLAGS="-arch arm64" \
     -DLIBOMP_ASMFLAGS="-arch arm64" \
-    -DRust_TOOLCHAIN=aarch64-apple-darwin \
+    -DRust_CARGO_TARGET=aarch64-apple-darwin \
     ..
 make -j${CPUS}
 export LIBOMP_AARCH64="$BUILD/build_libomp/openmp-11.0.0.src/build-arm64/runtime/src"
@@ -93,7 +93,7 @@ cmake \
     -DCMAKE_C_FLAGS="-arch arm64" -DCMAKE_CXX_FLAGS="-arch arm64" \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64}" -DOpenMP_C_LIB_NAMES=omp -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64}" -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=${LIBOMP_AARCH64}/libomp.a \
-    -DRust_TOOLCHAIN=aarch64-apple-darwin \
+    -DRust_CARGO_TARGET=aarch64-apple-darwin \
     "$REPO"
 make -j${CPUS}
 if [ "$(echo $(otool -L "src/${BINARY_NAME}" | wc -l))" != 5 ]; then

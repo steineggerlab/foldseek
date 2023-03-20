@@ -112,7 +112,7 @@ jobs:
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
             -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
-            -DRust_TOOLCHAIN=${CPREF}-unknown-linux-gnu \
+            -DRust_CARGO_TARGET=${CPREF}-unknown-linux-gnu \
             -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 ..
           make -j $(nproc --all)
         displayName: Build foldseek
