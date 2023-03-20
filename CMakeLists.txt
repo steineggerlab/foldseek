@@ -25,7 +25,8 @@ include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
 add_subdirectory(lib/corrosion)
-if (X64)
+
+if (X64 OR X86)
         set(RUST_FEATURE simd_avx2)
 elseif (ARM)
         set(RUST_FEATURE simd_neon)
@@ -38,3 +39,4 @@ include_directories(lib/block-aligner/c)
 
 
 add_subdirectory(src)
+
