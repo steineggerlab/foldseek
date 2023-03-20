@@ -187,6 +187,7 @@ LocalParameters::LocalParameters() :
     // msa2lddt
     msa2lddt.push_back(&PARAM_HELP);
     msa2lddt.push_back(&PARAM_LDDT_HTML);
+    msa2lddt.push_back(&PARAM_THREADS);
 
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
