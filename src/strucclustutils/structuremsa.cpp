@@ -258,7 +258,7 @@ std::vector<AlnSimple> removeMergedHits(std::vector<AlnSimple> & hits, unsigned 
 }
 
 
-inline int get1dIndex(int i, int j, int N) {
+inline size_t get1dIndex(size_t i, size_t j, size_t N) {
     return j + i * (2 * N - i - 1) / 2 - i - 1;
 }
 
@@ -274,7 +274,7 @@ std::vector<AlnSimple> updateAllScores(
     int compBiasCorrection,
     int compBiasCorrectionScale
 ) {
-    unsigned int N = allSeqs_aa.size();
+    size_t N = allSeqs_aa.size();
     std::vector<AlnSimple> newHits((N * N - N) / 2);
 #pragma omp parallel
 {
@@ -304,7 +304,7 @@ std::vector<AlnSimple> updateAllScores(
             aln.queryId = i;
             aln.targetId = j;
             aln.score = structureSmithWaterman.ungapped_alignment(target_aa_seq, target_3di_seq, allSeqs_aa[j]->L);
-            int ij = get1dIndex(i, j, N);
+            size_t ij = get1dIndex(i, j, N);
             newHits[ij] = aln;
         }
     }
@@ -353,7 +353,7 @@ std::string getNewick(TNode* node) {
 std::string orderToTree(std::vector<AlnSimple> hits, std::string *headers, int n) {
     std::string nwk = "";
     int totalNodes = n * 2 + 2;
-    TNode nodes[totalNodes];
+    TNode* nodes = new TNode[totalNodes];
     TNode *root = &nodes[0];
     for (int i = 0; i < totalNodes; i++) {
         nodes[i].id = i;
@@ -377,7 +377,9 @@ std::string orderToTree(std::vector<AlnSimple> hits, std::string *headers, int n
         root = newNode;
     }
     // printTree(root, 0);
-    return getNewick(root);
+    std::string newick = getNewick(root);
+    delete [] nodes;
+    return newick;
 }
 
 /**
@@ -900,11 +902,11 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     int sequenceCnt = seqDbrAA.getSize();
     std::vector<Sequence*> allSeqs_aa(sequenceCnt);
     std::vector<Sequence*> allSeqs_3di(sequenceCnt);
-    std::string msa_aa[sequenceCnt];
-    std::string msa_3di[sequenceCnt];
-    std::string headers[sequenceCnt];
-    std::string mappings[sequenceCnt];
-    int idMappings[sequenceCnt];
+    std::string * msa_aa  = new std::string[sequenceCnt];
+    std::string * msa_3di = new std::string[sequenceCnt];
+    std::string * headers = new std::string[sequenceCnt];
+    std::string * mappings = new std::string[sequenceCnt];
+    int * idMappings = new int[sequenceCnt];
     std::map<std::string, int> headers_rev;
 
     int maxSeqLength = 0;
