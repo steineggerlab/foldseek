@@ -7,7 +7,8 @@ add_subdirectory(commons)
 add_subdirectory(version)
 add_subdirectory(workflow)
 
-add_library(foldseek-framework
+
+add_executable(foldseek
         ${commons_source_files}
         ${strucclustutils_source_files}
         ${workflow_source_files})
@@ -25,7 +26,12 @@ add_executable(foldseek
         foldseek.cpp)
 
 mmseqs_setup_derived_target(foldseek)
-target_link_libraries(foldseek version foldseek-framework)
+target_link_libraries(foldseek version gemmiwrapper 3di pulchra kerasify tmalign block-aligner)
+
+if(HAVE_GCS)
+        find_package(google_cloud_cpp_storage REQUIRED)
+        target_link_libraries(foldseek google-cloud-cpp::storage)
+endif()
 
 add_dependencies(foldseek local-generated)
 

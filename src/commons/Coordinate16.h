@@ -6,11 +6,20 @@
 
 class Coordinate16 {
 public:
+    Coordinate16() : buffer(NULL), bufferSize(0) {}
+    ~Coordinate16(){
+        if(buffer != NULL){
+            free(buffer);
+        }
+    }
     float* read(const char* mem, size_t chainLength, size_t entryLength) {
         if (entryLength >= (chainLength * 3) * sizeof(float)) {
             return (float*) mem;
         }
-        buffer.reserve(chainLength * 3);
+        if(bufferSize < (chainLength * 3)){
+            buffer = (float *)realloc(buffer, (chainLength * 3) * sizeof(float));
+            bufferSize = (chainLength * 3);
+        }
         const char* data = mem;
         int32_t diffSum = 0;
         int32_t start;
@@ -44,8 +53,7 @@ public:
             diffSum += intDiff;
             buffer[i] = (start + diffSum) / 1000.0f;
         }
-        return buffer.data();
-
+        return buffer;
     }
 
     template <typename T>
@@ -66,7 +74,8 @@ public:
     }
 
 private:
-    std::vector<float> buffer;
+    float * buffer;
+    size_t bufferSize;
 };
 
 #endif

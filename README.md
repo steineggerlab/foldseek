@@ -7,6 +7,12 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 
 [van Kempen M, Kim S, Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398  (2022)](https://www.biorxiv.org/content/10.1101/2022.02.07.479398)
 
+## Tutorial Video
+We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
+Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
+
+<a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
+
 ## Webserver 
 Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
 
@@ -70,8 +76,12 @@ tsetid      Numeric identifier for target filename
 qca         Calpha corrdinates of the query
 tca         Calpha corrdinates of the target
 alntmscore  TM-score of the alignment 
+qtmscore    TM-score normalized by the query length
+ttmscore    TM-score normalized by the target length
 u           Rotation matrix (computed to by TM-score)
 t           Translation vector (computed to by TM-score)
+lddt        Average LDDT of the alignment    
+lddtfull    LDDT per aligned position
 ```
 
 #### Output: Superpositioned Cα only PDB files
@@ -89,6 +99,7 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     # sensitivity and speed
     -s                       adjust the sensitivity to speed trade-off.
                              lower is faster, higher more sensitive (fast: 7.5, highest sensitivity (default): 9.5)
+    --exhaustive-search      skips the prefilter and performs an all-vs-all alignment (more sensitive but much slower)                         
     --max-seqs               adjust the amount of prefilter that are handed to the alignment. 
                              Increasing it can lead to more hits (default: 1000)
     -e                       List matches below this E-value (range 0.0-inf, default: 0.001)
@@ -113,12 +124,12 @@ The `databases` command downloads pre-generated databases like PDB or AlphaFoldD
 We currently support the following databases: 
 ```
   Name                   	Type     	Taxonomy	Url
-- Alphafold/UniProt      	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/UniProt-NO-CA	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/UniProt50    	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/Proteome     	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- Alphafold/Swiss-Prot   	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
-- PDB                    	Aminoacid	     yes	https://www.rcsb.org
+- Alphafold/UniProt   	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/UniProt50 	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/Proteome  	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- Alphafold/Swiss-Prot	Aminoacid	     yes	https://alphafold.ebi.ac.uk/
+- ESMAtlas30          	Aminoacid	       -	https://esmatlas.com
+- PDB                 	Aminoacid	     yes	https://www.rcsb.org
 ```
 
 ### Main Modules

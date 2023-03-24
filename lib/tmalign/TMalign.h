@@ -56,7 +56,7 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
 
 double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                                 Coordinates &xtm, Coordinates &ytm, Coordinates &xt, int Lali,
-                                float t0[3], float u0[3][3], int simplify_step, int score_sum_method,
+                                float t0[3], float u0[3][3], int simplify_step,
                                 float *Rcomm, float local_d0_search, float score_d8, float d0, float * mem);
 
 //Comprehensive TMscore search engine
@@ -75,7 +75,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
                                  Coordinates &xtm, Coordinates &ytm, Coordinates &xt,
                                  const Coordinates &x, const Coordinates &y,
                                  int ylen, int invmap0[], float t[3], float u[3][3],
-                                 int simplify_step, int score_sum_method, double local_d0_search,
+                                 int simplify_step, double local_d0_search,
                                  const bool& bNormalize, float Lnorm, float score_d8, float d0, float * mem);
 //compute the score quickly in three iterations
 double get_score_fast( Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coordinates &ytm,
