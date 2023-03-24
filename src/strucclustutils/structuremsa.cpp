@@ -93,6 +93,7 @@ void postOrder(TNode *node, std::vector<int> *linkage) {
     }
 }
 
+// FIXME inconsistent with tree produced by orderToTree
 std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int> &headers) {
     // Should know this from number of structures in database
     int total = std::count(newick.begin(), newick.end(), '(');
@@ -104,16 +105,16 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
     auto words_end = std::sregex_token_iterator();
     
     // Initialise TNode array (2n+1 but a +1 for the root)
-    TNode nodes[total * 2 + 2];
+    // TNode nodes[total * 2 + 2];
+    std::vector<TNode *> nodes(total * 2 + 2);
     std::vector<TNode *> parents;
     TNode *tree;
     TNode *subtree;
     
     // Initialise the root node (the +1)
-    TNode root;
-    root.id = 0;
-    nodes[0] = root;
-    tree = &nodes[0];
+    nodes[0] = new TNode();
+    nodes[0]->id = 0;
+    tree = nodes[0];
     
     int count = 1;
     std::string prevToken;
@@ -123,12 +124,11 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
 
         if (match_str == "(") {
             // add new node, set it as new subtree
-            TNode newNode;
-            newNode.id = count;
-            newNode.dbId = -1;
-            newNode.length = 1;
-            nodes[count] = newNode;
-            subtree = &nodes[count];
+            nodes[count] = new TNode();
+            nodes[count]->id = count;
+            nodes[count]->dbId = -1;
+            nodes[count]->length = 1.0;
+            subtree = nodes[count];
             count++;
             
             // add it as child to current tree
@@ -139,12 +139,11 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
             parents.push_back(tree);
             tree = subtree;
         } else if (match_str == ",") {
-            TNode newNode;
-            newNode.id = count;
-            newNode.dbId = -1;
-            newNode.length = 1;
-            nodes[count] = newNode;
-            subtree = &nodes[count];
+            nodes[count] = new TNode();
+            nodes[count]->id = count;
+            nodes[count]->dbId = -1;
+            nodes[count]->length = 1.0;
+            subtree = nodes[count];
             count++;
             parents.back()->children.push_back(subtree);
             subtree->parent = parents.back();
@@ -181,6 +180,10 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
         hit.targetId = linkage[i + 1];
         hits.push_back(hit);
     }
+    
+    // Cleanup 
+    for(size_t i = 0; i < nodes.size(); i++)
+        delete nodes[i];
 
     return hits;
 }
@@ -350,23 +353,25 @@ std::string getNewick(TNode* node) {
  * @param n number of structures
  * @return std::string 
  */
-std::string orderToTree(std::vector<AlnSimple> hits, std::string *headers, int n) {
+std::string orderToTree(std::vector<AlnSimple> hits, std::vector<std::string> &headers, int n) {
     std::string nwk = "";
     int totalNodes = n * 2 + 2;
-    TNode* nodes = new TNode[totalNodes];
-    TNode *root = &nodes[0];
+
+    std::vector<TNode *> nodes(totalNodes);
     for (int i = 0; i < totalNodes; i++) {
-        nodes[i].id = i;
-        nodes[i].parent = &nodes[i];
-        if (i < n) {
-            nodes[i].name = headers[i];
-        }
+        nodes[i] = new TNode();
+        nodes[i]->id = i;
+        nodes[i]->parent = nodes[i];
+        if (i < n)
+            nodes[i]->name = headers[i];
     }
+    TNode *root = nodes[0];
+
     int newId = n + 1;
     for (AlnSimple aln : hits) {
-        TNode *u = findRoot(&nodes[aln.queryId]);
-        TNode *v = findRoot(&nodes[aln.targetId]);
-        TNode *newNode = &nodes[newId];
+        TNode *u = findRoot(nodes[aln.queryId]);
+        TNode *v = findRoot(nodes[aln.targetId]);
+        TNode *newNode = nodes[newId];
         newNode->id = newId;
         newNode->length = aln.score;
         newNode->children.push_back(u);            
@@ -378,7 +383,11 @@ std::string orderToTree(std::vector<AlnSimple> hits, std::string *headers, int n
     }
     // printTree(root, 0);
     std::string newick = getNewick(root);
-    delete [] nodes;
+    
+    // Cleanup 
+    for(size_t i = 0; i < nodes.size(); i++)
+        delete nodes[i];
+
     return newick;
 }
 
@@ -414,7 +423,7 @@ std::vector<AlnSimple> mst(std::vector<AlnSimple> hits, int n) {
  * @param n number of structures
  * @return std::vector<AlnSimple> 
  */
-std::vector<AlnSimple> reorderLinkage(std::vector<AlnSimple> linkage, std::vector<int> &merges, int n) {
+std::vector<AlnSimple> reorderLinkage(std::vector<AlnSimple> linkage, std::vector<size_t> &merges, int n) {
     std::vector<int> parent(n); 
     std::vector<int> counts(n);
     for (int i = 0; i < n; i++) {
@@ -902,11 +911,11 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     int sequenceCnt = seqDbrAA.getSize();
     std::vector<Sequence*> allSeqs_aa(sequenceCnt);
     std::vector<Sequence*> allSeqs_3di(sequenceCnt);
-    std::string * msa_aa  = new std::string[sequenceCnt];
-    std::string * msa_3di = new std::string[sequenceCnt];
-    std::string * headers = new std::string[sequenceCnt];
-    std::string * mappings = new std::string[sequenceCnt];
-    int * idMappings = new int[sequenceCnt];
+    std::vector<std::string> msa_aa(sequenceCnt);
+    std::vector<std::string> msa_3di(sequenceCnt);
+    std::vector<std::string> headers(sequenceCnt);
+    std::vector<std::string> mappings(sequenceCnt);
+    std::vector<size_t> idMappings(sequenceCnt);
     std::map<std::string, int> headers_rev;
 
     int maxSeqLength = 0;
@@ -986,16 +995,15 @@ int structuremsa(int argc, const char **argv, const Command& command) {
         std::cout << "Generated guide tree\n";
     }
 
-    std::vector<int> merges;
-
     std::cout << "Optimising merge order\n";
+    std::vector<size_t> merges;
     hits = reorderLinkage(hits, merges, sequenceCnt);
     
     int idx = 0;
     for (size_t i = 0; i < merges.size(); i++) {
         std::cout << "Merging " << merges[i] << " sequences\n";
         for (size_t j = 0; j < merges[i]; j++) {
-            std::cout << "  " << hits[idx + j].queryId << "\t" << hits[idx + j].targetId << '\n';
+            std::cout << "  " << headers[hits[idx + j].queryId] << "\t" << headers[hits[idx + j].targetId] << '\n';
         }
         idx += merges[i];
     }
@@ -1019,7 +1027,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     for (size_t i = 0; i < merges.size(); i++) {
 
 #pragma omp for schedule(dynamic, 1)
-        for (int j = 0; j < merges[i]; j++) {
+        for (size_t j = 0; j < merges[i]; j++) {
             unsigned int mergedId = std::min(hits[index + j].queryId, hits[index + j].targetId);
             unsigned int targetId = std::max(hits[index + j].queryId, hits[index + j].targetId);
             mergedId = idMappings[mergedId];
@@ -1045,7 +1053,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
             // Make sure all relevant ids are updated
             for (int k = 0; k < sequenceCnt; k++) {
-                if (idMappings[k] == (int)targetId || idMappings[k] == (int)mergedId)
+                if (idMappings[k] == targetId || idMappings[k] == mergedId)
                     idMappings[k] = mergedId;
             }
 
@@ -1070,6 +1078,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             std::vector<int> map2 = maskToMapping(mappings[targetId], res.dbLen);
             
             // Save new MSAs and remove targetId MSAs
+            // TODO merge both AA/3Di in same step instead of reading over twice
             std::vector<Instruction> qBt;
             std::vector<Instruction> tBt;
             getMergeInstructions(res, map1, map2, qBt, tBt);
