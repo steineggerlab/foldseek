@@ -293,7 +293,14 @@ std::vector<AlnSimple> updateAllScores(
     std::vector<AlnSimple> newHits((N * N - N) / 2);
 #pragma omp parallel
 {
-    StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale);
+    StructureSmithWaterman structureSmithWaterman(
+        maxSeqLen,
+        alphabetSize,
+        compBiasCorrection,
+        compBiasCorrectionScale,
+        subMat_aa,
+        subMat_3di
+    );
     unsigned int queryId = 0;
 #pragma omp for schedule(dynamic)
     for (unsigned int i = 0; i < allSeqs_aa.size(); i++) {
@@ -710,24 +717,32 @@ struct Instruction {
     char stateChar() { return (state == SEQ) ? 'S' : 'G'; }
 };
 
-std::vector<AlnSimple> parseAndScoreExternalHits(DBReader<unsigned int> * cluDbr,
-                                         int8_t * tinySubMatAA,
-                                         int8_t * tinySubMat3Di,
-                                         SubstitutionMatrix * subMat_aa,
-                                         std::vector<Sequence*> & allSeqs_aa,
-                                         std::vector<Sequence*> & allSeqs_3di,
-                                         int maxSeqLen,
-                                         int alphabetSize,
-                                         int compBiasCorrection,
-                                         int compBiasCorrectionScale
-                                         ) {
+std::vector<AlnSimple> parseAndScoreExternalHits(
+    DBReader<unsigned int> * cluDbr,
+    int8_t * tinySubMatAA,
+    int8_t * tinySubMat3Di,
+    SubstitutionMatrix * subMat_aa,
+    SubstitutionMatrix * subMat_3di,
+    std::vector<Sequence*> & allSeqs_aa,
+    std::vector<Sequence*> & allSeqs_3di,
+    int maxSeqLen,
+    int alphabetSize,
+    int compBiasCorrection,
+    int compBiasCorrectionScale
+) {
     // open an alignment DBReader
     std::vector<AlnSimple> allAlnResults;
 
 #pragma omp parallel
     {
-        StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize,
-                                                      compBiasCorrection, compBiasCorrectionScale);
+        StructureSmithWaterman structureSmithWaterman(
+            maxSeqLen,
+            alphabetSize,
+            compBiasCorrection,
+            compBiasCorrectionScale,
+            subMat_aa,
+            subMat_3di
+        );
         std::vector<AlnSimple> threadAlnResults;
         char buffer[255 + 1];
 
@@ -987,7 +1002,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::vector<size_t> idMappings(sequenceCnt);
     std::map<std::string, int> headers_rev;
 
-    int maxSeqLength = 0;
+    int maxSeqLength = par.maxSeqLen;
     for (size_t i = 0; i < sequenceCnt; i++) {
         size_t seqKeyAA = seqDbrAA.getDbKey(i);
         size_t seqKey3Di = seqDbr3Di.getDbKey(i);
@@ -1013,7 +1028,6 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     }
     
     // TODO: dynamically calculate and re-init PSSMCalculator/MsaFilter each iteration
-    maxSeqLength = par.maxSeqLen;
     std::cout << "Initialised MSAs, Sequence objects" << std::endl;
 
     // Substitution matrices needed for query profile
@@ -1072,22 +1086,24 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             par.compBiasCorrection,
             par.compBiasCorrectionScale
         );
-        if(cluDbr != NULL){
+        if (cluDbr != NULL) {
             // add external hits to the list
-            std::vector<AlnSimple> externalHits = parseAndScoreExternalHits(cluDbr,
-                                                                            tinySubMatAA,
-                                                                            tinySubMat3Di,
-                                                                            &subMat_aa,
-                                                                            allSeqs_aa,
-                                                                            allSeqs_3di,
-                                                                            par.maxSeqLen,
-                                                                            subMat_3di.alphabetSize,
-                                                                            par.compBiasCorrection,
-                                                                            par.compBiasCorrectionScale);
+            std::vector<AlnSimple> externalHits = parseAndScoreExternalHits(
+                cluDbr,
+                tinySubMatAA,
+                tinySubMat3Di,
+                &subMat_aa,
+                &subMat_3di,
+                allSeqs_aa,
+                allSeqs_3di,
+                par.maxSeqLen,
+                subMat_3di.alphabetSize,
+                par.compBiasCorrection,
+                par.compBiasCorrectionScale
+            );
             // maybe a bit dangerous because memory of hits might be doubled
-            for (size_t i = 0; i < externalHits.size(); i++) {
+            for (size_t i = 0; i < externalHits.size(); i++)
                 hits.push_back(externalHits[i]);
-            }
         }
         sortHitsByScore(hits);
         std::cout << "Performed initial all vs all alignments\n";
