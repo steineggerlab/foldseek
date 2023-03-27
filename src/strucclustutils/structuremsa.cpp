@@ -244,7 +244,14 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
 }
 
 void sortHitsByScore(std::vector<AlnSimple> &hits) {
-    std::stable_sort(hits.begin(), hits.end(), [](const AlnSimple & a, const AlnSimple & b) {
+    SORT_PARALLEL(hits.begin(), hits.end(), [](const AlnSimple & a, const AlnSimple & b) {
+        // sort by score then qId then tId
+        if (a.score == b.score) {
+            if (a.queryId == b.queryId) {
+                return a.targetId < b.targetId;
+            }
+            return a.queryId < b.queryId;
+        }
         return a.score > b.score;
     });
 }
@@ -277,13 +284,19 @@ std::vector<AlnSimple> updateAllScores(
     int compBiasCorrection,
     int compBiasCorrectionScale
 ) {
-    size_t N = allSeqs_aa.size();
+    size_t N = 0;
+    for (size_t i = 0; i < allSeqs_aa.size(); i++) {
+        if (alreadyMerged[i] == 0) {
+            N++;
+        }
+    }
     std::vector<AlnSimple> newHits((N * N - N) / 2);
 #pragma omp parallel
 {
     StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale);
+    unsigned int queryId = 0;
 #pragma omp for schedule(dynamic)
-    for (unsigned int i = 0; i < N; i++) {
+    for (unsigned int i = 0; i < allSeqs_aa.size(); i++) {
         if (alreadyMerged[i])
             continue;
         structureSmithWaterman.ssw_init(
@@ -293,7 +306,8 @@ std::vector<AlnSimple> updateAllScores(
             tinySubMat3Di,
             subMat_aa
         );
-        for (unsigned int j = i + 1; j < N; j++) {
+        unsigned int targetId = 0;
+        for (unsigned int j = i + 1; j < allSeqs_aa.size(); j++) {
             if (alreadyMerged[j] || i == j)
                 continue;
             bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[j]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
@@ -307,9 +321,11 @@ std::vector<AlnSimple> updateAllScores(
             aln.queryId = i;
             aln.targetId = j;
             aln.score = structureSmithWaterman.ungapped_alignment(target_aa_seq, target_3di_seq, allSeqs_aa[j]->L);
-            size_t ij = get1dIndex(i, j, N);
+            size_t ij = get1dIndex(queryId, targetId, N);
             newHits[ij] = aln;
+            targetId++;
         }
+        queryId++;
     }
 }
     return newHits;
@@ -694,6 +710,59 @@ struct Instruction {
     char stateChar() { return (state == SEQ) ? 'S' : 'G'; }
 };
 
+std::vector<AlnSimple> parseAndScoreExternalHits(DBReader<unsigned int> * cluDbr,
+                                         int8_t * tinySubMatAA,
+                                         int8_t * tinySubMat3Di,
+                                         SubstitutionMatrix * subMat_aa,
+                                         std::vector<Sequence*> & allSeqs_aa,
+                                         std::vector<Sequence*> & allSeqs_3di,
+                                         int maxSeqLen,
+                                         int alphabetSize,
+                                         int compBiasCorrection,
+                                         int compBiasCorrectionScale
+                                         ) {
+    // open an alignment DBReader
+    std::vector<AlnSimple> allAlnResults;
+
+#pragma omp parallel
+    {
+        StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize,
+                                                      compBiasCorrection, compBiasCorrectionScale);
+        std::vector<AlnSimple> threadAlnResults;
+        char buffer[255 + 1];
+
+#pragma omp for schedule(dynamic, 10)
+        for (size_t i = 0; i < cluDbr->getSize(); ++i) {
+            char *data = cluDbr->getData(i, 0);
+            unsigned int queryKey = cluDbr->getDbKey(i);
+            structureSmithWaterman.ssw_init(
+                    allSeqs_aa[queryKey],
+                    allSeqs_3di[queryKey],
+                    tinySubMatAA,
+                    tinySubMat3Di,
+                    subMat_aa
+            );
+            while (*data != '\0') {
+                Util::parseKey(data, buffer);
+                const unsigned int dbKey = (unsigned int) strtoul(buffer, NULL, 10);
+                AlnSimple aln;
+                aln.queryId = queryKey;
+                aln.targetId = dbKey;
+                aln.score = structureSmithWaterman.ungapped_alignment(allSeqs_aa[dbKey]->numSequence,
+                                                                      allSeqs_3di[dbKey]->numSequence,
+                                                                      allSeqs_aa[dbKey]->L);
+                threadAlnResults.push_back(aln);
+                data = Util::skipLine(data);
+            }
+        }
+#pragma omp critical
+        {
+            allAlnResults.insert(allAlnResults.end(), threadAlnResults.begin(), threadAlnResults.end());
+        }
+    }
+    return allAlnResults;
+}
+
 /**
  * @brief Get merge instructions for two MSAs
  * 
@@ -959,8 +1028,22 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::cout << "Set up tiny substitution matrices" << std::endl;
 
     bool * alreadyMerged = new bool[sequenceCnt];
-    memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
-    
+    DBReader<unsigned int> * cluDbr = NULL;
+    // if we have a clustering
+    if(par.filenames.size() == 3){
+        // consider everything merged and unmerge the ones that are not
+        memset(alreadyMerged, 1, sizeof(bool) * sequenceCnt);
+        cluDbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(),
+                                            par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
+        cluDbr->open(DBReader<unsigned int>::LINEAR_ACCCESS);
+        // mark all sequences that are already clustered as merged
+        for(size_t i = 0; i < cluDbr->getSize(); i++){
+            unsigned int dbKey = cluDbr->getDbKey(i);
+            alreadyMerged[dbKey] = 0;
+        }
+    }else{
+        memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
+    }
     std::vector<AlnSimple> hits;
     if (par.guideTree != "") {
         std::cout << "Loading guide tree: " << par.guideTree << "\n"; 
@@ -988,6 +1071,23 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             par.compBiasCorrection,
             par.compBiasCorrectionScale
         );
+        if(cluDbr != NULL){
+            // add external hits to the list
+            std::vector<AlnSimple> externalHits = parseAndScoreExternalHits(cluDbr,
+                                                                            tinySubMatAA,
+                                                                            tinySubMat3Di,
+                                                                            &subMat_aa,
+                                                                            allSeqs_aa,
+                                                                            allSeqs_3di,
+                                                                            par.maxSeqLen,
+                                                                            subMat_3di.alphabetSize,
+                                                                            par.compBiasCorrection,
+                                                                            par.compBiasCorrectionScale);
+            // maybe a bit dangerous because memory of hits might be doubled
+            for (size_t i = 0; i < externalHits.size(); i++) {
+                hits.push_back(externalHits[i]);
+            }
+        }
         sortHitsByScore(hits);
         std::cout << "Performed initial all vs all alignments\n";
         
@@ -1163,7 +1263,10 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     assert(finalMSA != "");
 
     // Write final MSA to file with correct headers
-    DBWriter resultWriter(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
+    DBWriter resultWriter(par.filenames[par.filenames.size()-1].c_str(),
+                          (par.filenames[par.filenames.size()-1] + ".index").c_str(),
+                          static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_OMIT_FILE);
+
     resultWriter.open();
     kseq_buffer_t d;
     d.buffer = (char*)finalMSA.c_str();
@@ -1183,7 +1286,8 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     }
     resultWriter.writeEnd(0, 0, false, 0);
     resultWriter.close(true);
-    FileUtil::remove(par.db2Index.c_str());
+    FileUtil::remove((par.filenames[par.filenames.size()-1] + ".index").c_str());
    
     return EXIT_SUCCESS;
 }
+

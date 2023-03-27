@@ -75,18 +75,22 @@ int easymsa(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
 
-    cmd.addVariable("CREATELININDEX_PAR", NULL);
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
-
+    par.spacedKmer = true;
+    par.covThr = 0.95;
+    par.evalThr = 0.01;
+    par.sortByStructureBits = 0;
+    par.kmersPerSequence = 300;
+    par.maskMode = 0;
+    par.compBiasCorrection = 0;
+    cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
+    cmd.addVariable("ALIGN_PAR", par.createParameterString(par.structurealign).c_str());
+    cmd.addVariable("CLUST_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
-    cmd.addVariable("GREEDY_BEST_HITS", par.greedyBestHits ? "TRUE" : NULL);
 
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
-    cmd.addVariable("SUMMARIZE_PAR", par.createParameterString(par.summarizeresult).c_str());
 
     std::string program = tmpDir + "/easymsa.sh";
     FileUtil::writeFile(program, easymsa_sh, easymsa_sh_len);
