@@ -101,6 +101,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     par.compBiasCorrectionScale = 0.15;
     cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
     par.compBiasCorrectionScale = 0.5;
+    if(par.exhaustiveSearch){
+        cmd.addVariable("EXHAUSTIVE", "1");
+    }
     if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         cmd.addVariable("ALIGNMENT_ALGO", "align");
         cmd.addVariable("QUERY_ALIGNMENT", (query+"_ss").c_str());

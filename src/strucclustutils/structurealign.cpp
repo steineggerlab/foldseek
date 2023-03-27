@@ -28,6 +28,11 @@ static bool compareHitsByStructureBits(const Matcher::result_t &first, const Mat
     return first.dbKey < second.dbKey;
 }
 
+
+static void structureAlignDefault(LocalParameters & par) {
+    par.compBiasCorrectionScale = 0.5;
+}
+
 int alignStructure(StructureSmithWaterman & structureSmithWaterman,
                    StructureSmithWaterman & reverseStructureSmithWaterman,
                    Sequence & tSeqAA, Sequence & tSeq3Di,
@@ -39,29 +44,47 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     float seqId = 0.0;
     backtrace.clear();
     // align only score and end pos
-    StructureSmithWaterman::s_align align = structureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+    StructureSmithWaterman::s_align align = structureSmithWaterman.alignScoreEndPos<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
                                                                                     par.gapExtend.values.aminoacid(), querySeqLen / 2);
     bool hasLowerCoverage = !(Util::hasCoverage(par.covThr, par.covMode, align.qCov, align.tCov));
     if(hasLowerCoverage){
         return -1;
     }
+    // we can already stop if this e-value isn't good enough, it wont be any better in the next step
+    align.evalue = evaluer.computeEvalueCorr(align.score1, muLambda.first, muLambda.second);
+    bool hasLowerEvalue = align.evalue > par.evalThr;
+    if(hasLowerEvalue){
+        return -1;
+    }
+
     StructureSmithWaterman::s_align revAlign;
     if(structureSmithWaterman.isProfileSearch()){
         revAlign.score1 = 0;
     } else {
-        revAlign = reverseStructureSmithWaterman.alignScoreEndPos(tSeqAA.numSequence, tSeq3Di.numSequence,
+        revAlign = reverseStructureSmithWaterman.alignScoreEndPos<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence,
                                                                   targetSeqLen, par.gapOpen.values.aminoacid(),
                                                                   par.gapExtend.values.aminoacid(), querySeqLen / 2);
     }
     int32_t score = static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1);
     align.evalue = evaluer.computeEvalueCorr(score, muLambda.first, muLambda.second);
-    bool hasLowerEvalue = align.evalue > par.evalThr;
+    hasLowerEvalue = align.evalue > par.evalThr;
     if (hasLowerEvalue) {
         return -1;
     }
-
-    align = structureSmithWaterman.alignStartPosBacktrace(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
-                                                          par.gapExtend.values.aminoacid(), par.alignmentMode, backtrace,  align, par.covMode, par.covThr, querySeqLen / 2);
+    if (structureSmithWaterman.isProfileSearch()) {
+        align = structureSmithWaterman.alignStartPosBacktrace<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence,
+                                                                                               tSeq3Di.numSequence,
+                                                                                               targetSeqLen,
+                                                                                               par.gapOpen.values.aminoacid(),
+                                                                                               par.gapExtend.values.aminoacid(),
+                                                                                               par.alignmentMode,
+                                                                                               backtrace, align,
+                                                                                               par.covMode, par.covThr,
+                                                                                               querySeqLen / 2);
+    }else{
+        align = structureSmithWaterman.alignStartPosBacktraceBlock(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+                                                                   par.gapExtend.values.aminoacid(), backtrace, align);
+    }
 
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
     if(backtrace.size() > 0){
@@ -103,6 +126,7 @@ int computeAlternativeAlignment(StructureSmithWaterman & structureSmithWaterman,
 
 int structurealign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
+    structureAlignDefault(par);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
     if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
         Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
@@ -110,8 +134,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
         par.sortByStructureBits = false;
     }
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
-    IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
-    IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+    IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
 
     IndexReader *t3DiDbr = NULL;
     IndexReader *tAADbr = NULL;
@@ -121,8 +145,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
         t3DiDbr = &qdbr3Di;
         tAADbr = &qdbrAA;
     } else {
-        tAADbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
-        t3DiDbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+        tAADbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+        t3DiDbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     }
 
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
@@ -145,7 +169,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 par.db1,
                 par.threads,
                 IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
-                touch ? IndexReader::PRELOAD_INDEX : 0,
+                touch ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0,
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                 "_ca");
         if (sameDB) {
@@ -155,7 +179,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     par.db2,
                     par.threads,
                     IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
-                    touch ? IndexReader::PRELOAD_INDEX : 0,
+                    touch ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0,
                     DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                     "_ca"
             );
@@ -201,8 +225,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
 #endif
         EvalueNeuralNet evaluer(tAADbr->sequenceReader->getAminoAcidDBSize(), &subMat3Di);
         std::vector<Matcher::result_t> alignmentResult;
-        StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
-        StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
+        StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMatAA, &subMat3Di);
+        StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMatAA, &subMat3Di);
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
@@ -299,7 +323,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                                                   res.dbLen,
                                                                   res.qStartPos,
                                                                   res.dbStartPos,
-                                                                          res.backtrace);
+                                                                  res.backtrace,
+                                                                  std::min(static_cast<unsigned int>(res.backtrace.size()), std::min(res.dbLen, res.qLen)));
                                 if (tmres.tmscore < par.tmScoreThr) {
                                     continue;
                                 }

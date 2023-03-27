@@ -2,8 +2,8 @@ set(workflow_source_files
         workflow/StructureCluster.cpp
         workflow/StructureIndex.cpp
         workflow/StructureSearch.cpp
-        workflow/StructureEasyRbh.cpp
         workflow/StructureRbh.cpp
+        workflow/EasyStructureRbh.cpp
         workflow/EasyStructureSearch.cpp
         workflow/EasyStructureCluster.cpp
 	workflow/EasyMSA.cpp

@@ -37,7 +37,9 @@ TMaligner::~TMaligner(){
     delete [] invmap;
 }
 
-TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z, unsigned int targetLen, int qStartPos, int dbStartPos, const std::string &backtrace) {
+TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z, unsigned int targetLen,
+                                                   int qStartPos, int dbStartPos, const std::string &backtrace,
+                                                   int normalizationLen) {
     int qPos = qStartPos;
     int tPos = dbStartPos;
     std::string cigarString = backtrace;
@@ -74,7 +76,7 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
     int L_ali;                // Aligned length in standard_TMscore
     float Lnorm;         //normalization length
     float score_d8,d0,d0_search,dcu0;//for TMscore search
-    parameter_set4search(std::min((unsigned int)backtrace.size(), targetLen),  queryLen, D0_MIN, Lnorm,
+    parameter_set4search(normalizationLen,  normalizationLen, D0_MIN, Lnorm,
                          score_d8, d0, d0_search, dcu0);
     double prevD0_MIN = D0_MIN;// stored for later use
     int prevLnorm = Lnorm;
@@ -86,7 +88,7 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
     Lnorm = prevLnorm;
     d0 = prevd0;
     double TM = detailed_search_standard(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen,
-                                         invmap, t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0, mem);
+                                         invmap, t, u, 40, local_d0_search, true, Lnorm, score_d8, d0, mem);
     TM = std::max(TM, TMalnScore);
     return TMaligner::TMscoreResult(u, t, TM, rmsd0);
 }

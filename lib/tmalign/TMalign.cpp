@@ -186,51 +186,6 @@ int score_fun8( Coordinates &xa, Coordinates &ya, int n_ali, float d, int i_ali[
 //    return n_cut;
 //}
 
-int score_fun8_standard(Coordinates &xa, Coordinates &ya, int n_ali, float d,
-                        int i_ali[], float *score1, int score_sum_method,
-                        float score_d8, float d0)
-{
-    float score_sum = 0, di;
-    float d_tmp = d*d;
-    float d02 = d0*d0;
-    float score_d8_cut = score_d8*score_d8;
-
-    int i, n_cut, inc = 0;
-    while (1)
-    {
-        n_cut = 0;
-        score_sum = 0;
-        for (i = 0; i<n_ali; i++)
-        {
-            di = BasicFunction::BasicFunction::dist(xa.x[i], xa.y[i], xa.z[i],
-                      ya.x[i], ya.y[i], ya.z[i]);
-            if (di<d_tmp)
-            {
-                i_ali[n_cut] = i;
-                n_cut++;
-            }
-            if (score_sum_method == 8)
-            {
-                if (di <= score_d8_cut) score_sum += 1 / (1 + di / d02);
-            }
-            else
-            {
-                score_sum += 1 / (1 + di / d02);
-            }
-        }
-        //there are not enough feasible pairs, reliefe the threshold
-        if (n_cut<3 && n_ali>3)
-        {
-            inc++;
-            double dinc = (d + inc*0.5);
-            d_tmp = dinc * dinc;
-        }
-        else break;
-    }
-
-    *score1 = score_sum / n_ali;
-    return n_cut;
-}
 
 
 bool KabschFast(Coordinates & x,
@@ -438,7 +393,7 @@ double TMscore8_search(Coordinates &r1, Coordinates &r2,
 
 double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                                 Coordinates &xtm, Coordinates &ytm, Coordinates &xt, int Lali,
-                                float t0[3], float u0[3][3], int simplify_step, int score_sum_method,
+                                float t0[3], float u0[3][3], int simplify_step,
                                 float *Rcomm, float local_d0_search, float score_d8, float d0, float * mem)
 {
     int i, m;
@@ -511,8 +466,10 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
 
             //get subsegment of this fragment
             d = local_d0_search - 1;
-            n_cut = score_fun8_standard(xt, ytm, Lali, d, i_ali, &score,
-                                        score_sum_method, score_d8, d0);
+            //n_cut = score_fun8_standard(xt, ytm, Lali, d, i_ali, &score,
+            //                            score_sum_method, score_d8, d0);
+            n_cut = score_fun8(xt, ytm, Lali, d, i_ali, &score,
+                             Lali, score_d8, d0, mem);
 
             if (score>score_max)
             {
@@ -550,8 +507,8 @@ double TMscore8_search_standard(Coordinates &r1, Coordinates &r2,
                 //extract rotation matrix based on the fragment
                 KabschFast(r1, r2, n_cut, &rmsd, t, u, mem);
                 BasicFunction::do_rotation(xtm, xt, Lali, t, u);
-                n_cut = score_fun8_standard(xt, ytm, Lali, d, i_ali, &score,
-                                            score_sum_method, score_d8, d0);
+                n_cut = score_fun8(xt, ytm, Lali, d, i_ali, &score,
+                                   Lali, score_d8, d0, mem);
                 if (score>score_max)
                 {
                     score_max = score;
@@ -633,7 +590,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
                                  Coordinates &xtm, Coordinates &ytm, Coordinates &xt,
                                  const Coordinates &x, const Coordinates &y,
                                  int ylen, int invmap0[], float t[3], float u[3][3],
-                                 int simplify_step, int score_sum_method, double local_d0_search,
+                                 int simplify_step, double local_d0_search,
                                  const bool& bNormalize, float Lnorm, float score_d8, float d0, float * mem)
 {
     //x is model, y is template, try to superpose onto y
@@ -660,7 +617,7 @@ double detailed_search_standard( Coordinates &r1, Coordinates &r2,
 
     //detailed search 40-->1
     tmscore = TMscore8_search_standard( r1, r2, xtm, ytm, xt, k, t, u,
-                                        simplify_step, score_sum_method, &rmsd, local_d0_search, score_d8, d0, mem);
+                                        simplify_step, &rmsd, local_d0_search, score_d8, d0, mem);
     if (bNormalize)// "-i", to use standard_TMscore, then bNormalize=true, else bNormalize=false;
         tmscore = tmscore * k / Lnorm;
 
@@ -1457,13 +1414,12 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
     if(u[0][0]==NAN){
         return 0;
     }
-    RMSD = sqrt( RMSD/(1.0*n_al) );
+    //RMSD = sqrt( RMSD/(1.0*n_al) );  // see rmsd_uncentered_avx
 
     int temp_simplify_step = 40;
-    int temp_score_sum_method = 0;
     float rms = 0.0;
     tmscore = TMscore8_search_standard(r1, r2, xtm, ytm, xt, n_al, t, u,
-                                       temp_simplify_step, temp_score_sum_method, &rms, d0_input,
+                                       temp_simplify_step, &rms, d0_input,
                                        score_d8, d0, mem);
     tmscore = tmscore * n_al / (1.0*Lnorm);
 
@@ -1497,7 +1453,6 @@ int TMalign_main(
     parameter_set4search(xlen, ylen, D0_MIN, Lnorm,
                          score_d8, d0, d0_search, dcu0);
     int simplify_step    = 40; //for similified search engine
-    int score_sum_method = 8;  //for scoring method, whether only sum over pairs with dis<score_d8
 
     int i;
     int *invmap0         = new int[ylen+1];
@@ -1669,9 +1624,8 @@ int TMalign_main(
     //extract the best rotation matrix (t, u) for the best alginment
     simplify_step=1;
     if (fast_opt) simplify_step=40;
-    score_sum_method=8;
     TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya, ylen,
-                                  invmap0, t, u, simplify_step, score_sum_method, local_d0_search,
+                                  invmap0, t, u, simplify_step, local_d0_search,
                                   false, Lnorm, score_d8, d0, mem);
 
     //select pairs with dis<d8 for final TMscore computation and output alignment
@@ -1723,7 +1677,6 @@ int TMalign_main(
     //****************************************//
     float rmsd;
     simplify_step=1;
-    score_sum_method=0;
     float Lnorm_0=ylen;
 
 

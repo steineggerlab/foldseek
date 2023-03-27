@@ -37,7 +37,8 @@ public:
     void initQuery(float * x, float * y, float * z, char * querySeq, unsigned int queryLen);
     TMscoreResult computeTMscore(float *x, float *y, float *z,
                                  unsigned int targetLen, int qStartPos,
-                                 int targetStartPos, const std::string & backtrace);
+                                 int targetStartPos, const std::string & backtrace,
+                                 int normalizationLen);
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
                             char * targetSeq, unsigned int targetLen, float &TM);
 private:

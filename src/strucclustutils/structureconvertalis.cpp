@@ -470,6 +470,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         Coordinate16 qcoords;
         Coordinate16 tcoords;
 
+        std::string tmpBt;
+        double rmsd = 0.0;
 #pragma omp  for schedule(dynamic, 10)
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
             progress.updateProgress();
@@ -493,8 +495,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             }
             float *queryCaData = NULL;
             if (needCA) {
+                size_t qSeqId = qDbr.sequenceReader->getId(queryKey);
+		        querySeqLen = qDbr.sequenceReader->getSeqLen(qSeqId);
                 size_t qId = qcadbr->sequenceReader->getId(queryKey);
-		        querySeqLen =  (qcadbr->sequenceReader->getEntryLen(qId)-1)/(3*sizeof(float));
                 char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
                 size_t qCaLength = qcadbr->sequenceReader->getEntryLen(qId);
                 queryCaData = qcoords.read(qcadata, querySeqLen, qCaLength);
@@ -594,8 +597,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 }
                 if(needTMaligner){
                     tmaligner->initQuery(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen], NULL, res.qLen);
+                    tmpBt = Matcher::uncompressAlignment(res.backtrace);
                     tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                      res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace));
+                                                      res.qStartPos, res.dbStartPos, tmpBt,
+                                                      std::min(std::min(res.dbLen, res.qLen), static_cast<unsigned int>(tmpBt.size())));
+                    rmsd = tmres.rmsd;
+
                 }
                 LDDTCalculator::LDDTScoreResult lddtres;
                 if(needLDDT) {
@@ -824,8 +831,20 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                     case LocalParameters::OUTFMT_ALNTMSCORE:
                                         result.append(SSTR(tmres.tmscore));
                                         break;
+                                    case LocalParameters::OUTFMT_QTMSCORE:
+                                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
+                                                                          res.qLen);
+                                        result.append(SSTR(tmres.tmscore));
+                                        break;
+                                    case LocalParameters::OUTFMT_TTMSCORE:
+                                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
+                                                                          res.dbLen);
+                                        result.append(SSTR(tmres.tmscore));
+                                        break;
                                     case LocalParameters::OUTFMT_RMSD:
-                                        result.append(SSTR(tmres.rmsd));
+                                        result.append(SSTR(rmsd));
                                         break;
                                     case LocalParameters::OUTFMT_LDDT:
                                         // TODO: make SSTR_approx that outputs %2f, not %3f

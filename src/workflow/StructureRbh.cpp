@@ -9,8 +9,11 @@ namespace structureRbh{
 
 #include <cassert>
 
-void setStructureRbhDefaults(Parameters *p) {
+
+void setStructureRbhDefaults(LocalParameters *p) {
     p->maskMode = 0;
+    p->compBiasCorrection = 0;
+    p->sortByStructureBits = 0;
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
@@ -18,7 +21,6 @@ void setStructureRbhDefaults(Parameters *p) {
     p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
 }
 
 int structurerbh(int argc, const char **argv, const Command &command) {

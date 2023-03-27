@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/sh -e
 fail() {
     echo "Error: $1"
     exit 1
@@ -108,20 +108,20 @@ case "${SELECTION}" in
     ;;
     "Alphafold/Proteome")
         if notExists "${TMP_PATH}/alphafolddb.tar.gz"; then
-            downloadFile "https://foldseek.steineggerlab.workers.dev/alphafolddb.tar.gz" "${TMP_PATH}/alphafolddb.tar.gz"
-            downloadFile "https://foldseek.steineggerlab.workers.dev/alphafolddb.version" "${TMP_PATH}/version"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_proteome.tar.gz" "${TMP_PATH}/afdb_proteome.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_proteome.version" "${TMP_PATH}/version"
         fi
-        tar xvfz "${TMP_PATH}/alphafolddb.tar.gz" -C "${TMP_PATH}"
-        push_back "${TMP_PATH}/alphafolddb"
+        tar xvfz "${TMP_PATH}/afdb_proteome.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/afdb_proteome"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "Alphafold/Swiss-Prot")
         if notExists "${TMP_PATH}/alphafold_swissprot.tar.gz"; then
-            downloadFile "https://foldseek.steineggerlab.workers.dev/alphafold_swissprot.tar.gz" "${TMP_PATH}/alphafold_swissprot.tar.gz"
-            downloadFile "https://foldseek.steineggerlab.workers.dev/alphafold_swissprot.version" "${TMP_PATH}/version"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_swissprot.tar.gz" "${TMP_PATH}/afdb_swissprot.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_swissprot.version" "${TMP_PATH}/version"
         fi
-        tar xvfz "${TMP_PATH}/alphafold_swissprot.tar.gz" -C "${TMP_PATH}"
-        push_back "${TMP_PATH}/alphafold_swissprot"
+        tar xvfz "${TMP_PATH}/afdb_swissprot.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/afdb_swissprot"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "ESMAtlas30")
