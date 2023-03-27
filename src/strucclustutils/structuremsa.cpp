@@ -40,8 +40,8 @@ KSEQ_INIT(kseq_buffer_t*, kseq_buffer_reader)
 #define	EXIT_SUCCESS	0
 
 struct AlnSimple {
-    unsigned int queryId;
-    unsigned int targetId;
+    size_t queryId;
+    size_t targetId;
     int score;
 };
 
@@ -188,8 +188,7 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
     return hits;
 }
 
-Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned int querySeqLen,  Sequence *target_aa, Sequence *target_3di, int gapOpen,
-                  int gapExtend) {
+Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned int querySeqLen,  Sequence *target_aa, Sequence *target_3di, int gapOpen, int gapExtend) {
     std::string backtrace;
     
     bool targetIsProfile = (Parameters::isEqualDbtype(target_aa->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
@@ -201,7 +200,7 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
         target_aa_seq = target_aa->numConsensusSequence;
         target_3di_seq = target_3di->numConsensusSequence;
     }
-    StructureSmithWaterman::s_align align = aligner.alignScoreEndPos(
+    StructureSmithWaterman::s_align align = aligner.alignScoreEndPos<StructureSmithWaterman::PROFILE>(
         target_aa_seq,
         target_3di_seq,
         target_aa->L,
@@ -209,7 +208,7 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
         gapExtend,
         querySeqLen / 2
     );
-    align = aligner.alignStartPosBacktrace(
+    align = aligner.alignStartPosBacktrace<StructureSmithWaterman::PROFILE>(
         target_aa_seq,
         target_3di_seq,
         target_aa->L,
@@ -249,7 +248,7 @@ void sortHitsByScore(std::vector<AlnSimple> &hits) {
     });
 }
 
-std::vector<AlnSimple> removeMergedHits(std::vector<AlnSimple> & hits, unsigned int mergedId, unsigned int targetId) {
+std::vector<AlnSimple> removeMergedHits(std::vector<AlnSimple> & hits, size_t mergedId, size_t targetId) {
     std::vector<AlnSimple> newHits;
     for (size_t i = 0; i < hits.size(); i++) {
         if (hits[i].queryId != mergedId && hits[i].targetId != mergedId
@@ -269,6 +268,7 @@ std::vector<AlnSimple> updateAllScores(
     int8_t * tinySubMatAA,
     int8_t * tinySubMat3Di,
     SubstitutionMatrix * subMat_aa,
+    SubstitutionMatrix * subMat_3di,
     std::vector<Sequence*> & allSeqs_aa,
     std::vector<Sequence*> & allSeqs_3di,
     bool * alreadyMerged,
@@ -281,9 +281,11 @@ std::vector<AlnSimple> updateAllScores(
     std::vector<AlnSimple> newHits((N * N - N) / 2);
 #pragma omp parallel
 {
-    StructureSmithWaterman structureSmithWaterman(maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale);
+    StructureSmithWaterman structureSmithWaterman(
+        maxSeqLen, alphabetSize, compBiasCorrection, compBiasCorrectionScale, subMat_aa, subMat_3di
+    );
 #pragma omp for schedule(dynamic)
-    for (unsigned int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         if (alreadyMerged[i])
             continue;
         structureSmithWaterman.ssw_init(
@@ -293,7 +295,7 @@ std::vector<AlnSimple> updateAllScores(
             tinySubMat3Di,
             subMat_aa
         );
-        for (unsigned int j = i + 1; j < N; j++) {
+        for (size_t j = i + 1; j < N; j++) {
             if (alreadyMerged[j] || i == j)
                 continue;
             bool targetIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[j]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
@@ -906,9 +908,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     SubstitutionMatrix subMat_aa(blosum.c_str(), 1.4, par.scoreBiasAa);
 
     std::cout << "Got substitution matrices" << std::endl;
-    
+
     // Initialise MSAs, Sequence objects
-    int sequenceCnt = seqDbrAA.getSize();
+    size_t sequenceCnt = seqDbrAA.getSize();
     std::vector<Sequence*> allSeqs_aa(sequenceCnt);
     std::vector<Sequence*> allSeqs_3di(sequenceCnt);
     std::vector<std::string> msa_aa(sequenceCnt);
@@ -919,9 +921,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::map<std::string, int> headers_rev;
 
     int maxSeqLength = 0;
-    for (int i = 0; i < sequenceCnt; i++) {
-        unsigned int seqKeyAA = seqDbrAA.getDbKey(i);
-        unsigned int seqKey3Di = seqDbr3Di.getDbKey(i);
+    for (size_t i = 0; i < sequenceCnt; i++) {
+        size_t seqKeyAA = seqDbrAA.getDbKey(i);
+        size_t seqKey3Di = seqDbr3Di.getDbKey(i);
         allSeqs_aa[i] = new Sequence(par.maxSeqLen, seqDbrAA.getDbtype(), (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
         allSeqs_aa[i]->mapSequence(i, seqKeyAA, seqDbrAA.getData(i, 0), seqDbrAA.getSeqLen(i));
         allSeqs_3di[i] = new Sequence(par.maxSeqLen, seqDbr3Di.getDbtype(), (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
@@ -980,6 +982,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             tinySubMatAA,
             tinySubMat3Di,
             &subMat_aa,
+            &subMat_3di,
             allSeqs_aa,
             allSeqs_3di,
             alreadyMerged,
@@ -1017,7 +1020,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 #pragma omp parallel
 {
     // Initialise alignment objects per thread
-    StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat_3di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale);
+    StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat_3di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMat_aa, &subMat_3di);
     PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
     PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
@@ -1028,8 +1031,8 @@ int structuremsa(int argc, const char **argv, const Command& command) {
 
 #pragma omp for schedule(dynamic, 1)
         for (size_t j = 0; j < merges[i]; j++) {
-            unsigned int mergedId = std::min(hits[index + j].queryId, hits[index + j].targetId);
-            unsigned int targetId = std::max(hits[index + j].queryId, hits[index + j].targetId);
+            size_t mergedId = std::min(hits[index + j].queryId, hits[index + j].targetId);
+            size_t targetId = std::max(hits[index + j].queryId, hits[index + j].targetId);
             mergedId = idMappings[mergedId];
             targetId = idMappings[targetId];
             bool queryIsProfile = (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
@@ -1052,7 +1055,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             assert(mergedId != targetId);
 
             // Make sure all relevant ids are updated
-            for (int k = 0; k < sequenceCnt; k++) {
+            for (size_t k = 0; k < sequenceCnt; k++) {
                 if (idMappings[k] == targetId || idMappings[k] == mergedId)
                     idMappings[k] = mergedId;
             }
@@ -1149,9 +1152,9 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     }
 
     // Find the final MSA (only non-empty string left in msa vectors)
-    int msaCnt = 0;
+    size_t msaCnt = 0;
     std::string finalMSA;
-    for (int i = 0; i < sequenceCnt; ++i) {
+    for (size_t i = 0; i < sequenceCnt; ++i) {
         if (msa_aa[i] != "" && msa_3di[i] != "") {
             finalMSA = msa_aa[i];
             ++msaCnt;

@@ -26,10 +26,9 @@ LocalParameters::LocalParameters() :
         PARAM_PCB_3DI(PARAM_PCB_3DI_ID, "--pcb-3di", "3Di alignment PCB", "", typeid(float), (void *) &pcb3di, "^([0-9]*\\.[0-9]*)$"),
         PARAM_SCORE_BIAS_AA(PARAM_SCORE_BIAS_AA_ID, "--score-bias-aa", "AA alignment score bias", "", typeid(float), (void *) &scoreBiasAa, "^([0-9]*\\.[0-9]*)$"),
         PARAM_SCORE_BIAS_3DI(PARAM_SCORE_BIAS_3DI_ID, "--score-bias-3di", "3Di alignment score bias", "", typeid(float), (void *) &scoreBias3di, "^([0-9]*\\.[0-9]*)$"),
-        PARAM_GUIDE_TREE(PARAM_GUIDE_TREE_ID, "--guide-tree", "Input Newick guide tree", "Guide tree in Newick format", typeid(std::string), (void *) &guideTree, ".*\.nw"),
+        PARAM_GUIDE_TREE(PARAM_GUIDE_TREE_ID, "--guide-tree", "Input Newick guide tree", "Guide tree in Newick format", typeid(std::string), (void *) &guideTree, ".*\\.nw"),
         PARAM_RECOMPUTE_SCORES(PARAM_RECOMPUTE_SCORES_ID, "--recompute-scores", "Recompute scores", "Recompute all-vs-all alignment scores every iteration", typeid(bool), (void *) &recomputeScores, ""),
-        PARAM_REGRESSIVE(PARAM_REGRESSIVE_ID, "--regressive", "Regressive alignment", "Align sequences root-to-leaf", typeid(bool), (void *) &regressive, ""),
-        PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT)
+        PARAM_REGRESSIVE(PARAM_REGRESSIVE_ID, "--regressive", "Regressive alignment", "Align sequences root-to-leaf", typeid(bool), (void *) &regressive, "")
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
