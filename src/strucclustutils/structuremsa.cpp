@@ -290,7 +290,8 @@ std::vector<AlnSimple> updateAllScores(
             N++;
         }
     }
-    std::vector<AlnSimple> newHits((N * N - N) / 2);
+    std::vector<AlnSimple> newHits;
+    // newHits.resize((N * N - N) / 2);
 #pragma omp parallel
 {
     StructureSmithWaterman structureSmithWaterman(
@@ -302,7 +303,9 @@ std::vector<AlnSimple> updateAllScores(
         subMat_3di
     );
     unsigned int queryId = 0;
-#pragma omp for schedule(dynamic)
+    std::vector<AlnSimple> threadHits;
+
+#pragma omp for schedule(dynamic, 10)
     for (unsigned int i = 0; i < allSeqs_aa.size(); i++) {
         if (alreadyMerged[i])
             continue;
@@ -328,11 +331,17 @@ std::vector<AlnSimple> updateAllScores(
             aln.queryId = i;
             aln.targetId = j;
             aln.score = structureSmithWaterman.ungapped_alignment(target_aa_seq, target_3di_seq, allSeqs_aa[j]->L);
-            size_t ij = get1dIndex(queryId, targetId, N);
-            newHits[ij] = aln;
+            threadHits.push_back(aln); 
+            // size_t ij = get1dIndex(queryId, targetId, N);
+            // newHits[ij] = aln;
             targetId++;
         }
         queryId++;
+    }
+
+#pragma omp critical
+    {
+        newHits.insert(newHits.end(), threadHits.begin(), threadHits.end());
     }
 }
     return newHits;
@@ -751,15 +760,19 @@ std::vector<AlnSimple> parseAndScoreExternalHits(
             char *data = cluDbr->getData(i, 0);
             unsigned int queryKey = cluDbr->getDbKey(i);
             structureSmithWaterman.ssw_init(
-                    allSeqs_aa[queryKey],
-                    allSeqs_3di[queryKey],
-                    tinySubMatAA,
-                    tinySubMat3Di,
-                    subMat_aa
+                allSeqs_aa[queryKey],
+                allSeqs_3di[queryKey],
+                tinySubMatAA,
+                tinySubMat3Di,
+                subMat_aa
             );
             while (*data != '\0') {
                 Util::parseKey(data, buffer);
                 const unsigned int dbKey = (unsigned int) strtoul(buffer, NULL, 10);
+                if (queryKey == dbKey) {
+                    data = Util::skipLine(data);
+                    continue;
+                }
                 AlnSimple aln;
                 aln.queryId = queryKey;
                 aln.targetId = dbKey;
@@ -1033,6 +1046,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     // Substitution matrices needed for query profile
     int8_t *tinySubMatAA  = (int8_t*) mem_align(ALIGN_INT, subMat_aa.alphabetSize * 32);
     int8_t *tinySubMat3Di = (int8_t*) mem_align(ALIGN_INT, subMat_3di.alphabetSize * 32);
+
     for (int i = 0; i < subMat_3di.alphabetSize; i++)
         for (int j = 0; j < subMat_3di.alphabetSize; j++)
             tinySubMat3Di[i * subMat_3di.alphabetSize + j] = subMat_3di.subMatrix[i][j]; // for farrar profile
@@ -1047,8 +1061,12 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     if(par.filenames.size() == 3){
         // consider everything merged and unmerge the ones that are not
         memset(alreadyMerged, 1, sizeof(bool) * sequenceCnt);
-        cluDbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(),
-                                            par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
+        cluDbr = new DBReader<unsigned int>(
+            par.db2.c_str(),
+            par.db2Index.c_str(),
+            par.threads,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA
+        );
         cluDbr->open(DBReader<unsigned int>::LINEAR_ACCCESS);
         // mark all sequences that are already clustered as merged
         for(size_t i = 0; i < cluDbr->getSize(); i++){
@@ -1060,7 +1078,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     }
     std::vector<AlnSimple> hits;
     if (par.guideTree != "") {
-        std::cout << "Loading guide tree: " << par.guideTree << "\n"; 
+        std::cout << "Loading guide tree: " << par.guideTree << "\n";
         std::string tree;
         std::string line;
         std::ifstream newick(par.guideTree);
