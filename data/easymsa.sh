@@ -15,29 +15,39 @@ if notExists "${STRUCTUREDB}.dbtype"; then
         || fail "Structure createdb died"
 fi
 
-if notExists "${TMP_PATH}/perf.dbtype"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" kmermatcher "${STRUCTUREDB}_ss" "${TMP_PATH}/perf" ${KMERMATCHER_PAR} \
-        || fail "Structure kmermatcher died"
-fi
+if [ "${PRECLUSTER}" ]
+then
+    if notExists "${TMP_PATH}/perf.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" kmermatcher "${STRUCTUREDB}_ss" "${TMP_PATH}/perf" ${KMERMATCHER_PAR} \
+            || fail "Structure kmermatcher died"
+    fi
 
-if notExists "${TMP_PATH}/aln.dbtype"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" structurealign "${STRUCTUREDB}" "${STRUCTUREDB}" "${TMP_PATH}/perf" "${TMP_PATH}/aln" ${ALIGN_PAR} \
-        || fail "Structure align died"
-fi
+    if notExists "${TMP_PATH}/aln.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" structurealign "${STRUCTUREDB}" "${STRUCTUREDB}" "${TMP_PATH}/perf" "${TMP_PATH}/aln" ${ALIGN_PAR} \
+            || fail "Structure align died"
+    fi
 
-if notExists "${TMP_PATH}/clu.dbtype"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" clust "${STRUCTUREDB}" "${TMP_PATH}/aln" "${TMP_PATH}/clu" ${CLUST_PAR} \
-        || fail "Structure clust died"
-fi
+    if notExists "${TMP_PATH}/clu.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" clust "${STRUCTUREDB}" "${TMP_PATH}/aln" "${TMP_PATH}/clu" ${CLUST_PAR} \
+            || fail "Structure clust died"
+    fi
 
-if notExists "${TMP_PATH}/${TREE}"; then
-    # shellcheck disable=SC2086
-	# Query DB, Alignment DB, temporary directory
-	"$MMSEQS" structuremsa "${STRUCTUREDB}" "${TMP_PATH}/clu" "${RESULTS}" ${STRUCTUREMSA_PAR} \
-		|| fail "structuremsa died"
+    if notExists "${TMP_PATH}/${TREE}"; then
+        # shellcheck disable=SC2086
+        # Query DB, Alignment DB, temporary directory
+        "$MMSEQS" structuremsacluster "${STRUCTUREDB}" "${TMP_PATH}/clu" "${RESULTS}" ${STRUCTUREMSA_PAR} \
+            || fail "structuremsa died"
+    fi
+else
+    if notExists "${TMP_PATH}/${TREE}"; then
+        # shellcheck disable=SC2086
+        # Query DB, Alignment DB, temporary directory
+        "$MMSEQS" structuremsa "${STRUCTUREDB}" "${RESULTS}" ${STRUCTUREMSA_PAR} \
+            || fail "structuremsa died"
+    fi   
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then

@@ -971,7 +971,7 @@ std::string mergeTwoMsa(
     return msa;
 }
 
-int structuremsa(int argc, const char **argv, const Command& command) {
+int structuremsa(int argc, const char **argv, const Command& command, bool preCluster) {
     LocalParameters &par = LocalParameters::getLocalInstance();
 
     par.compBiasCorrection = 0;
@@ -979,6 +979,7 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     // Databases
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
+
     DBReader<unsigned int> seqDbrAA(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbrAA.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbr3Di((par.db1+"_ss").c_str(), (par.db1+"_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
@@ -1056,9 +1057,10 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     std::cout << "Set up tiny substitution matrices" << std::endl;
 
     bool * alreadyMerged = new bool[sequenceCnt];
+    
     DBReader<unsigned int> * cluDbr = NULL;
-    // if we have a clustering
-    if(par.filenames.size() == 3){
+
+    if (preCluster) {
         // consider everything merged and unmerge the ones that are not
         memset(alreadyMerged, 1, sizeof(bool) * sequenceCnt);
         cluDbr = new DBReader<unsigned int>(
@@ -1073,9 +1075,10 @@ int structuremsa(int argc, const char **argv, const Command& command) {
             unsigned int dbKey = cluDbr->getDbKey(i);
             alreadyMerged[dbKey] = 0;
         }
-    }else{
+    } else {
         memset(alreadyMerged, 0, sizeof(bool) * sequenceCnt);
-    }
+    }       
+
     std::vector<AlnSimple> hits;
     if (par.guideTree != "") {
         std::cout << "Loading guide tree: " << par.guideTree << "\n";
@@ -1326,3 +1329,10 @@ int structuremsa(int argc, const char **argv, const Command& command) {
     return EXIT_SUCCESS;
 }
 
+int structuremsa(int argc, const char **argv, const Command& command) {
+    return structuremsa(argc, argv, command, false);
+}
+
+int structuremsacluster(int argc, const char **argv, const Command& command) {
+    return structuremsa(argc, argv, command, true);
+}

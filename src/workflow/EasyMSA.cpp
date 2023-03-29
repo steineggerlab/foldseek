@@ -89,7 +89,8 @@ int easymsa(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-
+    cmd.addVariable("PRECLUSTER", par.precluster ? "TRUE" : NULL);
+    
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
 
     std::string program = tmpDir + "/easymsa.sh";

@@ -68,6 +68,7 @@ public:
     std::vector<MMseqsParameter *> structuresearchworkflow;
     std::vector<MMseqsParameter *> structureclusterworkflow;
     std::vector<MMseqsParameter *> structuremsa;
+    std::vector<MMseqsParameter *> structuremsacluster;
     std::vector<MMseqsParameter *> msa2lddt;
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
@@ -96,6 +97,7 @@ public:
     PARAMETER(PARAM_GUIDE_TREE)
     PARAMETER(PARAM_RECOMPUTE_SCORES)
     PARAMETER(PARAM_REGRESSIVE)
+    PARAMETER(PARAM_PRECLUSTER)
 
     // PARAMETER(PARAM_NEWICK_OUTPUT)
     PARAMETER(PARAM_LDDT_HTML)
@@ -114,6 +116,7 @@ public:
     std::string guideTree;
     bool recomputeScores;
     bool regressive;
+    bool precluster;
     float scoreBiasAa;
     float scoreBias3di;
     MultiParam<PseudoCounts> pcaAa;
