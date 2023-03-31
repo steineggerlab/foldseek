@@ -82,6 +82,7 @@ u           Rotation matrix (computed to by TM-score)
 t           Translation vector (computed to by TM-score)
 lddt        Average LDDT of the alignment    
 lddtfull    LDDT per aligned position
+prob        Estimated probability for query and target to be homologous (e.g. being within the same SCOPe superfamily)
 ```
 
 #### Output: Superpositioned Cα only PDB files
