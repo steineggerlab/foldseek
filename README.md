@@ -142,7 +142,7 @@ Foldseek supports to realign hits using TMalign as well as rescoring alignments 
 ```
 foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 ```
-In case of the alignment type (`--alignment-type 1`) tmalign we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field.
+In case of the alignment type (`--alignment-type 1`) tmalign, we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field. All output fields (like pident, fident, and alnlen) are calculated from the TMalign alignment.
 
 
 ### Rescore aligments using TMscore
