@@ -134,7 +134,7 @@ jobs:
         displayName: Install Rust Toolchain
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./lib/mmseqs/util/build_osx.sh . build foldseek
+          ./util/build_osx.sh . build foldseek
         displayName: Build foldseek
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
