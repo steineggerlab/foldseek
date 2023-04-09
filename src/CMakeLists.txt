@@ -15,7 +15,7 @@ add_executable(foldseek
         foldseek.cpp)
 
 mmseqs_setup_derived_target(foldseek)
-target_link_libraries(foldseek version gemmiwrapper 3di pulchra kerasify tmalign block-aligner)
+target_link_libraries(foldseek version gemmiwrapper 3di pulchra kerasify tmalign block-aligner-c)
 
 if(HAVE_GCS)
         find_package(google_cloud_cpp_storage REQUIRED)
