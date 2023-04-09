@@ -8,5 +8,6 @@ c/a.out
 c/target
 c/example
 c/align_prefix
+c/align_local
 vis/.ipynb_checkpoints
 vis/*.log
