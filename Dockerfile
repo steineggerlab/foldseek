@@ -11,7 +11,7 @@ RUN dpkg --add-architecture $TARGETARCH \
       crossbuild-essential-$TARGETARCH zlib1g-dev:$TARGETARCH libbz2-dev:$TARGETARCH \
     && rm -rf /var/lib/apt/lists/*
     
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN rustup update && rustup target install x86_64-apple-darwin && rustup target install aarch64-apple-darwin
 
 WORKDIR /opt/build
