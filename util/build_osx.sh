@@ -105,7 +105,7 @@ fi
 # disabled: -arch x86_64 "$BUILD/build_sse41/src/${BINARY_NAME}" \
 lipo \
     -create \
-    -arch x86_64h "$BUILD/build_avx2/src/${BINARY_NAME}" \
+    -arch x86_64 "$BUILD/build_avx2/src/${BINARY_NAME}" \
     -arch arm64 "$BUILD/build_arm64/src/${BINARY_NAME}" \
     -output "$BUILD/${BINARY_NAME}"
 
