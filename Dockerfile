@@ -6,10 +6,14 @@ ARG APP
 RUN dpkg --add-architecture $TARGETARCH \
     && apt-get update \
     && apt-get install -y \
-      build-essential cmake xxd git \
+      build-essential cmake curl xxd git \
       zlib1g-dev libbz2-dev libatomic1 \
       crossbuild-essential-$TARGETARCH zlib1g-dev:$TARGETARCH libbz2-dev:$TARGETARCH \
     && rm -rf /var/lib/apt/lists/*
+    
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup update && rustup target install x86_64-apple-darwin && rustup target install aarch64-apple-darwin
 
 WORKDIR /opt/build
 ADD . .

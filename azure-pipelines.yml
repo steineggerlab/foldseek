@@ -174,18 +174,18 @@ jobs:
           archiveFile: $(Build.SourcesDirectory)/foldseek-osx-universal.tar.gz
           includeRootFolder: true
           archiveType: tar
-      # - task: DownloadPipelineArtifact@1
-      #   inputs:
-      #     artifactName: foldseek-linux-SSE2
-      #     targetPath: $(Build.SourcesDirectory)/foldseek/bin
-      # - script:
-      #     chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
-      # - task: ArchiveFiles@2
-      #   inputs:
-      #     rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
-      #     includeRootFolder: true
-      #     archiveType: tar
+      - task: DownloadPipelineArtifact@1
+        inputs:
+          artifactName: foldseek-linux-SSE2
+          targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      - script:
+          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
+          includeRootFolder: true
+          archiveType: tar
       # - task: DownloadPipelineArtifact@1
       #   inputs:
       #     artifactName: foldseek-linux-SSE4_1
@@ -256,7 +256,7 @@ jobs:
           ssh-keyscan -t rsa uniclust.mmseqs.com >> ~/.ssh/known_hosts
           cd "${BUILD_SOURCESDIRECTORY}"
           ssh codeship@uniclust.mmseqs.com "mkdir -p \"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}\""
-          # disabled: foldseek-linux-sse2.tar.gz foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
-          scp foldseek-osx-universal.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
+          # disabled:foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
+          scp foldseek-osx-universal.tar.gz foldseek-linux-sse2.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
           ssh codeship@uniclust.mmseqs.com "update-latest-foldseek.sh \"${BUILD_SOURCEVERSION}\""
 
