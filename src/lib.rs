@@ -2,7 +2,7 @@
 //! gap penalty sequence-to-sequence or sequence-to-profile alignments
 //! using an adaptive block-based algorithm.
 //!
-//! Currently, AVX2, Neon, and WASM SIMD are supported.
+//! Currently, SSE2, AVX2, Neon, and WASM SIMD are supported.
 //!
 //! ## Example
 //! ```
@@ -37,12 +37,21 @@
 //! Let me know how block aligner performs on your data!
 //!
 //! When building your code that uses this library, it is important to specify the
-//! correct feature flags: `simd_avx2`, `simd_neon`, or `simd_wasm`.
+//! correct feature flags: `simd_sse2`, `simd_avx2`, `simd_neon`, or `simd_wasm`.
 //! More information on specifying different features for different platforms
 //! with the same dependency [here](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#platform-specific-dependencies).
 
 // special SIMD instruction set modules adapted for this library
 // their types and lengths are abstracted out
+
+#[cfg(feature = "simd_sse2")]
+#[macro_use]
+#[doc(hidden)]
+/// cbindgen:ignore
+pub mod sse2;
+
+#[cfg(feature = "simd_sse2")]
+pub use sse2::L;
 
 #[cfg(feature = "simd_avx2")]
 #[macro_use]
@@ -71,14 +80,14 @@ pub mod neon;
 #[cfg(feature = "simd_neon")]
 pub use neon::L;
 
-#[cfg(any(feature = "simd_avx2", feature = "simd_wasm", feature = "simd_neon"))]
+#[cfg(any(feature = "simd_sse2", feature = "simd_avx2", feature = "simd_wasm", feature = "simd_neon"))]
 pub mod scan_block;
-#[cfg(any(feature = "simd_avx2", feature = "simd_wasm", feature = "simd_neon"))]
+#[cfg(any(feature = "simd_sse2", feature = "simd_avx2", feature = "simd_wasm", feature = "simd_neon"))]
 pub mod scores;
-#[cfg(any(feature = "simd_avx2", feature = "simd_wasm", feature = "simd_neon"))]
+#[cfg(any(feature = "simd_sse2", feature = "simd_avx2", feature = "simd_wasm", feature = "simd_neon"))]
 pub mod cigar;
 
-#[cfg(any(feature = "simd_avx2", feature = "simd_neon"))]
+#[cfg(any(feature = "simd_sse2", feature = "simd_avx2", feature = "simd_neon"))]
 #[doc(hidden)]
 pub mod ffi;
 

@@ -56,7 +56,7 @@ adapt to sequences of varying sequence identities. In practice, it is still very
 nucleotide sequences.
 
 Block aligner is designed to exploit SIMD parallelism on modern CPUs.
-Currently, AVX2 (256-bit vectors), Neon (128-bit vectors), and WASM SIMD (128-bit vectors) are supported.
+Currently, SSE2 (128-bit vectors), AVX2 (256-bit vectors), Neon (128-bit vectors), and WASM SIMD (128-bit vectors) are supported.
 For score calculations, 16-bit score values (lanes) and 32-bit per block offsets are used.
 
 Block aligner behaves similarly to an (adaptive) banded aligner when the minimum and maximum block size is set to
@@ -80,7 +80,7 @@ To use this as a crate in your Rust project, add the following to your `Cargo.to
 [dependencies]
 block-aligner = { version = "^0.3.0", features = ["simd_avx2"] }
 ```
-Use the `simd_neon` or `simd_wasm` feature flag for ARM Neon or WASM SIMD support, respectively.
+Use the `simd_sse2`, `simd_neon`, or `simd_wasm` feature flag for x86 SSE2, ARM Neon, or WASM SIMD support, respectively.
 It is your responsibility to ensure the correct feature to be enabled and supported by the
 platform that runs the code because this library does not automatically detect the supported
 SIMD instruction set. More information on specifying different features for different platforms
@@ -93,6 +93,11 @@ correct feature flags through the command line.
 For x86 AVX2:
 ```
 cargo build --features simd_avx2 --release
+```
+
+For x86 SSE2:
+```
+cargo build --features simd_sse2 --release
 ```
 
 For ARM Neon:

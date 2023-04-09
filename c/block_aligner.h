@@ -85,6 +85,11 @@ typedef struct NucMatrix NucMatrix;
 typedef struct PaddedBytes PaddedBytes;
 
 /**
+ * Positional score bias for scores.
+ */
+typedef struct PosBias PosBias;
+
+/**
  * An operation and how many times that operation is repeated.
  */
 typedef struct OpLen {
@@ -169,9 +174,14 @@ extern const struct ByteMatrix BYTES1;
 struct AAMatrix *block_new_simple_aamatrix(int8_t match_score, int8_t mismatch_score);
 
 /**
+ * Set an entry in the AAMatrix.
+ */
+void block_set_aamatrix(struct AAMatrix *matrix, uint8_t a, uint8_t b, int8_t score);
+
+/**
  * Frees an AAMatrix.
  */
-void block_free_simple_aamatrix(struct AAMatrix *matrix);
+void block_free_aamatrix(struct AAMatrix *matrix);
 
 /**
  * Create a new profile of a specific length, with default (large negative) values.
@@ -284,6 +294,21 @@ void block_set_bytes_padded_aa(struct PaddedBytes *padded,
 void block_free_padded_aa(struct PaddedBytes *padded);
 
 /**
+ * Create a new zero initialized positional score bias vector.
+ */
+struct PosBias *block_new_pos_bias(uintptr_t len, uintptr_t max_size);
+
+/**
+ * Write to the positional score bias vector.
+ */
+void block_set_pos_bias(struct PosBias *bias, const int16_t *b, uintptr_t len);
+
+/**
+ * Frees the positional score bias vector.
+ */
+void block_free_pos_bias(struct PosBias *bias);
+
+/**
  *Create a new block aligner instance for global alignment of amino acid strings (no traceback).
  */
 BlockHandle block_new_aa(uintptr_t query_len, uintptr_t reference_len, uintptr_t max_size);
@@ -309,6 +334,22 @@ void block_align_profile_aa(BlockHandle b,
                             int32_t x);
 
 /**
+ *Global alignment of two amino acid strings with 3di (no traceback).
+ */
+void block_align_3di_aa(BlockHandle b,
+                        const struct PaddedBytes *q,
+                        const struct PaddedBytes *q_3di,
+                        const struct PosBias *q_bias,
+                        const struct PaddedBytes *r,
+                        const struct PaddedBytes *r_3di,
+                        const struct PosBias *r_bias,
+                        const struct AAMatrix *m,
+                        const struct AAMatrix *m_3di,
+                        struct Gaps g,
+                        struct SizeRange s,
+                        int32_t x);
+
+/**
  *Retrieves the result of global alignment of two amino acid strings (no traceback).
  */
 struct AlignResult block_res_aa(BlockHandle b);
@@ -320,6 +361,16 @@ void _block_cigar_aa(BlockHandle b,
                      uintptr_t query_idx,
                      uintptr_t reference_idx,
                      struct Cigar *cigar);
+
+/**
+ *Don't use.
+ */
+void _block_cigar_eq_aa(BlockHandle b,
+                        const struct PaddedBytes *q,
+                        const struct PaddedBytes *r,
+                        uintptr_t query_idx,
+                        uintptr_t reference_idx,
+                        struct Cigar *cigar);
 
 /**
  *Frees the block used for global alignment of two amino acid strings (no traceback).
@@ -352,6 +403,22 @@ void block_align_profile_aa_xdrop(BlockHandle b,
                                   int32_t x);
 
 /**
+ *X-drop alignment of two amino acid strings with 3di (no traceback).
+ */
+void block_align_3di_aa_xdrop(BlockHandle b,
+                              const struct PaddedBytes *q,
+                              const struct PaddedBytes *q_3di,
+                              const struct PosBias *q_bias,
+                              const struct PaddedBytes *r,
+                              const struct PaddedBytes *r_3di,
+                              const struct PosBias *r_bias,
+                              const struct AAMatrix *m,
+                              const struct AAMatrix *m_3di,
+                              struct Gaps g,
+                              struct SizeRange s,
+                              int32_t x);
+
+/**
  *Retrieves the result of X-drop alignment of two amino acid strings (no traceback).
  */
 struct AlignResult block_res_aa_xdrop(BlockHandle b);
@@ -363,6 +430,16 @@ void _block_cigar_aa_xdrop(BlockHandle b,
                            uintptr_t query_idx,
                            uintptr_t reference_idx,
                            struct Cigar *cigar);
+
+/**
+ *Don't use.
+ */
+void _block_cigar_eq_aa_xdrop(BlockHandle b,
+                              const struct PaddedBytes *q,
+                              const struct PaddedBytes *r,
+                              uintptr_t query_idx,
+                              uintptr_t reference_idx,
+                              struct Cigar *cigar);
 
 /**
  *Frees the block used for X-drop alignment of two amino acid strings (no traceback).
@@ -395,6 +472,22 @@ void block_align_profile_aa_trace(BlockHandle b,
                                   int32_t x);
 
 /**
+ *Global alignment of two amino acid strings with 3di, with traceback.
+ */
+void block_align_3di_aa_trace(BlockHandle b,
+                              const struct PaddedBytes *q,
+                              const struct PaddedBytes *q_3di,
+                              const struct PosBias *q_bias,
+                              const struct PaddedBytes *r,
+                              const struct PaddedBytes *r_3di,
+                              const struct PosBias *r_bias,
+                              const struct AAMatrix *m,
+                              const struct AAMatrix *m_3di,
+                              struct Gaps g,
+                              struct SizeRange s,
+                              int32_t x);
+
+/**
  *Retrieves the result of global alignment of two amino acid strings, with traceback.
  */
 struct AlignResult block_res_aa_trace(BlockHandle b);
@@ -406,6 +499,16 @@ void block_cigar_aa_trace(BlockHandle b,
                           uintptr_t query_idx,
                           uintptr_t reference_idx,
                           struct Cigar *cigar);
+
+/**
+ *Retrieves the resulting CIGAR string from global alignment of two amino acid strings, with traceback containing =/X.
+ */
+void block_cigar_eq_aa_trace(BlockHandle b,
+                             const struct PaddedBytes *q,
+                             const struct PaddedBytes *r,
+                             uintptr_t query_idx,
+                             uintptr_t reference_idx,
+                             struct Cigar *cigar);
 
 /**
  *Frees the block used for global alignment of two amino acid strings, with traceback.
@@ -440,6 +543,22 @@ void block_align_profile_aa_trace_xdrop(BlockHandle b,
                                         int32_t x);
 
 /**
+ *X-drop alignment of two amino acid strings with 3di, with traceback.
+ */
+void block_align_3di_aa_trace_xdrop(BlockHandle b,
+                                    const struct PaddedBytes *q,
+                                    const struct PaddedBytes *q_3di,
+                                    const struct PosBias *q_bias,
+                                    const struct PaddedBytes *r,
+                                    const struct PaddedBytes *r_3di,
+                                    const struct PosBias *r_bias,
+                                    const struct AAMatrix *m,
+                                    const struct AAMatrix *m_3di,
+                                    struct Gaps g,
+                                    struct SizeRange s,
+                                    int32_t x);
+
+/**
  *Retrieves the result of X-drop alignment of two amino acid strings, with traceback.
  */
 struct AlignResult block_res_aa_trace_xdrop(BlockHandle b);
@@ -451,6 +570,16 @@ void block_cigar_aa_trace_xdrop(BlockHandle b,
                                 uintptr_t query_idx,
                                 uintptr_t reference_idx,
                                 struct Cigar *cigar);
+
+/**
+ *Retrieves the resulting CIGAR string from X-drop alignment of two amino acid strings, with traceback containing =/X.
+ */
+void block_cigar_eq_aa_trace_xdrop(BlockHandle b,
+                                   const struct PaddedBytes *q,
+                                   const struct PaddedBytes *r,
+                                   uintptr_t query_idx,
+                                   uintptr_t reference_idx,
+                                   struct Cigar *cigar);
 
 /**
  *Frees the block used for X-drop alignment of two amino acid strings, with traceback.

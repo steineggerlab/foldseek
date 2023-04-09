@@ -94,7 +94,7 @@ void example(void) {
     printf("\n");
 
     block_free_cigar(cigar);
-    block_free_aa_trace(block);
+    block_free_aa_trace_xdrop(block);
     block_free_padded_aa(a);
     block_free_padded_aa(a_3di);
     block_free_pos_bias(a_bias);
