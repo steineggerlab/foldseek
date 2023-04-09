@@ -7,10 +7,10 @@ variables:
     regression: 1
 
 jobs:
-  - job: build_ubuntu_1804
-    displayName: Ubuntu 1804
+  - job: build_ubuntu_2004
+    displayName: Ubuntu 2004
     pool:
-      vmImage: 'Ubuntu-18.04'
+      vmImage: 'Ubuntu-20.04'
     timeoutInMinutes: 120
     strategy:
       matrix:
@@ -24,11 +24,11 @@ jobs:
         #   STATIC: 1
         #   MPI: 0
         #   BUILD_TYPE: RelWithDebInfo
-        # sse2:
-        #   SIMD: 'SSE2'
-        #   STATIC: 1
-        #   MPI: 0
-        #   BUILD_TYPE: RelWithDebInfo
+        sse2:
+          SIMD: 'SSE2'
+          STATIC: 1
+          MPI: 0
+          BUILD_TYPE: RelWithDebInfo
         avx2_mpi:
           SIMD: 'AVX2'
           STATIC: 0
@@ -153,7 +153,7 @@ jobs:
       vmImage: 'Ubuntu-20.04'
     dependsOn:
       - build_macos_11
-      - build_ubuntu_1804
+      - build_ubuntu_2004
       - build_ubuntu_cross_2004
     steps:
       - script: |
