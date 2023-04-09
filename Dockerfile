@@ -12,6 +12,7 @@ RUN dpkg --add-architecture $TARGETARCH \
     && rm -rf /var/lib/apt/lists/*
     
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup update && rustup target install x86_64-apple-darwin && rustup target install aarch64-apple-darwin
 
 WORKDIR /opt/build
