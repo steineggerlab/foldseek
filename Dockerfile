@@ -12,9 +12,14 @@ RUN dpkg --add-architecture $TARGETARCH \
     && apt install -y -t $(awk -F'=' '$1 == "VERSION_CODENAME" { print $2 }'  /etc/os-release)-backports --no-install-suggests --no-install-recommends \
       cmake \
     && rm -rf /var/lib/apt/lists/*
-    
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-      sh -s -- --profile minimal -t x86_64-unknown-linux-gnu -t aarch64-unknown-linux-gnu -y
+
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      ARCH=aarch64; \
+    else \
+      ARCH=x86_64; \
+    fi; \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+      sh -s -- --profile minimal --default-host ${ARCH}-unknown-linux-gnu -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /opt/build
