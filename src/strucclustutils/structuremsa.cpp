@@ -188,7 +188,63 @@ std::vector<AlnSimple> parseNewick(std::string newick, std::map<std::string, int
     return hits;
 }
 
-Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned int querySeqLen,  Sequence *target_aa, Sequence *target_3di, int gapOpen, int gapExtend) {
+int rescoreBacktrace(
+    int qpos, int dbpos,
+    Sequence *qSeqAA, Sequence *tSeqAA,
+    Sequence *qSeq3Di, Sequence *tSeq3Di,
+    int gapOpen, int gapExtend, std::string backtrace,
+    SubstitutionMatrix *mat_aa,
+    SubstitutionMatrix *mat_3di
+    // short ** mat_aa, short ** mat_3di
+) {
+    unsigned int gapIcount, gapDcount;
+    int rescore, gapScore;
+    
+    rescore = 0;
+
+    for(size_t j = 0; j < backtrace.length(); j++){
+
+        //if match add 3Di and AA score as rescore value
+        int qAALetter = qSeqAA->numSequence[qpos];
+        int dbAALetter =  tSeqAA->numSequence[dbpos];
+        int q3DiLetter = qSeq3Di->numSequence[qpos];
+        int db3DiLetter =  tSeq3Di->numSequence[dbpos];
+
+        switch (backtrace[j]) {
+            case 'M':
+                rescore += mat_aa->subMatrix[qAALetter][dbAALetter] + mat_3di->subMatrix[q3DiLetter][db3DiLetter];
+                gapIcount = 0; gapDcount = 0;
+                qpos++;
+                dbpos++;
+                break;
+            case 'D':
+                gapIcount = 0;
+                gapScore = (gapDcount == 0) ? -gapOpen : -gapExtend;
+                rescore += gapScore;
+                gapDcount++;
+                dbpos++;
+                break;
+            case 'I':
+                gapDcount = 0;
+                gapScore = (gapIcount == 0) ? -gapOpen : -gapExtend;
+                rescore += gapScore;
+                gapIcount++;
+                qpos++;
+                break;
+        }
+    }
+    return rescore;
+}
+
+
+Matcher::result_t pairwiseAlignment(
+    StructureSmithWaterman & aligner,
+    unsigned int querySeqLen,
+    Sequence *query_aa, Sequence *query_3di,
+    Sequence *target_aa, Sequence *target_3di,
+    int gapOpen, int gapExtend,
+    SubstitutionMatrix *mat_aa, SubstitutionMatrix *mat_3di
+) {
     std::string backtrace;
     
     bool targetIsProfile = (Parameters::isEqualDbtype(target_aa->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
@@ -223,8 +279,8 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
     );
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
     alnLength = backtrace.size();
-    float seqId = Util::computeSeqId(Parameters::SEQ_ID_ALN_LEN, align.identicalAACnt, querySeqLen, target_aa->L, alnLength);
-    return Matcher::result_t(
+    float seqId = Util::computeSeqId(Parameters::SEQ_ID_ALN_LEN, align.identicalAACnt, querySeqLen, target_aa->L, alnLength); 
+    Matcher::result_t sw_align(
         target_aa->getDbKey(),
         align.score1,
         align.qCov,
@@ -240,6 +296,86 @@ Matcher::result_t pairwiseAlignment(StructureSmithWaterman & aligner, unsigned i
         target_aa->L,
         backtrace
     );
+
+    short **query_profile_scores_aa = new short * [aligner.get_profile()->alphabetSize];
+    short **query_profile_scores_3di = new short * [aligner.get_profile()->alphabetSize];
+    for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
+        query_profile_scores_aa[j] = new short [querySeqLen];
+        query_profile_scores_3di[j] = new short [querySeqLen];
+    }
+    std::cout << "\n### Setting up profile score arrays\n";
+    for (unsigned int i = 0; i < querySeqLen; i++) {
+        for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
+            query_profile_scores_aa[j][i] =  aligner.get_profile()->mat_aa[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_aa_sequence[i]];
+            query_profile_scores_3di[j][i] =  aligner.get_profile()->mat_3di[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_3di_sequence[i]];
+            // std::cout << i << "\t" << j << "\t" << query_profile_scores_aa[j][i] << "\t" << query_profile_scores_3di[j][i] << '\n';
+        }
+    }
+    // std::cout << "q: " << sw_align.qStartPos << ", " << querySeqLen << '\n';
+    // std::cout << "t: " << sw_align.dbStartPos << ", " << target_aa->L << '\n';
+    Matcher::result_t gAlign = aligner.simpleGotoh(
+        target_aa_seq,
+        target_3di_seq,
+        query_profile_scores_aa,
+        query_profile_scores_3di,
+        0,
+        query_aa->L,
+        0,
+        target_aa->L,
+        gapOpen,
+        gapExtend
+    );
+    
+    std::cout << "Align score: " << align.score1 << "\t" << gAlign.score << '\n';
+    std::cout << "Backtrace:\n" << backtrace << "\n" << gAlign.backtrace << '\n';
+    std::cout << "   qStart: " << sw_align.qStartPos << ", " << gAlign.qStartPos << '\n';
+    std::cout << "  dbStart: " << sw_align.dbStartPos << ", " << gAlign.dbStartPos << '\n';
+    std::cout << "     qEnd: " << sw_align.qEndPos << ", " << gAlign.qEndPos << '\n';
+    std::cout << "    dbEnd: " << sw_align.dbEndPos << ", " << gAlign.dbEndPos << '\n';
+    std::cout << "     qLen: " << sw_align.qLen << ", " << gAlign.qLen << ", " << query_aa->L << '\n';
+    std::cout << "    dbLen: " << sw_align.dbLen << ", " << gAlign.dbLen << ", " << target_aa->L << '\n';
+    assert(sw_align.qStartPos == gAlign.qStartPos);
+    assert(sw_align.dbStartPos == gAlign.dbStartPos);
+    assert(sw_align.qEndPos == gAlign.qEndPos);
+    assert(sw_align.dbEndPos == gAlign.dbEndPos);
+
+    int sw_rescore = rescoreBacktrace(
+        sw_align.qStartPos,
+        sw_align.dbStartPos,
+        query_aa,
+        target_aa,
+        query_3di,
+        target_3di,
+        gapOpen, gapExtend,
+        sw_align.backtrace,
+        mat_aa,
+        mat_3di
+        // query_profile_scores_aa,
+        // query_profile_scores_3di     
+    ); 
+    std::cout << "sw rescore: " << sw_rescore << '\n';
+
+    int gt_rescore = rescoreBacktrace(
+        gAlign.qStartPos,
+        gAlign.dbStartPos,
+        query_aa,
+        target_aa,
+        query_3di,
+        target_3di,
+        gapOpen, gapExtend,
+        gAlign.backtrace,
+        mat_aa,
+        mat_3di
+        // query_profile_scores_aa,
+        // query_profile_scores_3di      
+    ); 
+    std::cout << "gotoh rescore: " << gt_rescore << "\n";
+
+    assert(align.score1 == gAlign.score);
+    //assert(backtrace == gAlign.backtrace);
+    //assert(sw_rescore == gt_rescore);
+    // exit(-1);
+    return gAlign;
 }
 
 void sortHitsByScore(std::vector<AlnSimple> &hits) {
@@ -284,12 +420,12 @@ std::vector<AlnSimple> updateAllScores(
     int compBiasCorrection,
     int compBiasCorrectionScale
 ) {
-    size_t N = 0;
-    for (size_t i = 0; i < allSeqs_aa.size(); i++) {
-        if (alreadyMerged[i] == 0) {
-            N++;
-        }
-    }
+    // size_t N = 0;
+    // for (size_t i = 0; i < allSeqs_aa.size(); i++) {
+    //     if (alreadyMerged[i] == 0) {
+    //         N++;
+    //     }
+    // }
     std::vector<AlnSimple> newHits;
     // newHits.resize((N * N - N) / 2);
 #pragma omp parallel
@@ -302,7 +438,7 @@ std::vector<AlnSimple> updateAllScores(
         subMat_aa,
         subMat_3di
     );
-    unsigned int queryId = 0;
+    // unsigned int queryId = 0;
     std::vector<AlnSimple> threadHits;
 
 #pragma omp for schedule(dynamic, 10)
@@ -316,7 +452,7 @@ std::vector<AlnSimple> updateAllScores(
             tinySubMat3Di,
             subMat_aa
         );
-        unsigned int targetId = 0;
+        // unsigned int targetId = 0;
         for (size_t j = i + 1; j < allSeqs_aa.size(); j++) {
             if (alreadyMerged[j] || i == j)
                 continue;
@@ -334,9 +470,9 @@ std::vector<AlnSimple> updateAllScores(
             threadHits.push_back(aln); 
             // size_t ij = get1dIndex(queryId, targetId, N);
             // newHits[ij] = aln;
-            targetId++;
+            // targetId++;
         }
-        queryId++;
+        // queryId++;
     }
 
 #pragma omp critical
@@ -1150,7 +1286,6 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
     std::cout << "Tree: " << nw << ";\n";
 
     std::cout << "Merging:\n";
-    size_t merged = 0;
 
 #pragma omp parallel
 {
@@ -1205,10 +1340,14 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
             Matcher::result_t res = pairwiseAlignment(
                 structureSmithWaterman,
                 allSeqs_aa[mergedId]->L,
+                allSeqs_aa[mergedId],
+                allSeqs_3di[mergedId],
                 allSeqs_aa[targetId],
                 allSeqs_3di[targetId],
                 par.gapOpen.values.aminoacid(),
-                par.gapExtend.values.aminoacid()
+                par.gapExtend.values.aminoacid(),
+                &subMat_aa,
+                &subMat_3di
             );
             
             // Convert 010101 mask to [ 0, 2, 4 ] index mapping
@@ -1272,7 +1411,7 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
             alreadyMerged[targetId] = true;
         }
         index += merges[i];
-        merged += merges[i];
+        // merged += merges[i];
     }
 }
     // Cleanup

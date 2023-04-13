@@ -47,6 +47,7 @@
 #include "BaseMatrix.h"
 
 #include "Sequence.h"
+#include "Matcher.h"
 #include "EvalueComputation.h"
 #include "../strucclustutils/EvalueNeuralNet.h"
 #include "block_aligner.h"
@@ -149,7 +150,15 @@ public:
             const uint8_t gap_extend,
             std::string & backtrace,
             StructureSmithWaterman::s_align r);
-
+    
+    Matcher::result_t simpleGotoh(
+            const unsigned char *db_sequence_aa,
+            const unsigned char *db_sequence_3di,
+            short **profile_word_aa,
+            short **profile_word_3di,
+            int32_t query_start, int32_t query_end,
+            int32_t target_start, int32_t target_end,
+            const short gap_open, const short gap_extend);
 
     /*!	@function	Create the query profile using the query sequence.
      @param	read	pointer to the query sequence; the query sequence needs to be numbers
@@ -182,15 +191,13 @@ public:
     int isProfileSearch(){
         return profile->isProfile;
     }
-
+    
     const static unsigned int SUBSTITUTIONMATRIX = 1;
     const static unsigned int PROFILE = 2;
     const static unsigned int PROFILE_HMM = 3;
     // ssw_align
     const static unsigned int PROFILE_SEQ = 5;
     const static unsigned int PROFILE_PROFILE = 6;
-
-private:
 
     struct s_profile{
         simd_int* profile_aa_byte;	// 0: none
@@ -235,6 +242,10 @@ private:
         int8_t* alignment_aa_profile;
         int8_t* alignment_3di_profile;
         bool isProfile;
+        int8_t* mat_rev; // needed for queryProfile
+        int32_t query_length;
+        int32_t alphabetSize;
+        uint8_t bias;
         // Memory layout of if mat + queryProfile is qL * AA
         //    Query length
         // A  -1  -3  -2  -1  -4  -2  -2  -3  -1  -3  -2  -2   7  -1  -2  -1  -1  -2  -5  -3
@@ -247,13 +258,18 @@ private:
         // C  -1  -4   2   5  -3  -2   0  -3   1  -3  -2   0  -1   2   0   0  -1  -3  -4  -2
         // ...
         // Y -1  -3  -2  -1  -4  -2  -2  -3  -1  -3  -2  -2   7  -1  -2  -1  -1  -2  -5  -3
-        int8_t* mat_rev; // needed for queryProfile
-        int32_t query_length;
-        int32_t alphabetSize;
-        uint8_t bias;
         short ** profile_aa_word_linear;
         short ** profile_3di_word_linear;
     };
+    s_profile* get_profile() {
+        return profile;
+    }
+
+
+
+private:
+
+
     simd_int* vHStore;
     simd_int* vHLoad;
     simd_int* vE;
@@ -339,7 +355,6 @@ private:
     inline uint32_t to_cigar_int (uint32_t length, char op_letter);
 
     s_profile* profile;
-
 
 
     template <typename T, size_t Elements, const unsigned int type>

@@ -613,6 +613,267 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace<S
 template
 StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace<StructureSmithWaterman::PROFILE_HMM>(const unsigned char*, const unsigned char*, int32_t, const uint8_t, const uint8_t, const uint8_t, std::string& , StructureSmithWaterman::s_align, const int, const float, const int32_t);
 
+// Matcher::result_t StructureSmithWaterman::simpleGotoh(
+//         const unsigned char *db_sequence_aa,
+//         const unsigned char *db_sequence_3di,
+//         short **profile_word_aa,
+//         short **profile_word_3di,
+//         int32_t query_start, int32_t query_end,
+//         int32_t target_start, int32_t target_end,
+//         const short gap_open, const short gap_extend)
+// {
+//     alignment_end result;
+//     result.ref = 0;
+//     result.read = 0;
+//     result.score = 0;
+
+//     int query_length = query_end - query_start;
+//     int target_length = target_end - target_start;
+
+//     int dp[2][3][2 * query_length + 2];
+//     memset(dp, 0, sizeof(dp));
+    
+//     // defining constants for backtracing
+//     const int M = 3;
+//     const int F = 2;
+//     const int E = 1;
+
+//     // Define and initialize the backtrace matrix
+//     uint8_t * btMatrix = new uint8_t[(query_length + 1) * target_length];
+    
+//     for (int i = target_start; LIKELY(i < target_end); i++) {
+//         const short *profile_aa = profile_word_aa[db_sequence_aa[i]];
+//         const short *profile_3di = profile_word_3di[db_sequence_3di[i]];
+
+//         for (int j = query_start + 1; LIKELY(j < query_end); j++) {
+//             int cur = i % 2;       // current row
+//             int pre = (i + 1) % 2; // previous row
+//             if (i == 0 || j == 0) {
+//                 dp[cur][0][j] = 0;
+//                 dp[cur][1][j] = -gap_open;
+//                 dp[cur][2][j] = -INFINITY;
+//             } else {
+//                 int match_score = profile_aa[j - 1] + profile_3di[j - 1];
+//                 int diag_score  = dp[pre][0][j - 1] + match_score;
+//                 int up_score    = std::max(dp[pre][0][j] - gap_open, dp[pre][1][j] - gap_extend);
+//                 int left_score  = std::max(dp[pre][0][j - 1] - gap_open, dp[pre][2][j - 1] - gap_extend);
+//                 dp[cur][0][j] = std::max(0, diag_score);
+//                 dp[cur][0][j] = std::max(dp[cur][0][j], up_score);
+//                 dp[cur][0][j] = std::max(dp[cur][0][j], left_score);
+//                 dp[cur][1][j] = std::max(dp[pre][0][j] - gap_open, dp[pre][1][j] - gap_extend);
+//                 dp[cur][2][j] = std::max(dp[cur][0][j-1] - gap_open, dp[cur][2][j-1] - gap_extend);
+//                 // std::cout << match_score << '\t' << diag_score << '\t' << up_score << '\t' << left_score << '\n';
+                
+//                 int mode = (dp[cur][0][j] == diag_score) ? M : (dp[cur][0][j] == left_score) ? E : F;
+//                 mode = (dp[cur][0][j] == 0) ? 0 : mode;
+//                 btMatrix[i * query_length + j] = mode;
+//             }
+//             if (dp[cur][0][j] > result.score) {
+//                 result.ref = i;
+//                 result.read = j - 1;
+//                 result.score = dp[cur][0][j];
+//             }
+//         }
+//     }
+    
+//     std::cout << "Best: " << result.ref << '\t' << result.read << '\t' << result.score << '\n';
+    
+//     // Perform the backtrace
+//     std::string cigar;
+//     int i = result.ref;
+//     int j = result.read + 1;
+
+//     int qStart = 0;
+//     int dbStart = 0;
+//     int qEnd = result.read + 1;
+//     int dbEnd = result.ref;
+    
+//     while (i >= target_start && j >= query_start + 1) {
+//         int mode = btMatrix[i * query_length + j];
+//         if (mode == M) {
+//             cigar.push_back('M');
+//             qStart = j;
+//             dbStart = i;
+//             i--;
+//             j--;
+//         } else if (mode == E) {
+//             cigar.push_back('I');
+//             j--;
+//         } else if (mode == F) {
+//             cigar.push_back('D');
+//             i--;
+//         } else if (mode == 0) {
+//             break;
+//         }
+//     }
+//     std::reverse(cigar.begin(), cigar.end());
+//     std::cout << "Backtrace: " << cigar << '\n';
+    
+//     delete[] btMatrix;
+
+//     return Matcher::result_t(
+//         0, // target_aa->getDbKey(),
+//         result.score,
+//         0,               // align.qCov,
+//         0,               // align.tCov,
+//         0,               // seqId
+//         0,               // align.evalue,
+//         0,               // alnLength
+//         qStart,               // qstartpos
+//         qEnd,  // qendpos
+//         query_end,       // qlen
+//         dbStart,           // dbstartpos
+//         dbEnd, // dbendpos
+//         target_end,      // dblen
+//         cigar
+//     );
+// }
+
+Matcher::result_t StructureSmithWaterman::simpleGotoh(
+        const unsigned char *db_sequence_aa,
+        const unsigned char *db_sequence_3di,
+        short **profile_word_aa,
+        short **profile_word_3di,
+        int32_t query_start, int32_t query_end,
+        int32_t target_start, int32_t target_end,
+        const short gap_open, const short gap_extend)
+{
+    // defining constants for backtracing
+    const int M = 3;
+    const int F = 2;
+    const int E = 1;
+
+    struct scores{
+        short H, E, F;
+    };
+
+    alignment_end result;
+    result.ref = 0;
+    result.read = 0;
+    result.score = 0;
+
+    int query_length = query_end - query_start;
+    int target_length = target_end - target_start;
+
+    // Define and initialize the backtrace matrix
+    uint8_t * btMatrix = new uint8_t[(query_length + 1) * target_length];
+
+    scores *workspace = new scores[query_length * 2 + 2];
+    scores *curr_sM_G_D_vec = &workspace[0];
+    scores *prev_sM_G_D_vec = &workspace[query_length + 1];
+    memset(prev_sM_G_D_vec, 0, sizeof(scores) * (query_end + 1));
+
+    short goe = gap_open + gap_extend;
+
+    std::cout << "isProfile == " << profile->isProfile << '\n';
+
+    for (int i = target_start; LIKELY(i < target_end); i++) {
+        prev_sM_G_D_vec[query_start].H = 0;
+        prev_sM_G_D_vec[query_start].E = 0;
+        prev_sM_G_D_vec[query_start].F = 0;
+        curr_sM_G_D_vec[query_start].H = 0;
+        curr_sM_G_D_vec[query_start].E = 0;
+        curr_sM_G_D_vec[query_start].F = 0;
+        const short *profile_aa = profile_word_aa[db_sequence_aa[i]];
+        const short *profile_3di = profile_word_3di[db_sequence_3di[i]];
+
+        for (int j = query_start + 1; LIKELY(j <= query_end); j++) {
+            curr_sM_G_D_vec[j].E = std::max(curr_sM_G_D_vec[j-1].H - gap_open, curr_sM_G_D_vec[j-1].E - gap_extend);
+            curr_sM_G_D_vec[j].F = std::max(prev_sM_G_D_vec[j].H  - gap_open, prev_sM_G_D_vec[j].F - gap_extend);
+            short tempH = prev_sM_G_D_vec[j - 1].H + profile_aa[j - 1] + profile_3di[j - 1];
+            curr_sM_G_D_vec[j].H = std::max(tempH, curr_sM_G_D_vec[j].E);
+            curr_sM_G_D_vec[j].H = std::max(curr_sM_G_D_vec[j].H, curr_sM_G_D_vec[j].F);
+            curr_sM_G_D_vec[j].H = std::max(curr_sM_G_D_vec[j].H, static_cast<short>(0));
+
+            // std::cout << i << '\t' << j - 1 << '\t' << (int)profile->query_aa_sequence[j -1] << '\t' << (int)db_sequence_aa[i] << '\t' << (int)result.score << '\t' <<  (int)tempH << '\t' <<  (int)profile_aa[j -1] << '\t' << (int)profile_3di[j-1] << '\n';
+
+            // Backtrace matrix
+            int mode = (curr_sM_G_D_vec[j].H == tempH) ? M : (curr_sM_G_D_vec[j].H == curr_sM_G_D_vec[j].E) ? E : F;
+            mode = (curr_sM_G_D_vec[j].H  == 0) ?  0 :  mode;
+            btMatrix[i * query_length + j] = mode;
+            
+            if (i == 119 && j == 120) {
+                std::cout << mode << '\t' << curr_sM_G_D_vec[j].E << '\t'<< curr_sM_G_D_vec[j].F << '\t'<< curr_sM_G_D_vec[j].H << '\t' << tempH << '\n';
+            }
+
+            if (static_cast<uint16_t>(curr_sM_G_D_vec[j].H) > result.score) {
+                // std::cout << " Replacing i/j " << i << "-" << j << ", ref: " << result.ref << " " << static_cast<int32_t> (i)
+                //     << ", read: " << result.read << " " <<  static_cast<int32_t> (j - 1) << ", score: " << result.score << " "
+                //     << static_cast<uint16_t>(std::max(static_cast<uint16_t>(curr_sM_G_D_vec[j].H), result.score)) << '\n';
+                result.ref = static_cast<int32_t> (i);
+                result.read = static_cast<int32_t> (j - 1);
+                result.score = static_cast<uint16_t>(std::max(static_cast<uint16_t>(curr_sM_G_D_vec[j].H), result.score));
+            }
+        }
+
+        // swap rows
+        scores *tmpPtr = prev_sM_G_D_vec;
+        prev_sM_G_D_vec = curr_sM_G_D_vec;
+        curr_sM_G_D_vec = tmpPtr;
+    }
+    
+    // Printout the backtrace matrix
+    // for (int i = 0; i < target_length; i++) {
+    //     for (int j = 1; j <= query_length; j++) {
+    //         std::cout << static_cast<int>(btMatrix[i * query_length + j]) << "\t";
+    //     }
+    //     std::cout << std::endl;
+    // }    
+    
+    // Perform the backtrace
+    std::string cigar;
+    int i = result.ref;
+    int j = result.read + 1;
+    
+    int qStart = 0;
+    int dbStart = 0;
+    int qEnd = result.read;
+    int dbEnd = result.ref;
+    
+    while (i >= target_start && j >= query_start + 1) {
+        int mode = btMatrix[i * query_length + j];
+        if (mode == M) {
+            cigar.push_back('M');
+            qStart = j;
+            dbStart = i;
+            i--;
+            j--;
+        } else if (mode == E) {
+            cigar.push_back('I');
+            j--;
+        } else if (mode == F) {
+            cigar.push_back('D');
+            std::cout << " ** " << i << ", " << j << "\n";
+            i--;
+        } else if (mode == 0) {
+            break;
+        }
+    }
+    std::reverse(cigar.begin(), cigar.end());
+
+    // Save the cigar string in the result object
+    delete[] btMatrix;
+    delete[] workspace;
+    
+    return Matcher::result_t(
+        0, // target_aa->getDbKey(),
+        result.score,
+        0,               // align.qCov,
+        0,               // align.tCov,
+        0,               // seqId
+        0,               // align.evalue,
+        0,               // alnLength
+        qStart,               // qstartpos
+        qEnd,  // qendpos
+        query_end,       // qlen
+        dbStart,           // dbstartpos
+        dbEnd, // dbendpos
+        target_end,      // dblen
+        cigar
+    );
+}
+
+
 void StructureSmithWaterman::computerBacktrace(s_profile * query, const unsigned char * db_aa_sequence,
                                                s_align & alignment, std::string & backtrace,
                                                uint32_t & aaIds, size_t & mStatesCnt){
