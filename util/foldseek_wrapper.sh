@@ -4,9 +4,6 @@ case "${FLAGS}" in
   *avx2*)
     exec /usr/local/bin/foldseek_avx2 "$@"
     ;;
-  *sse4_1*)
-    exec /usr/local/bin/foldseek_sse41 "$@"
-    ;;
   *)
     exec /usr/local/bin/foldseek_sse2 "$@"
     ;;
