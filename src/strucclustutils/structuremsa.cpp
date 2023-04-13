@@ -248,6 +248,7 @@ Matcher::result_t pairwiseAlignment(
     std::string backtrace;
     
     bool targetIsProfile = (Parameters::isEqualDbtype(target_aa->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
+    bool queryIsProfile = (Parameters::isEqualDbtype(query_aa->getSeqType(), Parameters::DBTYPE_HMM_PROFILE));
 
     unsigned char * target_aa_seq = target_aa->numSequence;
     unsigned char * target_3di_seq = target_3di->numSequence;
@@ -303,16 +304,22 @@ Matcher::result_t pairwiseAlignment(
         query_profile_scores_aa[j] = new short [querySeqLen];
         query_profile_scores_3di[j] = new short [querySeqLen];
     }
-    std::cout << "\n### Setting up profile score arrays\n";
-    for (unsigned int i = 0; i < querySeqLen; i++) {
-        for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
-            query_profile_scores_aa[j][i] =  aligner.get_profile()->mat_aa[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_aa_sequence[i]];
-            query_profile_scores_3di[j][i] =  aligner.get_profile()->mat_3di[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_3di_sequence[i]];
-            // std::cout << i << "\t" << j << "\t" << query_profile_scores_aa[j][i] << "\t" << query_profile_scores_3di[j][i] << '\n';
-        }
+    if (queryIsProfile) {
+        for (unsigned int i = 0; i < querySeqLen; i++) {
+            for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
+                query_profile_scores_aa[j][i] = aligner.get_profile()->alignment_aa_profile[j * querySeqLen + i];
+                query_profile_scores_3di[j][i] = aligner.get_profile()->alignment_3di_profile[j * querySeqLen + i];
+            }
+        }       
+    } else {
+        for (unsigned int i = 0; i < querySeqLen; i++) {
+            for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
+                query_profile_scores_aa[j][i] =  aligner.get_profile()->mat_aa[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_aa_sequence[i]];
+                query_profile_scores_3di[j][i] =  aligner.get_profile()->mat_3di[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_3di_sequence[i]];
+            }
+        }       
     }
-    // std::cout << "q: " << sw_align.qStartPos << ", " << querySeqLen << '\n';
-    // std::cout << "t: " << sw_align.dbStartPos << ", " << target_aa->L << '\n';
+
     Matcher::result_t gAlign = aligner.simpleGotoh(
         target_aa_seq,
         target_3di_seq,
@@ -326,55 +333,42 @@ Matcher::result_t pairwiseAlignment(
         gapExtend
     );
     
-    std::cout << "Align score: " << align.score1 << "\t" << gAlign.score << '\n';
-    std::cout << "Backtrace:\n" << backtrace << "\n" << gAlign.backtrace << '\n';
-    std::cout << "   qStart: " << sw_align.qStartPos << ", " << gAlign.qStartPos << '\n';
-    std::cout << "  dbStart: " << sw_align.dbStartPos << ", " << gAlign.dbStartPos << '\n';
-    std::cout << "     qEnd: " << sw_align.qEndPos << ", " << gAlign.qEndPos << '\n';
-    std::cout << "    dbEnd: " << sw_align.dbEndPos << ", " << gAlign.dbEndPos << '\n';
-    std::cout << "     qLen: " << sw_align.qLen << ", " << gAlign.qLen << ", " << query_aa->L << '\n';
-    std::cout << "    dbLen: " << sw_align.dbLen << ", " << gAlign.dbLen << ", " << target_aa->L << '\n';
+    // int sw_rescore = rescoreBacktrace(
+    //     sw_align.qStartPos,
+    //     sw_align.dbStartPos,
+    //     query_aa,
+    //     target_aa,
+    //     query_3di,
+    //     target_3di,
+    //     gapOpen, gapExtend,
+    //     sw_align.backtrace,
+    //     mat_aa,
+    //     mat_3di
+    // ); 
+    // std::cout << "sw rescore: " << sw_rescore << '\n';
+
+    // int gt_rescore = rescoreBacktrace(
+    //     gAlign.qStartPos,
+    //     gAlign.dbStartPos,
+    //     query_aa,
+    //     target_aa,
+    //     query_3di,
+    //     target_3di,
+    //     gapOpen, gapExtend,
+    //     gAlign.backtrace,
+    //     mat_aa,
+    //     mat_3di
+    // ); 
+    // std::cout << "gotoh rescore: " << gt_rescore << "\n";
+
     assert(sw_align.qStartPos == gAlign.qStartPos);
     assert(sw_align.dbStartPos == gAlign.dbStartPos);
     assert(sw_align.qEndPos == gAlign.qEndPos);
     assert(sw_align.dbEndPos == gAlign.dbEndPos);
-
-    int sw_rescore = rescoreBacktrace(
-        sw_align.qStartPos,
-        sw_align.dbStartPos,
-        query_aa,
-        target_aa,
-        query_3di,
-        target_3di,
-        gapOpen, gapExtend,
-        sw_align.backtrace,
-        mat_aa,
-        mat_3di
-        // query_profile_scores_aa,
-        // query_profile_scores_3di     
-    ); 
-    std::cout << "sw rescore: " << sw_rescore << '\n';
-
-    int gt_rescore = rescoreBacktrace(
-        gAlign.qStartPos,
-        gAlign.dbStartPos,
-        query_aa,
-        target_aa,
-        query_3di,
-        target_3di,
-        gapOpen, gapExtend,
-        gAlign.backtrace,
-        mat_aa,
-        mat_3di
-        // query_profile_scores_aa,
-        // query_profile_scores_3di      
-    ); 
-    std::cout << "gotoh rescore: " << gt_rescore << "\n";
-
     assert(align.score1 == gAlign.score);
-    //assert(backtrace == gAlign.backtrace);
-    //assert(sw_rescore == gt_rescore);
-    // exit(-1);
+    // assert(backtrace == gAlign.backtrace);
+    // assert(sw_rescore == gt_rescore);
+
     return gAlign;
 }
 
