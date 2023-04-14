@@ -51,15 +51,25 @@ fi
 # check if $ALIGNMENT_ALGO is tmalign
 if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then
     # 2. tm alignment
+    INTERMEDIATE="${TMP_PATH}/strualn"
     if notExists "${TMP_PATH}/strualn.dbtype"; then
         # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" structurealign "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${TMP_PATH}/strualn" ${STRUCTUREALIGN_PAR} \
+        $RUNNER "$MMSEQS" structurealign "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${INTERMEDIATE}" ${STRUCTUREALIGN_PAR} \
             || fail "Alignment step died"
+    fi
+
+    if [ -n "${EXPAND}" ]; then
+        if notExists "${TMP_PATH}/strualn_expanded.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" mergeresultsbyset  "${INTERMEDIATE}" "${TARGET_ALIGNMENT}_clu" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
+                || fail "Expand died"
+        fi
+        INTERMEDIATE="${TMP_PATH}/strualn_expanded"
     fi
 
     if notExists "${TMP_PATH}/aln.dbtype"; then
         # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/strualn" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+        $RUNNER "$MMSEQS" tmalign "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${INTERMEDIATE}" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
             || fail "Alignment step died"
     fi
 
@@ -69,11 +79,28 @@ if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/strualn" ${VERBOSITY}
     fi
 else
-    # 2. Alignment
-    if notExists "${TMP_PATH}/aln.dbtype"; then
+
+   # 2. Alignment
+    if notExists "${TMP_PATH}/strualn.dbtype"; then
         # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
-            || fail "Alignment step died"
+        $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${TMP_PATH}/strualn" ${ALIGNMENT_PAR} \
+            || fail "Structure alignment step died"
+    fi
+
+    if [ -n "${EXPAND}" ]; then
+        if notExists "${TMP_PATH}/strualn_expanded.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" mergeresultsbyset "${TMP_PATH}/strualn" "${TARGET_ALIGNMENT}_clu" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
+                || fail "Expand died"
+        fi
+        INTERMEDIATE="${TMP_PATH}/strualn_expanded"
+        if notExists "${TMP_PATH}/aln.dbtype"; then
+            # shellcheck disable=SC2086
+            $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}_seq" "${TARGET_ALIGNMENT}_seq" "${TMP_PATH}/strualn_expanded" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+                || fail "Alignment step died"
+        fi
+    else
+      "$MMSEQS" mvdb "${TMP_PATH}/strualn" "${TMP_PATH}/aln"
     fi
 fi
 
@@ -82,6 +109,16 @@ fi
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
+    if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/strualn" ${VERBOSITY}
+    fi
+
+    if [ -n "${EXPAND}" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/strualn_expanded" ${VERBOSITY}
+    fi
+
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/pref" ${VERBOSITY}
 fi

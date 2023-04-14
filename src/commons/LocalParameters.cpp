@@ -18,7 +18,8 @@ LocalParameters::LocalParameters() :
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
-        PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT)
+        PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
+        PARAM_EXPAND_ALN(PARAM_EXPAND_ALN_ID, "--expand-alignment", "Expand alignment", "after searching against a clustered representative align all members", typeid(int), (void *) &expandalignment, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC)
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -107,6 +108,7 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
+    structuresearchworkflow.push_back(&PARAM_EXPAND_ALN);
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
@@ -154,7 +156,7 @@ LocalParameters::LocalParameters() :
     nsample = 5000;
     maskLowerCaseMode = 1;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
-
+    expandalignment = 0;
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S, Tumescheit C, Mirdita M, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2022)");
 
