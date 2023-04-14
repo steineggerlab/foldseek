@@ -96,7 +96,7 @@ else
         INTERMEDIATE="${TMP_PATH}/strualn_expanded"
         if notExists "${TMP_PATH}/aln.dbtype"; then
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}_seq" "${TARGET_ALIGNMENT}_seq" "${TMP_PATH}/strualn_expanded" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+            $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}_seq" "${TMP_PATH}/strualn_expanded" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
                 || fail "Alignment step died"
         fi
     else
