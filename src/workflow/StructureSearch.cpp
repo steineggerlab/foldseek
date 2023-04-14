@@ -173,7 +173,22 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.execProgram(program.c_str(), par.filenames);
     }else{
         if(par.expandalignment == 1) {
-            par.expansionMode = 0;
+            std::vector<std::string> dbsToCheck = {"_seq", "_seq_ca", "_seq_ss", "_seq_h"};
+            for(size_t i = 0; i < dbsToCheck.size(); i++){
+                std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
+                if (!FileUtil::fileExists(db.c_str())) {
+                    Debug(Debug::ERROR)
+                            << "Require " << db << " database for cluster search.";
+                    EXIT(EXIT_FAILURE);
+                }
+            }
+            if (!FileUtil::fileExists((par.db2 + "_clu.dbtype").c_str()) &&
+                !FileUtil::fileExists((par.db2 + "_aln.dbtype").c_str())) {
+                Debug(Debug::ERROR)
+                        << "Require " << par.db2 + "_clu  or " << par.db2 + "_aln database for cluster search.";
+                EXIT(EXIT_FAILURE);
+            }
+
             cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.threadsandcompression).c_str());
             cmd.addVariable("EXPAND", "1");
         }
