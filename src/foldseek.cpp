@@ -134,8 +134,8 @@ std::vector<struct Command> commands = {
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
 
 
-        {"createclusearchdb", createclusearchdb,   &localPar.verbandcompression,      COMMAND_MAIN,
-                "Build a searchable cluster database allowing for fast querying (--cluster-search)",
+        {"createclusearchdb", createclusearchdb,   &localPar.verbandcompression,      COMMAND_DATABASE_CREATION,
+                "Build a searchable cluster database allowing for fast querying",
                 "# cluster database and build a searchable db\n"
                 "foldseek cluster sequenceDB clusterDB tmp\n"
                 "foldseek createclusearchdb sequenceDB clusterDB clusterSearchDb tmp\n"
