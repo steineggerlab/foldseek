@@ -172,7 +172,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         FileUtil::writeFile(program, structureiterativesearch_sh, structureiterativesearch_sh_len);
         cmd.execProgram(program.c_str(), par.filenames);
     }else{
-        if(par.expandalignment == 1) {
+        if(par.clusterSearch == 1) {
             std::vector<std::string> dbsToCheck = {"_seq", "_seq_ca", "_seq_ss", "_seq_h"};
             for(size_t i = 0; i < dbsToCheck.size(); i++){
                 std::string db = par.db2 + dbsToCheck[i] + ".dbtype";

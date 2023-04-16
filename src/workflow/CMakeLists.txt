@@ -6,5 +6,6 @@ set(workflow_source_files
         workflow/EasyStructureRbh.cpp
         workflow/EasyStructureSearch.cpp
         workflow/EasyStructureCluster.cpp
+        workflow/CreateCluSearchDb.cpp
         PARENT_SCOPE
         )

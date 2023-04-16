@@ -132,6 +132,20 @@ std::vector<struct Command> commands = {
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+
+
+        {"createclusearchdb", createclusearchdb,   &localPar.verbandcompression,      COMMAND_MAIN,
+                "Build a searchable cluster database allowing for fast querying (--cluster-search)",
+                "# cluster database and build a searchable db\n"
+                "foldseek cluster sequenceDB clusterDB tmp\n"
+                "foldseek createclusearchdb sequenceDB clusterDB clusterSearchDb tmp\n"
+                "foldseek search sequenceDB clusterSearchDb aln tmp --cluster-search 1\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:sequenceDB> <i:clusterDB> <o:sequenceDB> <tmpDir>",
+                CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                            {"clusterDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
+                                                            {"clusterSearchDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"tmalign",      tmalign,      &localPar.tmalign,      COMMAND_ALIGNMENT,
                 "Compute tm-score ",
                 NULL,

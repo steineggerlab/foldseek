@@ -82,7 +82,7 @@ public:
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
-    PARAMETER(PARAM_EXPAND_ALN)
+    PARAMETER(PARAM_CLUSTER_SEARCH)
 
     float tmScoreThr;
     int tmAlignHitOrder;
@@ -94,7 +94,7 @@ public:
     int tmAlignFast;
     int nsample;
     int coordStoreMode;
-    int expandalignment;
+    int clusterSearch;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT);
