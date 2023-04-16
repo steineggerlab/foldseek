@@ -2,7 +2,7 @@
 #include "Util.h"
 #include "CommandCaller.h"
 #include "FileUtil.h"
-#include "createclusterdb.sh.h"
+#include "createclusearchdb.sh.h"
 #include <cassert>
 #include <LocalParameters.h>
 
@@ -43,7 +43,7 @@ int createclusearchdb(int argc, const char **argv, const Command& command) {
     }
     cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2profile).c_str());
     std::string program = tmpDir + "/createclusearchdb.sh";
-    FileUtil::writeFile(program, createclusterdb_sh, createclusterdb_sh_len);
+    FileUtil::writeFile(program, createclusearchdb_sh, createclusearchdb_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
     // Unreachable
     assert(false);
