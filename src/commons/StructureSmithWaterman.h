@@ -156,9 +156,11 @@ public:
             const unsigned char *db_sequence_3di,
             short **profile_word_aa,
             short **profile_word_3di,
+            short **target_profile_word_aa,
+            short **target_profile_word_3di,
             int32_t query_start, int32_t query_end,
             int32_t target_start, int32_t target_end,
-            const short gap_open, const short gap_extend);
+            const short gap_open, const short gap_extend, bool targetIsProfile);
 
     /*!	@function	Create the query profile using the query sequence.
      @param	read	pointer to the query sequence; the query sequence needs to be numbers

@@ -243,7 +243,8 @@ Matcher::result_t pairwiseAlignment(
     Sequence *query_aa, Sequence *query_3di,
     Sequence *target_aa, Sequence *target_3di,
     int gapOpen, int gapExtend,
-    SubstitutionMatrix *mat_aa, SubstitutionMatrix *mat_3di
+    SubstitutionMatrix *mat_aa,
+    SubstitutionMatrix *mat_3di
 ) {
     std::string backtrace;
     
@@ -310,14 +311,36 @@ Matcher::result_t pairwiseAlignment(
                 query_profile_scores_aa[j][i] = aligner.get_profile()->alignment_aa_profile[j * querySeqLen + i];
                 query_profile_scores_3di[j][i] = aligner.get_profile()->alignment_3di_profile[j * querySeqLen + i];
             }
-        }       
+        }
     } else {
         for (unsigned int i = 0; i < querySeqLen; i++) {
             for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
                 query_profile_scores_aa[j][i] =  aligner.get_profile()->mat_aa[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_aa_sequence[i]];
                 query_profile_scores_3di[j][i] =  aligner.get_profile()->mat_3di[j * aligner.get_profile()->alphabetSize + aligner.get_profile()->query_3di_sequence[i]];
             }
-        }       
+        }
+    }
+
+    short **target_profile_scores_aa = new short * [aligner.get_profile()->alphabetSize];
+    short **target_profile_scores_3di = new short * [aligner.get_profile()->alphabetSize];
+    for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
+        target_profile_scores_aa[j] = new short [target_aa->L];
+        target_profile_scores_3di[j] = new short [target_aa->L];
+    }
+    if (targetIsProfile) {
+        for (unsigned int i = 0; i < target_aa->L; i++) {
+            for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
+                target_profile_scores_aa[j][i] = static_cast<short>(target_aa->profile_for_alignment[j * target_aa->L + i]);
+                target_profile_scores_3di[j][i] = static_cast<short>(target_3di->profile_for_alignment[j * target_aa->L + i]);
+            }
+        }
+    } else {
+        for (unsigned int i = 0; i < target_aa->L; i++) {
+            for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
+                target_profile_scores_aa[j][i] =  mat_aa->subMatrix[j][target_aa_seq[i]];
+                target_profile_scores_3di[j][i] = mat_3di->subMatrix[j][target_3di_seq[i]];
+            }
+        }
     }
 
     Matcher::result_t gAlign = aligner.simpleGotoh(
@@ -325,50 +348,64 @@ Matcher::result_t pairwiseAlignment(
         target_3di_seq,
         query_profile_scores_aa,
         query_profile_scores_3di,
+        target_profile_scores_aa,
+        target_profile_scores_3di,
         0,
         query_aa->L,
         0,
         target_aa->L,
         gapOpen,
-        gapExtend
+        gapExtend,
+        targetIsProfile
     );
     
-    // int sw_rescore = rescoreBacktrace(
-    //     sw_align.qStartPos,
-    //     sw_align.dbStartPos,
-    //     query_aa,
-    //     target_aa,
-    //     query_3di,
-    //     target_3di,
-    //     gapOpen, gapExtend,
-    //     sw_align.backtrace,
-    //     mat_aa,
-    //     mat_3di
-    // ); 
-    // std::cout << "sw rescore: " << sw_rescore << '\n';
+    int sw_rescore = rescoreBacktrace(
+        sw_align.qStartPos,
+        sw_align.dbStartPos,
+        query_aa,
+        target_aa,
+        query_3di,
+        target_3di,
+        gapOpen, gapExtend,
+        sw_align.backtrace,
+        mat_aa,
+        mat_3di
+    ); 
+    std::cout << "\nTarget is profile " << targetIsProfile << ", query " << queryIsProfile << '\n';
+    std::cout << "sw rescore: " << sw_rescore << '\n';
 
-    // int gt_rescore = rescoreBacktrace(
-    //     gAlign.qStartPos,
-    //     gAlign.dbStartPos,
-    //     query_aa,
-    //     target_aa,
-    //     query_3di,
-    //     target_3di,
-    //     gapOpen, gapExtend,
-    //     gAlign.backtrace,
-    //     mat_aa,
-    //     mat_3di
-    // ); 
-    // std::cout << "gotoh rescore: " << gt_rescore << "\n";
+    int gt_rescore = rescoreBacktrace(
+        gAlign.qStartPos,
+        gAlign.dbStartPos,
+        query_aa,
+        target_aa,
+        query_3di,
+        target_3di,
+        gapOpen, gapExtend,
+        gAlign.backtrace,
+        mat_aa,
+        mat_3di
+    ); 
+    std::cout << "gotoh rescore: " << gt_rescore << "\n";
 
-    assert(sw_align.qStartPos == gAlign.qStartPos);
-    assert(sw_align.dbStartPos == gAlign.dbStartPos);
-    assert(sw_align.qEndPos == gAlign.qEndPos);
-    assert(sw_align.dbEndPos == gAlign.dbEndPos);
-    assert(align.score1 == gAlign.score);
+    std::cout << sw_align.backtrace << '\n' << gAlign.backtrace << '\n';
+    std::cout << " qStartPos: " << sw_align.qStartPos << ", " << gAlign.qStartPos << '\n';
+    std::cout << "   qEndPos: " << sw_align.qEndPos << ", " << gAlign.qEndPos << '\n';
+    std::cout << "dbStartPos: " << sw_align.dbStartPos << ", " << gAlign.dbStartPos << '\n';
+    std::cout << "  dbEndPos: " << sw_align.dbEndPos << ", " << gAlign.dbEndPos << '\n';
+    std::cout << "     Score: " << sw_align.score << ", " << gAlign.score << '\n';
+
+    // assert(sw_align.qStartPos == gAlign.qStartPos);
+    // assert(sw_align.dbStartPos == gAlign.dbStartPos);
+    // assert(sw_align.qEndPos == gAlign.qEndPos);
+    // assert(sw_align.dbEndPos == gAlign.dbEndPos);
+    // assert(sw_align.score == gAlign.score);
     // assert(backtrace == gAlign.backtrace);
     // assert(sw_rescore == gt_rescore);
 
+    // if (targetIsProfile && queryIsProfile) {
+    //     exit(1);
+    // }
     return gAlign;
 }
 
@@ -1358,7 +1395,6 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
             msa_3di[mergedId] = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2, qBt, tBt);
             msa_3di[targetId] = "";
             assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
-
             std::string profile_aa = fastamsa2profile(
                 msa_aa[mergedId], calculator_aa, filter_aa, subMat_aa, maxSeqLength,
                 sequenceCnt + 1, par.matchRatio, par.filterMsa,

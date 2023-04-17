@@ -616,11 +616,13 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace<S
 Matcher::result_t StructureSmithWaterman::simpleGotoh(
         const unsigned char *db_sequence_aa,
         const unsigned char *db_sequence_3di,
-        short **profile_word_aa,
-        short **profile_word_3di,
+        short **query_profile_word_aa,
+        short **query_profile_word_3di,
+        short **target_profile_word_aa,
+        short **target_profile_word_3di,
         int32_t query_start, int32_t query_end,
         int32_t target_start, int32_t target_end,
-        const short gap_open, const short gap_extend)
+        const short gap_open, const short gap_extend, bool targetIsProfile)
 {
     // defining constants for backtracing
     const uint8_t B = 0b00000001;
@@ -652,7 +654,12 @@ Matcher::result_t StructureSmithWaterman::simpleGotoh(
     scores *prev_sM_G_D_vec = &workspace[query_length + 1];
     memset(prev_sM_G_D_vec, 0, sizeof(scores) * (query_end + 1));
 
-    short goe = gap_open + gap_extend;
+    // for (int i = 0; i < query_length; i++) {
+    //     for (int j = 0; j < target_length; j++) {
+    //         std::cout << bestOdds[i * query_length + j] << '\t';
+    //     }
+    //     std::cout << '\n';
+    // }
 
     for (int i = target_start; LIKELY(i < target_end); i++) {
         prev_sM_G_D_vec[query_start].H = 0;
@@ -661,18 +668,37 @@ Matcher::result_t StructureSmithWaterman::simpleGotoh(
         curr_sM_G_D_vec[query_start].H = 0;
         curr_sM_G_D_vec[query_start].E = 0;
         curr_sM_G_D_vec[query_start].F = 0;
-        const short *profile_aa = profile_word_aa[db_sequence_aa[i]];
-        const short *profile_3di = profile_word_3di[db_sequence_3di[i]];
+        const short *query_profile_aa = query_profile_word_aa[db_sequence_aa[i]];
+        const short *query_profile_3di = query_profile_word_3di[db_sequence_3di[i]];
 
         for (int j = query_start + 1; LIKELY(j <= query_end); j++) {
+            const short *target_profile_aa = target_profile_word_aa[profile->query_aa_sequence[j-1]];
+            const short *target_profile_3di = target_profile_word_3di[profile->query_3di_sequence[j-1]];
+
             short tempE = curr_sM_G_D_vec[j-1].H - gap_open;
             curr_sM_G_D_vec[j].E = std::max(tempE, static_cast<short>(curr_sM_G_D_vec[j - 1].E - gap_extend));
             short tempF = prev_sM_G_D_vec[j].H  - gap_open;
             curr_sM_G_D_vec[j].F = std::max(tempF, static_cast<short>(prev_sM_G_D_vec[j].F - gap_extend));
-            short tempH = prev_sM_G_D_vec[j - 1].H + profile_aa[j - 1] + profile_3di[j - 1];
+
+            // TODO profile-profile scoring function - profile on query side + profile on target side
+            // access one with consensus of other, vice versa then average
+            // q profile_aa/3di + t profile_aa/3di
+
+            short tempH;
+            if (targetIsProfile) {
+                tempH = prev_sM_G_D_vec[j - 1].H + (query_profile_aa[j-1] + target_profile_aa[i]) / 2 + (query_profile_3di[j-1] + target_profile_3di[i]) / 2;
+            } else {
+                tempH = prev_sM_G_D_vec[j - 1].H + query_profile_aa[j-1] + query_profile_3di[j-1];
+            }
+
+            // short tempH = prev_sM_G_D_vec[j - 1].H + query_profile_aa[j-1] + query_profile_3di[j-1];
+            // tempH = (targetIsProfile) ? (tempH + target_profile_aa[i] + target_profile_3di[i]) / 2 : tempH;
+
             curr_sM_G_D_vec[j].H = std::max(tempH, curr_sM_G_D_vec[j].E);
             curr_sM_G_D_vec[j].H = std::max(curr_sM_G_D_vec[j].H, curr_sM_G_D_vec[j].F);
             curr_sM_G_D_vec[j].H = std::max(curr_sM_G_D_vec[j].H, static_cast<short>(0));
+            // std::cout << curr_sM_G_D_vec[j-1].H << '\t' << tempH << "\t" << curr_sM_G_D_vec[j].E << '\t' << curr_sM_G_D_vec[j].F << '\t' << curr_sM_G_D_vec[j].H << '\n';
+            // std::cout << curr_sM_G_D_vec[j].H   << '\t' << query_profile_aa[j-1] << '\t' << query_profile_3di[j-1] << "\t" << target_profile_aa[i] << '\t' << target_profile_3di[i] << '\t' << tempH << '\n';
 
             uint8_t mode = 0;
             mode |= (curr_sM_G_D_vec[j].E == tempE) ? E_M_FLAG : E_E_FLAG;
@@ -687,12 +713,24 @@ Matcher::result_t StructureSmithWaterman::simpleGotoh(
                 result.score = static_cast<uint16_t>(std::max(static_cast<uint16_t>(curr_sM_G_D_vec[j].H), result.score));
             }
         }
-
         // swap rows
         scores *tmpPtr = prev_sM_G_D_vec;
         prev_sM_G_D_vec = curr_sM_G_D_vec;
         curr_sM_G_D_vec = tmpPtr;
     }
+    
+    // for (int i = 0; i < query_length; i++) {
+    //     for (int j = 0; j < target_length; j++) {
+    //         uint8_t mode = btMatrix[j * query_length + i];
+    //         std::string mode_s;
+    //         if (mode & H) mode_s = "M"; 
+    //         else if (mode & E) mode_s = "E";
+    //         else if (mode & F) mode_s = "F";
+    //         else if (mode & B) mode_s = "B";
+    //         std::cout << mode_s << '\t';
+    //     }
+    //     std::cout << '\n';
+    // }
     
     // Perform the backtrace
     std::string cigar;
