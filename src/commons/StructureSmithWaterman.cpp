@@ -168,7 +168,7 @@ StructureSmithWaterman::~StructureSmithWaterman(){
     delete [] tmp_composition_bias;
     delete [] maxColumn;
     delete profile;
-    block_free_aa_trace(block);
+    block_free_aa_trace_xdrop(block);
 }
 
 
