@@ -1291,7 +1291,8 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
     std::string finalMSA;
     for (size_t i = 0; i < sequenceCnt; ++i) {
         if (msa_aa[i] != "" && msa_3di[i] != "") {
-            finalMSA = msa_aa[i];
+            if (par.outputmode > 0) finalMSA = msa_3di[i];
+            else finalMSA = msa_aa[i];
             ++msaCnt;
             continue;
         }
