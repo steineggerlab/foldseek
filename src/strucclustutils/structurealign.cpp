@@ -128,11 +128,26 @@ int structurealign(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     structureAlignDefault(par);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
-    if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
-        Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
-        Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
-        par.sortByStructureBits = false;
+
+    bool db1CaExist = FileUtil::fileExists((par.db1 + "_ca.dbtype").c_str());
+    bool db2CaExist = FileUtil::fileExists((par.db2 + "_ca.dbtype").c_str());
+    if(par.sortByStructureBits) {
+        bool disableStructureBits = false;
+        if(db1CaExist == false || db2CaExist == false){
+            Debug(Debug::WARNING) << "Cannot find " << par.db1 << " Calpha or " << par.db2 << " Calpha\n";
+            disableStructureBits = true;
+        }
+        if(par.alignmentMode == 1 || par.alignmentMode == 2){
+            Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
+            disableStructureBits = true;
+        }
+        if(disableStructureBits){
+            Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
+            Debug(Debug::WARNING) << "This impacts the final score and ranking of hits, but not E-values themselves. Ranking alterations primarily occur for E-values < 10^-1.\n";
+            par.sortByStructureBits = false;
+        }
     }
+
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
