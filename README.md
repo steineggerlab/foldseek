@@ -15,8 +15,8 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 - [Quick Start](#quick-start)
   - [Search](#search)
     - [Output](#output)
-    - [Important Search Parameters](#important-search-parameters)
-    - [Switch Alignment Mode](#switch-alignment-mode)
+    - [Important Parameters](#important-search-parameters)
+    - [Alignment Mode](#alignment-mode)
   - [Databases](#databases)
     - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
 - [Main Modules](#main-modules)
@@ -105,7 +105,7 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
 
-#### Switch Alignment Mode
+#### Alignment Mode
 In default Foldseek uses its local 3Di+AA strutural alignment but it also supports to realign hits using the global TMalign as well as rescoring alignments using TMscore. 
 ```
 foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
