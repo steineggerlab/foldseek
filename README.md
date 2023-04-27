@@ -18,15 +18,22 @@ Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.a
 
 ## Installation
 
-    # static Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
-    wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-    # static Linux SSE4.1 build (check using: cat /proc/cpuinfo | grep sse4_1)
-    wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-    # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
-    wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-    # conda installer 
-    conda install -c conda-forge -c bioconda foldseek
-
+1. Static Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
+```
+wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+```
+2. Static Linux SSE4.1 build (check using: cat /proc/cpuinfo | grep sse4_1)
+```
+wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+```
+3. Static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
+```
+wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+```
+4. Conda installer 
+```
+conda install -c conda-forge -c bioconda foldseek
+```
 Other precompiled binaries for ARM64, PPC64LE amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
 ### Documentation
