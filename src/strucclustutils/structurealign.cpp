@@ -134,7 +134,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
     if(par.sortByStructureBits) {
         bool disableStructureBits = false;
         if(db1CaExist == false || db2CaExist == false){
-            Debug(Debug::WARNING) << "Cannot find " << par.db1 << " Calpha or " << par.db2 << " Calpha\n";
+            Debug(Debug::WARNING) << "Cannot find " << FileUtil::baseName(par.db1) << " C-alpha or " << FileUtil::baseName(par.db2) << " C-alpha database\n";
             disableStructureBits = true;
         }
         if(par.alignmentMode == 1 || par.alignmentMode == 2){
