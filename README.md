@@ -29,6 +29,9 @@ Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.a
 
 Other precompiled binaries for ARM64, PPC64LE amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
+### Documentation
+Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information about these modules, refer to the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki). For documentation specific to Foldseek, checkout the Foldseek wiki [here](https://github.com/steineggerlab/foldseek/wiki).
+
 ### Quick start
 `easy-search` can search single or multiple query structures formatted in PDB/mmCIF format (flat or `.gz`) against a target database (`example/`) of protein structures. It outputs a tab-separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
 
