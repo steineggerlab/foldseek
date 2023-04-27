@@ -3,15 +3,24 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
-## Publications
-
 [van Kempen M, Kim S, Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398  (2022)](https://www.biorxiv.org/content/10.1101/2022.02.07.479398)
 
-## Tutorial Video
-We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
-Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
+# Table of Contents
 
-<a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
+- [Foldseek](#foldseek)
+- [Webserver](#webserver)
+- [Installation](#installation)
+- [Tutorial Video](#tutorial-video)
+- [Documentation](#documentation)
+- [Quick Start](#quick-start)
+  - [Search](#search)
+    - [Output](#output)
+    - [Important Search Parameters](#important-search-parameters)
+    - [Switch Alignment Mode](#switch-alignment-mode)
+  - [Databases](#databases)
+    - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
+- [Main Modules](#main-modules)
+- [Examples](#examples)
 
 ## Webserver 
 Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
@@ -31,6 +40,13 @@ wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldsee
 conda install -c conda-forge -c bioconda foldseek
 ```
 Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
+
+
+## Tutorial Video
+We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
+Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
+
+<a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
 
 ## Documentation
 Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information about these modules, refer to the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki). For documentation specific to Foldseek, checkout the Foldseek wiki [here](https://github.com/steineggerlab/foldseek/wiki).
@@ -89,7 +105,7 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
 
-#### Using TMalign for the alignment
+#### Switch Alignment Mode
 In default Foldseek uses its local 3Di+AA strutural alignment but it also supports to realign hits using the global TMalign as well as rescoring alignments using TMscore. 
 ```
 foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
@@ -145,7 +161,6 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
 Output format `aln_tmscore.tsv`: query and target identifier, TMscore, translation(3) and rotation vector=(3x3)
-
 
 ### Cluster search results 
 The following command aligns the input structures all-against-all and keeps only alignments with 80% of the sequence covered by the alignment (-c 0.8) (read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster)). It then clusters the results using greedy set cover algorithm. The clustering mode can be adjusted using --cluster-mode, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
