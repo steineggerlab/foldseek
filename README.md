@@ -14,11 +14,14 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 - [Documentation](#documentation)
 - [Quick Start](#quick-start)
   - [Search](#search)
-    - [Output](#output)
+    - [Output](#output-search)
     - [Important Parameters](#important-search-parameters)
     - [Alignment Mode](#alignment-mode)
   - [Databases](#databases)
     - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
+  - [Cluster](#cluster)
+    - [Output](#output-cluster)
+    - [Important Parameters](#important-cluster-parameters)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -41,7 +44,6 @@ conda install -c conda-forge -c bioconda foldseek
 ```
 Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
-
 ## Tutorial Video
 We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
 Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
@@ -58,7 +60,7 @@ The `easy-search` module allows to search single or multiple query structures, f
 
     foldseek easy-search example/d1asha_ example/ aln tmpFolder
     
-#### Output
+#### Output Search
 ##### Tab-separated
   
 The default fields are containing the following fields: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits` but they can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different output columns.
@@ -107,9 +109,9 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 
 #### Alignment Mode
 In default Foldseek uses its local 3Di+AA strutural alignment but it also supports to realign hits using the global TMalign as well as rescoring alignments using TMscore. 
-```
-foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
-```
+
+    foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
+
 In case of the alignment type (`--alignment-type 1`) tmalign, we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value=(qTMscore+tTMscore)/2 as well as into the score(=qTMscore*100) field. All output fields (like pident, fident, and alnlen) are calculated from the TMalign alignment.
 
 ### Databases 
@@ -137,6 +139,62 @@ The target database can be pre-processed by `createdb`. This make sense if searc
     foldseek createdb example/ targetDB
     foldseek createindex targetDB tmp  #OPTIONAL generates and stores the index on disk
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
+
+### Cluster
+The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein using structural alignment. It accepts input in either PDB or mmCIF format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
+
+    foldseek easy-cluster example/ res tmp -c 0.9 
+    
+#### Output Cluster
+##### Tab-separated cluster
+The provided format represents protein structure clustering in a tab-separated, two-column layout (representative and member). Each line denotes a cluster-representative and cluster-member relationship, signifying that the member shares significant structural similarity with the representative, and thus belongs to the same cluster.
+```
+Q0KJ32	Q0KJ32
+Q0KJ32	C0W539
+Q0KJ32	D6KVP9
+E3HQM9	E3HQM9
+E3HQM9	F0YHT8
+```
+
+##### Representative fasta
+The `_repseq.fasta` contains all representative protein sequences of the clustering.
+```
+>Q0KJ32
+MAGA....R
+>E3HQM9
+MCAT...Q
+```
+
+##### All member fasta
+In `_allseq.fasta` file all sequences of the cluster are present. A new cluster is marked by two identical name lines of the representative sequence, where the first line stands for the cluster and the second is the name line of the first cluster sequence. It is followed by the fasta formatted sequences of all its members.
+
+```
+>Q0KJ32	
+>Q0KJ32
+MAGA....R
+>C0W539
+MVGA....R
+>D6KVP9
+MVGA....R
+>D1Y890
+MVGV....R
+>E3HQM9	
+>E3HQM9
+MCAT...Q
+>Q223C0
+MCAR...Q
+```
+
+#### Important cluster parameters
+
+| Option            | Category        | Description                                                                                               |
+|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
+| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
+| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
+| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
+| --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
+
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
