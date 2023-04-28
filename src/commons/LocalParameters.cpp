@@ -112,6 +112,7 @@ LocalParameters::LocalParameters() :
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
+    easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
     structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, rescorediagonal);
