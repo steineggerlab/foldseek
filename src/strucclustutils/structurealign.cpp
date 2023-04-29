@@ -129,8 +129,28 @@ int structurealign(int argc, const char **argv, const Command& command) {
     structureAlignDefault(par);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
+    const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
+    IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+    IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+
+    IndexReader *t3DiDbr = NULL;
+    IndexReader *tAADbr = NULL;
+    bool sameDB = false;
+    if (par.db1.compare(par.db2) == 0) {
+        sameDB = true;
+        t3DiDbr = &qdbr3Di;
+        tAADbr = &qdbrAA;
+    } else {
+        tAADbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+        t3DiDbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+    }
+
+
     bool db1CaExist = FileUtil::fileExists((par.db1 + "_ca.dbtype").c_str());
     bool db2CaExist = FileUtil::fileExists((par.db2 + "_ca.dbtype").c_str());
+    if(Parameters::isEqualDbtype(tAADbr->getDbtype(), Parameters::DBTYPE_INDEX_DB)){
+        db2CaExist = true;
+    }
     if(par.sortByStructureBits) {
         bool disableStructureBits = false;
         if(db1CaExist == false || db2CaExist == false){
@@ -148,21 +168,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
         }
     }
 
-    const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
-    IndexReader qdbrAA(par.db1, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
-    IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
 
-    IndexReader *t3DiDbr = NULL;
-    IndexReader *tAADbr = NULL;
-    bool sameDB = false;
-    if (par.db1.compare(par.db2) == 0) {
-        sameDB = true;
-        t3DiDbr = &qdbr3Di;
-        tAADbr = &qdbrAA;
-    } else {
-        tAADbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
-        t3DiDbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
-    }
 
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
