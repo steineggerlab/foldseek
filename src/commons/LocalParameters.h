@@ -33,6 +33,10 @@ public:
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
 
+    static const int PREF_MODE_KMER = 0;
+    static const int PREF_MODE_UNGAPPED = 1;
+    static const int PREF_MODE_EXHAUSTIVE = 2;
+
     static const int TMALIGN_HIT_ORDER_AVG = 0;
     static const int TMALIGN_HIT_ORDER_QUERY = 1;
     static const int TMALIGN_HIT_ORDER_TARGET = 2;
@@ -72,6 +76,7 @@ public:
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
+    PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
     PARAMETER(PARAM_LDDT_THRESHOLD)
@@ -84,6 +89,7 @@ public:
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
 
+    int prefMode;
     float tmScoreThr;
     int tmAlignHitOrder;
     float lddtThr;

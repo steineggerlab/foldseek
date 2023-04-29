@@ -39,8 +39,12 @@ fake_pref() {
 
 # 1. Finding exact $k$-mer matches.
 if notExists "${TMP_PATH}/pref.dbtype"; then
-    if [ "$EXHAUSTIVE" = "1" ]; then
+    if [ "$PREFMODE" = "EXHAUSTIVE" ]; then
         fake_pref "${QUERY_PREFILTER}" "${TARGET_PREFILTER}" "${TMP_PATH}/pref"
+    elif [ "$PREFMODE" = "UNGAPPED" ]; then
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" ungappedprefilter "${QUERY_PREFILTER}" "${TARGET_PREFILTER}${INDEXEXT}" "${TMP_PATH}/pref" ${UNGAPPEDPREFILTER_PAR} \
+            || fail "Ungapped prefilter matching step died"
     else
         # shellcheck disable=SC2086
         $RUNNER "$MMSEQS" prefilter "${QUERY_PREFILTER}" "${TARGET_PREFILTER}${INDEXEXT}" "${TMP_PATH}/pref" ${PREFILTER_PAR} \

@@ -100,9 +100,24 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
     par.compBiasCorrectionScale = 0.15;
     cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
+    double prevEvalueThr = par.evalThr;
+    par.evalThr = std::numeric_limits<double>::max();
+    cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
+    par.evalThr = prevEvalueThr;
     par.compBiasCorrectionScale = 0.5;
+    switch(par.prefMode){
+        case LocalParameters::PREF_MODE_KMER:
+            cmd.addVariable("PREFMODE", "KMER");
+            break;
+        case LocalParameters::PREF_MODE_UNGAPPED:
+            cmd.addVariable("PREFMODE", "UNGAPPED");
+            break;
+        case LocalParameters::PREF_MODE_EXHAUSTIVE:
+            cmd.addVariable("PREFMODE", "EXHAUSTIVE");
+            break;
+    }
     if(par.exhaustiveSearch){
-        cmd.addVariable("EXHAUSTIVE", "1");
+        cmd.addVariable("PREFMODE", "EXHAUSTIVE");
     }
     if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         cmd.addVariable("ALIGNMENT_ALGO", "align");

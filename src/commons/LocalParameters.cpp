@@ -9,6 +9,7 @@ const int LocalParameters::DBTYPE_TMSCORE = 102;
 
 LocalParameters::LocalParameters() :
         Parameters(),
+        PARAM_PREF_MODE(PARAM_PREF_MODE_ID,"--prefilter-mode", "Prefilter mode", "prefilter mode: 0: kmer/ungapped 1: ungapped, 2: nofilter",typeid(int), (void *) &prefMode, "^[0-2]{1}$"),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_TMALIGN_HIT_ORDER(PARAM_TMALIGN_HIT_ORDER_ID,"--tmalign-hit-order", "TMalign hit order", "order hits by 0: (qTM+tTM)/2, 1: qTM, 2: tTM, 3: min(qTM,tTM) 4: max(qTM,tTM)",typeid(int), (void *) &tmAlignHitOrder, "^[0-4]{1}$"),
         PARAM_LDDT_THRESHOLD(PARAM_LDDT_THRESHOLD_ID,"--lddt-threshold", "LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &lddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
@@ -103,6 +104,7 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
+    structuresearchworkflow.push_back(&PARAM_PREF_MODE);
     structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
     structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
@@ -142,13 +144,14 @@ LocalParameters::LocalParameters() :
     samplemulambda.push_back(&PARAM_N_SAMPLE);
     samplemulambda.push_back(&PARAM_THREADS);
     samplemulambda.push_back(&PARAM_V);
-
+    prefMode = PREF_MODE_KMER;
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
     tmAlignHitOrder = TMALIGN_HIT_ORDER_AVG;
     lddtThr = 0.0;
     evalThr = 10;
     sortByStructureBits = 1;
+    minDiagScoreThr = 35;
     maskBfactorThreshold = 0;
     chainNameMode = 0;
     tmAlignFast = 1;
