@@ -6,6 +6,7 @@
 #include "gz.hpp"
 #include "input.hpp"
 #include "foldcomp.h"
+#include "cif.hpp"
 
 GemmiWrapper::GemmiWrapper(){
     threeAA2oneAA = {{"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
@@ -32,14 +33,38 @@ GemmiWrapper::GemmiWrapper(){
                      {"UNK",'X'}};
 }
 
-gemmi::Structure openStructure(const std::string & filename){
-    gemmi::MaybeGzipped infile(filename);
-    gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
-    if(format != gemmi::CoorFormat::Unknown && format != gemmi::CoorFormat::Unknown){
-        return gemmi::read_structure(infile, format);
-    }else{
-        return gemmi::read_structure(infile, gemmi::CoorFormat::Pdb);
+bool GemmiWrapper::load(std::string & filename){
+    if (gemmi::iends_with(filename, ".fcz")) {
+        std::ifstream in(filename, std::ios::binary);
+        if (!in) {
+            return false;
+        }
+        return loadFoldcompStructure(in, filename);
     }
+    try {
+        gemmi::MaybeGzipped infile(filename);
+        gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
+        gemmi::Structure st;
+        switch (format) {
+            case gemmi::CoorFormat::Mmcif: {
+                gemmi::cif::Document doc = gemmi::cif::read(infile);
+                st = gemmi::make_structure(doc);
+                break;
+            }
+            case gemmi::CoorFormat::Mmjson:
+                st = gemmi::make_structure(gemmi::cif::read_mmjson(infile));
+                break;
+            case gemmi::CoorFormat::ChemComp:
+                st = gemmi::make_structure_from_chemcomp_doc(gemmi::cif::read(infile));
+                break;
+            default:
+                st = gemmi::read_pdb(infile);
+        }
+        updateStructure((void*) &st, filename);
+    } catch (std::runtime_error& e) {
+        return false;
+    }
+    return true;
 }
 
 // https://stackoverflow.com/questions/1448467/initializing-a-c-stdistringstream-from-an-in-memory-buffer/1449527
@@ -68,9 +93,11 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             case gemmi::CoorFormat::Pdb:
                 st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(buffer, bufferSize), name, gemmi::PdbReadOptions());
                 break;
-            case gemmi::CoorFormat::Mmcif:
-                st = gemmi::make_structure(gemmi::cif::read_memory(buffer, bufferSize, name.c_str()));
+            case gemmi::CoorFormat::Mmcif: {
+                gemmi::cif::Document doc = gemmi::cif::read_memory(buffer, bufferSize, name.c_str());
+                st = gemmi::make_structure(doc);
                 break;
+            }
             case gemmi::CoorFormat::Unknown:
             case gemmi::CoorFormat::Detect:
                 return false;
@@ -245,21 +272,4 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename) 
             chain.push_back(std::make_pair(chainStartPos, currPos));
         }
     }
-}
-
-bool GemmiWrapper::load(std::string & filename){
-    if (gemmi::iends_with(filename, ".fcz")) {
-        std::ifstream in(filename, std::ios::binary);
-        if (!in) {
-            return false;
-        }
-        return loadFoldcompStructure(in, filename);
-    }
-    try {
-        gemmi::Structure st = openStructure(filename);
-        updateStructure((void*) &st, filename);
-    } catch (std::runtime_error& e) {
-        return false;
-    }
-    return true;
 }
