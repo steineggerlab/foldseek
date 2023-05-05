@@ -151,7 +151,7 @@ LocalParameters::LocalParameters() :
     lddtThr = 0.0;
     evalThr = 10;
     sortByStructureBits = 1;
-    minDiagScoreThr = 35;
+    minDiagScoreThr = 30;
     maskBfactorThreshold = 0;
     chainNameMode = 0;
     tmAlignFast = 1;

@@ -41,7 +41,14 @@ public:
             for(int dim = 0; dim < 3; dim++) {
                 num_cells[dim] = (int)((max[dim]-min[dim])/CUTOFF) + 1;
             }
+        }
 
+        std::tuple<int, int, int> getGridCoordinates(const float *point) {
+            int box_coord[3];
+            for(int dim = 0; dim < 3; dim++) {
+                box_coord[dim] = (int)((point[dim] - min[dim]) / CUTOFF);
+            }
+            return std::make_tuple(box_coord[0], box_coord[1], box_coord[2]);
         }
 
         float min[3] = {INF, INF, INF};
@@ -101,7 +108,7 @@ public:
     };
 
     void initQuery(unsigned int queryLen, float *qx, float *qy, float *qz);
-    void constructAlignHashes(int align_idx, int query_idx, int target_idx);
+    void constructAlignHashes(int query_idx, int target_idx, const std::string & cigar);
     void calculateDistance();
     void computeScores();
     LDDTScoreResult computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
@@ -114,7 +121,6 @@ private:
     int * target_to_align;
     int * align_to_query;
     int * align_to_target;
-    std::string cigar; // backtrace
     float **query_coordinates, **target_coordinates, **score;
     bool **dists_to_score;
     LDDTCalculator::Grid query_grid;

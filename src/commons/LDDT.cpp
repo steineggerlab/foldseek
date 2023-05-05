@@ -16,7 +16,7 @@ static bool compareByFirstKey(const std::pair<std::tuple<int, int, int>, int>& a
 }
 
 LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
-    : maxQueryLength(maxQueryLength), maxTargetLength(maxTargetLength) {
+        : maxQueryLength(maxQueryLength), maxTargetLength(maxTargetLength) {
     maxAlignLength = std::max(maxQueryLength, maxTargetLength);
     query_coordinates = new float*[maxQueryLength];
     for(unsigned int i = 0; i < maxQueryLength; i++) {
@@ -25,7 +25,7 @@ LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTarg
     target_coordinates = new float*[maxTargetLength];
     for(unsigned int i = 0; i < maxTargetLength; i++) {
         target_coordinates[i] = new float[3];
-    }    
+    }
     dists_to_score = new bool*[maxQueryLength];
     for(unsigned int i = 0; i < maxQueryLength; i++) {
         dists_to_score[i] = new bool[maxQueryLength];
@@ -121,9 +121,9 @@ void LDDTCalculator::initQuery(unsigned int queryLen, float *qx, float *qy, floa
 
 }
 
-LDDTCalculator::LDDTScoreResult LDDTCalculator::computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz) {
+LDDTCalculator::LDDTScoreResult LDDTCalculator::computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace,
+                                                                 float *tx, float *ty, float *tz) {
     targetLength = targetLen;
-    cigar = backtrace;
 
     for(unsigned int i = 0; i < targetLength; i++) {
         target_coordinates[i][0] = tx[i];
@@ -131,15 +131,16 @@ LDDTCalculator::LDDTScoreResult LDDTCalculator::computeLDDTScore(unsigned int ta
         target_coordinates[i][2] = tz[i];
     }
 
-    constructAlignHashes(0, qStartPos, tStartPos);
+    constructAlignHashes(qStartPos, tStartPos, backtrace);
     calculateDistance();
     computeScores();
     return LDDTScoreResult(reduce_score, alignLength);
 }
 
-void LDDTCalculator::constructAlignHashes(int align_idx, int query_idx, int target_idx) {
+void LDDTCalculator::constructAlignHashes(int query_idx, int target_idx, const std::string & cigar) {
     memset(query_to_align, -1, sizeof(int) * queryLength);
     memset(target_to_align, -1, sizeof(int) * targetLength);
+    int align_idx = 0;
     for(std::size_t i = 0; i < cigar.length(); i++) {
         if(cigar[i] == 'M') {
             align_to_query[align_idx] = query_idx;
@@ -159,74 +160,63 @@ void LDDTCalculator::constructAlignHashes(int align_idx, int query_idx, int targ
 }
 
 void LDDTCalculator::calculateDistance() {
-    // Directions
     const int DIR = 14;
-    int dx[DIR] = {0,1,1, 1,1,1, 1, 1, 1, 1,0,0, 0,0};
-    int dy[DIR] = {0,1,1, 1,0,0, 0,-1,-1,-1,1,1, 1,0};
-    int dz[DIR] = {0,1,0,-1,1,0,-1, 1, 0,-1,1,0,-1,1};
-    typedef std::vector<std::pair<std::tuple<int, int, int>, int>>::const_iterator box_iterator;
+    int dx[DIR] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0};
+    int dy[DIR] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1, 1, 1, 1, 0};
+    int dz[DIR] = {0, 1, 0, -1, 1, 0, -1, 1, 0, -1, 1, 0, -1, 1};
     memset(reduce_score, 0, sizeof(float) * alignLength);
+    typedef std::vector<std::pair<std::tuple<int, int, int>, int>>::const_iterator box_iterator;
+    std::map<std::tuple<int, int, int>, bool> visited_boxes;
+    // Create a set of unique boxes containing aligned residues
+    for (unsigned int align_idx = 0; align_idx < alignLength; align_idx++) {
+        if (align_to_query[align_idx] != -1) {
+            std::tuple<int, int, int> box_coord = query_grid.getGridCoordinates(query_coordinates[align_to_query[align_idx]]);
+            // If box_coord has been visited already, skip
+            if (visited_boxes.find(box_coord) != visited_boxes.end()) {
+                continue;
+            }
+            visited_boxes[box_coord] = true;
+            std::pair<std::tuple<int, int, int>, int> ref;
+            ref.first = box_coord;
+            ref.second = 0;
 
-    // Iterate through query_grid
-    // Update dists_to_score, aligned_dists_to_score, dist_l1
-    for(int i = 0; i <= query_grid.num_cells[0]; i++) {
-        for(int j = 0; j <= query_grid.num_cells[1]; j++) {
-            for(int k = 0; k <= query_grid.num_cells[2]; k++) {
-                // dir = 0 (same box)
-                std::pair<std::tuple<int, int, int>, int> ref;
-                ref.first = std::make_tuple(i, j, k);
-                ref.second = 0;
+            std::pair<box_iterator, box_iterator> box_members = std::equal_range(query_grid.box.begin(),
+                                                                                 query_grid.box.end(), ref,
+                                                                                 compareByFirstKey);
 
-                std::pair<box_iterator, box_iterator> box_members = std::equal_range(query_grid.box.begin(), query_grid.box.end(), ref, compareByFirstKey);
-                for(box_iterator it = box_members.first; it != box_members.second; it++) { // it->second contains query_idx corresponding to a "point"
-                    int query_idx1 = it->second;
-                    int align_idx1 = query_to_align[query_idx1];
-                    if(align_idx1 == -1) {
-                        continue;
-                    }
-                    for(box_iterator it2 = it; it2 != box_members.second; it2++) {
+            for (box_iterator it = box_members.first; it != box_members.second; it++) {
+                int query_idx1 = it->second;
+                int align_idx1 = query_to_align[query_idx1];
+                if (align_idx1 == -1) {
+                    continue;
+                }
+
+                // Different boxes
+                for (int dir = 0; dir < DIR; dir++) {
+                    std::pair<std::tuple<int, int, int>, int> ref;
+                    ref.first = std::make_tuple(std::get<0>(box_coord) + dx[dir],
+                                                std::get<1>(box_coord) + dy[dir],
+                                                std::get<2>(box_coord) + dz[dir]);
+                    ref.second = 0;
+
+                    std::pair<box_iterator, box_iterator> boxPrime_members = std::equal_range(query_grid.box.begin(),
+                                                                                              query_grid.box.end(), ref,
+                                                                                              compareByFirstKey);
+                    box_iterator it2 = (dir == 0) ? std::next(it) : boxPrime_members.first;
+                    for (; it2 != boxPrime_members.second; it2++) {
                         int query_idx2 = it2->second;
                         int align_idx2 = query_to_align[query_idx2];
-                        if(align_idx2 == -1) {
-                            continue; // not aligned
+                        if (align_idx2 == -1) {
+                            continue;
                         }
-                        if(dists_to_score[query_idx1][query_idx2]) {
+                        if (dists_to_score[query_idx1][query_idx2]) {
                             float distance = dist(query_coordinates[query_idx1], query_coordinates[query_idx2]);
-                            float dist_sub = dist(target_coordinates[align_to_target[align_idx1]], target_coordinates[align_to_target[align_idx2]]);
+                            float dist_sub = dist(target_coordinates[align_to_target[align_idx1]],
+                                                  target_coordinates[align_to_target[align_idx2]]);
                             float d_l = std::abs(distance - dist_sub);
                             float score = 0.25 * ((d_l < 0.5) + (d_l < 1.0) + (d_l < 2.0) + (d_l < 4.0));
                             reduce_score[align_idx2] += score;
                             reduce_score[align_idx1] += score;
-                        }
-                    }
-                }
-                // different box
-                for(int dir = 1; dir < DIR; dir++) {
-                    std::pair<std::tuple<int, int, int>, int> ref;
-                    ref.first = std::make_tuple(i+dx[dir], j+dy[dir], k+dz[dir]);
-                    ref.second = 0;
-                    std::pair<box_iterator, box_iterator> boxPrime_members = std::equal_range(query_grid.box.begin(), query_grid.box.end(), ref, compareByFirstKey);
-                    for(box_iterator it = box_members.first; it != box_members.second; it++) {
-                        int query_idx1 = it->second;
-                        int align_idx1 = query_to_align[query_idx1];
-                        if(align_idx1 == -1) {
-                            continue;
-                        }
-                        for(box_iterator it2 = boxPrime_members.first; it2 != boxPrime_members.second; it2++) {
-                            int query_idx2 = it2->second;
-                            int align_idx2 = query_to_align[query_idx2];
-                            if(align_idx2 == -1) {// not aligned
-                                continue;
-                            }
-                            if(dists_to_score[query_idx1][query_idx2]) {
-                                float distance = dist(query_coordinates[query_idx1], query_coordinates[query_idx2]);
-                                float dist_sub = dist(target_coordinates[align_to_target[align_idx1]],
-                                                      target_coordinates[align_to_target[align_idx2]]);
-                                float d_l = std::abs(distance - dist_sub);
-                                float score = 0.25 * ((d_l < 0.5) + (d_l < 1.0) + (d_l < 2.0) + (d_l < 4.0));
-                                reduce_score[align_idx2] += score;
-                                reduce_score[align_idx1] += score;
-                            }
                         }
                     }
                 }
@@ -235,8 +225,8 @@ void LDDTCalculator::calculateDistance() {
     }
 }
 
-void LDDTCalculator::computeScores() {
 
+void LDDTCalculator::computeScores() {
     for(unsigned int idx = 0; idx < alignLength; idx++) {
         reduce_score[idx] *= norm[align_to_query[idx]]; // reduce_score[] contains the lddt scores per residue
     }
