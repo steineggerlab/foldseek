@@ -29,7 +29,7 @@ public:
                 }
             }
             box.clear();
-
+            box_index.clear();
             for(int i = 0; i < (int)queryLength; i++) {
                 int box_coord[3];
                 for(int dim = 0; dim < 3; dim++) {
@@ -38,6 +38,18 @@ public:
                 box.emplace_back(std::make_tuple(box_coord[0], box_coord[1], box_coord[2]), i);
             }
             SORT_SERIAL(box.begin(), box.end());
+            // precompute index for box to get range per entry
+            // tuple -> (start, end) in box_index
+            std::tuple<int, int, int> currBoxKey = box[0].first;
+            size_t currBoxStart = 0;
+            for(size_t i = 0; i < box.size(); i++){
+                if(box[i].first != currBoxKey){
+                    box_index[currBoxKey] = std::make_pair(currBoxStart, i);
+                    currBoxKey = box[i].first;
+                    currBoxStart = i;
+                }
+            }
+            box_index[currBoxKey] = std::make_pair(currBoxStart, box.size());
             for(int dim = 0; dim < 3; dim++) {
                 num_cells[dim] = (int)((max[dim]-min[dim])/CUTOFF) + 1;
             }
@@ -51,10 +63,15 @@ public:
             return std::make_tuple(box_coord[0], box_coord[1], box_coord[2]);
         }
 
+        std::pair<size_t, size_t> getBoxMemberRange(std::tuple<int, int, int> &box_coord) {
+            return box_index[box_coord];
+        }
+
         float min[3] = {INF, INF, INF};
         float max[3] = {-INF, -INF, -INF};
         int num_cells[3];
         std::vector<std::pair<std::tuple<int, int, int>, int>> box;
+        std::map<std::tuple<int, int, int>, std::pair<size_t, size_t>> box_index;
     };
 
     struct LDDTScoreResult {
@@ -109,8 +126,7 @@ public:
 
     void initQuery(unsigned int queryLen, float *qx, float *qy, float *qz);
     void constructAlignHashes(int query_idx, int target_idx, const std::string & cigar);
-    void calculateDistance();
-    void computeScores();
+    void calculateLddtScores();
     LDDTScoreResult computeLDDTScore(unsigned int targetLen, int qStartPos, int tStartPos, const std::string &backtrace, float *tx, float *ty, float *tz);
 
 private:

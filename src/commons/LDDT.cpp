@@ -11,10 +11,6 @@ static inline float dist(float* arr1, float* arr2) {
     return sqrt(D2);
 }
 
-static bool compareByFirstKey(const std::pair<std::tuple<int, int, int>, int>& a, const std::pair<std::tuple<int, int, int>, int>& b) {
-    return a.first < b.first;
-}
-
 LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
         : maxQueryLength(maxQueryLength), maxTargetLength(maxTargetLength) {
     maxAlignLength = std::max(maxQueryLength, maxTargetLength);
@@ -132,8 +128,7 @@ LDDTCalculator::LDDTScoreResult LDDTCalculator::computeLDDTScore(unsigned int ta
     }
 
     constructAlignHashes(qStartPos, tStartPos, backtrace);
-    calculateDistance();
-    computeScores();
+    calculateLddtScores();
     return LDDTScoreResult(reduce_score, alignLength);
 }
 
@@ -159,13 +154,12 @@ void LDDTCalculator::constructAlignHashes(int query_idx, int target_idx, const s
     alignLength = align_idx;
 }
 
-void LDDTCalculator::calculateDistance() {
+void LDDTCalculator::calculateLddtScores() {
     const int DIR = 14;
     int dx[DIR] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0};
     int dy[DIR] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1, 1, 1, 1, 0};
     int dz[DIR] = {0, 1, 0, -1, 1, 0, -1, 1, 0, -1, 1, 0, -1, 1};
     memset(reduce_score, 0, sizeof(float) * alignLength);
-    typedef std::vector<std::pair<std::tuple<int, int, int>, int>>::const_iterator box_iterator;
     std::map<std::tuple<int, int, int>, bool> visited_boxes;
     // Create a set of unique boxes containing aligned residues
     for (unsigned int align_idx = 0; align_idx < alignLength; align_idx++) {
@@ -180,12 +174,10 @@ void LDDTCalculator::calculateDistance() {
             ref.first = box_coord;
             ref.second = 0;
 
-            std::pair<box_iterator, box_iterator> box_members = std::equal_range(query_grid.box.begin(),
-                                                                                 query_grid.box.end(), ref,
-                                                                                 compareByFirstKey);
+            std::pair<size_t, size_t> box_members = query_grid.getBoxMemberRange(box_coord);
 
-            for (box_iterator it = box_members.first; it != box_members.second; it++) {
-                int query_idx1 = it->second;
+            for (size_t i = box_members.first; i < box_members.second; i++) {
+                int query_idx1 = query_grid.box[i].second;
                 int align_idx1 = query_to_align[query_idx1];
                 if (align_idx1 == -1) {
                     continue;
@@ -194,17 +186,14 @@ void LDDTCalculator::calculateDistance() {
                 // Different boxes
                 for (int dir = 0; dir < DIR; dir++) {
                     std::pair<std::tuple<int, int, int>, int> ref;
-                    ref.first = std::make_tuple(std::get<0>(box_coord) + dx[dir],
-                                                std::get<1>(box_coord) + dy[dir],
-                                                std::get<2>(box_coord) + dz[dir]);
-                    ref.second = 0;
+                    std::tuple<int, int, int> key = std::make_tuple(std::get<0>(box_coord) + dx[dir],
+                                    std::get<1>(box_coord) + dy[dir],
+                                    std::get<2>(box_coord) + dz[dir]);
+                    std::pair<size_t, size_t> boxPrime_members = query_grid.getBoxMemberRange(key);
 
-                    std::pair<box_iterator, box_iterator> boxPrime_members = std::equal_range(query_grid.box.begin(),
-                                                                                              query_grid.box.end(), ref,
-                                                                                              compareByFirstKey);
-                    box_iterator it2 = (dir == 0) ? std::next(it) : boxPrime_members.first;
-                    for (; it2 != boxPrime_members.second; it2++) {
-                        int query_idx2 = it2->second;
+                    size_t i2 = (dir == 0) ? i + 1 : boxPrime_members.first;
+                    for (; i2 < boxPrime_members.second; i2++) {
+                        int query_idx2 = query_grid.box[i2].second;;
                         int align_idx2 = query_to_align[query_idx2];
                         if (align_idx2 == -1) {
                             continue;
@@ -223,10 +212,7 @@ void LDDTCalculator::calculateDistance() {
             }
         }
     }
-}
 
-
-void LDDTCalculator::computeScores() {
     for(unsigned int idx = 0; idx < alignLength; idx++) {
         reduce_score[idx] *= norm[align_to_query[idx]]; // reduce_score[] contains the lddt scores per residue
     }
