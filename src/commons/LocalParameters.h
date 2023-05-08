@@ -84,6 +84,7 @@ public:
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
     PARAMETER(PARAM_CHAIN_NAME_MODE)
+    PARAMETER(PARAM_WRITE_MAPPING)
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
@@ -97,6 +98,7 @@ public:
     float maskBfactorThreshold;
     int alignmentType;
     int chainNameMode;
+    bool writeMapping;
     int tmAlignFast;
     int nsample;
     int coordStoreMode;

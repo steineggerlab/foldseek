@@ -28,6 +28,7 @@ public:
     std::vector<std::string> names;
     std::vector<std::string> chainNames;
     std::vector<std::pair<size_t ,size_t>> chain;
+    std::vector<int> taxIds;
     std::string title;
 private:
     std::unordered_map<std::string,char> threeAA2oneAA;
@@ -35,7 +36,7 @@ private:
     int chainIt;
 
     bool loadFoldcompStructure(std::istream& stream, const std::string& filename);
-    void updateStructure(void * structure, const std::string & filename);
+    void updateStructure(void * structure, const std::string & filename, std::unordered_map<std::string, int>& entity_to_tax_id);
 };
 
 
