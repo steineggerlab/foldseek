@@ -45,8 +45,8 @@ jobs:
       - script: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get update
-          sudo apt-get install -y gcc-11 g++-11 libgcc-11-dev rustc cargo build-essential
-        displayName: Install newer GCC
+          sudo apt-get install -y gcc-11 g++-11 libgcc-11-dev rustc cargo build-essential zlib1g-dev libbz2-dev
+        displayName: Install newer GCC and Dependencies
       - script: |
           sudo apt-get update
           sudo apt-get -y install mpi-default-dev mpi-default-bin
