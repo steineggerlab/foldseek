@@ -3,6 +3,8 @@ project(foldseek C CXX)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/lib/mmseqs/cmake")
 
+set(IGNORE_RUST_VERSION 0 CACHE BOOL "Ignore Rust version check")
+
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
@@ -25,6 +27,10 @@ include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
 add_subdirectory(lib/corrosion)
+
+if(Rust_VERSION VERSION_LESS "1.68.0" AND NOT IGNORE_RUST_VERSION)
+    message(FATAL_ERROR "Rust >= 1.68.0 is required")
+endif()
 
 set(RUST_FEATURE "")
 if(HAVE_AVX2)
