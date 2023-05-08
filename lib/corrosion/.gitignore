@@ -1,6 +1,0 @@
-
-**/target/
-**/*.rs.bk
-build*/
-install*/
-.vscode
