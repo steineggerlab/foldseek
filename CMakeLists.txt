@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_policy(SET CMP0060 OLD)
 project(foldseek C CXX)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/lib/mmseqs/cmake")
