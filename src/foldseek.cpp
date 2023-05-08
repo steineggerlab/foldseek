@@ -53,7 +53,7 @@ std::vector<struct Command> commands = {
                 "# Search a single/multiple PDB file against a set of PDB files\n"
                 "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp\n"
                 "# Format output differently\n"
-                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp --format-output query,target,qStart,tStart,cigar\n"
+                "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp --format-output query,target,qstart,tstart,cigar\n"
                 "# Align with TMalign (global)\n"
                 "foldseek easy-search examples/d1asha_ examples/ result.m8 tmp --alignment-type 1\n"
                 "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
