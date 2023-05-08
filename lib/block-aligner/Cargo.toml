@@ -1,6 +1,6 @@
 [package]
 name = "block-aligner"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["c0deb0t <daniel.liu02@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -24,6 +24,9 @@ simd_avx2 = []
 simd_wasm = []
 # Enable Neon
 simd_neon = []
+
+# No SIMD
+no_simd = []
 
 # Print lots of debug information
 debug = ["debug_size"]

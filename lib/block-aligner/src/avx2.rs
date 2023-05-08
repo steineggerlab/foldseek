@@ -133,6 +133,13 @@ macro_rules! simd_sr_i16 {
     };
 }
 
+// hardcoded to STEP = 8
+#[target_feature(enable = "avx2")]
+#[inline]
+pub unsafe fn simd_step(a: Simd, b: Simd) -> Simd {
+    _mm256_permute2x128_si256(a, b, 0x03)
+}
+
 #[target_feature(enable = "avx2")]
 #[inline]
 unsafe fn simd_sl_i128(a: Simd, b: Simd) -> Simd {
