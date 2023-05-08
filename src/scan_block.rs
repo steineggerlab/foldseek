@@ -339,6 +339,8 @@ macro_rules! align_core_gen {
                 let D_max_max = simd_hmax_i16(D_max);
                 let grow_max = simd_hmax_i16(grow_D_max);
                 // max score of the entire block
+                // note that other than off_max and best_max, the other maxs are relative to the
+                // offsets off and ZERO
                 let max = cmp::max(D_max_max, grow_max);
                 off_max = off + (max as i32) - (ZERO as i32);
                 #[cfg(feature = "debug")]
@@ -369,7 +371,7 @@ macro_rules! align_core_gen {
                             },
                             Direction::Grow => {
                                 // max could be in either block
-                                if max >= grow_max {
+                                if D_max_max >= grow_max {
                                     // grow right
                                     best_argmax_i = state.i + idx_i + lane_idx;
                                     best_argmax_j = state.j + prev_size + idx_j;
@@ -571,6 +573,11 @@ macro_rules! align_core_gen {
 }
 
 /// Place block right or down for sequence-profile alignment.
+///
+/// Although conceptually blocks are squares, this function is actually used to compute any
+/// rectangular region. For example, when shifting a block right by some step
+/// size, only the rectangular region with width = step size needs to be computed, since
+/// the new shifted block will partially overlap with the previous block.
 ///
 /// Assumes all inputs are already relative to the current offset.
 ///
@@ -993,14 +1000,6 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
     #[allow(non_snake_case)]
     #[inline]
     unsafe fn shift_and_offset(block_size: usize, buf1: *mut i16, buf2: *mut i16, temp_buf1: *mut i16, temp_buf2: *mut i16, off_add: Simd) -> Simd {
-        #[inline]
-        unsafe fn sr(a: Simd, b: Simd) -> Simd {
-            if STEP == L {
-                a
-            } else {
-                simd_sr_i16!(a, b, STEP)
-            }
-        }
         let mut curr1 = simd_adds_i16(simd_load(buf1 as _), off_add);
         let D_corner = simd_set1_i16(simd_extract_i16!(curr1, STEP - 1));
         let mut curr2 = simd_adds_i16(simd_load(buf2 as _), off_add);
@@ -1009,8 +1008,8 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
         while i < block_size - L {
             let next1 = simd_adds_i16(simd_load(buf1.add(i + L) as _), off_add);
             let next2 = simd_adds_i16(simd_load(buf2.add(i + L) as _), off_add);
-            simd_store(buf1.add(i) as _, sr(next1, curr1));
-            simd_store(buf2.add(i) as _, sr(next2, curr2));
+            simd_store(buf1.add(i) as _, simd_step(next1, curr1));
+            simd_store(buf2.add(i) as _, simd_step(next2, curr2));
             curr1 = next1;
             curr2 = next2;
             i += L;
@@ -1018,12 +1017,17 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
 
         let next1 = simd_load(temp_buf1 as _);
         let next2 = simd_load(temp_buf2 as _);
-        simd_store(buf1.add(block_size - L) as _, sr(next1, curr1));
-        simd_store(buf2.add(block_size - L) as _, sr(next2, curr2));
+        simd_store(buf1.add(block_size - L) as _, simd_step(next1, curr1));
+        simd_store(buf2.add(block_size - L) as _, simd_step(next2, curr2));
         D_corner
     }
 
     /// Place block right or down for sequence-sequence alignment.
+    ///
+    /// Although conceptually blocks are squares, this function is actually used to compute any
+    /// rectangular region. For example, when shifting a block right by some step
+    /// size, only the rectangular region with width = step size needs to be computed, since
+    /// the new shifted block will partially overlap with the previous block.
     ///
     /// Assumes all inputs are already relative to the current offset.
     ///
@@ -1176,6 +1180,11 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
     place_block_profile_gen!(place_block_profile_down, reference, &P, query, &PaddedBytes, query, reference, false);
 
     /// Place block right or down for sequence-sequence 3di alignment.
+    ///
+    /// Although conceptually blocks are squares, this function is actually used to compute any
+    /// rectangular region. For example, when shifting a block right by some step
+    /// size, only the rectangular region with width = step size needs to be computed, since
+    /// the new shifted block will partially overlap with the previous block.
     ///
     /// Assumes all inputs are already relative to the current offset.
     ///

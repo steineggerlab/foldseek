@@ -130,6 +130,13 @@ macro_rules! simd_sr_i16 {
     };
 }
 
+// hardcoded to STEP = 8
+#[target_feature(enable = "simd128")]
+#[inline]
+pub unsafe fn simd_step(a: Simd, b: Simd) -> Simd {
+    a
+}
+
 macro_rules! simd_sllz_i16 {
     ($a:expr, $num:expr) => {
         {

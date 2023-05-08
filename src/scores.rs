@@ -57,6 +57,24 @@ impl AAMatrix {
         }
         Self { scores }
     }
+
+    /// Create an AAMatrix from a tab-separated table with no headers.
+    ///
+    /// Use `aa_order` to pass in the amino acids in order.
+    pub fn from_tsv(tsv: &str, aa_order: &str) -> Self {
+        let tsv = tsv.trim();
+        let aa_order = aa_order.split_ascii_whitespace().map(|s| s.as_bytes()[0]).collect::<Vec<_>>();
+        let mut res = Self::new();
+
+        for (line, &a) in tsv.split("\n").zip(&aa_order) {
+            for (score, &b) in line.split_ascii_whitespace().zip(&aa_order) {
+                let score = score.parse::<i8>().unwrap();
+                res.set(a, b, score);
+            }
+        }
+
+        res
+    }
 }
 
 impl Matrix for AAMatrix {

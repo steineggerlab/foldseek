@@ -123,6 +123,13 @@ macro_rules! simd_sr_i16 {
     };
 }
 
+// hardcoded to STEP = 8
+#[target_feature(enable = "sse2")]
+#[inline]
+pub unsafe fn simd_step(a: Simd, b: Simd) -> Simd {
+    a
+}
+
 // shift in zeros
 macro_rules! simd_sllz_i16 {
     ($a:expr, $num:expr) => {
