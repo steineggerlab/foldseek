@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+# keep old policy for setting implicit link libraries
+# zlib causes issues in static builds otherwise
 cmake_policy(SET CMP0060 OLD)
 project(foldseek C CXX)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -28,6 +30,8 @@ include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
 add_subdirectory(lib/corrosion)
+# don't try to link to gcc_s, its not needed anyway
+list(REMOVE_ITEM Rust_CARGO_TARGET_LINK_NATIVE_LIBS "gcc_s")
 
 if(Rust_VERSION VERSION_LESS "1.68.0" AND NOT IGNORE_RUST_VERSION)
     message(FATAL_ERROR "Rust >= 1.68.0 is required")
