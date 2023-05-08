@@ -51,7 +51,8 @@ cmake \
     "$REPO"
 make -j${CPUS}
 
-if [ "$(echo $(otool -L "src/${BINARY_NAME}" | wc -l))" != 6 ]; then
+otool -L "src/${BINARY_NAME}"
+if [ "$(otool -L "src/${BINARY_NAME}" | tail -n +2 | grep -v -E "lib(System\.B|z|bz2|c\+\+)\." )" != "" ]; then
     echo "Too many linked libraries found in ${BINARY_NAME} binary. Build is not static!"
     exit 1
 fi
@@ -68,7 +69,7 @@ cmake \
 make -j${CPUS}
 
 otool -L "src/${BINARY_NAME}"
-if [ "$(echo $(otool -L "src/${BINARY_NAME}" | wc -l))" != 6 ]; then
+if [ "$(otool -L "src/${BINARY_NAME}" | tail -n +2 | grep -v -E "lib(System\.B|z|bz2|c\+\+)\." )" != "" ]; then
     echo "Too many linked libraries found in ${BINARY_NAME} binary. Build is not static!"
     exit 1
 fi
@@ -97,7 +98,7 @@ cmake \
 make -j${CPUS}
 
 otool -L "src/${BINARY_NAME}"
-if [ "$(echo $(otool -L "src/${BINARY_NAME}" | wc -l))" != 6 ]; then
+if [ "$(otool -L "src/${BINARY_NAME}" | tail -n +2 | grep -v -E "lib(System\.B|z|bz2|c\+\+)\." )" != "" ]; then
     echo "Too many linked libraries found in ${BINARY_NAME} binary. Build is not static!"
     exit 1
 fi
