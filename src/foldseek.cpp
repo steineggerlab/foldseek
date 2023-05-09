@@ -245,7 +245,7 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                           {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
-        {"compressca",           compressca,             &localPar.onlythreads,           COMMAND_FORMAT_CONVERSION,
+        {"compressca",           compressca,             &localPar.onlythreads,           COMMAND_FORMAT_CONVERSION | COMMAND_EXPERT,
                 "Create a new compressed C-alpha DB with 16-bit diff encoding where possible from a sequence DB",
                 NULL,
                 "Milot Mirdita <milot@mirdita.de>",
