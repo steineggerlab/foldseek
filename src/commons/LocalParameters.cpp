@@ -165,7 +165,7 @@ LocalParameters::LocalParameters() :
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     clusterSearch = 0;
 
-    citations.emplace(CITATION_FOLDSEEK, "van Kempen M, Kim S, Tumescheit C, Mirdita M, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2022)");
+    citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
 
     //rewrite param vals.
 

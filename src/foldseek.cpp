@@ -6,8 +6,8 @@
 
 const char* binary_name = "foldseek";
 const char* tool_name = "foldseek";
-const char* tool_introduction = "Foldseek enables fast and sensitive comparisons of large structure sets. It reaches sensitivities similar to state-of-the-art structural aligners while being at least 20,000 times faster.\n\nPlease cite: van Kempen M, Kim S,Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398 (2021)";
-const char* main_author = "Michel van Kempen, Stephanie Kim, Charlotte Tumescheit, Milot Mirdita, Johannes Söding, Martin Steinegger";
+const char* tool_introduction = "Foldseek enables fast and sensitive comparisons of large structure sets. It reaches sensitivities similar to state-of-the-art structural aligners while being at least 20,000 times faster.\n\nPlease cite:\nvan Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)";
+const char* main_author = "Michel van Kempen, Stephanie Kim, Charlotte Tumescheit, Milot Mirdita, Jeongjae Lee, Cameron L. M. Gilchrist, Johannes Söding, Martin Steinegger";
 const char* show_extended_help = "1";
 const char* show_bash_info = NULL;
 const char* index_version_compatible = "fs1";
