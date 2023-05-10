@@ -248,23 +248,24 @@ int createdb(int argc, const char **argv, const Command& command) {
         std::vector<std::string> dirs;
         dirs.push_back(par.filenames.back());
         par.filenames.pop_back();
-        while(dirs.size() != 0){
+        while (dirs.size() != 0) {
             std::string dir = dirs.back();
             dirs.pop_back();
-            DIR * dpdf = opendir(dir.c_str());
-            if (dpdf != NULL) {
-                while (dirent * epdf = readdir(dpdf)) {
-                    std::string filename(epdf->d_name);
-                    if(filename != "." && filename !=".."){
-                        if (epdf->d_type == DT_DIR){
-                            dirs.push_back(dir+"/"+filename);
-                        }else{
-                            par.filenames.push_back(dir+"/"+filename);
-                        }
+            DIR* handle = opendir(dir.c_str());
+            if (handle == NULL) {
+                continue;
+            }
+            while (dirent* entry = readdir(handle)) {
+                std::string filename(entry->d_name);
+                if (filename != "." && filename !="..") {
+                    if (entry->d_type == DT_DIR) {
+                        dirs.push_back(dir+"/"+filename);
+                    } else {
+                        par.filenames.push_back(dir+"/"+filename);
                     }
                 }
-                closedir(dpdf);
             }
+            closedir(handle);
         }
     }
 
