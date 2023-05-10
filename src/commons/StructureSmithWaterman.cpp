@@ -393,7 +393,6 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
 
     }
 
-
     Cigar* cigar = block_new_cigar(queryAlnLen, targetAlnLen);
 
     AlignResult res;
@@ -415,9 +414,10 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
         res = block_res_aa_trace_xdrop(block);
         min_size *= 2;
     }
-    if(res.score != target_score){
+
+    if (res.score != target_score && !(target_score == INT16_MAX && res.score >= target_score)) {
         printf("ERROR: target_score not reached. res.score: %d target_score: %d", res.score, target_score);
-        exit(1);
+        exit(1); // TODO
     }
 
     block_cigar_aa_trace_xdrop(block, res.query_idx, res.reference_idx, cigar);
