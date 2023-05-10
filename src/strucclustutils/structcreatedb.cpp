@@ -78,7 +78,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
                     std::vector<int8_t> & camol, std::string & header, std::string & name,
                     DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
-                    float maskBfactorThreshold, size_t & tooShort, size_t & globalCnt, int thread_idx, int coordStoreMode,
+                    float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
                     std::string & filename,  size_t & fileidCnt,
                     std::map<std::string, size_t> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
@@ -86,13 +86,26 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     DBWriter* mappingWriter) {
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
     size_t entriesAdded = 0;
-    for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+    for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
         size_t dbKey = id + ch;
         size_t chainStart = readStructure.chain[ch].first;
         size_t chainEnd = readStructure.chain[ch].second;
         size_t chainLen = chainEnd - chainStart;
-        if(chainLen <= 3){
+        if (chainLen <= 3) {
             tooShort++;
+            continue;
+        }
+
+        bool allX = true;
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            const char aa = readStructure.ami[chainStart+pos];
+            if (aa != 'X' && aa != 'x') {
+                allX = false;
+                break;
+            }
+        }
+        if (allX) {
+            notProtein++;
             continue;
         }
 
@@ -305,6 +318,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     size_t globalFileidCnt = 0;
     size_t incorrectFiles = 0;
     size_t tooShort = 0;
+    size_t notProtein = 0;
     bool needsReorderingAtTheEnd = false;
     // Process tar files!
     for(size_t i = 0; i < tarFiles.size(); i++) {
@@ -333,7 +347,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
 #endif
 
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) num_threads(localThreads) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -466,7 +480,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di, pulchra,
                         alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                        par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
+                        par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
                     );
@@ -480,7 +494,7 @@ int createdb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -508,7 +522,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             writeStructureEntry(
                 mat, readStructure, structureTo3Di,  pulchra,
                 alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
+                par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                 looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                 mappingWriter
             );
@@ -534,7 +548,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -570,7 +584,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                                 writeStructureEntry(
                                     mat, readStructure, structureTo3Di,  pulchra,
                                     alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                    par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
+                                    par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                                     obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                                     mappingWriter
                                 );
@@ -587,7 +601,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -620,7 +634,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di,  pulchra,
                         alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                        par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
+                        par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
                     );
@@ -817,8 +831,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
     }
 
-
-    Debug(Debug::INFO) << "Ignore " << tooShort+incorrectFiles << " out of " << globalCnt << ".\n";
-    Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect  " << incorrectFiles << ".\n";
+    Debug(Debug::INFO) << "Ignore " << (tooShort+incorrectFiles+notProtein) << " out of " << globalCnt << ".\n";
+    Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect: " << incorrectFiles << ", not proteins: " << notProtein << ".\n";
     return EXIT_SUCCESS;
 }
