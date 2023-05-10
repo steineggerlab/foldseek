@@ -751,7 +751,6 @@ int createdb(int argc, const char **argv, const Command& command) {
             *(tmpBuff) = '\n';
             size_t length = tmpBuff - basePos + 1;
             size_t written = fwrite(buffer, sizeof(char), length, file);
-            Debug(Debug::ERROR) << "Writing " << std::string(buffer, length) << "\n";
             if (written != length) {
                 Debug(Debug::ERROR) << "Error writing to file " << mappingFile << "\n";
                 EXIT(EXIT_FAILURE);
