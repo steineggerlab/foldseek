@@ -9,9 +9,19 @@
 #include <map>
 #include "MMseqsMPI.h"
 
+#include <mutex>
+
 #ifndef EXIT
-#define EXIT(exitCode) do { int __status = (exitCode); std::cerr.flush(); std::cout.flush(); exit(__status); } while(0)
+#define EXIT(exitCode) do { \
+    static std::mutex exitMutex; \
+    std::lock_guard<std::mutex> lock(exitMutex); \
+    int __status = (exitCode); \
+    std::cerr.flush(); \
+    std::cout.flush(); \
+    exit(__status); \
+} while(0)
 #endif
+
 
 #define BIT_SET(a,b) ((a) | (1ULL<<(b)))
 #define BIT_CLEAR(a,b) ((a) & ~(1ULL<<(b)))
