@@ -3,7 +3,9 @@
 //
 #include "GemmiWrapper.h"
 #include "mmread.hpp"
+#ifdef HAVE_ZLIB
 #include "gz.hpp"
+#endif
 #include "input.hpp"
 #include "foldcomp.h"
 #include "cif.hpp"
@@ -70,7 +72,11 @@ bool GemmiWrapper::load(std::string & filename){
         return loadFoldcompStructure(in, filename);
     }
     try {
+#ifdef HAVE_ZLIB
         gemmi::MaybeGzipped infile(filename);
+#else
+        gemmi::BasicInput infile(filename);
+#endif
         gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
@@ -116,7 +122,11 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         return loadFoldcompStructure(istr, name);
     }
     try {
+#ifdef HAVE_ZLIB
         gemmi::MaybeGzipped infile(name);
+#else
+        gemmi::BasicInput infile(name);
+#endif
         gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
