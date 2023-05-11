@@ -348,7 +348,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
 #endif
 
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -368,7 +368,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             int status = inflateInit2(&strm, 15 | 32);
             if (status < 0) {
                 Debug(Debug::ERROR) << "Cannot initialize zlib stream\n";
-                //EXIT(EXIT_FAILURE);
+                EXIT(EXIT_FAILURE);
             }
 #endif
             //recon_related
@@ -403,13 +403,13 @@ int createdb(int argc, const char **argv, const Command& command) {
                             }
                             if (mtar_read_data(&tar, dataBuffer, tarHeader.size) != MTAR_ESUCCESS) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << tarHeader.name << "\n";
-                                //EXIT(EXIT_FAILURE);
+                                EXIT(EXIT_FAILURE);
                             }
                             name.assign(dataBuffer, tarHeader.size);
                             // skip to next record
                             if (mtar_read_header(&tar, &tarHeader) == MTAR_ENULLRECORD) {
                                 Debug(Debug::ERROR) << "Tar truncated after entry " << name << "\n";
-                                //EXIT(EXIT_FAILURE);
+                                EXIT(EXIT_FAILURE);
                             }
                         } else {
                             name = tarHeader.name;
@@ -422,7 +422,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                             }
                             if (mtar_read_data(&tar, dataBuffer, tarHeader.size) != MTAR_ESUCCESS) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << name << "\n";
-                                //EXIT(EXIT_FAILURE);
+                                EXIT(EXIT_FAILURE);
                             }
                             if (include.isMatch(name.c_str()) == false || exclude.isMatch(name.c_str()) == true) {
                                 proceed = true;
@@ -462,14 +462,14 @@ int createdb(int argc, const char **argv, const Command& command) {
                                 default:
                                     inflateEnd(&strm);
                                     Debug(Debug::ERROR) << "Gzip error " << err << " entry " << name << "\n";
-                                    //EXIT(EXIT_FAILURE);
+                                    EXIT(EXIT_FAILURE);
                             }
                             have = CHUNK - strm.avail_out;
                             pdbFile.append((char *) out, have);
                         } while (strm.avail_out == 0);
 #else
                         Debug(Debug::ERROR) << "MMseqs2 was not compiled with zlib support. Cannot read compressed input.\n";
-                EXIT(EXIT_FAILURE);
+                        EXIT(EXIT_FAILURE);
 #endif
                     } else {
                         pdbFile.append(dataBuffer, tarHeader.size);
