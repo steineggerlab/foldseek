@@ -253,10 +253,13 @@ jobs:
       - script: |
           mkdir ~/.ssh && mv $DOWNLOADSECUREFILE_SECUREFILEPATH ~/.ssh/id_rsa
           chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -t rsa uniclust.mmseqs.com >> ~/.ssh/known_hosts
           cd "${BUILD_SOURCESDIRECTORY}"
-          ssh codeship@uniclust.mmseqs.com "mkdir -p \"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}\""
           # disabled:foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
-          scp foldseek-osx-universal.tar.gz foldseek-linux-sse2.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
-          ssh codeship@uniclust.mmseqs.com "update-latest-foldseek.sh \"${BUILD_SOURCEVERSION}\""
-
+          ssh-keygen -Y sign -f ~/.ssh/id_rsa -n file foldseek-osx-universal.tar.gz foldseek-linux-sse2.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz
+          curl -X POST \
+            -F file[]=@foldseek-osx-universal.tar.gz -F signature[]=@foldseek-osx-universal.tar.gz.sig \
+            -F file[]=@foldseek-linux-sse2.tar.gz -F signature[]=@foldseek-linux-sse2.tar.gz.sig \
+            -F file[]=@foldseek-linux-avx2.tar.gz -F signature[]=@foldseek-linux-avx2.tar.gz.sig \
+            -F file[]=@foldseek-linux-arm64.tar.gz -F signature[]=@foldseek-linux-arm64.tar.gz.sig \
+            -F identifier="foldseek" -F directory="${BUILD_SOURCEVERSION}" \
+              https://mmseqs.com/upload
