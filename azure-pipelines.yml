@@ -252,8 +252,8 @@ jobs:
         displayName: Get Deployment Key
       - script: |
           mkdir ~/.ssh && mv $DOWNLOADSECUREFILE_SECUREFILEPATH ~/.ssh/id_rsa
+          chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_rsa
           ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub
-          chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa.pub
           cd "${BUILD_SOURCESDIRECTORY}"
           # disabled:foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
           ssh-keygen -Y sign -f ~/.ssh/id_rsa -n file foldseek-osx-universal.tar.gz foldseek-linux-sse2.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz
