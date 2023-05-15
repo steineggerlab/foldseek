@@ -256,17 +256,12 @@ jobs:
           ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub
           cd "${BUILD_SOURCESDIRECTORY}"
           # disabled:foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
-          ssh-keygen -Y sign -f ~/.ssh/id_rsa -n file foldseek-osx-universal.tar.gz foldseek-linux-sse2.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz
-          openssl s_client -connect mmseqs.com:443
-          curl --version
-          curl -v -i -X POST \
-            -F file[]=@foldseek-osx-universal.tar.gz -F signature[]=@foldseek-osx-universal.tar.gz.sig \
-            -F file[]=@foldseek-linux-sse2.tar.gz -F signature[]=@foldseek-linux-sse2.tar.gz.sig \
-            -F file[]=@foldseek-linux-avx2.tar.gz -F signature[]=@foldseek-linux-avx2.tar.gz.sig \
-            -F file[]=@foldseek-linux-arm64.tar.gz -F signature[]=@foldseek-linux-arm64.tar.gz.sig \
-            -F identifier="foldseek" -F directory="${BUILD_SOURCEVERSION}" \
-              https://mmseqs.com/upload
-          curl --http1.1 -v -i -X POST \
+          ssh-keygen -Y sign -f ~/.ssh/id_rsa -n file \
+             foldseek-osx-universal.tar.gz \
+             foldseek-linux-sse2.tar.gz \
+             foldseek-linux-avx2.tar.gz \
+             foldseek-linux-arm64.tar.gz
+          curl -X POST \
             -F file[]=@foldseek-osx-universal.tar.gz -F signature[]=@foldseek-osx-universal.tar.gz.sig \
             -F file[]=@foldseek-linux-sse2.tar.gz -F signature[]=@foldseek-linux-sse2.tar.gz.sig \
             -F file[]=@foldseek-linux-avx2.tar.gz -F signature[]=@foldseek-linux-avx2.tar.gz.sig \
