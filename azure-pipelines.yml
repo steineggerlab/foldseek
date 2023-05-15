@@ -261,7 +261,7 @@ jobs:
              foldseek-linux-sse2.tar.gz \
              foldseek-linux-avx2.tar.gz \
              foldseek-linux-arm64.tar.gz
-          curl -X POST \
+          curl --retry 5 --retry-all-errors -X POST \
             -F file[]=@foldseek-osx-universal.tar.gz -F signature[]=@foldseek-osx-universal.tar.gz.sig \
             -F file[]=@foldseek-linux-sse2.tar.gz -F signature[]=@foldseek-linux-sse2.tar.gz.sig \
             -F file[]=@foldseek-linux-avx2.tar.gz -F signature[]=@foldseek-linux-avx2.tar.gz.sig \
