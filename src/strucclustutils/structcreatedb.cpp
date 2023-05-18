@@ -831,7 +831,11 @@ int createdb(int argc, const char **argv, const Command& command) {
             EXIT(EXIT_FAILURE);
         }
     }
-
+    if (globalCnt == 0) {
+        Debug(Debug::ERROR) << "No structures found in given input.\n";
+        EXIT(EXIT_FAILURE);
+    }
+    
     Debug(Debug::INFO) << "Ignore " << (tooShort+incorrectFiles+notProtein) << " out of " << globalCnt << ".\n";
     Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect: " << incorrectFiles << ", not proteins: " << notProtein << ".\n";
     return EXIT_SUCCESS;
