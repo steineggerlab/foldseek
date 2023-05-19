@@ -44,6 +44,18 @@ conda install -c conda-forge -c bioconda foldseek
 ```
 Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
+### Memory requirments 
+For optimal software performance, consider three options based on your RAM and search requirements:
+
+1. **With Cα info (default).** 
+   Use this formula to calculate RAM - `(6 bytes Cα + 1 3Di byte + 1 AA byte) * (database residues)`. The 54M AFDB50 entries require 151GB.
+
+2. **Without Cα info.** 
+   By disabling `--sort-by-structure-bits 0`, RAM requirement reduces to 35GB. However, this alters hit rankings and final scores but not E-values. Structure bits are mostly relevant for hit ranking for E-value > 10^-1.
+
+3. **Single query searches.** 
+   Use the `--prefilter-mode 1`, which isn't memory-limited and computes all ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries.
+
 ## Tutorial Video
 We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
 Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
