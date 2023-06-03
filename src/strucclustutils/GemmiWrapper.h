@@ -27,6 +27,8 @@ public:
     std::vector<char> ami;
     std::vector<std::string> names;
     std::vector<std::string> chainNames;
+    std::vector<unsigned int> modelIndices;
+    unsigned int modelCount = 0;
     std::vector<std::pair<size_t ,size_t>> chain;
     std::vector<int> taxIds;
     std::string title;

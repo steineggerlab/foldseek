@@ -173,6 +173,7 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     chain.clear();
     names.clear();
     chainNames.clear();
+    modelIndices.clear();
     ca.clear();
     ca_bfactor.clear();
     c.clear();
@@ -183,6 +184,8 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     names.push_back(filename);
     const AtomCoordinate& first = coordinates[0];
     chainNames.push_back(first.chain);
+    modelCount = 1;
+    modelIndices.push_back(modelCount);
     int residueIndex = INT_MAX;
     Vec3 ca_atom = {NAN, NAN, NAN};
     Vec3 cb_atom = {NAN, NAN, NAN};
@@ -239,6 +242,8 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
     chain.clear();
     names.clear();
     chainNames.clear();
+    modelIndices.clear();
+    modelCount = 0;
     ca.clear();
     ca_bfactor.clear();
     c.clear();
@@ -249,6 +254,7 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
     title.append(st->get_info("_struct.title"));
     size_t currPos = 0;
     for (gemmi::Model& model : st->models){
+        modelCount++;
         for (gemmi::Chain& ch : model.chains) {
             size_t chainStartPos = currPos;
             size_t pos = filename.find_last_of("\\/");
@@ -257,6 +263,15 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                                : filename.substr(pos+1, filename.length());
             //name.push_back('_');
             chainNames.push_back(ch.name);
+            char* rest;
+            errno = 0;
+            unsigned int modelNumber = strtoul(model.name.c_str(), &rest, 10);
+            if ((rest != model.name.c_str() && *rest != '\0') || errno == ERANGE) {
+                modelIndices.push_back(modelCount);
+            }else{
+                modelIndices.push_back(modelNumber);
+            }
+
             names.push_back(name);
             int taxId = -1;
             for (gemmi::Residue &res : ch.residues) {
