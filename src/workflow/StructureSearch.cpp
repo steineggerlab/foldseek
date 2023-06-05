@@ -11,7 +11,7 @@
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
-    p->maskMode = 1;
+    p->maskMode = 0;
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
