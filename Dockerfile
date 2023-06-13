@@ -6,11 +6,9 @@ ARG APP
 RUN dpkg --add-architecture $TARGETARCH \
     && apt-get update \
     && apt-get install -y \
-      build-essential curl xxd git \
+      build-essential curl xxd git cmake \
       zlib1g-dev libbz2-dev libatomic1 \
       crossbuild-essential-$TARGETARCH zlib1g-dev:$TARGETARCH libbz2-dev:$TARGETARCH \
-    && apt install -y -t $(awk -F'=' '$1 == "VERSION_CODENAME" { print $2 }'  /etc/os-release)-backports --no-install-suggests --no-install-recommends \
-      cmake \
     && rm -rf /var/lib/apt/lists/*
 
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
