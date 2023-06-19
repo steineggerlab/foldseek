@@ -22,6 +22,7 @@ extern int structureungappedalign(int argc, const char** argv, const Command &co
 extern int structuremsa(int argc, const char** argv, const Command &command);
 extern int structuremsacluster(int argc, const char** argv, const Command &command);
 extern int msa2lddt(int argc, const char** argv, const Command &command);
+extern int refinemsa(int argc, const char** argv, const Command &command);
 extern int convert2pdb(int argc, const char** argv, const Command &command);
 extern int compressca(int argc, const char** argv, const Command &command);
 
