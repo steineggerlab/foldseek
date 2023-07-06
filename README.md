@@ -84,8 +84,8 @@ The default fields are containing the following fields: `query,target,fident,aln
 | --- | --- |
 |query | Query sequence identifier |
 |target | Target sequence identifier |
-|qca        | Calpha corrdinates of the query |
-|tca        | Calpha corrdinates of the target |
+|qca        | Calpha coordinates of the query |
+|tca        | Calpha coordinates of the target |
 |alntmscore | TM-score of the alignment | 
 |qtmscore   | TM-score normalized by the query length |
 |ttmscore   | TM-score normalized by the target length |
