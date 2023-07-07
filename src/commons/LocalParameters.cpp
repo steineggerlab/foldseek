@@ -21,7 +21,10 @@ LocalParameters::LocalParameters() :
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
-        PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC)
+        PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
+        PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
+        PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$")
+
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -67,8 +70,8 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
-    structurecreatedb.push_back(&PARAM_TAR_INCLUDE);
-    structurecreatedb.push_back(&PARAM_TAR_EXCLUDE);
+    structurecreatedb.push_back(&PARAM_FILE_INCLUDE);
+    structurecreatedb.push_back(&PARAM_FILE_EXCLUDE);
     structurecreatedb.push_back(&PARAM_THREADS);
     structurecreatedb.push_back(&PARAM_V);
     // tmalign
@@ -164,6 +167,8 @@ LocalParameters::LocalParameters() :
     maskLowerCaseMode = 1;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     clusterSearch = 0;
+    fileInclude = ".*";
+    fileExclude = "^$";
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
 
@@ -175,7 +180,8 @@ LocalParameters::LocalParameters() :
 
 
 std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT) {
+                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner,
+                                             bool &needLDDT, bool isConvertAlis) {
     std::vector<int> formatCodes;
     if (formatMode == Parameters::FORMAT_ALIGNMENT_SAM || formatMode == Parameters::FORMAT_ALIGNMENT_HTML) {
         needSequences = true;
@@ -229,7 +235,7 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("empty") == 0){ code = Parameters::OUTFMT_EMPTY;}
         else if (outformatSplit[i].compare("lddt") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT; }
         else if (outformatSplit[i].compare("lddtfull") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
-        else if (outformatSplit[i].compare("prob") == 0) { needCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
+        else if (outformatSplit[i].compare("prob") == 0) { if(isConvertAlis == false) { needCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; } code = LocalParameters::OUTFMT_PROBTP; }
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

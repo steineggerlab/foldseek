@@ -248,6 +248,10 @@ int createdb(int argc, const char **argv, const Command& command) {
 
     std::string outputName = par.filenames.back();
     par.filenames.pop_back();
+
+
+    PatternCompiler include(par.fileInclude.c_str());
+    PatternCompiler exclude(par.fileExclude.c_str());
     if (par.filenames.size() == 1 && FileUtil::directoryExists(par.filenames.back().c_str())) {
         std::vector<std::string> dirs;
         dirs.push_back(par.filenames.back());
@@ -265,7 +269,10 @@ int createdb(int argc, const char **argv, const Command& command) {
                     if (entry->d_type == DT_DIR) {
                         dirs.push_back(dir+"/"+filename);
                     } else {
-                        par.filenames.push_back(dir+"/"+filename);
+                        std::cout << filename << " " << par.fileInclude << std::endl;
+                        if (include.isMatch(filename.c_str()) == true && exclude.isMatch(filename.c_str()) == false) {
+                            par.filenames.push_back(dir+"/"+filename);
+                        }
                     }
                 }
             }
@@ -393,8 +400,8 @@ int createdb(int argc, const char **argv, const Command& command) {
             size_t inflateSize = 1024 * 1024;
             char *inflateBuffer = (char *) malloc(inflateSize);
             bool proceed = true;
-            PatternCompiler include(par.tarInclude.c_str());
-            PatternCompiler exclude(par.tarExclude.c_str());
+            PatternCompiler includeThread(par.fileInclude.c_str());
+            PatternCompiler excludeThread(par.fileExclude.c_str());
 
             while (proceed) {
                 bool writeEntry = true;
@@ -430,7 +437,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << name << "\n";
                                 EXIT(EXIT_FAILURE);
                             }
-                            if (include.isMatch(name.c_str()) == false || exclude.isMatch(name.c_str()) == true) {
+                            if (includeThread.isMatch(name.c_str()) == false || excludeThread.isMatch(name.c_str()) == true) {
                                 proceed = true;
                                 writeEntry = false;
                             } else {
