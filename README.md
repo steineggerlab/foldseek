@@ -3,8 +3,10 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
-[van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist C, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
+## Publications
+[van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
 
+[Barrio-Hernandez I, Yeo J, Jänes J, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. biorxiv, doi:10.1101/2023.03.09.531927 (2023)](https://www.biorxiv.org/content/10.1101/2023.03.09.531927v1)
 # Table of Contents
 
 - [Foldseek](#foldseek)
@@ -82,8 +84,8 @@ The default fields are containing the following fields: `query,target,fident,aln
 | --- | --- |
 |query | Query sequence identifier |
 |target | Target sequence identifier |
-|qca        | Calpha corrdinates of the query |
-|tca        | Calpha corrdinates of the target |
+|qca        | Calpha coordinates of the query |
+|tca        | Calpha coordinates of the target |
 |alntmscore | TM-score of the alignment | 
 |qtmscore   | TM-score normalized by the query length |
 |ttmscore   | TM-score normalized by the target length |

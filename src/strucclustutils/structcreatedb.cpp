@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #ifdef HAVE_GCS
 #include "google/cloud/storage/client.h"
@@ -265,13 +266,16 @@ int createdb(int argc, const char **argv, const Command& command) {
             }
             while (dirent* entry = readdir(handle)) {
                 std::string filename(entry->d_name);
+
                 if (filename != "." && filename !="..") {
-                    if (entry->d_type == DT_DIR) {
-                        dirs.push_back(dir+"/"+filename);
+                    std::string fullpath = dir + "/" + filename;
+                    struct stat info;
+                    stat(fullpath.c_str(), &info);
+		    if (info.st_mode & S_IFDIR) {
+                        dirs.push_back(fullpath);
                     } else {
-                        std::cout << filename << " " << par.fileInclude << std::endl;
                         if (include.isMatch(filename.c_str()) == true && exclude.isMatch(filename.c_str()) == false) {
-                            par.filenames.push_back(dir+"/"+filename);
+                            par.filenames.push_back(fullpath);
                         }
                     }
                 }

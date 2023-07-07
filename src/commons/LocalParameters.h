@@ -89,6 +89,8 @@ public:
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
+    PARAMETER(PARAM_FILE_INCLUDE)
+    PARAMETER(PARAM_FILE_EXCLUDE)
 
     int prefMode;
     float tmScoreThr;
@@ -103,9 +105,11 @@ public:
     int nsample;
     int coordStoreMode;
     int clusterSearch;
-
+    std::string fileInclude;
+    std::string fileExclude;
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT);
+                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner,
+                                            bool &needLDDT, bool isConvertAlis);
 
 
 private:
