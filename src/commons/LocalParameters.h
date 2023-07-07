@@ -109,7 +109,7 @@ public:
     std::string fileExclude;
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner,
-                                            bool &needLDDT, bool isConvertAlis);
+                                            bool &needLDDT);
 
 
 private:
