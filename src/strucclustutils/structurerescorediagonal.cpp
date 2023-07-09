@@ -221,7 +221,8 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
             break;
         }
     }
-    SubstitutionMatrix subMatAA(blosum.c_str(), 1.4, par.scoreBias);
+    float aaFactor = (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA) ? 1.4 : 0.0;
+    SubstitutionMatrix subMatAA(blosum.c_str(), aaFactor, par.scoreBias);
     //temporary output file
     Debug::Progress progress(resultReader.getSize());
 

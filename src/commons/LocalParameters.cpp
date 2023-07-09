@@ -90,11 +90,14 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_V);
 
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurerescorediagonal.push_back(&PARAM_LDDT_THRESHOLD);
+    structurerescorediagonal.push_back(&PARAM_ALIGNMENT_TYPE);
     structurerescorediagonal = combineList(structurerescorediagonal, align);
 
     structurealign.push_back(&PARAM_TMSCORE_THRESHOLD);
     structurealign.push_back(&PARAM_LDDT_THRESHOLD);
     structurealign.push_back(&PARAM_SORT_BY_STRUCTURE_BITS);
+    structurealign.push_back(&PARAM_ALIGNMENT_TYPE);
     structurealign = combineList(structurealign, align);
 //    tmalign.push_back(&PARAM_GAP_OPEN);
 //    tmalign.push_back(&PARAM_GAP_EXTEND);
@@ -105,13 +108,11 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
     // structuresearchworkflow
-    // structuresearchworkflow
     structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
     structuresearchworkflow.push_back(&PARAM_PREF_MODE);
     structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
-    structuresearchworkflow.push_back(&PARAM_ALIGNMENT_TYPE);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
@@ -122,7 +123,7 @@ LocalParameters::LocalParameters() :
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
     structureclusterworkflow = combineList(prefilter, structurealign);
-    structureclusterworkflow = combineList(structureclusterworkflow, rescorediagonal);
+    structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
     structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
     structureclusterworkflow = combineList(structureclusterworkflow, clust);
     structureclusterworkflow.push_back(&PARAM_CASCADED);

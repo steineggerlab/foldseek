@@ -107,14 +107,10 @@ int structurecluster(int argc, const char **argv, const Command& command) {
     CommandCaller cmd;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     std::string alnParam;
-    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI) {
-        cmd.addVariable("ALIGNMENT_ALGO", "align");
-        cmd.addVariable("ALN_EXTENSION", "_ss");
-        alnParam = par.createParameterString(par.align);
-    } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN) {
+    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN) {
         cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
         alnParam = par.createParameterString(par.tmalign);
-    } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA) {
+    } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI) {
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
         alnParam = par.createParameterString(par.structurealign);
     }
