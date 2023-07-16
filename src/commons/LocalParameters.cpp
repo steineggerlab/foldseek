@@ -2,7 +2,6 @@
 #include "Command.h"
 #include "Debug.h"
 #include "mat3di.out.h"
-#include "matNBR.out.h"
 
 
 const int LocalParameters::DBTYPE_CA_ALPHA = 101;
@@ -34,8 +33,9 @@ LocalParameters::LocalParameters() :
         PARAM_REFINE_ITERS(PARAM_REFINE_ITERS_ID, "--refine-iters", "Total refinement iterations", "Number of alignment refinement iterations", typeid(int), (void *) &refineIters, "[0-9]{1}[0-9]*$"),
         PARAM_BITFACTOR_AA(PARAM_BITFACTOR_AA_ID, "--bitfactor-aa", "AA matrix bit factor", "AA matrix bit factor", typeid(float), (void *) &bitFactorAa, "^([0-9]*\\.[0-9]*)$"),
         PARAM_BITFACTOR_3DI(PARAM_BITFACTOR_3DI_ID, "--bitfactor-3di", "3Di matrix bit factor", "3Di matrix bit factor", typeid(float), (void *) &bitFactor3Di, "^([0-9]*\\.[0-9]*)$"),
-        PARAM_BITFACTOR_NBR(PARAM_BITFACTOR_NBR_ID, "--bitfactor-nbr", "NBR matrix bit factor", "NBR matrix bit factor", typeid(float), (void *) &bitFactorNBR, "^([0-9]*\\.[0-9]*)$"),
         PARAM_PAIR_THRESHOLD(PARAM_PAIR_THRESHOLD_ID,"--pair-threshold", "LDDT pair threshold", "% of pair subalignments with LDDT information [0.0,1.0]",typeid(float), (void *) &pairThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$")
+        PARAM_OUTPUT_MODE(PARAM_OUTPUT_MODE_ID, "--output-mode", "Alignment output mode", "Output file mode: \n0: Amino acid\n1: 3Di alphabet", typeid(int), (void *) &outputmode, "[0-1]{1}$")
+
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -75,7 +75,6 @@ LocalParameters::LocalParameters() :
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
-    substitutionMatrices.emplace_back("nbr.out", matNBR_out, matNBR_out_len);
 
     // structurecreatedb
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
@@ -184,13 +183,13 @@ LocalParameters::LocalParameters() :
     structuremsa.push_back(&PARAM_GUIDE_TREE);
     structuremsa.push_back(&PARAM_RECOMPUTE_SCORES);
     structuremsa.push_back(&PARAM_REGRESSIVE);
+    structuremsa.push_back(&PARAM_OUTPUT_MODE);
     structuremsa.push_back(&PARAM_SUB_MAT);
     structuremsa.push_back(&PARAM_THREADS);
     structuremsa.push_back(&PARAM_MAX_SEQ_LEN);
     structuremsa.push_back(&PARAM_REFINE_ITERS);
     structuremsa.push_back(&PARAM_BITFACTOR_AA);
     structuremsa.push_back(&PARAM_BITFACTOR_3DI);
-    structuremsa.push_back(&PARAM_BITFACTOR_NBR);
     structuremsa.push_back(&PARAM_PAIR_THRESHOLD);
 
     structuremsacluster = combineList(structuremsacluster, structuremsa);
@@ -211,10 +210,9 @@ LocalParameters::LocalParameters() :
     regressive = false;
     precluster = false;
     refineIters = 0;
-    
     bitFactorAa = 1.1;
     bitFactor3Di = 2.1;
-    bitFactorNBR = 1.1;
+    outputmode = 0;
 
     // msa2lddt
     msa2lddt.push_back(&PARAM_HELP);

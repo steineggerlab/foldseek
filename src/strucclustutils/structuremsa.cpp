@@ -1686,6 +1686,9 @@ if (true) {
             finalMSA = msa_aa[i];
             finalMSA_aa = msa_aa[i];
             finalMSA_3di = msa_3di[i];
+            if (par.outputmode > 0) finalMSA = msa_3di[i];
+            else finalMSA = msa_aa[i];
+            ++msaCnt;
             continue;
         }
     }
