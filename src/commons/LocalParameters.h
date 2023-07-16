@@ -73,6 +73,7 @@ public:
     std::vector<MMseqsParameter *> structuremsa;
     std::vector<MMseqsParameter *> structuremsacluster;
     std::vector<MMseqsParameter *> msa2lddt;
+    std::vector<MMseqsParameter *> refinemsa;
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
@@ -101,10 +102,14 @@ public:
     PARAMETER(PARAM_RECOMPUTE_SCORES)
     PARAMETER(PARAM_REGRESSIVE)
     PARAMETER(PARAM_PRECLUSTER)
+    PARAMETER(PARAM_REFINE_ITERS)
+    PARAMETER(PARAM_BITFACTOR_AA)
+    PARAMETER(PARAM_BITFACTOR_3DI)
     PARAMETER(PARAM_OUTPUT_MODE)
 
     // PARAMETER(PARAM_NEWICK_OUTPUT)
     PARAMETER(PARAM_LDDT_HTML)
+    PARAMETER(PARAM_PAIR_THRESHOLD)
 
     float tmScoreThr;
     int tmAlignHitOrder;
@@ -121,6 +126,7 @@ public:
     bool recomputeScores;
     bool regressive;
     bool precluster;
+    int refineIters;
     int outputmode;
     float scoreBiasAa;
     float scoreBias3di;
@@ -129,6 +135,11 @@ public:
     MultiParam<PseudoCounts> pca3di;
     MultiParam<PseudoCounts> pcb3di;
     std::string lddtHtml;
+
+    float bitFactorAa;
+    float bitFactor3Di;
+    
+    float pairThreshold;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner, bool &needLDDT);

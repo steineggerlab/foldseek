@@ -10,6 +10,7 @@ set(COMPILED_RESOURCES
         structurerbh.sh
         structdatabases.sh
         mat3di.out
+        matNBR.out
         encoder_weights_3di.kerasify
         evalue_nn.kerasify
 	result_viz_prelude_fs.html.zst
