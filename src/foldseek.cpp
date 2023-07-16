@@ -196,7 +196,7 @@ std::vector<struct Command> commands = {
                 "Iteratively refine a MSA using structural information",
                 NULL,
                 "Cameron Gilchrist <gamcil@snu.ac.kr> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:queryDB> <i:msaFile>",
+                "<i:queryDB> <i:msaFile> <o:msaFile>",
                 CITATION_FOLDSEEK, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                     {"msaFileIn", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfileAndStdin },
                                     {"msaFileOut", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },}},
