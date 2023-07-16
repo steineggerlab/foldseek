@@ -33,7 +33,7 @@ LocalParameters::LocalParameters() :
         PARAM_REFINE_ITERS(PARAM_REFINE_ITERS_ID, "--refine-iters", "Total refinement iterations", "Number of alignment refinement iterations", typeid(int), (void *) &refineIters, "[0-9]{1}[0-9]*$"),
         PARAM_BITFACTOR_AA(PARAM_BITFACTOR_AA_ID, "--bitfactor-aa", "AA matrix bit factor", "AA matrix bit factor", typeid(float), (void *) &bitFactorAa, "^([0-9]*\\.[0-9]*)$"),
         PARAM_BITFACTOR_3DI(PARAM_BITFACTOR_3DI_ID, "--bitfactor-3di", "3Di matrix bit factor", "3Di matrix bit factor", typeid(float), (void *) &bitFactor3Di, "^([0-9]*\\.[0-9]*)$"),
-        PARAM_PAIR_THRESHOLD(PARAM_PAIR_THRESHOLD_ID,"--pair-threshold", "LDDT pair threshold", "% of pair subalignments with LDDT information [0.0,1.0]",typeid(float), (void *) &pairThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$")
+        PARAM_PAIR_THRESHOLD(PARAM_PAIR_THRESHOLD_ID,"--pair-threshold", "LDDT pair threshold", "% of pair subalignments with LDDT information [0.0,1.0]",typeid(float), (void *) &pairThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_OUTPUT_MODE(PARAM_OUTPUT_MODE_ID, "--output-mode", "Alignment output mode", "Output file mode: \n0: Amino acid\n1: 3Di alphabet", typeid(int), (void *) &outputmode, "[0-1]{1}$")
 
 {
