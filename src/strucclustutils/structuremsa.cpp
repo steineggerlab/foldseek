@@ -249,14 +249,11 @@ Matcher::result_t pairwiseAlignment(
     unsigned int querySeqLen,
     Sequence *query_aa,
     Sequence *query_3di,
-    Sequence *query_nbr,
     Sequence *target_aa,
     Sequence *target_3di,
-    Sequence *target_nbr,
     int gapOpen, int gapExtend,
     SubstitutionMatrix *mat_aa,
     SubstitutionMatrix *mat_3di,
-    SubstitutionMatrix *mat_nbr,
     std::vector<std::vector<std::vector<int> > > &neighbours,
     std::vector<int> &qMap,
     std::vector<int> &tMap
@@ -268,19 +265,15 @@ Matcher::result_t pairwiseAlignment(
 
     unsigned char * query_aa_seq = query_aa->numSequence;
     unsigned char * query_3di_seq = query_3di->numSequence;
-    unsigned char * query_nbr_seq = query_nbr->numSequence;
     unsigned char * target_aa_seq = target_aa->numSequence;
     unsigned char * target_3di_seq = target_3di->numSequence;
-    unsigned char * target_nbr_seq = target_nbr->numSequence;
     if (queryIsProfile) {
         query_aa_seq = query_aa->numConsensusSequence;
         query_3di_seq = query_3di->numConsensusSequence;
-        query_nbr_seq = query_nbr->numConsensusSequence;
     }
     if (targetIsProfile) {
         target_aa_seq = target_aa->numConsensusSequence;
         target_3di_seq = target_3di->numConsensusSequence;
-        target_nbr_seq = target_nbr->numConsensusSequence;
     }
 
     // TODO composition bias
@@ -344,18 +337,15 @@ Matcher::result_t pairwiseAlignment(
 
     short **query_profile_scores_aa = new short * [aligner.get_profile()->alphabetSize];
     short **query_profile_scores_3di = new short * [aligner.get_profile()->alphabetSize];
-    short **query_profile_scores_nbr = new short * [aligner.get_profile()->alphabetSize];
     for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
         query_profile_scores_aa[j] = new short [querySeqLen];
         query_profile_scores_3di[j] = new short [querySeqLen];
-        query_profile_scores_nbr[j] = new short [querySeqLen];
     }
     if (queryIsProfile) {
         for (unsigned int i = 0; i < querySeqLen; i++) {
             for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
                 query_profile_scores_aa[j][i]  = query_aa->profile_for_alignment[j * querySeqLen + i];
                 query_profile_scores_3di[j][i] = query_3di->profile_for_alignment[j * querySeqLen + i];
-                query_profile_scores_nbr[j][i] = query_nbr->profile_for_alignment[j * querySeqLen + i];
             }
         }
     } else {
@@ -363,25 +353,21 @@ Matcher::result_t pairwiseAlignment(
             for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
                 query_profile_scores_aa[j][i]  = mat_aa->subMatrix[j][query_aa_seq[i]]   + composition_bias_aa[i];
                 query_profile_scores_3di[j][i] = mat_3di->subMatrix[j][query_3di_seq[i]] + composition_bias_ss[i];
-                query_profile_scores_nbr[j][i] = mat_nbr->subMatrix[j][query_nbr_seq[i]];
             }
         }
     }
    
     short **target_profile_scores_aa = new short * [aligner.get_profile()->alphabetSize];
     short **target_profile_scores_3di = new short * [aligner.get_profile()->alphabetSize];
-    short **target_profile_scores_nbr = new short * [aligner.get_profile()->alphabetSize];
     for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
         target_profile_scores_aa[j]  = new short [target_aa->L];
         target_profile_scores_3di[j] = new short [target_aa->L];
-        target_profile_scores_nbr[j] = new short [target_aa->L];
     }
     if (targetIsProfile) {
         for (int i = 0; i < target_aa->L; i++) {
             for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
                 target_profile_scores_aa[j][i]  = target_aa->profile_for_alignment[j * target_aa->L + i];
                 target_profile_scores_3di[j][i] = target_3di->profile_for_alignment[j * target_aa->L + i];
-                target_profile_scores_nbr[j][i] = target_nbr->profile_for_alignment[j * target_aa->L + i];
             }
         }
     } else {
@@ -389,7 +375,6 @@ Matcher::result_t pairwiseAlignment(
             for (int32_t j = 0; j < aligner.get_profile()->alphabetSize; j++) {
                 target_profile_scores_aa[j][i]  = mat_aa->subMatrix[j][target_aa_seq[i]];
                 target_profile_scores_3di[j][i] = mat_3di->subMatrix[j][target_3di_seq[i]];
-                target_profile_scores_nbr[j][i] = mat_nbr->subMatrix[j][target_nbr_seq[i]];
             }
         }
     }
@@ -409,14 +394,10 @@ Matcher::result_t pairwiseAlignment(
     Matcher::result_t gAlign = aligner.simpleGotoh(
         target_aa_seq,
         target_3di_seq,
-        target_nbr_seq,
-        query_nbr_seq,
         query_profile_scores_aa,
         query_profile_scores_3di,
-        query_profile_scores_nbr,
         target_profile_scores_aa,
         target_profile_scores_3di,
-        target_profile_scores_nbr,
         0,
         query_aa->L,
         0,
@@ -482,18 +463,14 @@ Matcher::result_t pairwiseAlignment(
     for (int32_t i = 0; i < aligner.get_profile()->alphabetSize; i++) {
         delete[] query_profile_scores_aa[i];
         delete[] query_profile_scores_3di[i];
-        delete[] query_profile_scores_nbr[i];
         delete[] target_profile_scores_aa[i];
         delete[] target_profile_scores_3di[i];
-        delete[] target_profile_scores_nbr[i];
     }
     
     delete[] query_profile_scores_aa;
     delete[] query_profile_scores_3di;
-    delete[] query_profile_scores_nbr;
     delete[] target_profile_scores_aa;
     delete[] target_profile_scores_3di;
-    delete[] target_profile_scores_nbr;
     
     return gAlign;
     // return sw_align;
@@ -1300,8 +1277,6 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbrCA((par.db1+"_ca").c_str(), (par.db1+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbrCA.open(DBReader<unsigned int>::NOSORT);
-    DBReader<unsigned int> seqDbrNBR((par.db1+"_nbr").c_str(), (par.db1+"_nbr.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    seqDbrNBR.open(DBReader<unsigned int>::NOSORT);
    
     IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
     
@@ -1309,7 +1284,6 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
    
     SubstitutionMatrix subMat_3di(par.scoringMatrixFile.values.aminoacid().c_str(), par.bitFactor3Di, par.scoreBias3di);
     std::string blosum;
-    std::string nbr;
     for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
         if (par.substitutionMatrices[i].name == "blosum62.out") {
             std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
@@ -1317,16 +1291,9 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
             char * serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
             blosum.assign(serializedMatrix);
             free(serializedMatrix);
-        } else if (par.substitutionMatrices[i].name == "nbr.out") {
-            std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
-            std::string matrixName = par.substitutionMatrices[i].name;
-            char * serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
-            nbr.assign(serializedMatrix);
-            free(serializedMatrix);
         }
     }
     SubstitutionMatrix subMat_aa(blosum.c_str(), par.bitFactorAa, par.scoreBiasAa);
-    SubstitutionMatrix subMat_nbr(nbr.c_str(), par.bitFactorNBR, par.scoreBias3di);
 
     std::cout << "Got substitution matrices" << std::endl;
 
@@ -1334,10 +1301,8 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
     size_t sequenceCnt = seqDbrAA.getSize();
     std::vector<Sequence*> allSeqs_aa(sequenceCnt);
     std::vector<Sequence*> allSeqs_3di(sequenceCnt);
-    std::vector<Sequence*> allSeqs_nbr(sequenceCnt);
     std::vector<std::string> msa_aa(sequenceCnt);
     std::vector<std::string> msa_3di(sequenceCnt);
-    std::vector<std::string> msa_nbr(sequenceCnt);
     std::vector<std::string> headers(sequenceCnt);
     std::vector<std::string> mappings(sequenceCnt);
     std::vector<size_t> idMappings(sequenceCnt);
@@ -1347,13 +1312,11 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
 
     // 6x6 neighbour matrices
     std::vector<std::vector<std::vector<int> > > neighbours(sequenceCnt);
-    std::vector<std::string> neighbours_nbr(sequenceCnt);
 
     int maxSeqLength = par.maxSeqLen;
     for (size_t i = 0; i < sequenceCnt; i++) {
         size_t seqKeyAA = seqDbrAA.getDbKey(i);
         size_t seqKey3Di = seqDbr3Di.getDbKey(i);
-        size_t seqKeyNBR = seqDbrNBR.getDbKey(i);
 
         // Grab headers, remove \0
         std::string header = qdbrH.sequenceReader->getData(seqKeyAA, 0);
@@ -1366,16 +1329,12 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
         allSeqs_aa[i]->mapSequence(i, seqKeyAA, seqDbrAA.getData(i, 0), seqDbrAA.getSeqLen(i));
         allSeqs_3di[i] = new Sequence(par.maxSeqLen, seqDbr3Di.getDbtype(), (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
         allSeqs_3di[i]->mapSequence(i, seqKey3Di, seqDbr3Di.getData(i, 0), seqDbr3Di.getSeqLen(i));
-        allSeqs_nbr[i] = new Sequence(par.maxSeqLen, seqDbrNBR.getDbtype(), (const BaseMatrix *) &subMat_nbr, 0, false, par.compBiasCorrection);
-        allSeqs_nbr[i]->mapSequence(i, seqKeyNBR, seqDbrNBR.getData(i, 0), seqDbrNBR.getSeqLen(i));
         
         maxSeqLength = std::max(maxSeqLength, allSeqs_aa[i]->L);
         msa_aa[i] += ">" + header + "\n";
         msa_aa[i] += seqDbrAA.getData(i, 0);
         msa_3di[i] += ">" +  header + "\n";
         msa_3di[i] += seqDbr3Di.getData(i, 0);
-        msa_nbr[i] += ">" +  header + "\n";
-        msa_nbr[i] += seqDbrNBR.getData(i, 0);
         mappings[i] = std::string(seqDbrAA.getSeqLen(i), '0');
 
         // Map each sequence id to itself for now
@@ -1437,11 +1396,7 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
     // Substitution matrices needed for query profile
     int8_t *tinySubMatAA  = (int8_t*) mem_align(ALIGN_INT, subMat_aa.alphabetSize * 32);
     int8_t *tinySubMat3Di = (int8_t*) mem_align(ALIGN_INT, subMat_3di.alphabetSize * 32);
-    int8_t *tinySubMatNBR = (int8_t*) mem_align(ALIGN_INT, subMat_nbr.alphabetSize * 32);
 
-    for (int i = 0; i < subMat_nbr.alphabetSize; i++)
-        for (int j = 0; j < subMat_nbr.alphabetSize; j++)
-            tinySubMatNBR[i * subMat_nbr.alphabetSize + j] = subMat_nbr.subMatrix[i][j]; // for farrar profile
     for (int i = 0; i < subMat_3di.alphabetSize; i++)
         for (int j = 0; j < subMat_3di.alphabetSize; j++)
             tinySubMat3Di[i * subMat_3di.alphabetSize + j] = subMat_3di.subMatrix[i][j]; // for farrar profile
@@ -1543,7 +1498,6 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
     int finalMSAId = 0;
     std::string finalMSA_aa;
     std::string finalMSA_3di;
-    std::string finalMSA_nbr;
 
     std::string nw = orderToTree(hits, headers, sequenceCnt);
     std::cout << "Tree: " << nw << ";\n";
@@ -1560,8 +1514,6 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
     PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid()); 
-    PSSMCalculator calculator_nbr(&subMat_nbr, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
-    MsaFilter filter_nbr(maxSeqLength + 1, sequenceCnt + 1, &subMat_nbr, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid()); 
 
     int index = 0; // in hit list
     for (size_t i = 0; i < merges.size(); i++) {
@@ -1617,15 +1569,12 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
                 allSeqs_aa[mergedId]->L,
                 allSeqs_aa[mergedId],
                 allSeqs_3di[mergedId],
-                allSeqs_nbr[mergedId],
                 allSeqs_aa[targetId],
                 allSeqs_3di[targetId],
-                allSeqs_nbr[targetId],
                 par.gapOpen.values.aminoacid(),
                 par.gapExtend.values.aminoacid(),
                 &subMat_aa,
                 &subMat_3di,
-                &subMat_nbr,
                 neighbours,
                 map1,
                 map2
@@ -1635,7 +1584,6 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
             getMergeInstructions(res, map1, map2, qBt, tBt);
             std::string msa3di_aa  = mergeTwoMsa(msa_aa[mergedId], msa_aa[targetId], res, map1, map2, qBt, tBt);
             std::string msa3di_3di = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], res, map1, map2, qBt, tBt);
-            std::string msa3di_nbr = mergeTwoMsa(msa_nbr[mergedId], msa_nbr[targetId], res, map1, map2, qBt, tBt);
 
             // If neither are profiles, do TM-align as well and take the best alignment
             if (!queryIsProfile && !targetIsProfile) {
@@ -1645,23 +1593,19 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
                 getMergeInstructions(tmRes, map1, map2, qBtTM, tBtTM);
                 std::string msaTM_aa  = mergeTwoMsa(msa_aa[mergedId],  msa_aa[targetId],  tmRes, map1, map2, qBtTM, tBtTM);
                 std::string msaTM_3di = mergeTwoMsa(msa_3di[mergedId], msa_3di[targetId], tmRes, map1, map2, qBtTM, tBtTM);
-                std::string msaTM_nbr = mergeTwoMsa(msa_nbr[mergedId], msa_nbr[targetId], tmRes, map1, map2, qBtTM, tBtTM);
                 float lddtTM  = getLDDTScore(seqDbrAA, seqDbr3Di, seqDbrCA, msaTM_aa,  par.pairThreshold);
                 float lddt3di = getLDDTScore(seqDbrAA, seqDbr3Di, seqDbrCA, msa3di_aa, par.pairThreshold);
                 msa_aa[mergedId]  = (lddtTM > lddt3di) ? msaTM_aa : msa3di_aa;
                 msa_3di[mergedId] = (lddtTM > lddt3di) ? msaTM_3di : msa3di_3di;
-                msa_nbr[mergedId] = (lddtTM > lddt3di) ? msaTM_nbr : msa3di_nbr;
                 res               = (lddtTM > lddt3di) ? tmRes : res;
                 qBt               = (lddtTM > lddt3di) ? qBtTM : qBt;
                 tBt               = (lddtTM > lddt3di) ? tBtTM : tBt;
             } else {
                 msa_aa[mergedId]  = msa3di_aa;
                 msa_3di[mergedId] = msa3di_3di;
-                msa_nbr[mergedId] = msa3di_nbr;
             }
             msa_aa[targetId] = "";
             msa_3di[targetId] = "";
-            msa_nbr[targetId] = "";
             assert(msa_aa[mergedId].length() == msa_3di[mergedId].length());
             testSeqLens(msa_aa[mergedId], seqLens);
             updateBins(mergedId, targetId, res, map1, map2, qBt, tBt, neighbours); 
@@ -1710,14 +1654,6 @@ if (true) {
                 par.qsc,
                 par.filterMinEnable, par.wg, maskBool, par.scoreBias3di
             );
-            std::string profile_nbr = fastamsa2profile(
-                msa_nbr[mergedId], calculator_nbr, filter_nbr, subMat_nbr, maxSeqLength,
-                sequenceCnt + 1, par.matchRatio, par.filterMsa,
-                par.compBiasCorrection,
-                par.qid, par.filterMaxSeqId, par.Ndiff, par.covMSAThr,
-                par.qsc,
-                par.filterMinEnable, par.wg, maskBool, par.scoreBias3di
-            );
 
             delete[] maskBool; 
             assert(profile_aa.length() == profile_3di.length());
@@ -1725,15 +1661,12 @@ if (true) {
             if (Parameters::isEqualDbtype(allSeqs_aa[mergedId]->getSeqType(), Parameters::DBTYPE_AMINO_ACIDS)) {
                 delete allSeqs_aa[mergedId];
                 delete allSeqs_3di[mergedId];
-                delete allSeqs_nbr[mergedId];
                 allSeqs_aa[mergedId]  = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa, 0, false, par.compBiasCorrection);
                 allSeqs_3di[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, par.compBiasCorrection);
-                allSeqs_nbr[mergedId] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_nbr, 0, false, par.compBiasCorrection);
             }
 
             allSeqs_aa[mergedId]->mapSequence(mergedId, mergedId, profile_aa.c_str(), profile_aa.length() / Sequence::PROFILE_READIN_SIZE);
             allSeqs_3di[mergedId]->mapSequence(mergedId, mergedId, profile_3di.c_str(), profile_3di.length() / Sequence::PROFILE_READIN_SIZE);
-            allSeqs_nbr[mergedId]->mapSequence(mergedId, mergedId, profile_nbr.c_str(), profile_nbr.length() / Sequence::PROFILE_READIN_SIZE);
             alreadyMerged[targetId] = true;
    
             // # Neighbours should == new sequence length
@@ -1753,7 +1686,6 @@ if (true) {
             finalMSA = msa_aa[i];
             finalMSA_aa = msa_aa[i];
             finalMSA_3di = msa_3di[i];
-            finalMSA_nbr = msa_nbr[i];
             continue;
         }
     }
@@ -1766,25 +1698,20 @@ if (true) {
     // 5. Pairwise alignment
     // 6. Repeat x100
     if (par.refineIters > 0) {
-        std::tie(finalMSA_aa, finalMSA_3di, finalMSA_nbr) = refineMany(
+        std::tie(finalMSA_aa, finalMSA_3di) = refineMany(
             tinySubMatAA,
             tinySubMat3Di,
-            tinySubMatNBR,
             seqDbrAA,
             seqDbr3Di,
             seqDbrCA,
             finalMSA_aa,
             finalMSA_3di,
-            finalMSA_nbr,
             calculator_aa,
             filter_aa,
             subMat_aa,
             calculator_3di,
             filter_3di,
             subMat_3di,
-            calculator_nbr,
-            filter_nbr,
-            subMat_nbr,
             structureSmithWaterman,
             par.refineIters,
             par.compBiasCorrection,
@@ -1809,21 +1736,14 @@ if (true) {
     // Cleanup
     seqDbrAA.close();
     seqDbr3Di.close();
-    seqDbrNBR.close();
     delete[] alreadyMerged;
     delete [] tinySubMatAA;
     delete [] tinySubMat3Di;
-    delete [] tinySubMatNBR;
     for (size_t i = 0; i < allSeqs_aa.size(); i++) {
         delete allSeqs_aa[i];
         delete allSeqs_3di[i];
-        delete allSeqs_nbr[i];
     }
 }
-
-    // std::cout << finalMSA_nbr << '\n';
-    // assert(msaCnt == 1);
-    // assert(finalMSA != "");
 
     // Write final MSA to file with correct headers
     DBWriter resultWriter(

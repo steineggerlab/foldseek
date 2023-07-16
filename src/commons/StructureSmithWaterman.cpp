@@ -613,15 +613,7 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace<S
 template
 StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace<StructureSmithWaterman::PROFILE_HMM>(const unsigned char*, const unsigned char*, int32_t, const uint8_t, const uint8_t, const uint8_t, std::string& , StructureSmithWaterman::s_align, const int, const float, const int32_t);
 
-void trimCIGAR(std::string &cigar) {
-    std::reverse(cigar.begin(), cigar.end());
-    size_t firstM = cigar.find('M');
-    size_t lastM = cigar.rfind('M');
-    cigar.erase(lastM + 1);
-    cigar.erase(0, firstM);
-}
-
-void trimCIGAR2(std::string &cigar, int &qStart, int &qEnd, int &tStart, int &tEnd) {
+void trimCIGAR(std::string &cigar, int &qStart, int &qEnd, int &tStart, int &tEnd) {
     int i = 0;
     while (cigar[i] != 'M') {
         if (cigar[i] == 'D') {
@@ -684,14 +676,10 @@ double edis(const std::vector<int> &one, const std::vector<int> &two) {
 Matcher::result_t StructureSmithWaterman::simpleGotoh(
         const unsigned char *db_sequence_aa,
         const unsigned char *db_sequence_3di,
-        const unsigned char *db_sequence_nbr,
-        const unsigned char *query_sequence_nbr,
         short **query_profile_word_aa,
         short **query_profile_word_3di,
-        short **query_profile_word_nbr,
         short **target_profile_word_aa,
         short **target_profile_word_3di,
-        short **target_profile_word_nbr,
         int32_t query_start, int32_t query_end,
         int32_t target_start, int32_t target_end,
         const short gap_open, const short gap_extend, bool targetIsProfile,
@@ -761,12 +749,10 @@ Matcher::result_t StructureSmithWaterman::simpleGotoh(
         // curr_sM_G_D_vec[query_start].F = -gap_open - (i - 1) * -gap_extend;
         const short *query_profile_aa  = query_profile_word_aa[db_sequence_aa[i]];
         const short *query_profile_3di = query_profile_word_3di[db_sequence_3di[i]];
-        const short *query_profile_nbr = query_profile_word_nbr[db_sequence_nbr[i]];
 
         for (int j = query_start + 1; LIKELY(j <= query_end); j++) {
             const short *target_profile_aa = target_profile_word_aa[profile->query_aa_sequence[j-1]];
             const short *target_profile_3di = target_profile_word_3di[profile->query_3di_sequence[j-1]]; 
-            const short *target_profile_nbr = target_profile_word_nbr[query_sequence_nbr[j-1]];
             
             // double cosVal = cosine(neighbours[queryId][qMap[j-1]], neighbours[targetId][tMap[i]]);
             // cosVal = std::log2(cosVal / (1 - cosVal));
@@ -779,7 +765,6 @@ Matcher::result_t StructureSmithWaterman::simpleGotoh(
             tempH = prev_sM_G_D_vec[j - 1].H
                 + (query_profile_aa[j-1] + target_profile_aa[i]) / 2
                 + (query_profile_3di[j-1] + target_profile_3di[i]) / 2
-                + (query_profile_nbr[j-1] + target_profile_nbr[i]) / 2
                 // + (cosVal - 5) * 4
                 ;
             curr_sM_G_D_vec[j].E = std::max(tempE, static_cast<short>(tempEE));
@@ -866,13 +851,7 @@ Matcher::result_t StructureSmithWaterman::simpleGotoh(
     // Adjust CIGAR string to start/end on M
     // q/dbStart and q/dbEnd are already correct, no need to adjust here
     // q/dbStart set to last M j/i, q/dbEnd last M .ref/.read
-    // std::string cigar2 = cigar;
-    // std::reverse(cigar2.begin(), cigar2.end());
-    // std::cout << "before: " << cigar2 << '\n';
-    // trimCIGAR(cigar);
-    trimCIGAR2(cigar, qStart, qEnd, dbStart, dbEnd);
-    // std::reverse(cigar.begin(), cigar.end());
-    // std::cout << qStart << '-' << qEnd << '(' << query_end << ")\t" << dbStart << '-' << dbEnd << '(' << target_end << ")\t" << cigar << '\n';
+    trimCIGAR(cigar, qStart, qEnd, dbStart, dbEnd);
 
     delete[] workspace;
     delete[] btMatrix;

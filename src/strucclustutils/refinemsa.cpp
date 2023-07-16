@@ -107,22 +107,17 @@ std::string convertMSA(DBReader<unsigned int> &seqDbrAA, DBReader<unsigned int> 
     return msaNew;
 }
 
-std::tuple<std::string, std::string, std::string> refineOne(
+std::tuple<std::string, std::string> refineOne(
     int8_t * tinySubMatAA,
     int8_t * tinySubMat3Di,
-    int8_t * tinySubMatNBR,
     std::string msaAa,
     std::string msa3Di,
-    std::string msaNBR,
     PSSMCalculator &calculator_aa,
     MsaFilter &filter_aa,
     SubstitutionMatrix &subMat_aa,
     PSSMCalculator &calculator_3di,
     MsaFilter &filter_3di,
     SubstitutionMatrix &subMat_3di,
-    PSSMCalculator &calculator_nbr,
-    MsaFilter &filter_nbr,
-    SubstitutionMatrix &subMat_nbr,
     StructureSmithWaterman &structureSmithWaterman,
     bool compBiasCorrection,
     bool wg,
@@ -145,15 +140,11 @@ std::tuple<std::string, std::string, std::string> refineOne(
     std::string subMSA2_aa;
     std::string subMSA1_3di;
     std::string subMSA2_3di;
-    std::string subMSA1_nbr;
-    std::string subMSA2_nbr;
     
     Sequence* subSequence1_aa;
     Sequence* subSequence2_aa;
     Sequence* subSequence1_3di;
     Sequence* subSequence2_3di;
-    Sequence* subSequence1_nbr;
-    Sequence* subSequence2_nbr;
     bool *maskBool1;
     bool *maskBool2;
 
@@ -163,7 +154,6 @@ std::tuple<std::string, std::string, std::string> refineOne(
 
     makeSubMSA(msaAa,  subMSA1_aa,  subMSA2_aa,  group); 
     makeSubMSA(msa3Di, subMSA1_3di, subMSA2_3di, group); 
-    makeSubMSA(msaNBR, subMSA1_nbr, subMSA2_nbr, group); 
 
     // create profile subMSA 1 -> Sequence
     //                subMSA 2 -> Sequence
@@ -214,21 +204,6 @@ std::tuple<std::string, std::string, std::string> refineOne(
         qid, filterMaxSeqId, Ndiff, 0,
         qsc, filterMinEnable, wg, maskBool2, scoreBias3Di
     );
-    std::string subProfile1_nbr = fastamsa2profile(
-        subMSA1_nbr, calculator_nbr, filter_nbr, subMat_nbr, maxSeqLen,
-        sequenceCnt + 1, matchRatio, filterMsa,
-        compBiasCorrection,
-        qid, filterMaxSeqId, Ndiff, 0,
-        qsc, filterMinEnable, wg, maskBool1, scoreBiasAa
-    );
-    std::string subProfile2_nbr = fastamsa2profile(
-        subMSA2_nbr, calculator_nbr, filter_nbr, subMat_nbr, maxSeqLen,
-        sequenceCnt + 1, matchRatio, filterMsa,
-        compBiasCorrection,
-        qid, filterMaxSeqId, Ndiff, 0,
-        qsc, filterMinEnable, wg, maskBool2, scoreBiasAa
-    );
-
     assert(subProfile1_aa.length() == subProfile1_3di.length());
     assert(subProfile2_aa.length() == subProfile2_3di.length());
 
@@ -236,15 +211,11 @@ std::tuple<std::string, std::string, std::string> refineOne(
     subSequence2_aa  = new Sequence(maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_aa,  0, false, compBiasCorrection);
     subSequence1_3di = new Sequence(maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, compBiasCorrection);
     subSequence2_3di = new Sequence(maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_3di, 0, false, compBiasCorrection);
-    subSequence1_nbr = new Sequence(maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_nbr, 0, false, compBiasCorrection);
-    subSequence2_nbr = new Sequence(maxSeqLen, Parameters::DBTYPE_HMM_PROFILE, (const BaseMatrix *) &subMat_nbr, 0, false, compBiasCorrection);
 
     subSequence1_aa->mapSequence(0, 0, subProfile1_aa.c_str(), subProfile1_aa.length() / Sequence::PROFILE_READIN_SIZE);
     subSequence2_aa->mapSequence(1, 1, subProfile2_aa.c_str(), subProfile2_aa.length() / Sequence::PROFILE_READIN_SIZE);
     subSequence1_3di->mapSequence(0, 0, subProfile1_3di.c_str(), subProfile1_3di.length() / Sequence::PROFILE_READIN_SIZE);
     subSequence2_3di->mapSequence(1, 1, subProfile2_3di.c_str(), subProfile2_3di.length() / Sequence::PROFILE_READIN_SIZE);
-    subSequence1_nbr->mapSequence(0, 0, subProfile1_nbr.c_str(), subProfile1_nbr.length() / Sequence::PROFILE_READIN_SIZE);
-    subSequence2_nbr->mapSequence(1, 1, subProfile2_nbr.c_str(), subProfile2_nbr.length() / Sequence::PROFILE_READIN_SIZE);
 
     // TODO move to function in structuremsa
     float q_neff_sum = 0.0;
@@ -257,10 +228,8 @@ std::tuple<std::string, std::string, std::string> refineOne(
         std::swap(mask1, mask2);
         std::swap(subMSA1_3di, subMSA2_3di);
         std::swap(subMSA1_aa, subMSA2_aa);
-        std::swap(subMSA1_nbr, subMSA2_nbr);
         std::swap(subSequence1_3di, subSequence2_3di);
         std::swap(subSequence1_aa, subSequence2_aa);
-        std::swap(subSequence1_nbr, subSequence2_nbr);
     }
 
     // pairwise align
@@ -273,15 +242,12 @@ std::tuple<std::string, std::string, std::string> refineOne(
         subSequence1_aa->L,
         subSequence1_aa,
         subSequence1_3di,
-        subSequence1_nbr,
         subSequence2_aa,
         subSequence2_3di,
-        subSequence2_nbr,
         gapOpen,
         gapExtend,
         &subMat_aa,
         &subMat_3di,
-        &subMat_nbr,
         neighbours,
         map1,
         map2
@@ -291,7 +257,6 @@ std::tuple<std::string, std::string, std::string> refineOne(
     getMergeInstructions(result, map1, map2, qBt, tBt);
     std::string merged_aa  = mergeTwoMsa(subMSA1_aa,  subMSA2_aa,  result, map1, map2, qBt, tBt);
     std::string merged_3di = mergeTwoMsa(subMSA1_3di, subMSA2_3di, result, map1, map2, qBt, tBt);
-    std::string merged_nbr = mergeTwoMsa(subMSA1_nbr, subMSA2_nbr, result, map1, map2, qBt, tBt);
 
     assert(merged_aa.length() == merged_3di.length());
     
@@ -299,33 +264,26 @@ std::tuple<std::string, std::string, std::string> refineOne(
     delete subSequence2_aa;
     delete subSequence1_3di;
     delete subSequence2_3di;
-    delete subSequence1_nbr;
-    delete subSequence2_nbr;
     delete maskBool1;
     delete maskBool2;
     
-    return std::make_tuple(merged_aa, merged_3di, merged_nbr);
+    return std::make_tuple(merged_aa, merged_3di);
 }
 
-std::tuple<std::string, std::string, std::string> refineMany(
+std::tuple<std::string, std::string> refineMany(
     int8_t * tinySubMatAA,
     int8_t * tinySubMat3Di,
-    int8_t * tinySubMatNBR,
     DBReader<unsigned int> &seqDbrAA,
     DBReader<unsigned int> &seqDbr3Di,
     DBReader<unsigned int> &seqDbrCA,
     std::string msaAa,
     std::string msa3Di,
-    std::string msaNBR,
     PSSMCalculator &calculator_aa,
     MsaFilter &filter_aa,
     SubstitutionMatrix &subMat_aa,
     PSSMCalculator &calculator_3di,
     MsaFilter &filter_3di,
     SubstitutionMatrix &subMat_3di,
-    PSSMCalculator &calculator_nbr,
-    MsaFilter &filter_nbr,
-    SubstitutionMatrix &subMat_nbr,
     StructureSmithWaterman & structureSmithWaterman,
     int iterations,
     bool compBiasCorrection,
@@ -351,22 +309,17 @@ std::tuple<std::string, std::string, std::string> refineMany(
     std::cout << "Initial LDDT: " << prevLDDT << '\n';
 
     for (int i = 0; i < iterations; i++) {
-        std::tuple<std::string, std::string, std::string> msas = refineOne(
+        std::tuple<std::string, std::string> msas = refineOne(
             tinySubMatAA,
             tinySubMat3Di,
-            tinySubMatNBR,
             msaAa,
             msa3Di,
-            msaNBR,
             calculator_aa,
             filter_aa,
             subMat_aa,
             calculator_3di,
             filter_3di,
             subMat_3di,
-            calculator_nbr,
-            filter_nbr,
-            subMat_nbr,
             structureSmithWaterman,
             compBiasCorrection,
             wg,
@@ -390,10 +343,9 @@ std::tuple<std::string, std::string, std::string> refineMany(
             prevLDDT = lddtScore;
             msaAa  = std::get<0>(msas);
             msa3Di = std::get<1>(msas);
-            msaNBR = std::get<2>(msas);
         }
     }
-    return std::make_tuple(msaAa, msa3Di, msaNBR);
+    return std::make_tuple(msaAa, msa3Di);
 }
 
 std::pair<std::string, int> parseMSADb(std::string db) {
@@ -428,23 +380,19 @@ int refinemsa(int argc, const char **argv, const Command& command) {
     seqDbr3Di.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> seqDbrCA((par.db1+"_ca").c_str(), (par.db1+"_ca.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     seqDbrCA.open(DBReader<unsigned int>::NOSORT);
-    DBReader<unsigned int> seqDbrNBR((par.db1+"_nbr").c_str(), (par.db1+"_nbr.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    seqDbrNBR.open(DBReader<unsigned int>::NOSORT);
 
     IndexReader qdbrH(par.db1, par.threads, IndexReader::HEADERS, touch ? IndexReader::PRELOAD_INDEX : 0);
 
     // Read in FASTA alignment
     // Also get # structures here for sequenceCnt
-    // Use AA MSA to generate 3Di/NBR ones
+    // Use AA MSA to generate 3Di ones
     int sequenceCnt;
     std::string msaAa;
     std::tie(msaAa, sequenceCnt) = parseMSADb(par.db2);
     std::string msa3Di = convertMSA(seqDbrAA, seqDbr3Di, msaAa);
-    std::string msaNBR = convertMSA(seqDbrAA, seqDbrNBR, msaAa);
     
     SubstitutionMatrix subMat_3di(par.scoringMatrixFile.values.aminoacid().c_str(), par.bitFactor3Di, par.scoreBias3di);
     std::string blosum;
-    std::string nbr;
     for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
         if (par.substitutionMatrices[i].name == "blosum62.out") {
             std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
@@ -452,21 +400,13 @@ int refinemsa(int argc, const char **argv, const Command& command) {
             char * serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
             blosum.assign(serializedMatrix);
             free(serializedMatrix);
-        } else if (par.substitutionMatrices[i].name == "nbr.out") {
-            std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
-            std::string matrixName = par.substitutionMatrices[i].name;
-            char * serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
-            nbr.assign(serializedMatrix);
-            free(serializedMatrix);
         }
     }
     SubstitutionMatrix subMat_aa(blosum.c_str(), par.bitFactorAa, par.scoreBiasAa);
-    SubstitutionMatrix subMat_nbr(nbr.c_str(), par.bitFactorNBR, par.scoreBias3di);
 
     // Substitution matrices needed for query profile
     int8_t *tinySubMatAA  = (int8_t*) mem_align(ALIGN_INT, subMat_aa.alphabetSize * 32);
     int8_t *tinySubMat3Di = (int8_t*) mem_align(ALIGN_INT, subMat_3di.alphabetSize * 32);
-    int8_t *tinySubMatNBR = (int8_t*) mem_align(ALIGN_INT, subMat_nbr.alphabetSize * 32);
 
     for (int i = 0; i < subMat_aa.alphabetSize; i++)
         for (int j = 0; j < subMat_aa.alphabetSize; j++)
@@ -474,39 +414,29 @@ int refinemsa(int argc, const char **argv, const Command& command) {
     for (int i = 0; i < subMat_3di.alphabetSize; i++)
         for (int j = 0; j < subMat_3di.alphabetSize; j++)
             tinySubMat3Di[i * subMat_3di.alphabetSize + j] = subMat_3di.subMatrix[i][j]; // for farrar profile
-    for (int i = 0; i < subMat_nbr.alphabetSize; i++)
-        for (int j = 0; j < subMat_nbr.alphabetSize; j++)
-            tinySubMatNBR[i * subMat_nbr.alphabetSize + j] = subMat_nbr.subMatrix[i][j]; // for farrar profile
 
     StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat_3di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMat_aa, &subMat_3di);
     MsaFilter filter_aa(par.maxSeqLen + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
     MsaFilter filter_3di(par.maxSeqLen + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid()); 
-    MsaFilter filter_nbr(par.maxSeqLen + 1, sequenceCnt + 1, &subMat_nbr, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid()); 
     PSSMCalculator calculator_aa(&subMat_aa, par.maxSeqLen + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     PSSMCalculator calculator_3di(&subMat_3di, par.maxSeqLen + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
-    PSSMCalculator calculator_nbr(&subMat_nbr, par.maxSeqLen + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
     
     // Refine for N iterations
     // std::tuple<std::string, std::string, std::string> newMSA = refineMany(
-    std::tie(msaAa, msa3Di, msaNBR) = refineMany(
+    std::tie(msaAa, msa3Di) = refineMany(
         tinySubMatAA,
         tinySubMat3Di,
-        tinySubMatNBR,
         seqDbrAA,
         seqDbr3Di,
         seqDbrCA,
         msaAa,
         msa3Di,
-        msaNBR,
         calculator_aa,
         filter_aa,
         subMat_aa,
         calculator_3di,
         filter_3di,
         subMat_3di,
-        calculator_nbr,
-        filter_nbr,
-        subMat_nbr,
         structureSmithWaterman,
         par.refineIters,
         par.compBiasCorrection,
@@ -555,10 +485,8 @@ int refinemsa(int argc, const char **argv, const Command& command) {
     // Cleanup
     seqDbrAA.close();
     seqDbr3Di.close();
-    seqDbrNBR.close();
     delete [] tinySubMatAA;
     delete [] tinySubMat3Di;
-    delete [] tinySubMatNBR;
 
     return EXIT_SUCCESS;
 }
