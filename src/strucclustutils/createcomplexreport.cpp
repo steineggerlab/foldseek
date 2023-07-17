@@ -130,7 +130,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
         } // for end
     }
     getResult(qChainVector, tChainVector, complexResVec, qTMScore, tTMScore, prevAssId);
-    SORT_PARALLEL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
+    SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
     for (size_t i=0; i < complexResVec.size(); i++) {
         resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);
     }
