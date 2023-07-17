@@ -229,7 +229,7 @@ struct Complex {
 
 struct ComplexToComplexAln {
     ComplexToComplexAln() {}
-    ComplexToComplexAln(unsigned int qComplexId, unsigned int dbComplexId, unsigned int qLength, unsigned int dbLength): qComplexId(qComplexId), qResidueLength(qLength), dbResidueLength(dbLength), matches(0) {}
+    ComplexToComplexAln(unsigned int qComplexId, unsigned int qLength, unsigned int dbLength): qComplexId(qComplexId), qResidueLength(qLength), dbResidueLength(dbLength), matches(0) {}
     unsigned int qComplexId;
 //    unsigned int dbComplexId;
     std::vector<unsigned int> qChainKeys;
@@ -444,7 +444,7 @@ public:
 
         if (!validClusters.empty()) {
             keepValidClustersOnly(qComplex);
-            std::sort(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByClusterLabel);
+            SORT_SERIAL(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByClusterLabel);
             return;
         }
         else if (cLabel==0 || !smallClusters.empty()) return clusterAlns(qComplex, eps * (1 + LEARNING_RATE), clusterSize);
@@ -497,7 +497,7 @@ private:
                 IndexPairs.emplace_back(IndexPairWithDist(i, j, dist));
             }
         }
-        std::sort(IndexPairs.begin(), IndexPairs.end(), compareIndexPairWithDistByDist);
+        SORT_SERIAL(IndexPairs.begin(), IndexPairs.end(), compareIndexPairWithDistByDist);
         if (IndexPairs.empty())
             return labelAlns(qComplex);
         for (auto &IndexPair : IndexPairs) {
@@ -507,7 +507,7 @@ private:
             qComplex.alnVec[alnIdx1].featVec.label = ++cLabel;
             qComplex.alnVec[alnIdx2].featVec.label = cLabel;
         }
-        std::sort(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByClusterLabel);
+        SORT_SERIAL(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByClusterLabel);
     }
 
     static void initializeAlnLabeling(Complex &qComplex) {
@@ -587,7 +587,8 @@ public:
                 parsedAlns.emplace_back(chainAln);
                 data = Util::skipLine(data);
             }
-            std::sort(parsedAlns.begin(), parsedAlns.end(), compareChainToChainAlnByDbComplexId);
+            SORT_SERIAL(parsedAlns.begin(), parsedAlns.end(), compareChainToChainAlnByDbComplexId);
+
         }
 
         unsigned int currDbComplexId = parsedAlns[0].dbChain.complexId;
@@ -612,7 +613,7 @@ public:
         qComplex.filterAlnVec(1.0);
         if (!qComplex.alnVec.empty()) {
             qComplex.normalize();
-            std::sort(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByComplexIdAndChainKey);
+            SORT_SERIAL(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByComplexIdAndChainKey);
             qComplexes.emplace_back(qComplex);
         }
         return qComplexes;
@@ -627,7 +628,7 @@ public:
         DBSCANCluster dbscanCluster = DBSCANCluster((unsigned int) std::ceil(qComplex.qChainKeys.size() * minAssignedChainsRatio), 0.5);
         dbscanCluster.clusterAlns(qComplex, 0.5, std::min(qComplex.qChainKeys.size(), qComplex.dbChainKeys.size()));
         int currLabel = 0;
-        ComplexToComplexAln complexAln = ComplexToComplexAln(qComplex.qComplexId,qComplex.dbComplexId,qComplex.qResidueLen, qComplex.dbResidueLen);
+        ComplexToComplexAln complexAln = ComplexToComplexAln(qComplex.qComplexId,qComplex.qResidueLen, qComplex.dbResidueLen);
         for (auto &currAln: qComplex.alnVec) {
             if (currAln.featVec.label == 0 || currAln.featVec.label == -1) continue;
             if (currAln.featVec.label == currLabel) {
@@ -771,11 +772,11 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
             }
         }
         complexScorer.die();
-        std::sort(results.begin(), results.end(), compareComplexToComplexAln);
+        SORT_SERIAL(results.begin(), results.end(), compareComplexToComplexAln);
         for (size_t resultIdx = 0; resultIdx < results.size(); resultIdx++) {
             ComplexToComplexAln result = results[resultIdx];
             for (size_t chainAlnIdx = 0; chainAlnIdx < result.alnResVec.size(); chainAlnIdx++) {
-                int count = snprintf(buffer, sizeof(buffer), "%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n",
+                snprintf(buffer, sizeof(buffer), "%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n",
                                      result.alnResVec[chainAlnIdx].c_str(), result.qTmScore, result.dbTmScore,
                                      result.tVec[chainAlnIdx].c_str(), result.uVec[chainAlnIdx].c_str(), assignmentIdx);
                 resultWriter.writeData(buffer, strlen(buffer), result.qChainKeys[chainAlnIdx], thread_idx);
