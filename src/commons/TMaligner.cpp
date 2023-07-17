@@ -8,10 +8,14 @@
 #include "StructureSmithWaterman.h"
 #include "StructureSmithWaterman.h"
 
-TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast)
-   : affineNW(maxSeqLen, 20), tmAlignFast(tmAlignFast),
+TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly)
+   : tmAlignFast(tmAlignFast),
      xtm(maxSeqLen), ytm(maxSeqLen), xt(maxSeqLen),
      r1(maxSeqLen), r2(maxSeqLen){
+    affineNW = NULL;
+    if(tmScoreOnly == false){
+        affineNW = new AffineNeedlemanWunsch(maxSeqLen, 20);
+    }
     query_x = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
     query_y = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
     query_z = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
@@ -25,6 +29,9 @@ TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast)
 }
 
 TMaligner::~TMaligner(){
+    if(affineNW != NULL){
+        delete affineNW;
+    }
     free(query_x);
     free(query_y);
     free(query_z);
@@ -146,7 +153,7 @@ Matcher::result_t TMaligner::align(unsigned int dbKey, float *x, float *y, float
     if(queryLen <=5 || targetLen <=5){
         return Matcher::result_t();
     }
-    TMalign_main(&affineNW,
+    TMalign_main(affineNW,
                  targetCaCords, queryCaCords, targetSeq, querySeq, targetSecStruc, querySecStruc,
                  t0, u0, TM1, TM2, TM3, TM4, TM5,
                  d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,

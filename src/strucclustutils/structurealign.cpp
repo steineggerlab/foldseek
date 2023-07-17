@@ -253,7 +253,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(qdbr3Di.sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false);
+                    std::max(qdbr3Di.sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false, true);
         }
         LDDTCalculator *lddtcalculator = NULL;
         if(needLDDT) {

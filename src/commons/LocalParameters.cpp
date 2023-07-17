@@ -21,6 +21,8 @@ LocalParameters::LocalParameters() :
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
+        PARAM_PROTEIN_CHAINS_ONLY(PARAM_PROTEIN_CHAINS_ONLY_ID, "--protein-chains-only", "store protein chains only", "store protein chains only: \n0: store all types of chains\n1: store protein chains only", typeid(int), (void *) &storeProteinChainsOnly, "^[0-1]{1}$"),
+        PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "minimum percentage of assigned chains out of all query chains > thr [0,100] %", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$")
@@ -42,10 +44,13 @@ LocalParameters::LocalParameters() :
                                     "1: SAM\n2: BLAST-TAB + query/db length\n"
                                     "3: Pretty HTML\n4: BLAST-TAB + column headers\n"
                                     "5: Calpha only PDB super-posed to query\n"
+                                    "6: BLAST-TAB + q/db complex tm (only for scorecomplex result)\n"
                                     "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
                                     "support custom output formats (--format-output)\n"
                                     "(5) Superposed PDB files (Calpha only)";
-    PARAM_FORMAT_MODE.regex = "^[0-5]{1}$";
+
+    // TODO
+    PARAM_FORMAT_MODE.regex = "^[0-6]{1}$";
     PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
@@ -64,16 +69,22 @@ LocalParameters::LocalParameters() :
     scoringMatrixFile = "3di.out";
     seedScoringMatrixFile = "3di.out";
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
+
     // structurecreatedb
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
+    structurecreatedb.push_back(&PARAM_TAR_INCLUDE);
+    structurecreatedb.push_back(&PARAM_TAR_EXCLUDE);
+    // protein chain only
+    structurecreatedb.push_back(&PARAM_PROTEIN_CHAINS_ONLY);
     structurecreatedb.push_back(&PARAM_FILE_INCLUDE);
     structurecreatedb.push_back(&PARAM_FILE_EXCLUDE);
     structurecreatedb.push_back(&PARAM_THREADS);
     structurecreatedb.push_back(&PARAM_V);
+
     // tmalign
     tmalign.push_back(&PARAM_MIN_SEQ_ID);
     tmalign.push_back(&PARAM_C);
@@ -150,6 +161,16 @@ LocalParameters::LocalParameters() :
     samplemulambda.push_back(&PARAM_N_SAMPLE);
     samplemulambda.push_back(&PARAM_THREADS);
     samplemulambda.push_back(&PARAM_V);
+    //scorecomplex
+    scorecomplex.push_back(&PARAM_THREADS);
+    scorecomplex.push_back(&PARAM_V);
+    scorecomplex.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
+    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, structurecreatedb);
+    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, structuresearchworkflow);
+    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, scorecomplex);
+    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, convertalignments);
+    createcomplexreport.push_back(&PARAM_THREADS);
+    createcomplexreport.push_back(&PARAM_V);
     prefMode = PREF_MODE_KMER;
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
@@ -174,8 +195,8 @@ LocalParameters::LocalParameters() :
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
 
     //rewrite param vals.
-
-    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\n";
+//    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\n";
+    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\nqcomplextmscore,tcomplextmscore,assignid\n";
 }
 
 
@@ -237,6 +258,10 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("lddt") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT; }
         else if (outformatSplit[i].compare("lddtfull") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
         else if (outformatSplit[i].compare("prob") == 0) { needCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
+        // TODO
+        else if (outformatSplit[i].compare("qcomplextmscore")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
+        else if (outformatSplit[i].compare("tcomplextmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
+        else if (outformatSplit[i].compare("assignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

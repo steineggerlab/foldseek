@@ -27,17 +27,21 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 
 std::vector<struct Command> commands = {
+
+
         {"createdb",             createdb,            &localPar.structurecreatedb,    COMMAND_MAIN,
                 "Convert PDB/mmCIF/tar[.gz]/DB files to a db",
                 "Convert PDB/mmCIF/tar[.gz]/DB files to a db",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]|tar|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, 
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
+
 #ifdef HAVE_GCS
-                        &DbValidator::flatfileStdinGenericUri
+                  &DbValidator::flatfileStdinGenericUri
 #else
-                        &DbValidator::flatfileStdinAndGeneric
+           &DbValidator::flatfileStdinAndGeneric
 #endif
+
                                           },
                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"structureto3didescriptor",             structureto3didescriptor,            &localPar.structurecreatedb,    COMMAND_HIDDEN,
@@ -64,12 +68,12 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder },
                                           {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"easy-cluster",         easystructurecluster,          &localPar.easystructureclusterworkflow, COMMAND_EASY,
+        {"easy-getComplexAlns",         easystructurecluster,          &localPar.easystructureclusterworkflow, COMMAND_EASY,
                 "Slower, sensitive clustering",
-                "foldseek easy-cluster examples/ result tmp\n"
+                "foldseek easy-getComplexAlns examples/ result tmp\n"
                 "# Cluster output\n"
                 "#  - result_rep_seq.fasta: Representatives\n"
-                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
+                "#  - result_all_seq.fasta: FASTA-like per getComplexAlns\n"
                 "#  - result_cluster.tsv:   Adjacency list\n\n"
                 "# Important parameter: --min-seq-id, --cov-mode and -c \n"
                 "#                  --cov-mode \n"
@@ -113,10 +117,10 @@ std::vector<struct Command> commands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"cluster",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_MAIN,
+        {"getComplexAlns",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_MAIN,
                 "Slower, sensitive clustering",
                 "# Cascaded clustering of FASTA file\n"
-                "mmseqs cluster sequenceDB clusterDB tmp\n\n"
+                "mmseqs getComplexAlns sequenceDB clusterDB tmp\n\n"
                 "#                  --cov-mode \n"
                 "# Sequence         0    1    2\n"
                 "# Q: MAVGTACRPA  60%  IGN  60%\n"
@@ -126,7 +130,7 @@ std::vector<struct Command> commands = {
                 "# Cascaded clustering with reassignment\n"
                 "# - Corrects criteria-violoations of cascaded merging\n"
                 "# - Produces more clusters and is a bit slower\n"
-                "mmseqs cluster sequenceDB clusterDB tmp --cluster-reassign\n",
+                "mmseqs cluster sequenceDB clusterDB tmp --getComplexAlns-reassign\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr> & Lars von den Driesch",
                 "<i:sequenceDB> <o:clusterDB> <tmpDir>",
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
@@ -259,14 +263,44 @@ std::vector<struct Command> commands = {
                 "<i:Db> <o:pdbFile>",
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                           {"pdbFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
-        {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
-                "",
+        {"scorecomplex", scorecomplex, &localPar.scorecomplex, COMMAND_ALIGNMENT,
+            "get complex score",
+            NULL,
+            "Woosub Kim <woosubgo@snu.ac.kr>",
+            "<i:queryDb> <i:targetDb> <i:alignmentDB> <o:resultDB>",
+            CITATION_FOLDSEEK, {
+                {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
+                {"resultFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
+            }
+        },
+        {"easy-complexsearch", easycomplexsearch, &localPar.easyscorecomplexworkflow, COMMAND_EASY,
+            "run scorecomplex",
+            NULL,
+            "Woosub Kim <woosubgo@snu.ac.kr>",
+            "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFile> <tmpDir>",
+            CITATION_FOLDSEEK, {
+                {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
+                {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder},
+                {"outputFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
+                {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
+            }
+        },
+        {"createcomplexreport", createcomplexreport, &localPar.createcomplexreport, COMMAND_FORMAT_CONVERSION,
+                "get the result of scorecomplex",
                 NULL,
-                "",
-                "",
-                CITATION_FOLDSEEK, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
+                "Woosub Kim <woosubgo@snu.ac.kr>",
+                "<i:queryDb> <i:targetDb> <i:scorecomplexDB> <o:resultFile>",
+                CITATION_FOLDSEEK, {
+                                           {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                           {"scorecomplexDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                           {"outputFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
+                                   }
+        },
+        {"version",versionstring,&localPar.empty,COMMAND_HIDDEN,"",NULL,"","",CITATION_FOLDSEEK, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
 };
-
 
 std::vector<KmerThreshold> externalThreshold = { {Parameters::DBTYPE_AMINO_ACIDS, 7, 197.0, 11.22}};
 

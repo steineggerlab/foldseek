@@ -13,6 +13,9 @@ set(strucclustutils_source_files
         strucclustutils/structurerescorediagonal.cpp
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
+        strucclustutils/scorecomplex.cpp
+        strucclustutils/createcomplexreport.cpp
+        strucclustutils/createcomplexreport.h
         PARENT_SCOPE
         )
 

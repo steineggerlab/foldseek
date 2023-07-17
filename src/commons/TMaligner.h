@@ -12,7 +12,7 @@
 
 class TMaligner{
 public:
-    TMaligner(unsigned int maxSeqLen, bool tmAlignFast);
+    TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly);
     ~TMaligner();
 
     struct TMscoreResult{
@@ -41,8 +41,9 @@ public:
                                  int normalizationLen);
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
                             char * targetSeq, unsigned int targetLen, float &TM);
+
 private:
-    AffineNeedlemanWunsch affineNW;
+    AffineNeedlemanWunsch * affineNW;
     std::string backtrace;
     float * query_x;
     float * query_y;

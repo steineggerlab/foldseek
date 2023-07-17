@@ -13,6 +13,7 @@
 #include "NcbiTaxonomy.h"
 #include "MappingReader.h"
 #include "Coordinate16.h"
+#include "createcomplexreport.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
 
@@ -232,7 +233,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needTaxonomyMapping = false;
     bool needTMaligner = false;
     bool needLDDT = false;
-
+    bool isScoreComplexDB = false;
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
                                                                   needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
 
@@ -425,6 +426,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     }
 
     Debug::Progress progress(alnDbr.getSize());
+//    std::vector<ComplexResult> complexResVec;
+//    unsigned int prevAssId;
+    std::vector<std::string> qChains;
+    std::vector<std::string> tChains;
+//    std::pair<double, double> complexTMScores;
 #pragma omp parallel num_threads(localThreads)
     {
         unsigned int thread_idx = 0;
@@ -436,7 +442,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false);
+                    std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false, true);
         }
         LDDTCalculator *lddtcalculator = NULL;
         if(needLDDT) {
@@ -510,11 +516,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 queryHeaderBuffer.assign(qHeader, qHeaderLen);
                 qHeader = (char*) queryHeaderBuffer.c_str();
             }
-            
             if(needLDDT){
 	            lddtcalculator->initQuery(querySeqLen, queryCaData, &queryCaData[querySeqLen], &queryCaData[querySeqLen+querySeqLen]);
             }
-	    if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
+
+            if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
                 const char* jsStart = "{\"query\": {\"accession\": \"%s\",\"sequence\": \"";
                 int count = snprintf(buffer, sizeof(buffer), jsStart, queryId.c_str(), querySeqData);
                 if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
@@ -533,18 +539,22 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 result.append(caStr, 0, caStr.size()-1);
                 result.append("\"}, \"alignments\": [\n");
             }
-
             char *data = alnDbr.getData(i, thread_idx);
+            Matcher::result_t res;
+            auto complexDataHandler = ComplexDataHandler();
             while (*data != '\0') {
-                Matcher::result_t res = Matcher::parseAlignmentRecord(data, true);
+                const char *entry[255];
+                Util::getWordsOfLine(data, entry, 255);
+                isScoreComplexDB = parseScoreComplexResult(data, res, complexDataHandler);
+                if (!isScoreComplexDB) {
+                    res = Matcher::parseAlignmentRecord(data, true);
+                }
                 data = Util::skipLine(data);
-
                 if (res.backtrace.empty() && needBacktrace == true) {
                     Debug(Debug::ERROR) << "Backtrace cigar is missing in the alignment result. Please recompute the alignment with the -a flag.\n"
                                            "Command: mmseqs align " << par.db1 << " " << par.db2 << " " << par.db3 << " " << "alnNew -a\n";
                     EXIT(EXIT_FAILURE);
                 }
-
                 size_t tHeaderId = tDbrHeader->sequenceReader->getId(res.dbKey);
                 const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
                 size_t tHeaderLen = tDbrHeader->sequenceReader->getSeqLen(tHeaderId);
@@ -585,9 +595,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                 break;
                         }
                     }
-//                res.seqId = X / alnLen;
+//                res.seqId = X / alnLength;
                     identical = static_cast<unsigned int>(res.seqId * static_cast<float>(alnLen) + 0.5);
-                    //res.alnLength = alnLen;
+                    //res.alnLength = alnLength;
                     missMatchCount = static_cast<unsigned int>( matchCount - identical);
                 } else {
                     const int adjustQstart = (res.qStartPos == -1) ? 0 : res.qStartPos;
@@ -860,6 +870,30 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                     case LocalParameters::OUTFMT_PROBTP:
                                         result.append(SSTR(CalcProbTP::calculate(res.score)));
                                         break;
+                                    case LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE:
+                                        if (!isScoreComplexDB) {
+                                            // TODO
+                                            Debug(Debug::ERROR) << "The column qcomplextmscore is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(SSTR(complexDataHandler.qTmScore));
+                                        break;
+                                    case LocalParameters::OUTFMT_T_COMPLEX_TMSCORE:
+                                        if (!isScoreComplexDB) {
+                                            // TODO
+                                            Debug(Debug::ERROR) << "The column tcomplextmscore is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(SSTR(complexDataHandler.tTmScore));
+                                        break;
+                                    case LocalParameters::OUTFMT_ASSIGN_ID:
+                                        if (!isScoreComplexDB) {
+                                            // TODO
+                                            Debug(Debug::ERROR) << "The column assignid is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(SSTR(complexDataHandler.assId));
+                                        break;
                                 }
                                 if (i < outcodes.size() - 1) {
                                     result.push_back('\t');
@@ -959,7 +993,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                         break;
                     }
                     case Parameters::FORMAT_ALIGNMENT_HTML: {
-                        const char* jsAln = "{\"target\": \"%s\", \"seqId\": %1.3f, \"alnLen\": %d, \"mismatch\": %d, \"gapopen\": %d, \"qStartPos\": %d, \"qEndPos\": %d, \"dbStartPos\": %d, \"dbEndPos\": %d, \"eval\": %.2E, \"score\": %d, \"qLen\": %d, \"dbLen\": %d, \"qAln\": \"";
+                        const char* jsAln = "{\"target\": \"%s\", \"seqId\": %1.3f, \"alnLength\": %d, \"mismatch\": %d, \"gapopen\": %d, \"qStartPos\": %d, \"qEndPos\": %d, \"dbStartPos\": %d, \"dbEndPos\": %d, \"eval\": %.2E, \"score\": %d, \"qLen\": %d, \"dbLen\": %d, \"qAln\": \"";
                         int count = snprintf(buffer, sizeof(buffer), jsAln,
                                              targetId.c_str(), res.seqId, alnLen,
                                              missMatchCount, gapOpenCount,
@@ -1009,6 +1043,45 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                         break;
                     }
 
+                    case LocalParameters::FORMAT_SCORE_COMPLEX_DEFAULT: {
+                        if (!isScoreComplexDB){
+                            // TODO
+                            Debug(Debug::ERROR) << "This mode is only for scorecomplex result.\n";
+                            EXIT(EXIT_FAILURE);
+                        }
+                        unsigned int assId = complexDataHandler.assId;
+                        double qComplexTm = complexDataHandler.qTmScore;
+                        double tComplexTm = complexDataHandler.tTmScore;
+                        int count = snprintf(
+                                buffer,
+                                sizeof(buffer),
+                                "%s\t%s\t%1.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2E\t%d\t%d\t%d\t%1.5f\t%1.5f\t%d\n",
+                                queryId.c_str(),
+                                targetId.c_str(),
+                                res.seqId,
+                                alnLen,
+                                missMatchCount,
+                                gapOpenCount,
+                                res.qStartPos + 1,
+                                res.qEndPos + 1,
+                                res.dbStartPos + 1,
+                                res.dbEndPos + 1,
+                                res.eval,
+                                res.score,
+                                res.qLen,
+                                res.dbLen,
+                                qComplexTm,
+                                tComplexTm,
+                                assId
+                                );
+
+                        if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
+                            Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
+                            continue;
+                        }
+                        result.append(buffer, count);
+                        break;
+                    }
                     default:
                         Debug(Debug::ERROR) << "Not implemented yet";
                         EXIT(EXIT_FAILURE);
