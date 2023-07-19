@@ -319,14 +319,6 @@ size_t QueryMatcher::match(Sequence *seq, float *compositionBias) {
     outer:
     indexPointer[indexTo + 1] = databaseHits + numMatches;
     // fill the output
-    if((foundDiagonalsSize - overflowHitCount) < 0.1 * foundDiagonalsSize){
-        foundDiagonalsSize *= 1.5;
-        foundDiagonals = (CounterResult*) realloc(foundDiagonals, foundDiagonalsSize * sizeof(CounterResult));
-        if(foundDiagonals == NULL){
-            Debug(Debug::ERROR) << "Out of memory in QueryMatcher::match\n";
-            EXIT(EXIT_FAILURE);
-        }
-    }
     size_t hitCount = findDuplicates(indexPointer, foundDiagonals + overflowHitCount,
                                      foundDiagonalsSize - overflowHitCount, indexStart, indexTo, (diagonalScoring == false));
     if (overflowHitCount != 0) {
