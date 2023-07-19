@@ -547,13 +547,16 @@ public:
     }
 
     std::vector<Complex> getQComplexes(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys) {
-        unsigned int qResLen = getQueryResidueLength(qChainKeys);
-        Complex qComplex = Complex(qComplexId, qChainKeys, qResLen);
         std::vector<Complex> qComplexes;
         std::vector<ChainToChainAln> parsedAlns;
+        unsigned int qResLen = getQueryResidueLength(qChainKeys);
+        if (qResLen == 0) {
+            return qComplexes;
+        }
+        Complex qComplex = Complex(qComplexId, qChainKeys, qResLen);
         for (auto qChainKey: qChainKeys) {
             unsigned int qKey = alnDbr.getId(qChainKey);
-            if (qKey==NOT_AVAILABLE_Q_CHAIN_KEY)
+            if (qKey == NOT_AVAILABLE_CHAIN_KEY)
                 continue;
             char *data = alnDbr.getData(qKey, thread_idx);
             if (*data == '\0') continue;
@@ -576,7 +579,6 @@ public:
                 float *targetCaData = tCoords.read(tCaData, alnResult.dbLen, tCaLength);
                 Chain dbChain = Chain(dbComplexId, dbKey);
                 TMaligner::TMscoreResult tmResult = tmAligner->computeTMscore(targetCaData, &targetCaData[alnResult.dbLen], &targetCaData[alnResult.dbLen + alnResult.dbLen], alnResult.dbLen, alnResult.qStartPos, alnResult.dbStartPos, Matcher::uncompressAlignment(alnResult.backtrace), alnResult.alnLength);
-//                Chain qChain = Chain(qComplexId, qChainKey);
                 ChainToChainAln chainAln(qChain, dbChain, queryCaData, targetCaData, alnResult, tmResult);
                 parsedAlns.emplace_back(chainAln);
 
@@ -593,7 +595,7 @@ public:
         for (auto &aln: parsedAlns) {
             if (aln.dbChain.complexId != currDbComplexId) {
                 qComplex.filterAlnVec(1.0);
-                if (!qComplex.alnVec.empty()) {
+                if (!qComplex.alnVec.empty() && currDbResLen > 0) {
                     qComplex.normalize();
                     qComplexes.emplace_back(qComplex);
                 }
@@ -606,7 +608,7 @@ public:
             qComplex.alnVec.emplace_back(aln);
         }
         qComplex.filterAlnVec(1.0);
-        if (!qComplex.alnVec.empty()) {
+        if (!qComplex.alnVec.empty() && currDbResLen > 0) {
             qComplex.normalize();
             SORT_SERIAL(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByComplexIdAndChainKey);
             qComplexes.emplace_back(qComplex);
@@ -670,12 +672,16 @@ private:
     unsigned int thread_idx;
     float minAssignedChainsRatio;
     unsigned int maxResLen;
-    unsigned int NOT_AVAILABLE_Q_CHAIN_KEY =  4294967295;
+    unsigned int NOT_AVAILABLE_CHAIN_KEY =  4294967295;
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
         for (auto qChainKey : qChainKeys) {
             size_t id = q3diDbr->sequenceReader->getId(qChainKey);
+            if (id == NOT_AVAILABLE_CHAIN_KEY) {
+                // Not accessible
+                return 0;
+            }
             qResidueLen += q3diDbr->sequenceReader->getSeqLen(id);
         }
         return qResidueLen;
@@ -685,6 +691,10 @@ private:
         unsigned int dbResidueLen = 0;
         for (auto dbChainKey : dbChainKeys) {
             size_t id = t3diDbr->sequenceReader->getId(dbChainKey);
+            if (id == NOT_AVAILABLE_CHAIN_KEY) {
+                // Not accessible
+                return 0;
+            }
             dbResidueLen += t3diDbr->sequenceReader->getSeqLen(id);
         }
         return dbResidueLen;
