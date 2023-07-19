@@ -60,6 +60,7 @@ private:
     bool tmAlignFast;
     Coordinates xtm, ytm, xt, r1, r2;
     int * invmap;
+    size_t allocatedLength;
 };
 
 #endif //FOLDSEEK_TMALIGNER_H

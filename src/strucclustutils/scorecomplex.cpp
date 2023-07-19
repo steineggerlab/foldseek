@@ -558,26 +558,34 @@ public:
             unsigned int qKey = alnDbr.getId(qChainKey);
             if (qKey == NOT_AVAILABLE_CHAIN_KEY)
                 continue;
+
             char *data = alnDbr.getData(qKey, thread_idx);
             if (*data == '\0') continue;
-            Matcher::result_t qAlnResult = Matcher::parseAlignmentRecord(data);
             size_t qId = qCaDbr->sequenceReader->getId(qChainKey);
+            unsigned int qLen = q3diDbr->sequenceReader->getSeqLen(qId);
             char *qCaData = qCaDbr->sequenceReader->getData(qId, thread_idx);
             size_t qCaLength = qCaDbr->sequenceReader->getEntryLen(qId);
-            float *queryCaData = qCoords.read(qCaData, qAlnResult.qLen, qCaLength);
+            float *queryCaData = qCoords.read(qCaData, qLen, qCaLength);
             Chain qChain = Chain(qComplexId, qChainKey);
-            tmAligner->initQuery(queryCaData, &queryCaData[qAlnResult.qLen], &queryCaData[qAlnResult.qLen * 2], NULL, qAlnResult.qLen);
+            tmAligner->initQuery(queryCaData, &queryCaData[qLen], &queryCaData[qLen * 2], NULL, qLen);
             while (*data != '\0') {
-                char dbKeyBuffer[255 + 1];
-                Util::parseKey(data, dbKeyBuffer);
-                const auto dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-                const unsigned int dbComplexId = dbChainKeyToComplexIdLookup.at(dbKey);
                 Matcher::result_t alnResult = Matcher::parseAlignmentRecord(data);
-                size_t tCaId = tCaDbr->sequenceReader->getId(dbKey);
+                const unsigned int dbComplexId = dbChainKeyToComplexIdLookup.at(alnResult.dbKey);
+                size_t tCaId = tCaDbr->sequenceReader->getId(alnResult.dbKey);
                 char *tCaData = tCaDbr->sequenceReader->getData(tCaId, thread_idx);
                 size_t tCaLength = tCaDbr->sequenceReader->getEntryLen(tCaId);
                 float *targetCaData = tCoords.read(tCaData, alnResult.dbLen, tCaLength);
-                Chain dbChain = Chain(dbComplexId, dbKey);
+                Chain dbChain = Chain(dbComplexId, alnResult.dbKey);
+                if(qChainKey == 49 && alnResult.dbKey == 685) {
+                    for(unsigned int i = 0; i < alnResult.qLen; i++) {
+                        std::cout << queryCaData[i] << " " << queryCaData[alnResult.qLen + i] << " " << queryCaData[alnResult.qLen + alnResult.qLen + i] << std::endl;
+                    }
+                    std::cout << std::endl;
+                    for(unsigned int i = 0; i < alnResult.dbLen; i++) {
+                        std::cout << targetCaData[i] << " " << targetCaData[alnResult.dbLen + i] << " " << targetCaData[alnResult.dbLen + alnResult.dbLen + i] << std::endl;
+                    }
+                    std::cout << std::endl;
+                }
                 TMaligner::TMscoreResult tmResult = tmAligner->computeTMscore(targetCaData, &targetCaData[alnResult.dbLen], &targetCaData[alnResult.dbLen + alnResult.dbLen], alnResult.dbLen, alnResult.qStartPos, alnResult.dbStartPos, Matcher::uncompressAlignment(alnResult.backtrace), alnResult.alnLength);
                 ChainToChainAln chainAln(qChain, dbChain, queryCaData, targetCaData, alnResult, tmResult);
                 parsedAlns.emplace_back(chainAln);
@@ -772,7 +780,6 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         // for each q complex
         for (size_t queryIdx = 0; queryIdx < complexScorer.qComplexIdVec.size(); queryIdx++) {
             progress.updateProgress();
-
             unsigned int qComplexId = complexScorer.qComplexIdVec[queryIdx];
             std::vector<unsigned int> qChainKeys = complexScorer.getQueryChainKeys(qComplexId);
             std::vector<Complex> qComplexes = complexScorer.getQComplexes(qComplexId, qChainKeys);

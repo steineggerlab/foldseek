@@ -26,6 +26,7 @@ TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly)
     querySecStruc  = new char[maxSeqLen];
     targetSecStruc = new char[maxSeqLen];
     invmap = new int[maxSeqLen];
+    allocatedLength = maxSeqLen;
 }
 
 TMaligner::~TMaligner(){
@@ -64,7 +65,7 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
             tPos++;
         }
     }
-
+    std::cout << targetLen << std::endl;
     memcpy(target_x, x, sizeof(float) * targetLen);
     memcpy(target_y, y, sizeof(float) * targetLen);
     memcpy(target_z, z, sizeof(float) * targetLen);
@@ -101,6 +102,7 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
 }
 
 void TMaligner::initQuery(float *x, float *y, float *z, char * querySeq, unsigned int queryLen){
+    // reallocate memory if necessary
     memset(querySecStruc, 0, sizeof(char) * queryLen);
     memcpy(query_x, x, sizeof(float) * queryLen);
     memcpy(query_y, y, sizeof(float) * queryLen);
@@ -112,7 +114,6 @@ void TMaligner::initQuery(float *x, float *y, float *z, char * querySeq, unsigne
     queryCaCords.y = query_y;
     queryCaCords.z = query_z;
     make_sec(queryCaCords, queryLen, querySecStruc); // secondary structure assignment
-
 }
 
 Matcher::result_t TMaligner::align(unsigned int dbKey, float *x, float *y, float *z, char * targetSeq, unsigned int targetLen, float &TM1){
