@@ -191,7 +191,7 @@ LocalParameters::LocalParameters() :
     clusterSearch = 0;
     fileInclude = ".*";
     fileExclude = "^$";
-
+    dbSuffixList = "_ca,_ss";
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
 
     //rewrite param vals.

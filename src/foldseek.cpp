@@ -203,18 +203,17 @@ std::vector<struct Command> commands = {
                 "<i:sequenceDB> <tmpDir>",
                 CITATION_SERVER | CITATION_FOLDSEEK,{{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"createclusearchdb", createclusearchdb,   &localPar.threadsandcompression,      COMMAND_DATABASE_CREATION,
+        {"createclusearchdb", createclusearchdb,   &localPar.createclusearchdb,      COMMAND_DATABASE_CREATION,
                 "Build a searchable cluster database allowing for faster searches",
                 "# cluster database and build a searchable db\n"
                 "foldseek cluster sequenceDB clusterDB tmp --min-seq-id 0.3\n"
-                "foldseek createclusearchdb sequenceDB clusterDB clusterSearchDb tmp\n"
+                "foldseek createclusearchdb sequenceDB clusterDB clusterSearchDb\n"
                 "foldseek search sequenceDB clusterSearchDb aln tmp --cluster-search 1\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:sequenceDB> <i:clusterDB> <o:sequenceDB> <tmpDir>",
+                "<i:sequenceDB> <i:clusterDB> <o:sequenceDB>",
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"clusterDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
-                                           {"clusterSearchDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+                                           {"clusterSearchDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
         {"mmcreateindex",        createindex,          &localPar.createindex,          COMMAND_HIDDEN,
                 NULL,
                 NULL,

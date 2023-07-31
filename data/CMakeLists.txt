@@ -8,11 +8,10 @@ set(COMPILED_RESOURCES
         structureiterativesearch.sh
         structurerbh.sh
         structdatabases.sh
-        createclusearchdb.sh
         mat3di.out
         encoder_weights_3di.kerasify
         evalue_nn.kerasify
-	    result_viz_prelude_fs.html.zst
+	result_viz_prelude_fs.html.zst
         easycomplexsearch.sh
         )
 
