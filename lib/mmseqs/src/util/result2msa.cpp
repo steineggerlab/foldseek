@@ -36,6 +36,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
     IndexReader *tDbrIdx = NULL;
     DBReader<unsigned int> *targetHeaderReader = NULL;
     IndexReader *targetHeaderReaderIdx = NULL;
+    const bool sameDatabase = (par.db1.compare(par.db2) == 0) ? true : false;
 
     if (Parameters::isEqualDbtype(FileUtil::parseDbType(par.db2.c_str()), Parameters::DBTYPE_INDEX_DB)) {
         if (isCA3M == true) {
@@ -58,7 +59,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
         if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
             tDbr->readMmapedDataInMemory();
         }
-        if (isCA3M == false) {
+        if (isCA3M == false || sameDatabase) {
             targetHeaderReader = new DBReader<unsigned int>(par.hdr2.c_str(), par.hdr2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
             targetHeaderReader->open(DBReader<unsigned int>::NOSORT);
             if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
@@ -69,7 +70,6 @@ int result2msa(int argc, const char **argv, const Command &command) {
 
     DBReader<unsigned int> *qDbr = NULL;
     DBReader<unsigned int> *queryHeaderReader = NULL;
-    const bool sameDatabase = (par.db1.compare(par.db2) == 0) ? true : false;
     if (!sameDatabase) {
         qDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
         qDbr->open(DBReader<unsigned int>::NOSORT);
@@ -209,7 +209,6 @@ int result2msa(int argc, const char **argv, const Command &command) {
 #pragma omp for schedule(dynamic, 10)
         for (size_t id = dbFrom; id < (dbFrom + dbSize); id++) {
             progress.updateProgress();
-
             unsigned int queryKey = resultReader.getDbKey(id);
             size_t queryId = qDbr->getId(queryKey);
             if (queryId == UINT_MAX) {
@@ -217,7 +216,6 @@ int result2msa(int argc, const char **argv, const Command &command) {
                 continue;
             }
             centerSequence.mapSequence(queryId, queryKey, qDbr->getData(queryId, thread_idx), qDbr->getSeqLen(queryId));
-
             // TODO: Do we still need this?
 //            if (centerSequence.L) {
 //                // remove last in it is a *
@@ -231,6 +229,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                 Debug(Debug::WARNING) << "Invalid query header " << queryKey << "\n";
                 continue;
             }
+
             char *centerSequenceHeader = queryHeaderReader->getData(centerHeaderId, thread_idx);
             size_t centerHeaderLength = queryHeaderReader->getEntryLen(centerHeaderId) - 1;
 
@@ -238,11 +237,11 @@ int result2msa(int argc, const char **argv, const Command &command) {
                 accession = Util::parseFastaHeader(centerSequenceHeader);
             }
 
-
             bool isQueryInit = false;
             char *data = resultReader.getData(id, thread_idx);
             while (*data != '\0') {
                 Util::parseKey(data, dbKey);
+
                 const unsigned int key = (unsigned int) strtoul(dbKey, NULL, 10);
                 // in the same database case, we have the query repeated
                 if (key == queryKey && sameDatabase == true) {
@@ -324,9 +323,21 @@ int result2msa(int argc, const char **argv, const Command &command) {
                         header = targetHeaderReader->getData(id, thread_idx);
                         length = targetHeaderReader->getEntryLen(id) - 1;
                     }
+                    bool isOnlyGap = true;
+                    for (size_t pos = 0; pos < res.centerLength; pos++) {
+                        char aa = res.msaSequence[i][pos];
+                        if (aa != MultipleAlignment::GAP) {
+                            isOnlyGap = false;
+                            break;
+                        }
+                    }
 
                     result.append(1, '>');
-                    result.append(header, length);
+                    if(isOnlyGap) {
+                        result.append("DUMMY\n");
+                    }else{
+                        result.append(header, length);
+                    }
                     // need to allow insertion in the centerSequence
                     for (size_t pos = 0; pos < res.centerLength; pos++) {
                         char aa = res.msaSequence[i][pos];
@@ -353,13 +364,31 @@ int result2msa(int argc, const char **argv, const Command &command) {
                         continue;
                     }
 
-                    char *header;
+                    const char *header;
+                    bool isOnlyGap = true;
+                    for (size_t pos = 0; pos < res.centerLength; pos++) {
+                        char aa = res.msaSequence[i][pos];
+                        if (aa != MultipleAlignment::GAP) {
+                            isOnlyGap = false;
+                            break;
+                        }
+                    }
+
+
                     if (i == 0) {
-                        header = centerSequenceHeader;
+                        if(isOnlyGap) {
+                            header = "DUMMY";
+                        }else{
+                            header = centerSequenceHeader;
+                        }
                     } else {
-                        unsigned int key = seqKeys[i - 1];
-                        size_t id = targetHeaderReader->getId(key);
-                        header = targetHeaderReader->getData(id, thread_idx);
+                        if(isOnlyGap) {
+                            header = "DUMMY";
+                        }else {
+                            unsigned int key = seqKeys[i - 1];
+                            size_t id = targetHeaderReader->getId(key);
+                            header = targetHeaderReader->getData(id, thread_idx);
+                        }
                     }
                     accession = Util::parseFastaHeader(header);
 
@@ -386,12 +415,30 @@ int result2msa(int argc, const char **argv, const Command &command) {
                     }
 
                     result.push_back('>');
+                    bool isOnlyGap = true;
+                    for (size_t pos = 0; pos < res.centerLength; pos++) {
+                        char aa = res.msaSequence[i][pos];
+                        if (aa != MultipleAlignment::GAP) {
+                            isOnlyGap = false;
+                            break;
+                        }
+                    }
+
+
                     if (i == 0) {
-                        result.append(Util::parseFastaHeader(centerSequenceHeader));
+                        if(isOnlyGap){
+                            result.append("DUMMY");
+                        }else{
+                            result.append(Util::parseFastaHeader(centerSequenceHeader));
+                        }
                     } else {
                         unsigned int key = seqKeys[i - 1];
                         size_t id = targetHeaderReader->getId(key);
-                        result.append(Util::parseFastaHeader(targetHeaderReader->getData(id, thread_idx)));
+                        if(isOnlyGap){
+                            result.append("DUMMY");
+                        }else {
+                            result.append(Util::parseFastaHeader(targetHeaderReader->getData(id, thread_idx)));
+                        }
                         if (par.msaFormatMode == Parameters::FORMAT_MSA_A3M_ALN_INFO) {
                             size_t len = Matcher::resultToBuffer(buffer, alnResults[i - 1], false);
                             char* data = buffer;
@@ -472,7 +519,6 @@ int result2msa(int argc, const char **argv, const Command &command) {
                     }
                     result.append("\n;");
                 }
-
                 Matcher::result_t queryAln;
                 unsigned int newQueryKey = seqConcat->dbAKeyMap(queryKey);
                 queryAln.qStartPos = 0;

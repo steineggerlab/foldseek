@@ -37,6 +37,7 @@ Parameters::Parameters():
         alphabetSize(NuclAA<int>(INT_MAX,INT_MAX)),
         PARAM_S(PARAM_S_ID, "-s", "Sensitivity", "Sensitivity: 1.0 faster; 4.0 fast; 7.5 sensitive", typeid(float), (void *) &sensitivity, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PREFILTER),
         PARAM_K(PARAM_K_ID, "-k", "k-mer length", "k-mer length (0: automatically set to optimum)", typeid(int), (void *) &kmerSize, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_TARGET_SEARCH_MODE(PARAM_TARGET_SEARCH_MODE_ID, "--target-search-mode", "Target search mode", "target search mode (0: regular k-mer, 1: similar k-mer)", typeid(int), (void *) &targetSearchMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
         PARAM_THREADS(PARAM_THREADS_ID, "--threads", "Threads", "Number of CPU-cores used (all by default)", typeid(int), (void *) &threads, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_COMMON),
         PARAM_COMPRESSED(PARAM_COMPRESSED_ID, "--compressed", "Compressed", "Write compressed output", typeid(int), (void *) &compressed, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON),
         PARAM_ALPH_SIZE(PARAM_ALPH_SIZE_ID, "--alph-size", "Alphabet size", "Alphabet size (range 2-21)", typeid(MultiParam<NuclAA<int>>), (void *) &alphabetSize, "", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
@@ -270,6 +271,9 @@ Parameters::Parameters():
         // aggregatetax
         PARAM_MAJORITY(PARAM_MAJORITY_ID, "--majority", "Majority threshold", "minimal fraction of agreement among taxonomically assigned sequences of a set", typeid(float), (void *) &majorityThr, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
         PARAM_VOTE_MODE(PARAM_VOTE_MODE_ID, "--vote-mode", "Vote mode", "Mode of assigning weights to compute majority. 0: uniform, 1: minus log E-value, 2: score", typeid(int), (void *) &voteMode, "^[0-2]{1}$"),
+        // pairaln
+        PARAM_PAIRING_DUMMY_MODE(PARAM_PAIRING_DUMMY_MODE_ID, "--pairing-dummy-mode", "Include dummy pairing", "0: dont include, 1: include - an entry that will cause result2msa to write a gap only line", typeid(int), (void *) &pairdummymode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_PAIRING_MODE(PARAM_PAIRING_MODE_ID, "--pairing-mode", "Pairing mode", "0: pair maximal per species, 1: pair only if all chains are covered per species", typeid(int), (void *) &pairmode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         // taxonomyreport
         PARAM_REPORT_MODE(PARAM_REPORT_MODE_ID, "--report-mode", "Report mode", "Taxonomy report mode 0: Kraken 1: Krona", typeid(int), (void *) &reportMode, "^[0-1]{1}$"),
         // createtaxdb
@@ -389,6 +393,7 @@ Parameters::Parameters():
     prefilter.push_back(&PARAM_SEED_SUB_MAT);
     prefilter.push_back(&PARAM_S);
     prefilter.push_back(&PARAM_K);
+    prefilter.push_back(&PARAM_TARGET_SEARCH_MODE);
     prefilter.push_back(&PARAM_K_SCORE);
     prefilter.push_back(&PARAM_ALPH_SIZE);
     prefilter.push_back(&PARAM_MAX_SEQ_LEN);
@@ -1191,6 +1196,8 @@ Parameters::Parameters():
     expand2profile.push_back(&PARAM_V);
 
     pairaln.push_back(&PARAM_PRELOAD_MODE);
+    pairaln.push_back(&PARAM_PAIRING_DUMMY_MODE);
+    pairaln.push_back(&PARAM_PAIRING_MODE);
     pairaln.push_back(&PARAM_COMPRESSED);
     pairaln.push_back(&PARAM_THREADS);
     pairaln.push_back(&PARAM_V);
@@ -2206,6 +2213,7 @@ void Parameters::setDefaults() {
     seedScoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("VTML80.out", "nucleotide.out"));
 
     kmerSize =  0;
+    targetSearchMode = 0;
     kmerScore.values = INT_MAX;
     alphabetSize = MultiParam<NuclAA<int>>(NuclAA<int>(21,5));
     maxSeqLen = MAX_SEQ_LEN; // 2^16
@@ -2511,6 +2519,10 @@ void Parameters::setDefaults() {
     // aggregatetax
     majorityThr = 0.5;
     voteMode = AGG_TAX_MINUS_LOG_EVAL;
+
+    // pairaln
+    pairdummymode = PAIRALN_DUMMY_MODE_OFF;
+    pairmode = PAIRALN_MODE_ALL_PER_SPECIES;
 
     // taxonomyreport
     reportMode = 0;
