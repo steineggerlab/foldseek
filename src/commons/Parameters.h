@@ -10,6 +10,7 @@
 #include <typeinfo>
 #include <cstddef>
 #include <utility>
+#include <cstdint>
 
 #include "Command.h"
 #include "MultiParam.h"
@@ -213,6 +214,14 @@ public:
     static const int AGG_TAX_MINUS_LOG_EVAL = 1;
     static const int AGG_TAX_SCORE = 2;
 
+    // pairaln dummy mode
+    static const int PAIRALN_DUMMY_MODE_OFF = 0;
+    static const int PAIRALN_DUMMY_MODE_ON = 1;
+
+    // pairaln mode
+    static const int PAIRALN_MODE_ALL_PER_SPECIES = 0;
+    static const int PAIRALN_MODE_COVER_ALL_CHAINS = 1;
+
     // taxonomy search strategy
     static const int TAXONOMY_SINGLE_SEARCH = 1;
     static const int TAXONOMY_2BLCA = 2;
@@ -375,6 +384,7 @@ public:
     // PREFILTER
     float  sensitivity;                  // target sens
     int    kmerSize;                     // kmer size for the prefilter
+    int targetSearchMode;                // target search mode
     MultiParam<SeqProf<int>> kmerScore;   // kmer score for the prefilter
     MultiParam<NuclAA<int>> alphabetSize; // alphabet size for the prefilter
     int    compBiasCorrection;           // Aminoacid composiont correction
@@ -644,6 +654,10 @@ public:
     float majorityThr;
     int voteMode;
 
+    // pairaln
+    int pairdummymode;
+    int pairmode;
+
     // taxonomyreport
     int reportMode;
 
@@ -704,6 +718,7 @@ public:
 
     PARAMETER(PARAM_S)
     PARAMETER(PARAM_K)
+    PARAMETER(PARAM_TARGET_SEARCH_MODE)
     PARAMETER(PARAM_THREADS)
     PARAMETER(PARAM_COMPRESSED)
     PARAMETER(PARAM_ALPH_SIZE)
@@ -983,6 +998,10 @@ public:
     PARAMETER(PARAM_MAJORITY)
     PARAMETER(PARAM_VOTE_MODE)
 
+    // pairaln
+    PARAMETER(PARAM_PAIRING_DUMMY_MODE)
+    PARAMETER(PARAM_PAIRING_MODE)
+    
     // taxonomyreport
     PARAMETER(PARAM_REPORT_MODE)
 
