@@ -42,10 +42,9 @@ fi
 
 if notExists "${TMP_PATH}/alis.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${TMP_PATH}/query" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${RESULTS}" ${CONVERT_PAR} \
+    "$MMSEQS" convertalis "${TMP_PATH}/query" "${TARGET}${EXPAND_EXT}${INDEXEXT}" "${INTERMEDIATE}" "${RESULTS}" ${CONVERT_PAR} \
         || fail "Convert Alignments died"
 fi
-
 
 if [ -n "${REMOVE_TMP}" ]; then
     if [ -n "${GREEDY_BEST_HITS}" ]; then

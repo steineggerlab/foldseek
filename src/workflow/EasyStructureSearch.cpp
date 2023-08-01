@@ -111,6 +111,12 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
+    if(par.clusterSearch == 1 && isIndex == false) {
+        cmd.addVariable("EXPAND_EXT", "_seq");
+    }else{
+        cmd.addVariable("EXPAND_EXT", "");
+    }
+
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
