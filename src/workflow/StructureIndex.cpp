@@ -52,11 +52,16 @@ int structureindex(int argc, const char **argv, const Command& command) {
         }
     }
 
+    const bool excludeKmers = (par.indexExclude & LocalParameters::INDEX_EXCLUDE_KMER_INDEX) != 0;
+    const bool excludeCa = (par.indexExclude & LocalParameters::INDEX_EXCLUDE_CA) != 0;
+
     CommandCaller cmd;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("CREATEINDEX_PAR", par.createParameterString(createIndexWithoutIndexSubset, true).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("INDEX_DB_CA_KEY", SSTR(LocalParameters::INDEX_DB_CA_KEY).c_str());
+    cmd.addVariable("SS_SUBSET_MODE", SSTR(excludeKmers ? 3 : 1).c_str());
+    cmd.addVariable("INCLUDE_CA", excludeCa == false ? "TRUE" : NULL);
 
     std::string program(tmpDir + "/structureindex.sh");
     FileUtil::writeFile(program, structureindex_sh, structureindex_sh_len);

@@ -70,6 +70,10 @@ public:
 
     static const unsigned int INDEX_DB_CA_KEY = 500;
 
+    static const int INDEX_EXCLUDE_NONE = 0;
+    static const int INDEX_EXCLUDE_KMER_INDEX = 1 << 0;
+    static const int INDEX_EXCLUDE_CA = 1 << 1;
+
     // TODO
     static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
     static const unsigned int FORMAT_SCORE_COMPLEX_DEFAULT = 6;
@@ -105,6 +109,7 @@ public:
     PARAMETER(PARAM_CLUSTER_SEARCH)
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
+    PARAMETER(PARAM_INDEX_EXCLUDE)
 
     int prefMode;
     float tmScoreThr;
@@ -123,6 +128,8 @@ public:
     int clusterSearch;
     std::string fileInclude;
     std::string fileExclude;
+    int indexExclude;
+
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner,
                                             bool &needLDDT);
