@@ -1,4 +1,5 @@
 #include <cassert>
+
 #include "LocalParameters.h"
 #include "FileUtil.h"
 #include "CommandCaller.h"
@@ -63,10 +64,28 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     }
     tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
     par.filenames.pop_back();
-
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    cmd.addVariable("OUTPUT", par.filenames.back().c_str());
+    switch (par.formatAlignmentMode) {
+        case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: // 0
+        case Parameters::FORMAT_ALIGNMENT_BLAST_TAB_WITH_HEADERS: // 4
+            cmd.addVariable("OUTPUT", (par.filenames.back()+".m8").c_str());
+            break;
+        case Parameters::FORMAT_ALIGNMENT_BLAST_WITH_LEN: // 2
+        case LocalParameters::FORMAT_SCORE_COMPLEX_DEFAULT: // 6
+            cmd.addVariable("OUTPUT", (par.filenames.back()+".csv").c_str());
+            break;
+        case Parameters::FORMAT_ALIGNMENT_SAM: // 1
+            cmd.addVariable("OUTPUT", (par.filenames.back()+".sam").c_str());
+            break;
+        case Parameters::FORMAT_ALIGNMENT_HTML: // 3
+            cmd.addVariable("OUTPUT", (par.filenames.back()+".html").c_str());
+            break;
+        case LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED: // 5
+            cmd.addVariable("OUTPUT", (par.filenames.back()+"_").c_str());
+            break;
+    }
+    cmd.addVariable("REPORT", (par.filenames.back()+"_report.tsv").c_str());
     par.filenames.pop_back();
     cmd.addVariable("TARGET", par.filenames.back().c_str());
     par.filenames.pop_back();
@@ -79,7 +98,6 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-
     std::string program = tmpDir + "/easycomplexsearch.sh";
     FileUtil::writeFile(program, easycomplexsearch_sh, easycomplexsearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);

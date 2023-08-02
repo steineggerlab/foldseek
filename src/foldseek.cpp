@@ -259,39 +259,56 @@ std::vector<struct Command> commands = {
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"pdbFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
         {"scorecomplex", scorecomplex, &localPar.scorecomplex, COMMAND_ALIGNMENT,
-                "get complex score",
-                NULL,
+                "Get complex level alignments from alignmentDB",
+                "# Get complex level alignments (chain assignments and tm-scores) from alignmentDB.\n"
+                "foldseek scorecomplex queryDB targetDB alignmentDB complexDB\n"
+                "# simple tsv output format"
+                "foldseek createcomplexreport queryDB targetDB complexDB result.tsv"
+                "# output files with convertalis"
+                "foldseek convertalis queryDB targetDB complexDB result.m8\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
-                "<i:queryDb> <i:targetDb> <i:alignmentDB> <o:resultDB>",
+                "<i:queryDb> <i:targetDb> <i:alignmentDB> <o:complexDB>",
                 CITATION_FOLDSEEK, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
-                                           {"resultFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
+                                           {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
                                    }
         },
         {"easy-complexsearch", easycomplexsearch, &localPar.easyscorecomplexworkflow, COMMAND_EASY,
-                "run scorecomplex",
-                NULL,
+                "Complex level search",
+                "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
+                "foldseek easy-complexsearch !/? !/ result tmp\n"
+                "# Format output differently\n"
+                "foldseek easy-complexsearch !/? !/ result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "# Align with TMalign (global)\n"
+                "foldseek easy-complexsearch !/? !/ result tmp --alignment-type 1\n"
+                "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
+                "foldseek easy-complexsearch !/? !/ result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
-                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFile> <tmpDir>",
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
                 CITATION_FOLDSEEK, {
                                            {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder},
-                                           {"outputFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
+                                           {"outputFileName", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
         {"createcomplexreport", createcomplexreport, &localPar.createcomplexreport, COMMAND_FORMAT_CONVERSION,
-                "get the result of scorecomplex",
-                NULL,
+                "Convert complex DB to tsv format\"",
+                "# Create output in tsv format (7 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, assId\n"
+                "#  (1,2) identifiers for query and target complex,\n"
+                "#  (3,4) chains of query complex and target complex,\n"
+                "#  (5,6) tm score based on query and target residue length,\n"
+                "#  (7) assignment id\n"
+                "foldseek convertalis queryDB targetDB complexDB result.tsv\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
-                "<i:queryDb> <i:targetDb> <i:scorecomplexDB> <o:resultFile>",
+                "<i:queryDb> <i:targetDb> <i:complexDB> <o:complexFile>",
                 CITATION_FOLDSEEK, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
-                                           {"scorecomplexDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
-                                           {"outputFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
+                                           {"complexDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                           {"complexFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
                                    }
         },
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
