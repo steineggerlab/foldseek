@@ -50,7 +50,7 @@ fi
 
 # shellcheck disable=SC2086
 "$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${REPORT}" \
-    || fail "Convert Alignments died"
+    || fail "Createcomplexreport dies"
 
 
 
