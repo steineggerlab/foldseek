@@ -21,7 +21,6 @@ LocalParameters::LocalParameters() :
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
-        PARAM_PROTEIN_CHAINS_ONLY(PARAM_PROTEIN_CHAINS_ONLY_ID, "--protein-chains-only", "store protein chains only", "store protein chains only: \n0: store all types of chains\n1: store protein chains only", typeid(int), (void *) &storeProteinChainsOnly, "^[0-1]{1}$"),
         PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "minimum percentage of assigned chains out of all query chains > thr [0,100] %", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
@@ -79,7 +78,6 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_TAR_INCLUDE);
     structurecreatedb.push_back(&PARAM_TAR_EXCLUDE);
     // protein chain only
-    structurecreatedb.push_back(&PARAM_PROTEIN_CHAINS_ONLY);
     structurecreatedb.push_back(&PARAM_FILE_INCLUDE);
     structurecreatedb.push_back(&PARAM_FILE_EXCLUDE);
     structurecreatedb.push_back(&PARAM_THREADS);

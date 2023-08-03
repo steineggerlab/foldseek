@@ -104,7 +104,6 @@ public:
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
-    PARAMETER(PARAM_PROTEIN_CHAINS_ONLY)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
     PARAMETER(PARAM_CLUSTER_SEARCH)
     PARAMETER(PARAM_FILE_INCLUDE)
@@ -123,7 +122,6 @@ public:
     int tmAlignFast;
     int nsample;
     int coordStoreMode;
-    int storeProteinChainsOnly;
     float minAssignedChainsThreshold;
     int clusterSearch;
     std::string fileInclude;
