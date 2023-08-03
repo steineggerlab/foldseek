@@ -12,7 +12,7 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 - [Foldseek](#foldseek)
 - [Webserver](#webserver)
 - [Installation](#installation)
-- [Memory requirments](#memory-requirments)
+- [Memory requirements](#memory-requirements)
 - [Tutorial Video](#tutorial-video)
 - [Documentation](#documentation)
 - [Quick Start](#quick-start)
@@ -47,7 +47,7 @@ conda install -c conda-forge -c bioconda foldseek
 ```
 Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
-## Memory requirments 
+## Memory requirements 
 For optimal software performance, consider three options based on your RAM and search requirements:
 
 1. **With Cα info (default).** 
