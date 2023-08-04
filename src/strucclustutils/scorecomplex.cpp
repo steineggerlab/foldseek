@@ -753,8 +753,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_ALIGNMENT_RES);
     resultWriter.open();
-    float minAssignedChainsRatio = par.minAssignedChainsThreshold/100;
-    minAssignedChainsRatio = minAssignedChainsRatio > 1.0 ? 1.0 : minAssignedChainsRatio;
+    float minAssignedChainsRatio = par.minAssignedChainsThreshold > 1.0 ? 1.0 : par.minAssignedChainsThreshold;
 
 #pragma omp parallel
     {
