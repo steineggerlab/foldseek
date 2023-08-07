@@ -47,9 +47,8 @@ if notExists "${TMP_PATH}/alis.dbtype"; then
     "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${OUTPUT}" ${CONVERT_PAR} \
         || fail "Convert Alignments died"
 fi
-
 # shellcheck disable=SC2086
-"$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${REPORT}" \
+"$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${REPORT}" ${REPORT_PAR}\
     || fail "Createcomplexreport dies"
 
 
