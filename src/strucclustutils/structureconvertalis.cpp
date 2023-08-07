@@ -278,6 +278,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
 
     IndexReader qDbr(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
     IndexReader qDbrHeader(par.db1, par.threads, IndexReader::SRC_HEADERS , (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+    uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
+    bool isExtendedAlignment = extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC;
 
     IndexReader *tDbr;
     IndexReader *tDbrHeader;
@@ -285,8 +287,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         tDbr = &qDbr;
         tDbrHeader= &qDbrHeader;
     } else {
-        tDbr = new IndexReader(par.db2, par.threads, IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
-        tDbrHeader = new IndexReader(par.db2, par.threads, IndexReader::SRC_HEADERS, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+        tDbr = new IndexReader(par.db2, par.threads,
+                               isExtendedAlignment ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+                               (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
+        tDbrHeader = new IndexReader(par.db2, par.threads,
+                                     isExtendedAlignment ? IndexReader::SRC_HEADERS : IndexReader::HEADERS,
+                                     (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     }
     IndexReader *qcadbr = NULL;
     IndexReader *tcadbr = NULL;
@@ -295,7 +301,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         qcadbr = new IndexReader(
                 par.db1,
                 par.threads,
-                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
                 touch ? IndexReader::PRELOAD_INDEX : 0,
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                 "_ca");
@@ -305,10 +311,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             tcadbr = new IndexReader(
                     par.db2,
                     par.threads,
-                    IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                    isExtendedAlignment ? IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB2) :
+                                           IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
                     touch ? IndexReader::PRELOAD_INDEX : 0,
                     DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-                    "_ca"
+                    isExtendedAlignment ? "_seq_ca" : "_ca"
             );
         }
     }

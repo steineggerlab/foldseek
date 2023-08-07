@@ -68,7 +68,8 @@ public:
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
 
-    static const unsigned int INDEX_DB_CA_KEY = 500;
+    static const unsigned int INDEX_DB_CA_KEY_DB1 = 500;
+    static const unsigned int INDEX_DB_CA_KEY_DB2 = 502;
 
     static const int INDEX_EXCLUDE_NONE = 0;
     static const int INDEX_EXCLUDE_KMER_INDEX = 1 << 0;

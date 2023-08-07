@@ -41,7 +41,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
     IndexReader qcadbr(
             par.db1,
             par.threads,
-            IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+            IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
             touch ? IndexReader::PRELOAD_INDEX : 0,
             DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
             "_ca"
@@ -55,14 +55,19 @@ int tmalign(int argc, const char **argv, const Command& command) {
         tdbr = &qdbr;
         tcadbr = &qcadbr;
     } else {
-        tdbr = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+        uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
+        bool alignmentIsExtended = extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC;
+        tdbr = new IndexReader(par.db2, par.threads,
+                        alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+                        (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
         tcadbr = new IndexReader(
                 par.db2,
                 par.threads,
-                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                alignmentIsExtended ?  IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB2) :
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
                 touch ? IndexReader::PRELOAD_INDEX : 0,
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-                "_ca"
+                alignmentIsExtended ? "_seq_ca" : "_ca"
         );
     }
 

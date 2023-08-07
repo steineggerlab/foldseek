@@ -94,13 +94,14 @@ else
     if [ -n "${EXPAND}" ]; then
         if notExists "${TMP_PATH}/strualn_expanded.dbtype"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" mergeresultsbyset "${TMP_PATH}/strualn" "${TARGET_ALIGNMENT}_clu" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
+            "$MMSEQS" mergeresultsbyset "${TMP_PATH}/strualn" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
                 || fail "Expand died"
+            "$MMSEQS" setextendeddbtype "${TMP_PATH}/strualn_expanded" --extended-dbtype 2
         fi
         INTERMEDIATE="${TMP_PATH}/strualn_expanded"
         if notExists "${TMP_PATH}/aln.dbtype"; then
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}_seq" "${TMP_PATH}/strualn_expanded" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+            $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/strualn_expanded" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
                 || fail "Alignment step died"
         fi
     else

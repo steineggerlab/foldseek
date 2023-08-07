@@ -183,22 +183,36 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.execProgram(program.c_str(), par.filenames);
     }else{
         if(par.clusterSearch == 1) {
-            std::vector<std::string> dbsToCheck = {"_seq", "_seq_ca", "_seq_ss", "_seq_h"};
-            for(size_t i = 0; i < dbsToCheck.size(); i++){
-                std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
-                if (!FileUtil::fileExists(db.c_str())) {
+            if (isIndex){
+                // check if we have  SRC_SEQUENCES, SEQUENCES, ALIGNMENT
+                DBReader<unsigned int> indexReader( (par.db2+".idx").c_str(),
+                                                 (par.db2+".idx.index").c_str(),
+                                                 1, DBReader<unsigned int>::USE_INDEX);
+                indexReader.open(DBReader<unsigned int>::NOSORT);
+                size_t alignmentIdx = indexReader.getId(PrefilteringIndexReader::ALNINDEX);
+                if(alignmentIdx == UINT_MAX){
                     Debug(Debug::ERROR)
-                            << "Require " << db << " database for cluster search.";
+                            << "Require idx with alignments/cluster for cluster search.";
+                    EXIT(EXIT_FAILURE);
+                }
+                indexReader.close();
+            }else {
+                std::vector<std::string> dbsToCheck = {"_seq", "_seq_ca", "_seq_ss", "_seq_h"};
+                for (size_t i = 0; i < dbsToCheck.size(); i++) {
+                    std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
+                    if (!FileUtil::fileExists(db.c_str())) {
+                        Debug(Debug::ERROR)
+                                << "Require " << db << " database for cluster search.";
+                        EXIT(EXIT_FAILURE);
+                    }
+                }
+                if (!FileUtil::fileExists((par.db2 + "_clu.dbtype").c_str()) &&
+                    !FileUtil::fileExists((par.db2 + "_aln.dbtype").c_str())) {
+                    Debug(Debug::ERROR)
+                            << "Require " << par.db2 + "_clu  or " << par.db2 + "_aln database for cluster search.";
                     EXIT(EXIT_FAILURE);
                 }
             }
-            if (!FileUtil::fileExists((par.db2 + "_clu.dbtype").c_str()) &&
-                !FileUtil::fileExists((par.db2 + "_aln.dbtype").c_str())) {
-                Debug(Debug::ERROR)
-                        << "Require " << par.db2 + "_clu  or " << par.db2 + "_aln database for cluster search.";
-                EXIT(EXIT_FAILURE);
-            }
-
             cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.threadsandcompression).c_str());
             cmd.addVariable("EXPAND", "1");
         }

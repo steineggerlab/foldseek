@@ -59,8 +59,9 @@ int structureindex(int argc, const char **argv, const Command& command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("CREATEINDEX_PAR", par.createParameterString(createIndexWithoutIndexSubset, true).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-    cmd.addVariable("INDEX_DB_CA_KEY", SSTR(LocalParameters::INDEX_DB_CA_KEY).c_str());
-    cmd.addVariable("SS_SUBSET_MODE", SSTR(excludeKmers ? 3 : 1).c_str());
+    cmd.addVariable("INDEX_DB_CA_KEY_DB1", SSTR(LocalParameters::INDEX_DB_CA_KEY_DB1).c_str());
+    cmd.addVariable("INDEX_DB_CA_KEY_DB2", SSTR(LocalParameters::INDEX_DB_CA_KEY_DB2).c_str());
+    cmd.addVariable("SS_SUBSET_MODE", SSTR(excludeKmers ? 7 : 5).c_str());
     cmd.addVariable("INCLUDE_CA", excludeCa == false ? "TRUE" : NULL);
 
     std::string program(tmpDir + "/structureindex.sh");
