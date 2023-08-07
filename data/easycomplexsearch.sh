@@ -49,7 +49,7 @@ if notExists "${TMP_PATH}/alis.dbtype"; then
 fi
 
 # shellcheck disable=SC2086
-"$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${REPORT}" \
+"$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${REPORT}" "${REPORT_PAR}"\
     || fail "Createcomplexreport dies"
 
 
