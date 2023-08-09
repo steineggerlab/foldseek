@@ -3,13 +3,34 @@ on:
   push:
     branches:
       - master
+      - staging
+      - trying
   pull_request:
     branches:
-      - '**'
-defaults:
-  run:
-    shell: bash
+      - 'master'
+      - 'stable/**'
 jobs:
+
+  test_legacy_linux:
+    name: Test Corrosion (CMake 3.15)
+    uses: ./.github/workflows/test_legacy.yaml
+    with :
+      os: ubuntu-20.04
+      rust: 1.46.0
+  test_legacy_mac:
+    name: Test Corrosion (CMake 3.15)
+    uses: ./.github/workflows/test_legacy.yaml
+    with:
+      os: macos-12
+      rust: 1.54.0
+  test_legacy_windows:
+    name: Test Corrosion (CMake 3.15)
+    uses: ./.github/workflows/test_legacy.yaml
+    with:
+      os: windows-2019
+      rust: 1.46.0
+
+
   test:
     name: Test Corrosion
     runs-on: ${{ matrix.os }}
@@ -20,7 +41,7 @@ jobs:
         os:
           - windows-2019 # windows-latest is currently not having a supported MSVC compiler
           - ubuntu-latest
-          - macos-10.15
+          - macos-12
         arch:
           - x86_64
           - i686
@@ -31,40 +52,51 @@ jobs:
           - darwin
           - msvc
         cmake:
-          - 3.12.4
-          - 3.18.0
           - 3.19.0
         rust:
-          - 1.44.1 # Earliest targeted version
-          - 1.45.0 # Earliest version compatible with Windows GNU
+          # Our MSRV is already tested with the legacy generator, so just test the current stable rust here.
           - stable
-          - nightly
         generator:
           - default # This is just whatever the platform default is
           - ninja
+        compiler: [default]
         include:
-          - os: macos-latest
-            arch: x86_64
-            abi: darwin
+          - rust: nightly
             cmake: 3.19.0
-            rust: 1.44.1
-            generator: default
-          - os: macos-latest
-            arch: x86_64
-            abi: darwin
-            cmake: 3.19.0
-            rust: stable
             generator: ninja
-        exclude:
-          # Something's busted when building with Visual Studio with CMake 3.12 - perhaps should
-          # look into this at some point
-          - os: windows-2019
-            cmake: 3.12.4
-            generator: default # Default generator is Visual Studio
-
-          # You cannot build with GNU using Visual Studio on Windows
-          - os: windows-2019
+            arch: x86_64
+            abi: msvc
+            os: windows-2019
+          - rust: nightly
+            cmake: 3.19.0
+            generator: ninja
+            arch: x86_64
             abi: gnu
+            os: ubuntu-latest
+          - rust: nightly
+            cmake: 3.19.0
+            generator: ninja
+            arch: x86_64
+            abi: darwin
+            os: macos-12
+          - rust: 1.54
+            cmake: 3.19.0
+            generator: ninja
+            arch: x86_64
+            abi: msvc
+            os: windows-2019
+            compiler: clang
+          - os: ubuntu-latest
+            arch: x86_64
+            abi: gnu
+            cmake: 3.20.0
+            rust: 1.54
+            generator: ninja-multiconfig
+
+        exclude:
+
+          # We have a separate test Matrix for the Visual Studio Generator
+          - os: windows-2019
             generator: default # Default generator is Visual Studio
 
           # ARCH
@@ -82,11 +114,11 @@ jobs:
             generator: ninja
           - os: windows-2019
             arch: powerpc64le
-          - os: macos-10.15
+          - os: macos-12
             arch: i686
-          - os: macos-10.15
+          - os: macos-12
             arch: aarch64
-          - os: macos-10.15
+          - os: macos-12
             arch: powerpc64le
 
           # ABI
@@ -96,182 +128,116 @@ jobs:
             abi: darwin
           - os: windows-2019
             abi: darwin
-          - os: macos-10.15
+          - os: macos-12
             abi: msvc
-          - os: macos-10.15
+          - os: macos-12
             abi: gnu
-
-          # Rust
-          # Build each set only with the earliest compatible versioned Rust
-          - os: macos-10.15
-            rust: 1.45.0
-          - os: ubuntu-latest
-            rust: 1.45.0
-          - os: windows-2019
-            abi: msvc
-            rust: 1.45.0
-          # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
-          # target. See: https://github.com/rust-lang/rust/pull/71769
-          - os: windows-2019
-            abi: gnu
-            rust: 1.44.1
 
     steps:
-      - name: Determine Rust OS
-        id: determine_rust_os
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            echo "::set-output name=os::pc-windows"
-            echo "::set-output name=host_abi::msvc"
-          elif [ "${{ runner.os }}" == "Linux" ]; then
-            echo "::set-output name=os::unknown-linux"
-            echo "::set-output name=host_abi::gnu"
-          elif [ "${{ runner.os }}" == "macOS" ]; then
-            echo "::set-output name=os::apple"
-            echo "::set-output name=host_abi::darwin"
-          fi
-      - name: Pick Compiler
-        id: pick_compiler
-        run: |
-          if [ "${{ matrix.abi }}" == "gnu" ]; then
-            if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-              echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=${{matrix.arch}}-linux-gnu-gcc"
-              echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++"
-              echo "::set-output name=system_name::-DCMAKE_SYSTEM_NAME=Linux"
-            else
-              echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=gcc"
-              echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=g++"
-            fi
-          elif [ "${{ matrix.abi }}" == "darwin" ]; then
-            echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=clang"
-            echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=clang++"
-          elif [ "${{ matrix.abi }}" == "msvc" ]; then
-            echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=cl"
-            echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=cl"
-          fi
-      - name: Pick Generator
-        id: pick_generator
-        run: |
-          if [ "${{ matrix.generator }}" == "ninja" ]; then
-            echo "::set-output name=generator::-GNinja"
-          elif [ "${{ matrix.abi }}" == "default" ]; then
-            echo "::set-output name=generator::"
-          fi
-      - name: CMake Build Flags
-        id: cmake_build_flags
-        run: |
-          if [ "${{ matrix.cmake }}" != "3.12.4" ]; then
-            echo "::set-output name=cmake_build_flags::--verbose"
-          else
-            echo "::set-output name=cmake_build_flags::"
-          fi
-      - name: Arch Flags
-        id: arch_flags
-        run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            if [ "${{matrix.generator}}" == "default" ]; then
-              if [ "${{ matrix.arch }}" == "x86_64" ]; then
-                echo "::set-output name=msvc::amd64"
-                echo "::set-output name=cmake::-Ax64"
-              elif [ "${{ matrix.arch }}" == "i686" ]; then
-                echo "::set-output name=msvc::amd64_x86"
-                echo "::set-output name=cmake::-AWin32"
-              elif [ "${{ matrix.arch }}" == "aarch64" ]; then
-                echo "::set-output name=msvc::amd64_arm64"
-                echo "::set-output name=cmake::-AARM64"
-              fi
-            elif [ "${{matrix.generator}}" == "ninja" ]; then
-              # We don't do cross-compiling builds with Ninja
-              echo "::set-output name=msvc::amd64"
-            fi
-          elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            echo "::set-output name=cmake::-DRust_CARGO_TARGET=${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}"
-          fi
-      - name: Setup MSVC Development Environment
-        uses: ilammy/msvc-dev-cmd@v1.4.1
+      - uses: actions/checkout@v3
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
         with:
-          arch: ${{ steps.arch_flags.outputs.msvc }}
-        if: ${{ 'msvc' == matrix.abi }}
-      - uses: actions/checkout@v2
-      - name: Install CMake
-        uses: corrosion-rs/install-cmake@v1.1
-        with:
+          target_arch: ${{matrix.arch}}
+          abi: ${{matrix.abi}}
           cmake: ${{matrix.cmake}}
-          ninja: 1.10.0
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+          rust: ${{matrix.rust}}
+          generator: ${{matrix.generator}}
+          build_dir: build
+          compiler: ${{matrix.compiler}}
+      - name: Run Tests
+        id: run_tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3
+
+  test_msvc:
+    name: Test MSVC Generator
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2019
+          - windows-2022
+        arch:
+          - x86_64
+          - i686
+          - aarch64
+        include:
+          - rust: 1.54.0
+          # Override rust version for x86_64
+          - arch: x86_64
+            rust: 1.46.0
+          - os: windows-2019
+            cmake: 3.20.6  # Multi-config Generators require at least CMake 3.20
+          - os: windows-2022
+            cmake: 3.21.5 # VS on windows-2022 requires at least CMake 3.21
+
+    steps:
+      - uses: actions/checkout@v3
+      # The initial configure for MSVC is quite slow, so we cache the build directory
+      # (including the build directories of the tests) since reconfiguring is
+      # significantly faster.
+      - name: Cache MSVC build directory
+        id: cache-msvc-builddir
+        uses: actions/cache@v3
         with:
-          toolchain: ${{matrix.rust}}
-          target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
-      - name: Install Cross Compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
-        if: ${{ 'ubuntu-latest' == matrix.os }}
-      - name: CMake Version
-        run: cmake --version
-      - name: Rust Version
-        run: rustc +${{matrix.rust}} --version
-      - name: Configure (3.12 only)
-        run: >
-          cmake
-          -H.
-          -Bbuild
-          -DCORROSION_VERBOSE_OUTPUT=ON
-          ${{ steps.arch_flags.outputs.cmake }}
-          ${{ steps.pick_compiler.outputs.c_compiler }}
-          ${{ steps.pick_compiler.outputs.cxx_compiler }}
-          ${{ steps.pick_compiler.outputs.system_name }}
-          ${{ steps.pick_generator.outputs.generator }}
-          -DRust_TOOLCHAIN="${{matrix.rust}}"
-        if: ${{ matrix.cmake == '3.12.4' }}
-      - name: Configure
-        run: >
-          cmake
-          -S.
-          -Bbuild
-          -DCORROSION_VERBOSE_OUTPUT=ON
-          ${{ steps.arch_flags.outputs.cmake }}
-          ${{ steps.pick_compiler.outputs.c_compiler }}
-          ${{ steps.pick_compiler.outputs.cxx_compiler }}
-          ${{ steps.pick_compiler.outputs.system_name }}
-          ${{ steps.pick_generator.outputs.generator }}
-          -DRust_TOOLCHAIN="${{matrix.rust}}"
-        if: ${{ matrix.cmake != '3.12.4' }}
-      - name: Run Config Tests (x86_64 Only)
-        run: |
-          cd build
-          cmake \
-            --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target test-install
-          ctest --verbose --build-config Debug
-        if: ${{ 'x86_64' == matrix.arch && !('windows-2019' == matrix.os && 'gnu' == matrix.abi) && '3.12.4' != matrix.cmake }}
-      - name: Build C++ program linking Rust
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target cpp-exe
-      - name: Build Rust program linking C++
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target cargo-build_rust-exe
-      - name: Build Rust cdylib and link against C++
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target my_program
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' }}
-      - name: Build host program in cross-compile setup
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target cargo-build_rust-host-program
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' && matrix.cmake == '3.19.0' }}
-      - name: Run host program in cross-compile setup
-        run: |
-          ./build/test/hostbuild/rust-host-program
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' && matrix.cmake == '3.19.0' }}
+          path: build
+          key: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.rust }}-msvc-build
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
+        with:
+          target_arch: ${{matrix.arch}}
+          abi: msvc
+          cmake: ${{matrix.cmake}}
+          rust: ${{matrix.rust}}
+          generator: default
+          build_dir: build
+          configure_params: "-DCORROSION_TESTS_KEEP_BUILDDIRS=ON"
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3
+
+  test_cxxbridge:
+    name: Test cxxbridge integration
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2019
+          - ubuntu-latest
+          - macos-12
+        include:
+          - abi: default
+        #  - os: windows-2019
+        #    abi: gnu
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        id: cache_cxxbridge
+        with:
+          path: "~/.cargo/bin/cxxbridge*"
+          key: ${{ runner.os }}-cxxbridge_1_0_86
+      - name: Install cxxbridge
+        if: steps.cache_cxxbridge.outputs.cache-hit != 'true'
+        run: cargo install cxxbridge-cmd@1.0.86
+      - name: Install lld
+        run: sudo apt update && sudo apt install -y lld
+        if: ${{ 'Linux' == runner.os }}
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
+        with:
+          target_arch: x86_64
+          cmake: 3.15.7
+          rust: stable minus 2 releases
+          abi: ${{ matrix.abi }}
+          generator: ninja
+          build_dir: build
+          configure_params: -DCORROSION_TESTS_CXXBRIDGE=ON
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3 -R "^cxxbridge"
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
@@ -281,55 +247,78 @@ jobs:
         os:
           - windows-2019
           - ubuntu-latest
-          - macos-10.15
-        method:
-          - subdirectory
-          - install
+          - macos-12
+        include:
+          - rust: 1.46.0
+          - os: macos-12
+            rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
     steps:
-      - name: Check tests external
-        id: check_external
-        run: |
-          if [ "${{ matrix.method }}" == "subdirectory" ]; then
-            echo "::set-output name=find::OFF"
-          elif [ "${{ matrix.method }}" == "install" ]; then
-            echo "::set-output name=find::ON"
-          fi
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Setup MSVC Development Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
       - name: Install CMake
-        uses: corrosion-rs/install-cmake@v1.1
+        uses: corrosion-rs/install-cmake@v2
         with:
           cmake: 3.18.0
           ninja: 1.10.0
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.44.1
-          default: true
+          toolchain: ${{matrix.rust}}
       - name: CMake Version
         run: cmake --version
       - name: Rust Version
         run: rustc --version
-      - name: Install Corrosion
+      - name: Test Corrosion as subdirectory
         run: >
           cmake
           -S.
-          -Bbuild-corrosion
+          -Bbuild
+          -GNinja
           -DCORROSION_VERBOSE_OUTPUT=ON
-          -DCORROSION_BUILD_TESTS=OFF
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_INSTALL_PREFIX=install-corrosion
-
-          cmake --build build-corrosion --config Release
-
-          cmake --install build-corrosion --config Release
-        if: ${{ matrix.method == 'install' }}
-      - name: Configure Tests
+          -DCORROSION_TESTS_INSTALL_CORROSION=OFF
+          &&
+          cd build
+          &&
+          ctest --output-on-failure -C Debug -j 3
+      - name: Test Corrosion as installed module
         run: >
+          cmake -E remove_directory build
+          &&
           cmake
-          -Stest
-          -Bbuild-tests
-          -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}}
-          -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
-      - name: Build Tests
-        run: cmake --build build-tests
+          -S.
+          -Bbuild
+          -GNinja
+          -DCORROSION_VERBOSE_OUTPUT=ON
+          -DCMAKE_BUILD_TYPE=Release
+          -DCORROSION_TESTS_INSTALL_CORROSION=ON
+          &&
+          cd build
+          &&
+          ctest --output-on-failure -C Release -j 3
+  # We need some "accumulation" job here because bors fails (timeouts) to
+  # listen on matrix builds.
+  # Hence, we have some kind of dummy here that bors can listen on
+  ci-success:
+    name: bors-ci-status
+    if: ${{ always() }}
+    needs:
+      - test_legacy_linux
+      - test_legacy_mac
+      - test_legacy_windows
+      - test
+      - test_msvc
+      - test_cxxbridge
+      - install
+    runs-on: ubuntu-latest
+    # Step copied from: https://github.com/cross-rs/cross/blob/80c9f9109a719ffb0f694060ddc6e371d5b3a540/.github/workflows/ci.yml#L361
+    steps:
+      - name: Result
+        run: |
+          jq -C <<< "${needs}"
+          # Check if all needs were successful or skipped.
+          "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
+        env:
+          needs: ${{ toJson(needs) }}
 

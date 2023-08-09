@@ -15,6 +15,7 @@ set(COMPILED_RESOURCES
         evalue_nn.kerasify
 	result_viz_prelude_fs.html.zst
 	msa.html.zst
+        easycomplexsearch.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

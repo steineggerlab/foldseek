@@ -8,7 +8,7 @@ function(_cargo_metadata out manifest)
         message(FATAL_ERROR "Internal error - unexpected arguments: ${CM_UNPARSED_ARGUMENTS}")
     elseif(DEFINED CM_KEYWORDS_MISSING_VALUES)
         message(FATAL_ERROR "Internal error - the following keywords had no associated value(s):"
-                "${CM_KEYWORDS_MISSING_VALUES}")
+            "${CM_KEYWORDS_MISSING_VALUES}")
     endif()
 
     set(cargo_locked "")
@@ -20,20 +20,20 @@ function(_cargo_metadata out manifest)
         set(cargo_frozen "--frozen")
     endif()
     execute_process(
-            COMMAND
+        COMMAND
             ${CMAKE_COMMAND} -E env
-            "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
-            "${_CORROSION_CARGO}"
-            metadata
-            --manifest-path "${manifest}"
-            --format-version 1
-            # We don't care about non-workspace dependencies
-            --no-deps
-            ${cargo_locked}
-            ${cargo_frozen}
+                "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+                "${_CORROSION_CARGO}"
+                    metadata
+                        --manifest-path "${manifest}"
+                        --format-version 1
+                        # We don't care about non-workspace dependencies
+                        --no-deps
+                        ${cargo_locked}
+                        ${cargo_frozen}
 
-            OUTPUT_VARIABLE json
-            COMMAND_ERROR_IS_FATAL ANY
+        OUTPUT_VARIABLE json
+        COMMAND_ERROR_IS_FATAL ANY
     )
 
     set(${out} "${json}" PARENT_SCOPE)
@@ -50,7 +50,7 @@ function(_generator_add_package_targets)
         message(FATAL_ERROR "Internal error - unexpected arguments: ${GAPT_UNPARSED_ARGUMENTS}")
     elseif(DEFINED GAPT_KEYWORDS_MISSING_VALUES)
         message(FATAL_ERROR "Internal error - the following keywords had no associated value(s):"
-                "${GAPT_KEYWORDS_MISSING_VALUES}")
+                    "${GAPT_KEYWORDS_MISSING_VALUES}")
     endif()
 
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GAPT no_linker_override)
@@ -89,16 +89,16 @@ function(_generator_add_package_targets)
         endforeach()
 
         if(TARGET "${target_name}"
-                AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds)
-                )
+            AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds)
+            )
             message(WARNING "Failed to import Rust crate ${target_name} (kind: `${target_kind}`) because a target "
-                    "with the same name already exists. Skipping this target.\n"
-                    "Help: If you are importing a package which exposes both a `lib` and "
-                    "a `bin` target, please consider explicitly naming the targets in your `Cargo.toml` manifest.\n"
-                    "Note: If you have multiple different packages which have targets with the same name, please note that "
-                    "this is currently not supported by Corrosion. Feel free to open an issue on Github to request "
-                    "supporting this scenario."
-                    )
+                "with the same name already exists. Skipping this target.\n"
+                "Help: If you are importing a package which exposes both a `lib` and "
+                "a `bin` target, please consider explicitly naming the targets in your `Cargo.toml` manifest.\n"
+                "Note: If you have multiple different packages which have targets with the same name, please note that "
+                "this is currently not supported by Corrosion. Feel free to open an issue on Github to request "
+                "supporting this scenario."
+                )
             # Skip this target to prevent a hard error.
             continue()
         endif()
@@ -109,12 +109,12 @@ function(_generator_add_package_targets)
             set(pdb_byproduct "")
 
             _corrosion_add_library_target(
-                    WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
-                    TARGET_NAME "${target_name}"
-                    LIB_KINDS ${kinds}
-                    OUT_ARCHIVE_OUTPUT_BYPRODUCTS archive_byproducts
-                    OUT_SHARED_LIB_BYPRODUCTS shared_lib_byproduct
-                    OUT_PDB_BYPRODUCT pdb_byproduct
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
+                TARGET_NAME "${target_name}"
+                LIB_KINDS ${kinds}
+                OUT_ARCHIVE_OUTPUT_BYPRODUCTS archive_byproducts
+                OUT_SHARED_LIB_BYPRODUCTS shared_lib_byproduct
+                OUT_PDB_BYPRODUCT pdb_byproduct
             )
 
             set(byproducts "")
@@ -122,54 +122,54 @@ function(_generator_add_package_targets)
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
-                    cargo_build_out_dir
-                    PACKAGE ${package_name}
-                    TARGET ${target_name}
-                    MANIFEST_PATH "${manifest_path}"
-                    WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
-                    TARGET_KINDS "${kinds}"
-                    BYPRODUCTS "${byproducts}"
-                    # Optional
-                    ${no_linker_override}
+                cargo_build_out_dir
+                PACKAGE ${package_name}
+                TARGET ${target_name}
+                MANIFEST_PATH "${manifest_path}"
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
+                TARGET_KINDS "${kinds}"
+                BYPRODUCTS "${byproducts}"
+                # Optional
+                ${no_linker_override}
             )
             if(archive_byproducts)
                 _corrosion_copy_byproducts(
-                        ${target_name} ARCHIVE_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${archive_byproducts}"
+                    ${target_name} ARCHIVE_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${archive_byproducts}"
                 )
             endif()
             if(shared_lib_byproduct)
                 _corrosion_copy_byproducts(
-                        ${target_name} LIBRARY_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${shared_lib_byproduct}"
+                    ${target_name} LIBRARY_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${shared_lib_byproduct}"
                 )
             endif()
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                        ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                    ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
                 )
             endif()
             list(APPEND corrosion_targets ${target_name})
-            # Note: "bin" is mutually exclusive with "staticlib/cdylib", since `bin`s are seperate crates from libraries.
+        # Note: "bin" is mutually exclusive with "staticlib/cdylib", since `bin`s are seperate crates from libraries.
         elseif("bin" IN_LIST kinds)
             set(bin_byproduct "")
             set(pdb_byproduct "")
             _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}"
-                    "bin_byproduct" "pdb_byproduct"
-                    )
+                "bin_byproduct" "pdb_byproduct"
+            )
 
             set(byproducts "")
             list(APPEND byproducts "${bin_byproduct}" "${pdb_byproduct}")
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
-                    cargo_build_out_dir
-                    PACKAGE "${package_name}"
-                    TARGET "${target_name}"
-                    MANIFEST_PATH "${manifest_path}"
-                    WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
-                    TARGET_KINDS "bin"
-                    BYPRODUCTS "${byproducts}"
-                    # Optional
-                    ${no_linker_override}
+                cargo_build_out_dir
+                PACKAGE "${package_name}"
+                TARGET "${target_name}"
+                MANIFEST_PATH "${manifest_path}"
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
+                TARGET_KINDS "bin"
+                BYPRODUCTS "${byproducts}"
+                # Optional
+                ${no_linker_override}
             )
             _corrosion_copy_byproducts(
                     ${target_name} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}"
@@ -201,11 +201,11 @@ function(_generator_add_cargo_targets)
     set(one_value_args MANIFEST_PATH IMPORTED_CRATES)
     set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
-            GGC
-            "${options}"
-            "${one_value_args}"
-            "${multi_value_args}"
-            ${ARGN}
+        GGC
+        "${options}"
+        "${one_value_args}"
+        "${multi_value_args}"
+        ${ARGN}
     )
 
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GGC no_linker_override)
@@ -222,18 +222,17 @@ function(_generator_add_cargo_targets)
     math(EXPR ws_mems_len-1 "${ws_mems_len} - 1")
 
     set(created_targets "")
+    set(available_package_names "")
     foreach(ix RANGE ${pkgs_len-1})
         string(JSON pkg GET "${packages}" ${ix})
         string(JSON pkg_id GET "${pkg}" "id")
         string(JSON pkg_name GET "${pkg}" "name")
         string(JSON pkg_manifest_path GET "${pkg}" "manifest_path")
         string(JSON pkg_version GET "${pkg}" "version")
+        list(APPEND available_package_names "${pkg_name}")
 
         if(DEFINED GGC_CRATES)
             if(NOT pkg_name IN_LIST GGC_CRATES)
-                message(DEBUG "Package `${pkg_name}` was not in the `CRATES` allowlist passed to "
-                        "corrosion_import_crate. Ignoring the package."
-                        )
                 continue()
             endif()
         endif()
@@ -255,27 +254,40 @@ function(_generator_add_cargo_targets)
             # If nobody complains for a while, it should be safe to remove this check and the previous loop, which
             # should speed up the configuration process.
             message(WARNING "The package `${pkg_name}` unexpectedly is not part of the workspace."
-                    "Please open an issue at corrosion with some background information on the package"
-                    )
+                "Please open an issue at corrosion with some background information on the package"
+            )
         endif()
 
         string(JSON targets GET "${pkg}" "targets")
 
         _generator_add_package_targets(
-                WORKSPACE_MANIFEST_PATH "${GGC_MANIFEST_PATH}"
-                PACKAGE_MANIFEST_PATH "${pkg_manifest_path}"
-                PACKAGE_NAME "${pkg_name}"
-                PACKAGE_VERSION "${pkg_version}"
-                TARGETS_JSON "${targets}"
-                OUT_CREATED_TARGETS curr_created_targets
-                ${no_linker_override}
-                ${crate_types}
+            WORKSPACE_MANIFEST_PATH "${GGC_MANIFEST_PATH}"
+            PACKAGE_MANIFEST_PATH "${pkg_manifest_path}"
+            PACKAGE_NAME "${pkg_name}"
+            PACKAGE_VERSION "${pkg_version}"
+            TARGETS_JSON "${targets}"
+            OUT_CREATED_TARGETS curr_created_targets
+            ${no_linker_override}
+            ${crate_types}
         )
         list(APPEND created_targets "${curr_created_targets}")
     endforeach()
 
     if(NOT created_targets)
-        message(FATAL_ERROR "found no targets in ${pkgs_len} packages")
+        set(crates_error_message "")
+        if(DEFINED GGC_CRATES)
+            set(crates_error_message "\n`corrosion_import_crate()` was called with the `CRATES` "
+                "parameter set to `${GGC_CRATES}`. Corrosion will only attempt to import packages matching "
+                    "names from this list."
+            )
+        endif()
+        message(FATAL_ERROR
+                "Found no targets in ${pkgs_len} packages."
+                ${crates_error_message}.
+                "\nPlease keep in mind that corrosion will only import Rust `bin` targets or"
+                "`staticlib` or `cdylib` library targets."
+                "The following packages were found in the Manifest: ${available_package_names}"
+        )
     else()
         message(DEBUG "Corrosion created the following CMake targets: ${created_targets}")
     endif()

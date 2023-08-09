@@ -184,7 +184,7 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
         qcadbr = new IndexReader(
                 par.db1,
                 par.threads,
-                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
                 touch ? IndexReader::PRELOAD_INDEX : 0,
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                 "_ca");
@@ -194,7 +194,7 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
             tcadbr = new IndexReader(
                     par.db2,
                     par.threads,
-                    IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY),
+                    IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
                     touch ? IndexReader::PRELOAD_INDEX : 0,
                     DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                     "_ca"
@@ -221,7 +221,8 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
             break;
         }
     }
-    SubstitutionMatrix subMatAA(blosum.c_str(), 1.4, par.scoreBias);
+    float aaFactor = (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA) ? 1.4 : 0.0;
+    SubstitutionMatrix subMatAA(blosum.c_str(), aaFactor, par.scoreBias);
     //temporary output file
     Debug::Progress progress(resultReader.getSize());
 
@@ -260,7 +261,7 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(t3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false);
+                    std::max(t3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false, true);
         }
 
         Coordinate16 qcoords;

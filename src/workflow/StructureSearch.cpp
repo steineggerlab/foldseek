@@ -100,16 +100,26 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
     par.compBiasCorrectionScale = 0.15;
     cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
+    double prevEvalueThr = par.evalThr;
+    par.evalThr = std::numeric_limits<double>::max();
+    cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
+    par.evalThr = prevEvalueThr;
     par.compBiasCorrectionScale = 0.5;
-    if(par.exhaustiveSearch){
-        cmd.addVariable("EXHAUSTIVE", "1");
+    switch(par.prefMode){
+        case LocalParameters::PREF_MODE_KMER:
+            cmd.addVariable("PREFMODE", "KMER");
+            break;
+        case LocalParameters::PREF_MODE_UNGAPPED:
+            cmd.addVariable("PREFMODE", "UNGAPPED");
+            break;
+        case LocalParameters::PREF_MODE_EXHAUSTIVE:
+            cmd.addVariable("PREFMODE", "EXHAUSTIVE");
+            break;
     }
-    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
-        cmd.addVariable("ALIGNMENT_ALGO", "align");
-        cmd.addVariable("QUERY_ALIGNMENT", (query+"_ss").c_str());
-        cmd.addVariable("TARGET_ALIGNMENT", (target+"_ss").c_str());
-        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
-    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
+    if(par.exhaustiveSearch){
+        cmd.addVariable("PREFMODE", "EXHAUSTIVE");
+    }
+   if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
         cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
@@ -118,7 +128,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         par.sortByStructureBits = 0;
         //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
         cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
-    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA){
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
@@ -127,6 +137,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+
     if(par.numIterations > 1){
         double originalEval = par.evalThr;
         par.evalThr = (par.evalThr < par.evalProfile) ? par.evalThr  : par.evalProfile;
@@ -171,6 +182,40 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         FileUtil::writeFile(program, structureiterativesearch_sh, structureiterativesearch_sh_len);
         cmd.execProgram(program.c_str(), par.filenames);
     }else{
+        if(par.clusterSearch == 1) {
+            if (isIndex){
+                // check if we have  SRC_SEQUENCES, SEQUENCES, ALIGNMENT
+                DBReader<unsigned int> indexReader( (par.db2+".idx").c_str(),
+                                                 (par.db2+".idx.index").c_str(),
+                                                 1, DBReader<unsigned int>::USE_INDEX);
+                indexReader.open(DBReader<unsigned int>::NOSORT);
+                size_t alignmentIdx = indexReader.getId(PrefilteringIndexReader::ALNINDEX);
+                if(alignmentIdx == UINT_MAX){
+                    Debug(Debug::ERROR)
+                            << "Require idx with alignments/cluster for cluster search.";
+                    EXIT(EXIT_FAILURE);
+                }
+                indexReader.close();
+            }else {
+                std::vector<std::string> dbsToCheck = {"_seq", "_seq_ca", "_seq_ss", "_seq_h"};
+                for (size_t i = 0; i < dbsToCheck.size(); i++) {
+                    std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
+                    if (!FileUtil::fileExists(db.c_str())) {
+                        Debug(Debug::ERROR)
+                                << "Require " << db << " database for cluster search.";
+                        EXIT(EXIT_FAILURE);
+                    }
+                }
+                if (!FileUtil::fileExists((par.db2 + "_clu.dbtype").c_str()) &&
+                    !FileUtil::fileExists((par.db2 + "_aln.dbtype").c_str())) {
+                    Debug(Debug::ERROR)
+                            << "Require " << par.db2 + "_clu  or " << par.db2 + "_aln database for cluster search.";
+                    EXIT(EXIT_FAILURE);
+                }
+            }
+            cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.threadsandcompression).c_str());
+            cmd.addVariable("EXPAND", "1");
+        }
         std::string program = tmpDir + "/structuresearch.sh";
         FileUtil::writeFile(program, structuresearch_sh, structuresearch_sh_len);
         cmd.execProgram(program.c_str(), par.filenames);

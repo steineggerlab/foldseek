@@ -3,9 +3,12 @@
 //
 #include "GemmiWrapper.h"
 #include "mmread.hpp"
+#ifdef HAVE_ZLIB
 #include "gz.hpp"
+#endif
 #include "input.hpp"
 #include "foldcomp.h"
+#include "cif.hpp"
 
 GemmiWrapper::GemmiWrapper(){
     threeAA2oneAA = {{"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
@@ -32,14 +35,72 @@ GemmiWrapper::GemmiWrapper(){
                      {"UNK",'X'}};
 }
 
-gemmi::Structure openStructure(const std::string & filename){
-    gemmi::MaybeGzipped infile(filename);
-    gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
-    if(format != gemmi::CoorFormat::Unknown && format != gemmi::CoorFormat::Unknown){
-        return gemmi::read_structure(infile, format);
-    }else{
-        return gemmi::read_structure(infile, gemmi::CoorFormat::Pdb);
+std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document& doc) {
+    std::unordered_map<std::string, int> entity_to_taxid;
+    static const std::vector<std::pair<std::string, std::string>> loops_with_taxids = {
+        { "_entity_src_nat.", "?pdbx_ncbi_taxonomy_id"},
+        { "_entity_src_gen.", "?pdbx_gene_src_ncbi_taxonomy_id"},
+        { "_pdbx_entity_src_syn.", "?ncbi_taxonomy_id"}
+    };
+    for (gemmi::cif::Block& block : doc.blocks) {
+        for (auto&& [loop, taxid] : loops_with_taxids) {
+            for (auto row : block.find(loop, {"entity_id", taxid})) {
+                if (row.has2(1) == false) {
+                    continue;
+                }
+                std::string entity_id = gemmi::cif::as_string(row[0]);
+                if (entity_to_taxid.find(entity_id) != entity_to_taxid.end()) {
+                    continue;
+                }
+                const char* endptr = NULL;
+                int taxId = gemmi::no_sign_atoi(row[1].c_str(), &endptr);
+                if (endptr != NULL && *endptr == '\0') {
+                    entity_to_taxid.emplace(entity_id, taxId);
+                }
+            }
+        }
     }
+    return entity_to_taxid;
+}
+
+bool GemmiWrapper::load(std::string & filename){
+    if (gemmi::iends_with(filename, ".fcz")) {
+        std::ifstream in(filename, std::ios::binary);
+        if (!in) {
+            return false;
+        }
+        return loadFoldcompStructure(in, filename);
+    }
+    try {
+#ifdef HAVE_ZLIB
+        gemmi::MaybeGzipped infile(filename);
+#else
+        gemmi::BasicInput infile(filename);
+#endif
+        gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
+        gemmi::Structure st;
+        std::unordered_map<std::string, int> entity_to_tax_id;
+        switch (format) {
+            case gemmi::CoorFormat::Mmcif: {
+                gemmi::cif::Document doc = gemmi::cif::read(infile);
+                entity_to_tax_id = getEntityTaxIDMapping(doc);
+                st = gemmi::make_structure(doc);
+                break;
+            }
+            case gemmi::CoorFormat::Mmjson:
+                st = gemmi::make_structure(gemmi::cif::read_mmjson(infile));
+                break;
+            case gemmi::CoorFormat::ChemComp:
+                st = gemmi::make_structure_from_chemcomp_doc(gemmi::cif::read(infile));
+                break;
+            default:
+                st = gemmi::read_pdb(infile);
+        }
+        updateStructure((void*) &st, filename, entity_to_tax_id);
+    } catch (std::runtime_error& e) {
+        return false;
+    }
+    return true;
 }
 
 // https://stackoverflow.com/questions/1448467/initializing-a-c-stdistringstream-from-an-in-memory-buffer/1449527
@@ -61,21 +122,29 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         return loadFoldcompStructure(istr, name);
     }
     try {
+#ifdef HAVE_ZLIB
         gemmi::MaybeGzipped infile(name);
+#else
+        gemmi::BasicInput infile(name);
+#endif
         gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
         gemmi::Structure st;
+        std::unordered_map<std::string, int> entity_to_tax_id;
         switch (format) {
             case gemmi::CoorFormat::Pdb:
                 st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(buffer, bufferSize), name, gemmi::PdbReadOptions());
                 break;
-            case gemmi::CoorFormat::Mmcif:
-                st = gemmi::make_structure(gemmi::cif::read_memory(buffer, bufferSize, name.c_str()));
+            case gemmi::CoorFormat::Mmcif: {
+                gemmi::cif::Document doc = gemmi::cif::read_memory(buffer, bufferSize, name.c_str());
+                entity_to_tax_id = getEntityTaxIDMapping(doc);
+                st = gemmi::make_structure(doc);
                 break;
+            }
             case gemmi::CoorFormat::Unknown:
             case gemmi::CoorFormat::Detect:
                 return false;
         }
-        updateStructure((void*) &st, name);
+        updateStructure((void*) &st, name, entity_to_tax_id);
     } catch (std::runtime_error& e) {
         return false;
     }
@@ -104,6 +173,7 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     chain.clear();
     names.clear();
     chainNames.clear();
+    modelIndices.clear();
     ca.clear();
     ca_bfactor.clear();
     c.clear();
@@ -114,6 +184,8 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     names.push_back(filename);
     const AtomCoordinate& first = coordinates[0];
     chainNames.push_back(first.chain);
+    modelCount = 1;
+    modelIndices.push_back(modelCount);
     int residueIndex = INT_MAX;
     Vec3 ca_atom = {NAN, NAN, NAN};
     Vec3 cb_atom = {NAN, NAN, NAN};
@@ -163,24 +235,27 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     return true;
 }
 
-void GemmiWrapper::updateStructure(void * void_st, const std::string& filename) {
+void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, std::unordered_map<std::string, int>& entity_to_tax_id) {
     gemmi::Structure * st = (gemmi::Structure *) void_st;
 
     title.clear();
     chain.clear();
     names.clear();
     chainNames.clear();
+    modelIndices.clear();
+    modelCount = 0;
     ca.clear();
     ca_bfactor.clear();
     c.clear();
     cb.clear();
     n.clear();
     ami.clear();
-    title.append(  st->get_info("_struct.title"));
+    taxIds.clear();
+    title.append(st->get_info("_struct.title"));
     size_t currPos = 0;
     for (gemmi::Model& model : st->models){
+        modelCount++;
         for (gemmi::Chain& ch : model.chains) {
-
             size_t chainStartPos = currPos;
             size_t pos = filename.find_last_of("\\/");
             std::string name = (std::string::npos == pos)
@@ -188,20 +263,36 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename) 
                                : filename.substr(pos+1, filename.length());
             //name.push_back('_');
             chainNames.push_back(ch.name);
+            char* rest;
+            errno = 0;
+            unsigned int modelNumber = strtoul(model.name.c_str(), &rest, 10);
+            if ((rest != model.name.c_str() && *rest != '\0') || errno == ERANGE) {
+                modelIndices.push_back(modelCount);
+            }else{
+                modelIndices.push_back(modelNumber);
+            }
+
             names.push_back(name);
+            int taxId = -1;
             for (gemmi::Residue &res : ch.residues) {
+                if (taxId == -1) {
+                    auto it = entity_to_tax_id.find(res.entity_id);
+                    if (it != entity_to_tax_id.end()) {
+                        taxId = it->second;
+                    }
+                }
                 bool isHetAtomInList = res.het_flag == 'H' && threeAA2oneAA.find(res.name) != threeAA2oneAA.end();
-                if(isHetAtomInList == false && res.het_flag != 'A')
+                if (isHetAtomInList == false && res.het_flag != 'A')
                     continue;
-                if(isHetAtomInList){
+                if (isHetAtomInList) {
                     bool hasCA = false;
-                    for(gemmi::Atom &atom : res.atoms){
-                        if(atom.name == "CA"){
+                    for (gemmi::Atom &atom : res.atoms) {
+                        if (atom.name == "CA") {
                             hasCA = true;
                             break;
                         }
                     }
-                    if(hasCA == false){
+                    if (hasCA == false) {
                         continue;
                     }
                 }
@@ -242,24 +333,8 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename) 
                     ami.push_back(threeAA2oneAA[res.name]);
                 }
             }
+            taxIds.push_back(taxId == -1 ? 0 : taxId);
             chain.push_back(std::make_pair(chainStartPos, currPos));
         }
     }
-}
-
-bool GemmiWrapper::load(std::string & filename){
-    if (gemmi::iends_with(filename, ".fcz")) {
-        std::ifstream in(filename, std::ios::binary);
-        if (!in) {
-            return false;
-        }
-        return loadFoldcompStructure(in, filename);
-    }
-    try {
-        gemmi::Structure st = openStructure(filename);
-        updateStructure((void*) &st, filename);
-    } catch (std::runtime_error& e) {
-        return false;
-    }
-    return true;
 }

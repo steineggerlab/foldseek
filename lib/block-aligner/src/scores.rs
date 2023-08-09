@@ -1,5 +1,8 @@
 //! Structs for representing match/mismatch scoring matrices.
 
+#[cfg(feature = "simd_sse2")]
+use crate::sse2::*;
+
 #[cfg(feature = "simd_avx2")]
 use crate::avx2::*;
 
@@ -54,6 +57,24 @@ impl AAMatrix {
         }
         Self { scores }
     }
+
+    /// Create an AAMatrix from a tab-separated table with no headers.
+    ///
+    /// Use `aa_order` to pass in the amino acids in order.
+    pub fn from_tsv(tsv: &str, aa_order: &str) -> Self {
+        let tsv = tsv.trim();
+        let aa_order = aa_order.split_ascii_whitespace().map(|s| s.as_bytes()[0]).collect::<Vec<_>>();
+        let mut res = Self::new();
+
+        for (line, &a) in tsv.split("\n").zip(&aa_order) {
+            for (score, &b) in line.split_ascii_whitespace().zip(&aa_order) {
+                let score = score.parse::<i8>().unwrap();
+                res.set(a, b, score);
+            }
+        }
+
+        res
+    }
 }
 
 impl Matrix for AAMatrix {
@@ -90,6 +111,7 @@ impl Matrix for AAMatrix {
     }
 
     // TODO: get rid of lookup for around half of the shifts by constructing position specific scoring matrix?
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -168,6 +190,7 @@ impl Matrix for NucMatrix {
         unsafe { self.scores.as_ptr().add((i & 0b111) * 16) }
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -226,6 +249,7 @@ impl Matrix for ByteMatrix {
         unimplemented!()
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -496,6 +520,7 @@ impl Profile for AAProfile {
         unsafe { self.aa_pos.as_ptr().add(a * self.len) }
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -508,6 +533,7 @@ impl Profile for AAProfile {
         halfsimd_lookup2_i16(scores1, scores2, v)
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -517,6 +543,7 @@ impl Profile for AAProfile {
         simd_loadu(matrix_ptr.add(i) as *const Simd)
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -525,6 +552,7 @@ impl Profile for AAProfile {
         simd_set1_i16(*self.pos_gap_open_C.as_ptr().add(i))
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -533,6 +561,7 @@ impl Profile for AAProfile {
         simd_set1_i16(*self.pos_gap_close_C.as_ptr().add(i))
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -541,6 +570,7 @@ impl Profile for AAProfile {
         simd_set1_i16(*self.pos_gap_open_R.as_ptr().add(i))
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -549,6 +579,7 @@ impl Profile for AAProfile {
         simd_loadu(self.pos_gap_open_C.as_ptr().add(i) as *const Simd)
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -557,6 +588,7 @@ impl Profile for AAProfile {
         simd_loadu(self.pos_gap_close_C.as_ptr().add(i) as *const Simd)
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -604,6 +636,7 @@ impl PosBias {
         *self.bias.as_ptr().add(i)
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]

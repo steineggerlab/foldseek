@@ -7,10 +7,10 @@ variables:
     regression: 1
 
 jobs:
-  - job: build_ubuntu_1804
-    displayName: Ubuntu 1804
+  - job: build_ubuntu_2004
+    displayName: Ubuntu 2004
     pool:
-      vmImage: 'Ubuntu-18.04'
+      vmImage: 'Ubuntu-20.04'
     timeoutInMinutes: 120
     strategy:
       matrix:
@@ -24,11 +24,11 @@ jobs:
         #   STATIC: 1
         #   MPI: 0
         #   BUILD_TYPE: RelWithDebInfo
-        # sse2:
-        #   SIMD: 'SSE2'
-        #   STATIC: 1
-        #   MPI: 0
-        #   BUILD_TYPE: RelWithDebInfo
+        sse2:
+          SIMD: 'SSE2'
+          STATIC: 1
+          MPI: 0
+          BUILD_TYPE: RelWithDebInfo
         avx2_mpi:
           SIMD: 'AVX2'
           STATIC: 0
@@ -129,12 +129,13 @@ jobs:
       - checkout: self
         submodules: true
       - script: |
+          rustup update
           rustup target install x86_64-apple-darwin
           rustup target install aarch64-apple-darwin
         displayName: Install Rust Toolchain
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./lib/mmseqs/util/build_osx.sh . build foldseek
+          ./util/build_osx.sh . build foldseek
         displayName: Build foldseek
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
@@ -150,10 +151,10 @@ jobs:
     displayName: Upload Artifacts
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     pool:
-      vmImage: 'Ubuntu-20.04'
+      vmImage: 'ubuntu-latest'
     dependsOn:
       - build_macos_11
-      - build_ubuntu_1804
+      - build_ubuntu_2004
       - build_ubuntu_cross_2004
     steps:
       - script: |
@@ -173,18 +174,18 @@ jobs:
           archiveFile: $(Build.SourcesDirectory)/foldseek-osx-universal.tar.gz
           includeRootFolder: true
           archiveType: tar
-      # - task: DownloadPipelineArtifact@1
-      #   inputs:
-      #     artifactName: foldseek-linux-SSE2
-      #     targetPath: $(Build.SourcesDirectory)/foldseek/bin
-      # - script:
-      #     chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
-      # - task: ArchiveFiles@2
-      #   inputs:
-      #     rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
-      #     includeRootFolder: true
-      #     archiveType: tar
+      - task: DownloadPipelineArtifact@1
+        inputs:
+          artifactName: foldseek-linux-SSE2
+          targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      - script:
+          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
+          includeRootFolder: true
+          archiveType: tar
       # - task: DownloadPipelineArtifact@1
       #   inputs:
       #     artifactName: foldseek-linux-SSE4_1
@@ -252,10 +253,18 @@ jobs:
       - script: |
           mkdir ~/.ssh && mv $DOWNLOADSECUREFILE_SECUREFILEPATH ~/.ssh/id_rsa
           chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -t rsa uniclust.mmseqs.com >> ~/.ssh/known_hosts
+          ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub
           cd "${BUILD_SOURCESDIRECTORY}"
-          ssh codeship@uniclust.mmseqs.com "mkdir -p \"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}\""
-          # disabled: foldseek-linux-sse2.tar.gz foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
-          scp foldseek-osx-universal.tar.gz foldseek-linux-avx2.tar.gz foldseek-linux-arm64.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
-          ssh codeship@uniclust.mmseqs.com "update-latest-foldseek.sh \"${BUILD_SOURCEVERSION}\""
-
+          # disabled:foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
+          ssh-keygen -Y sign -f ~/.ssh/id_rsa -n file \
+             foldseek-osx-universal.tar.gz \
+             foldseek-linux-sse2.tar.gz \
+             foldseek-linux-avx2.tar.gz \
+             foldseek-linux-arm64.tar.gz
+          curl --retry 5 --retry-all-errors -X POST \
+            -F file[]=@foldseek-osx-universal.tar.gz -F signature[]=@foldseek-osx-universal.tar.gz.sig \
+            -F file[]=@foldseek-linux-sse2.tar.gz -F signature[]=@foldseek-linux-sse2.tar.gz.sig \
+            -F file[]=@foldseek-linux-avx2.tar.gz -F signature[]=@foldseek-linux-avx2.tar.gz.sig \
+            -F file[]=@foldseek-linux-arm64.tar.gz -F signature[]=@foldseek-linux-arm64.tar.gz.sig \
+            -F identifier="foldseek" -F directory="${BUILD_SOURCEVERSION}" \
+              https://mmseqs.com/upload

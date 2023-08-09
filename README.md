@@ -4,8 +4,60 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
 ## Publications
+[van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
 
-[van Kempen M, Kim S, Tumescheit C, Mirdita M, Söding J, and Steinegger M. Foldseek:  fast and accurate protein structure search. bioRxiv, doi:10.1101/2022.02.07.479398  (2022)](https://www.biorxiv.org/content/10.1101/2022.02.07.479398)
+[Barrio-Hernandez I, Yeo J, Jänes J, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. biorxiv, doi:10.1101/2023.03.09.531927 (2023)](https://www.biorxiv.org/content/10.1101/2023.03.09.531927v1)
+# Table of Contents
+
+- [Foldseek](#foldseek)
+- [Webserver](#webserver)
+- [Installation](#installation)
+- [Memory requirments](#memory-requirments)
+- [Tutorial Video](#tutorial-video)
+- [Documentation](#documentation)
+- [Quick Start](#quick-start)
+  - [Search](#search)
+    - [Output](#output-search)
+    - [Important Parameters](#important-search-parameters)
+    - [Alignment Mode](#alignment-mode)
+  - [Databases](#databases)
+    - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
+  - [Cluster](#cluster)
+    - [Output](#output-cluster)
+    - [Important Parameters](#important-cluster-parameters)
+- [Main Modules](#main-modules)
+- [Examples](#examples)
+
+## Webserver 
+Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
+
+## Installation
+```
+# Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
+wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+
+# Linux SSE4.1 build (check using: cat /proc/cpuinfo | grep sse4_1)
+wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+
+# MacOS
+wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+
+# Conda installer (Linux and macOS)
+conda install -c conda-forge -c bioconda foldseek
+```
+Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
+
+## Memory requirments 
+For optimal software performance, consider three options based on your RAM and search requirements:
+
+1. **With Cα info (default).** 
+   Use this formula to calculate RAM - `(6 bytes Cα + 1 3Di byte + 1 AA byte) * (database residues)`. The 54M AFDB50 entries require 151GB.
+
+2. **Without Cα info.** 
+   By disabling `--sort-by-structure-bits 0`, RAM requirement reduces to 35GB. However, this alters hit rankings and final scores but not E-values. Structure bits are mostly relevant for hit ranking for E-value > 10^-1.
+
+3. **Single query searches.** 
+   Use the `--prefilter-mode 1`, which isn't memory-limited and computes all ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries.
 
 ## Tutorial Video
 We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
@@ -13,105 +65,69 @@ Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
 
 <a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
 
-## Webserver 
-Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
+## Documentation
+Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information about these modules, refer to the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki). For documentation specific to Foldseek, checkout the Foldseek wiki [here](https://github.com/steineggerlab/foldseek/wiki).
 
-## Installation
+## Quick start
 
-    # static Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
-    wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-    # static Linux SSE4.1 build (check using: cat /proc/cpuinfo | grep sse4_1)
-    wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-    # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
-    wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-    # conda installer 
-    conda install -c conda-forge -c bioconda foldseek
+### Search
+The `easy-search` module allows to search single or multiple query structures, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or single protein structures. In default it outputs the alignment information as a [tab-separated file](#tab-separated) but we support also [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) or a [HTML](#interactive-html) output.
 
-Other precompiled binaries for ARM64, PPC64LE amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
-
-### Quick start
-`easy-search` can search single or multiple query structures formatted in PDB/mmCIF format (flat or `.gz`) against a target database (`example/`) of protein structures. It outputs a tab-separated file of the alignments (`.m8`) the fields are `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits`.
-
-    foldseek easy-search example/d1asha_ example/ aln.m8 tmpFolder
-
-#### Output: Customize fields of tab seperated output
+    foldseek easy-search example/d1asha_ example/ aln tmpFolder
     
-The output can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different output columns.
+#### Output Search
+##### Tab-separated
+  
+The default fields are containing the following fields: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits` but they can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different output columns.
 
-```
-query       Query sequence identifier 
-target      Target sequence identifier
-evalue      E-value
-gapopen     Number of gap open events (note: this is NOT the number of gap characters)
-pident      Percentage of identical matches
-fident      Fraction of identical matches
-nident      Number of identical matches
-qstart      1-indexed alignment start position in query sequence
-qend        1-indexed alignment end position in query sequence
-qlen        Query sequence length
-tstart      1-indexed alignment start position in target sequence
-tend        1-indexed alignment end position in target sequence
-tlen        Target sequence length
-alnlen      Alignment length (number of aligned columns)
-raw         Raw alignment score
-bits        Bit score
-cigar       Alignment as string. Each position contains either M (match), D (deletion, gap in query), or I (Insertion, gap in target)
-qseq        Query sequence 
-tseq        Target sequence
-qaln        Aligned query sequence with gaps
-taln        Aligned target sequence with gaps
-qheader     Header of Query sequence
-theader     Header of Target sequence
-mismatch    Number of mismatches
-qcov        Fraction of query sequence covered by alignment
-tcov        Fraction of target sequence covered by alignment
-empty       Dash column '-'
-taxid       Taxonomical identifier (needs mmseqs tax db)
-taxname     Taxon Name (needs mmseqs tax db)
-taxlineage  Taxonomical lineage (needs mmseqs tax db)
-qset        Query filename of FASTA/Q (useful if multiple files were passed to createdb)
-qsetid      Numeric identifier for query filename
-tset        Target filename of FASTA/Q (useful if multiple files were passed to createdb)
-tsetid      Numeric identifier for target filename
-qca         Calpha corrdinates of the query
-tca         Calpha corrdinates of the target
-alntmscore  TM-score of the alignment 
-qtmscore    TM-score normalized by the query length
-ttmscore    TM-score normalized by the target length
-u           Rotation matrix (computed to by TM-score)
-t           Translation vector (computed to by TM-score)
-lddt        Average LDDT of the alignment    
-lddtfull    LDDT per aligned position
-```
+| Code | Description |
+| --- | --- |
+|query | Query sequence identifier |
+|target | Target sequence identifier |
+|qca        | Calpha coordinates of the query |
+|tca        | Calpha coordinates of the target |
+|alntmscore | TM-score of the alignment | 
+|qtmscore   | TM-score normalized by the query length |
+|ttmscore   | TM-score normalized by the target length |
+|u          | Rotation matrix (computed to by TM-score) |
+|t          | Translation vector (computed to by TM-score) |
+|lddt       | Average LDDT of the alignment |
+|lddtfull   | LDDT per aligned position |
+|prob       | Estimated probability for query and target to be homologous (e.g. being within the same SCOPe superfamily) |
 
-#### Output: Superpositioned Cα only PDB files
+Check out the [MMseqs2 documentation for more format output codes](https://github.com/soedinglab/MMseqs2/wiki#custom-alignment-format-with-convertalis).
+
+##### Superpositioned Cα only PDB files
 Foldseek's `--format-mode 5` generates PDB files with all Cα atoms superimposed based on the aligned coordinates on to the query structure. 
 For each pairwise alignment it will write a single PDB files, so be carefull when using this options for large searches. 
 
-#### Create reusable databases and indexes
-The target database can be pre-processed by `createdb`. This make sense if searched multiple times. 
- 
-    foldseek createdb example/ targetDB
-    foldseek createindex targetDB tmp  #OPTIONAL generates and stores the index on disk
-    foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
+##### Interactive HTML
+Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
 
-### Important search parameters
-    # sensitivity and speed
-    -s                       adjust the sensitivity to speed trade-off.
-                             lower is faster, higher more sensitive (fast: 7.5, highest sensitivity (default): 9.5)
-    --exhaustive-search      skips the prefilter and performs an all-vs-all alignment (more sensitive but much slower)                         
-    --max-seqs               adjust the amount of prefilter that are handed to the alignment. 
-                             Increasing it can lead to more hits (default: 1000)
-    -e                       List matches below this E-value (range 0.0-inf, default: 0.001)
-                             Increasing it helps to report more distantly related structures.
-                             Structures with an E-value of up to 1 might be still related.
-    # other                         
-    --alignment-type         0: 3Di Gotoh-Smith-Waterman (local, not recommended), 
-                             1: TMalign (global, slow), 
-                             2: 3Di+AA Gotoh-Smith-Waterman (local, default)
-    -c                       list matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0) 
-                             The higher the alignment coverage the more global is the alignment.
-    --cov-mode               0: coverage of query and target, 1: coverage of target, 2: coverage of query
+```
+foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
+```
+
+<p align="center"><img src="./.github/results.png" height="400"/></p>
+
+#### Important search parameters
+
+| Option            | Category        | Description                                                                                               |
+|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
+| -s              | Sensitivity     | Adjust sensitivity to speed trade-off; lower is faster, higher more sensitive (fast: 7.5, default: 9.5)   |
+| --exhaustive-search | Sensitivity | Skips prefilter and performs an all-vs-all alignment (more sensitive but much slower)                     |
+| --max-seqs      | Sensitivity     | Adjust the amount of prefilter handed to alignment; increasing it can lead to more hits (default: 1000)   |
+| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
+| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
+| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
+
+#### Alignment Mode
+In default Foldseek uses its local 3Di+AA strutural alignment but it also supports to realign hits using the global TMalign as well as rescoring alignments using TMscore. 
+
+    foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
+
+In case of the alignment type (`--alignment-type 1`) tmalign, we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value=(qTMscore+tTMscore)/2 as well as into the score(=qTMscore*100) field. All output fields (like pident, fident, and alnlen) are calculated from the TMalign alignment.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
@@ -132,19 +148,76 @@ We currently support the following databases:
 - PDB                 	Aminoacid	     yes	https://www.rcsb.org
 ```
 
-### Main Modules
+#### Create custom databases and indexes
+The target database can be pre-processed by `createdb`. This make sense if searched multiple times. 
+ 
+    foldseek createdb example/ targetDB
+    foldseek createindex targetDB tmp  #OPTIONAL generates and stores the index on disk
+    foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
+
+### Cluster
+The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein using structural alignment. It accepts input in either PDB or mmCIF format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
+
+    foldseek easy-cluster example/ res tmp -c 0.9 
+    
+#### Output Cluster
+##### Tab-separated cluster
+The provided format represents protein structure clustering in a tab-separated, two-column layout (representative and member). Each line denotes a cluster-representative and cluster-member relationship, signifying that the member shares significant structural similarity with the representative, and thus belongs to the same cluster.
+```
+Q0KJ32	Q0KJ32
+Q0KJ32	C0W539
+Q0KJ32	D6KVP9
+E3HQM9	E3HQM9
+E3HQM9	F0YHT8
+```
+
+##### Representative fasta
+The `_repseq.fasta` contains all representative protein sequences of the clustering.
+```
+>Q0KJ32
+MAGA....R
+>E3HQM9
+MCAT...Q
+```
+
+##### All member fasta
+In `_allseq.fasta` file all sequences of the cluster are present. A new cluster is marked by two identical name lines of the representative sequence, where the first line stands for the cluster and the second is the name line of the first cluster sequence. It is followed by the fasta formatted sequences of all its members.
+
+```
+>Q0KJ32	
+>Q0KJ32
+MAGA....R
+>C0W539
+MVGA....R
+>D6KVP9
+MVGA....R
+>D1Y890
+MVGV....R
+>E3HQM9	
+>E3HQM9
+MCAT...Q
+>Q223C0
+MCAR...Q
+```
+
+#### Important cluster parameters
+
+| Option            | Category        | Description                                                                                               |
+|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
+| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
+| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
+| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
+| --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
+
+
+## Main Modules
 - `easy-search`       fast protein structure search  
+- `easy-cluster`      fast protein structure clustering  
 - `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 - `databases`         download pre-assembled databases
 
-### Using TMalign for the alignment
-Foldseek supports to realign hits using TMalign as well as rescoring alignments using TMscore. 
-```
-foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
-```
-In case of the alignment type (`--alignment-type 1`) tmalign we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value(=TMscore) as well as into the score(=TMscore*100) field.
-
-
+## Examples
 ### Rescore aligments using TMscore
 Easiest way to get the alignment TMscore normalized by min(alnLen,qLen,targetLen) as well as a rotation matrix is through the following command:
 ```
@@ -162,17 +235,7 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 
 Output format `aln_tmscore.tsv`: query and target identifier, TMscore, translation(3) and rotation vector=(3x3)
 
-
-### Search result visualisations
-Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
-
-```
-foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
-```
-
-<p align="center"><img src="./.github/results.png" height="400"/></p>
-
-### Cluster structures 
+### Cluster search results 
 The following command aligns the input structures all-against-all and keeps only alignments with 80% of the sequence covered by the alignment (-c 0.8) (read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster)). It then clusters the results using greedy set cover algorithm. The clustering mode can be adjusted using --cluster-mode, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
 
 ```
@@ -192,19 +255,3 @@ foldseek search queryDB targetDB aln tmpFolder -a
 foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
 foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
-
-### Compile from source
-Compiling `foldseek` from source has the advantage of system-specific optimizations, which should improve its performance. To compile it `git`, `g++` (4.9 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the foldseek binary will be located in the `build/bin` directory.
-
-    git clone https://github.com/steineggerlab/foldseek.git
-    cd foldseek
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
-    make -j
-    make install
-    export PATH=$(pwd)/foldseek/bin/:$PATH
-
-:exclamation: If you want to compile `foldseek` on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP (by default) and `foldseek` will not be able to run multi-threaded. Adjust the `cmake` call above to:
-
-    CC="$(brew --prefix)/bin/gcc-11" CXX="$(brew --prefix)/bin/g++-11" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,6 +17,7 @@ jobs:
       - name: Build
         run: |
           mkdir -p build
+          rustup update
           cd build
           LIBOMP=$(brew --prefix libomp)
           cmake \

@@ -1,5 +1,8 @@
 //! Main block aligner algorithm and supporting data structures.
 
+#[cfg(feature = "simd_sse2")]
+use crate::sse2::*;
+
 #[cfg(feature = "simd_avx2")]
 use crate::avx2::*;
 
@@ -100,6 +103,7 @@ pub struct Block<const TRACE: bool, const X_DROP: bool> {
 
 macro_rules! align_core_gen {
     ($fn_name:ident, $matrix_or_profile:tt, $state:tt, $place_block_right_fn:path, $place_block_down_fn:path) => {
+        #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
         #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
         #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
         #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -335,6 +339,8 @@ macro_rules! align_core_gen {
                 let D_max_max = simd_hmax_i16(D_max);
                 let grow_max = simd_hmax_i16(grow_D_max);
                 // max score of the entire block
+                // note that other than off_max and best_max, the other maxs are relative to the
+                // offsets off and ZERO
                 let max = cmp::max(D_max_max, grow_max);
                 off_max = off + (max as i32) - (ZERO as i32);
                 #[cfg(feature = "debug")]
@@ -365,7 +371,7 @@ macro_rules! align_core_gen {
                             },
                             Direction::Grow => {
                                 // max could be in either block
-                                if max >= grow_max {
+                                if D_max_max >= grow_max {
                                     // grow right
                                     best_argmax_i = state.i + idx_i + lane_idx;
                                     best_argmax_j = state.j + prev_size + idx_j;
@@ -568,6 +574,11 @@ macro_rules! align_core_gen {
 
 /// Place block right or down for sequence-profile alignment.
 ///
+/// Although conceptually blocks are squares, this function is actually used to compute any
+/// rectangular region. For example, when shifting a block right by some step
+/// size, only the rectangular region with width = step size needs to be computed, since
+/// the new shifted block will partially overlap with the previous block.
+///
 /// Assumes all inputs are already relative to the current offset.
 ///
 /// Inside this function, everything will be treated as shifting right,
@@ -578,6 +589,7 @@ macro_rules! align_core_gen {
 /// is aligned to a profile.
 macro_rules! place_block_profile_gen {
     ($fn_name:ident, $query: ident, $query_type: ty, $reference: ident, $reference_type: ty, $q: ident, $r: ident, $right: expr) => {
+        #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
         #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
         #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
         #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -944,6 +956,7 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
     align_core_gen!(align_profile_core, Profile, StateProfile, Self::place_block_profile_right, Self::place_block_profile_down);
     align_core_gen!(align_3di_core, Matrix, State3di, Self::place_block_3di, Self::place_block_3di);
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -960,6 +973,7 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
         }
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -969,6 +983,7 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
         simd_prefix_hmax_i16!(simd_load(buf as _), STEP)
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -978,20 +993,13 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
         simd_suffix_hmax_i16!(simd_load(buf.add(buf_len - L) as _), SHRINK_SUFFIX_LEN)
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
     #[allow(non_snake_case)]
     #[inline]
     unsafe fn shift_and_offset(block_size: usize, buf1: *mut i16, buf2: *mut i16, temp_buf1: *mut i16, temp_buf2: *mut i16, off_add: Simd) -> Simd {
-        #[inline]
-        unsafe fn sr(a: Simd, b: Simd) -> Simd {
-            if STEP == L {
-                a
-            } else {
-                simd_sr_i16!(a, b, STEP)
-            }
-        }
         let mut curr1 = simd_adds_i16(simd_load(buf1 as _), off_add);
         let D_corner = simd_set1_i16(simd_extract_i16!(curr1, STEP - 1));
         let mut curr2 = simd_adds_i16(simd_load(buf2 as _), off_add);
@@ -1000,8 +1008,8 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
         while i < block_size - L {
             let next1 = simd_adds_i16(simd_load(buf1.add(i + L) as _), off_add);
             let next2 = simd_adds_i16(simd_load(buf2.add(i + L) as _), off_add);
-            simd_store(buf1.add(i) as _, sr(next1, curr1));
-            simd_store(buf2.add(i) as _, sr(next2, curr2));
+            simd_store(buf1.add(i) as _, simd_step(next1, curr1));
+            simd_store(buf2.add(i) as _, simd_step(next2, curr2));
             curr1 = next1;
             curr2 = next2;
             i += L;
@@ -1009,12 +1017,17 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
 
         let next1 = simd_load(temp_buf1 as _);
         let next2 = simd_load(temp_buf2 as _);
-        simd_store(buf1.add(block_size - L) as _, sr(next1, curr1));
-        simd_store(buf2.add(block_size - L) as _, sr(next2, curr2));
+        simd_store(buf1.add(block_size - L) as _, simd_step(next1, curr1));
+        simd_store(buf2.add(block_size - L) as _, simd_step(next2, curr2));
         D_corner
     }
 
     /// Place block right or down for sequence-sequence alignment.
+    ///
+    /// Although conceptually blocks are squares, this function is actually used to compute any
+    /// rectangular region. For example, when shifting a block right by some step
+    /// size, only the rectangular region with width = step size needs to be computed, since
+    /// the new shifted block will partially overlap with the previous block.
     ///
     /// Assumes all inputs are already relative to the current offset.
     ///
@@ -1024,6 +1037,7 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
     ///
     /// The same function can be reused for right and down shifts because
     /// sequence to sequence alignment is symmetric.
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -1167,6 +1181,11 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
 
     /// Place block right or down for sequence-sequence 3di alignment.
     ///
+    /// Although conceptually blocks are squares, this function is actually used to compute any
+    /// rectangular region. For example, when shifting a block right by some step
+    /// size, only the rectangular region with width = step size needs to be computed, since
+    /// the new shifted block will partially overlap with the previous block.
+    ///
     /// Assumes all inputs are already relative to the current offset.
     ///
     /// Inside this function, everything will be treated as shifting right,
@@ -1175,6 +1194,7 @@ impl<const TRACE: bool, const X_DROP: bool> Block<{ TRACE }, { X_DROP }> {
     ///
     /// The same function can be reused for right and down shifts because
     /// sequence to sequence alignment is symmetric.
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -1405,6 +1425,7 @@ impl Allocated {
         }
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -1481,6 +1502,7 @@ impl Trace {
         self.reference_len = reference_len;
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -1764,6 +1786,7 @@ impl Aligned {
         Self { layout, ptr }
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -1775,6 +1798,7 @@ impl Aligned {
         }
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]
@@ -1783,6 +1807,7 @@ impl Aligned {
         simd_store(self.ptr.add(idx) as _, simd_load(o.as_ptr().add(idx) as _));
     }
 
+    #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
     #[cfg_attr(feature = "simd_avx2", target_feature(enable = "avx2"))]
     #[cfg_attr(feature = "simd_wasm", target_feature(enable = "simd128"))]
     #[cfg_attr(feature = "simd_neon", target_feature(enable = "neon"))]

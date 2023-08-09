@@ -14,9 +14,11 @@
 #include "microtar.h"
 #include "PatternCompiler.h"
 #include "Coordinate16.h"
+#include "itoa.h"
 
 #include <iostream>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #ifdef HAVE_GCS
 #include "google/cloud/storage/client.h"
@@ -67,25 +69,44 @@ int structure_mtar_gzopen(mtar_t *tar, const char *filename) {
 }
 #endif
 
+template <typename T, typename U>
+static inline bool compareByFirst(const std::pair<T, U>& a, const std::pair<T, U>& b) {
+    return a.first < b.first;
+}
+
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
                     std::vector<int8_t> & camol, std::string & header, std::string & name,
                     DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
-                    float maskBfactorThreshold, size_t & tooShort, size_t &globalCnt, int thread_idx, int coordStoreMode,
-                    std::string & filename,  size_t  &fileidCnt,
-                    std::map<std::string, size_t> & entrynameToFileId,
+                    float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
+                    std::string & filename,  size_t & fileidCnt,
+                    std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
-                    std::map<size_t, std::string> & fileIdToName) {
+                    std::map<size_t, std::string> & fileIdToName,
+                    DBWriter* mappingWriter) {
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
     size_t entriesAdded = 0;
-    for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+    for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
         size_t dbKey = id + ch;
         size_t chainStart = readStructure.chain[ch].first;
         size_t chainEnd = readStructure.chain[ch].second;
         size_t chainLen = chainEnd - chainStart;
-        if(chainLen <= 3){
+        if (chainLen <= 3) {
             tooShort++;
+            continue;
+        }
+
+        bool allX = true;
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            const char aa = readStructure.ami[chainStart+pos];
+            if (aa != 'X' && aa != 'x') {
+                allX = false;
+                break;
+            }
+        }
+        if (allX) {
+            notProtein++;
             continue;
         }
 
@@ -126,6 +147,10 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
         header.append(readStructure.names[ch]);
+        if(readStructure.modelCount > 1){
+            header.append("_MODEL_");
+            header.append(std::to_string(readStructure.modelIndices[ch]));
+        }
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
             header.push_back('_');
@@ -141,18 +166,24 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         {
             std::map<std::string, size_t>::iterator it = filenameToFileId.find(filename);
             size_t fileid;
-            if(it != filenameToFileId.end()){
+            if (it != filenameToFileId.end()) {
                 fileid = it->second;
-            }else{
+            } else {
                 fileid = fileidCnt;
                 filenameToFileId[filename] = fileid;
                 fileIdToName[fileid] = filename;
                 fileidCnt++;
             }
-            entrynameToFileId[entryName] = fileid;
+            entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
         }
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
         name.clear();
+
+        if (mappingWriter != NULL) {
+            std::string taxId = SSTR(readStructure.taxIds[ch]);
+            taxId.append(1, '\n');
+            mappingWriter->writeData(taxId.c_str(), taxId.size(), dbKey, thread_idx, false);
+        }
 
         float* camolf32;
         if (coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
@@ -212,35 +243,44 @@ void sortDatafileByIdOrder(DBWriter & dbw,
     }
 }
 
-
-
-int structcreatedb(int argc, const char **argv, const Command& command) {
+int createdb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_COMMON);
 
     std::string outputName = par.filenames.back();
     par.filenames.pop_back();
+
+
+    PatternCompiler include(par.fileInclude.c_str());
+    PatternCompiler exclude(par.fileExclude.c_str());
     if (par.filenames.size() == 1 && FileUtil::directoryExists(par.filenames.back().c_str())) {
         std::vector<std::string> dirs;
         dirs.push_back(par.filenames.back());
         par.filenames.pop_back();
-        while(dirs.size() != 0){
+        while (dirs.size() != 0) {
             std::string dir = dirs.back();
             dirs.pop_back();
-            DIR * dpdf = opendir(dir.c_str());
-            if (dpdf != NULL) {
-                while (dirent * epdf = readdir(dpdf)) {
-                    std::string filename(epdf->d_name);
-                    if(filename != "." && filename !=".."){
-                        if (epdf->d_type == DT_DIR){
-                            dirs.push_back(dir+"/"+filename);
-                        }else{
-                            par.filenames.push_back(dir+"/"+filename);
+            DIR* handle = opendir(dir.c_str());
+            if (handle == NULL) {
+                continue;
+            }
+            while (dirent* entry = readdir(handle)) {
+                std::string filename(entry->d_name);
+
+                if (filename != "." && filename !="..") {
+                    std::string fullpath = dir + "/" + filename;
+                    struct stat info;
+                    stat(fullpath.c_str(), &info);
+		    if (info.st_mode & S_IFDIR) {
+                        dirs.push_back(fullpath);
+                    } else {
+                        if (include.isMatch(filename.c_str()) == true && exclude.isMatch(filename.c_str()) == false) {
+                            par.filenames.push_back(fullpath);
                         }
                     }
                 }
-                closedir(dpdf);
             }
+            closedir(handle);
         }
     }
 
@@ -255,9 +295,15 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
+    DBWriter* mappingWriter = NULL;
+    if (par.writeMapping) {
+        mappingWriter = new DBWriter((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), static_cast<unsigned int>(par.threads), false, LocalParameters::DBTYPE_OMIT_FILE);
+        mappingWriter->open();
+    }
+
     SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
     Debug::Progress progress(par.filenames.size());
-    std::map<std::string, size_t> entrynameToFileId;
+    std::map<std::string, std::pair<size_t, unsigned int>> entrynameToFileId;
     std::map<size_t, std::string> fileIdToName;
     std::map<std::string, size_t> filenameToFileId;
 
@@ -288,7 +334,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     size_t globalFileidCnt = 0;
     size_t incorrectFiles = 0;
     size_t tooShort = 0;
+    size_t notProtein = 0;
     bool needsReorderingAtTheEnd = false;
+    size_t needToWriteModel = 0;
+
     // Process tar files!
     for(size_t i = 0; i < tarFiles.size(); i++) {
         mtar_t tar;
@@ -316,7 +365,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
 #endif
 
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName) num_threads(localThreads) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -336,7 +385,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             int status = inflateInit2(&strm, 15 | 32);
             if (status < 0) {
                 Debug(Debug::ERROR) << "Cannot initialize zlib stream\n";
-                //EXIT(EXIT_FAILURE);
+                EXIT(EXIT_FAILURE);
             }
 #endif
             //recon_related
@@ -355,8 +404,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             size_t inflateSize = 1024 * 1024;
             char *inflateBuffer = (char *) malloc(inflateSize);
             bool proceed = true;
-            PatternCompiler include(par.tarInclude.c_str());
-            PatternCompiler exclude(par.tarExclude.c_str());
+            PatternCompiler includeThread(par.fileInclude.c_str());
+            PatternCompiler excludeThread(par.fileExclude.c_str());
+
             while (proceed) {
                 bool writeEntry = true;
 #pragma omp critical
@@ -370,13 +420,13 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                             }
                             if (mtar_read_data(&tar, dataBuffer, tarHeader.size) != MTAR_ESUCCESS) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << tarHeader.name << "\n";
-                                //EXIT(EXIT_FAILURE);
+                                EXIT(EXIT_FAILURE);
                             }
                             name.assign(dataBuffer, tarHeader.size);
                             // skip to next record
                             if (mtar_read_header(&tar, &tarHeader) == MTAR_ENULLRECORD) {
                                 Debug(Debug::ERROR) << "Tar truncated after entry " << name << "\n";
-                                //EXIT(EXIT_FAILURE);
+                                EXIT(EXIT_FAILURE);
                             }
                         } else {
                             name = tarHeader.name;
@@ -389,9 +439,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                             }
                             if (mtar_read_data(&tar, dataBuffer, tarHeader.size) != MTAR_ESUCCESS) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << name << "\n";
-                                //EXIT(EXIT_FAILURE);
+                                EXIT(EXIT_FAILURE);
                             }
-                            if (include.isMatch(name.c_str()) == false || exclude.isMatch(name.c_str()) == true) {
+                            if (includeThread.isMatch(name.c_str()) == false || excludeThread.isMatch(name.c_str()) == true) {
                                 proceed = true;
                                 writeEntry = false;
                             } else {
@@ -429,14 +479,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                 default:
                                     inflateEnd(&strm);
                                     Debug(Debug::ERROR) << "Gzip error " << err << " entry " << name << "\n";
-                                    //EXIT(EXIT_FAILURE);
+                                    EXIT(EXIT_FAILURE);
                             }
                             have = CHUNK - strm.avail_out;
                             pdbFile.append((char *) out, have);
                         } while (strm.avail_out == 0);
 #else
                         Debug(Debug::ERROR) << "MMseqs2 was not compiled with zlib support. Cannot read compressed input.\n";
-                EXIT(EXIT_FAILURE);
+                        EXIT(EXIT_FAILURE);
 #endif
                     } else {
                         pdbFile.append(dataBuffer, tarHeader.size);
@@ -445,10 +495,16 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         incorrectFiles++;
                         continue;
                     }
-                    writeStructureEntry(mat, readStructure, structureTo3Di, pulchra,
-                                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                        par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
-                                        name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+
+                    __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
+
+                    writeStructureEntry(
+                        mat, readStructure, structureTo3Di, pulchra,
+                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                        par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
+                        name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                        mappingWriter
+                    );
                 }
             } // end while
             free(inflateBuffer);
@@ -459,7 +515,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -475,7 +531,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         std::string header;
         std::string name;
 
-
 #pragma omp for schedule(static)
         for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
@@ -484,13 +539,16 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 incorrectFiles++;
                 continue;
             }
+            __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
             // clear memory
-            writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
-                                alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
-                                looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+            writeStructureEntry(
+                mat, readStructure, structureTo3Di,  pulchra,
+                alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
+                looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                mappingWriter
+            );
         }
-
     }
 
 #ifdef HAVE_GCS
@@ -512,7 +570,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -545,10 +603,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                             if (readStructure.loadFromBuffer(contents.c_str(), contents.size(), obj_name) == false) {
                                 incorrectFiles++;
                             } else {
-                                writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
-                                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                        par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
-                                        obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+                                __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
+                                writeStructureEntry(
+                                    mat, readStructure, structureTo3Di,  pulchra,
+                                    alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                                    par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
+                                    obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                                    mappingWriter
+                                );
                             }
                         }
                     }
@@ -562,7 +624,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader) reduction(+:incorrectFiles, tooShort)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -592,10 +654,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 if (readStructure.loadFromBuffer(data, len, name) == false) {
                     incorrectFiles++;
                 } else {
-                    writeStructureEntry(mat, readStructure, structureTo3Di,  pulchra,
-                            alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                            par.chainNameMode, par.maskBfactorThreshold, tooShort, globalCnt, thread_idx, par.coordStoreMode,
-                            dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName);
+                    __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
+                    writeStructureEntry(
+                        mat, readStructure, structureTo3Di,  pulchra,
+                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                        par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
+                        dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                        mappingWriter
+                    );
                 }
             }
         }
@@ -606,9 +672,12 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     hdbw.close(true);
     cadbw.close(true);
     aadbw.close(true);
+    if (par.writeMapping) {
+        mappingWriter->close(true);
+        delete mappingWriter;
+    }
 
-
-    if(needsReorderingAtTheEnd) {
+    if (needsReorderingAtTheEnd) {
         Debug(Debug::INFO) << "Reordering by identifier\n";
         DBReader<unsigned int> header_reorder((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
         header_reorder.open(DBReader<unsigned int>::NOSORT);
@@ -644,7 +713,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
             buffer.clear();
         }
-        fclose(file);
+        if (fclose(file) != 0) {
+            Debug(Debug::ERROR) << "Cannot close lookup file " << lookupFile << "\n";
+            EXIT(EXIT_FAILURE);
+        }
 
         DBWriter hdbw_reorder((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
         hdbw_reorder.open();
@@ -678,11 +750,56 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         sortDatafileByIdOrder(aadbw_reorder, aadbr_reorder, mappingOrder);
         aadbw_reorder.close(true);
         aadbr_reorder.close();
-    }else{
+
+        if (par.writeMapping) {
+            DBReader<unsigned int> mappingReader_reorder((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+            mappingReader_reorder.open(DBReader<unsigned int>::NOSORT);
+            mappingReader_reorder.readMmapedDataInMemory();
+            DBWriter mappingWriter_reorder((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
+            mappingWriter_reorder.open();
+            sortDatafileByIdOrder(mappingWriter_reorder, mappingReader_reorder, mappingOrder);
+            mappingWriter_reorder.close(true);
+            mappingReader_reorder.close();
+        }
+    } else {
         DBWriter::createRenumberedDB((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         DBWriter::createRenumberedDB((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         DBWriter::createRenumberedDB((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         DBWriter::createRenumberedDB((outputName).c_str(), (outputName+".index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+        if (par.writeMapping) {
+            DBWriter::createRenumberedDB((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+        }
+    }
+
+    if (par.writeMapping) {
+        std::string mappingFile = outputName + "_mapping";
+        FILE* file = FileUtil::openAndDelete(mappingFile.c_str(), "w");
+        char buffer[1024];
+        DBReader<unsigned int> mappingReader((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), 1, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        mappingReader.open(DBReader<unsigned int>::NOSORT);
+        for (size_t i = 0; i < mappingReader.getSize(); ++i) {
+            unsigned int key = mappingReader.getDbKey(i);
+            char* data = mappingReader.getData(i, 0);
+            size_t entryLength = mappingReader.getEntryLen(i) - 1;
+            char* basePos = buffer;
+            char* tmpBuff = Itoa::u32toa_sse2(static_cast<uint32_t>(key), buffer);
+            *(tmpBuff-1) = '\t';
+            strncpy(tmpBuff, data, entryLength);
+            tmpBuff = tmpBuff + entryLength;
+            *(tmpBuff) = '\n';
+            size_t length = tmpBuff - basePos + 1;
+            size_t written = fwrite(buffer, sizeof(char), length, file);
+            if (written != length) {
+                Debug(Debug::ERROR) << "Error writing to file " << mappingFile << "\n";
+                EXIT(EXIT_FAILURE);
+            }
+        }
+        mappingReader.close();
+        if (fclose(file) != 0) {
+            Debug(Debug::ERROR) << "Cannot close file " << mappingFile << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+        DBReader<unsigned int>::removeDb(outputName + "_mapping_tmp");
     }
 
     if (par.writeLookup == true) {
@@ -690,20 +807,33 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                             1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
         readerHeader.open(DBReader<unsigned int>::NOSORT);
         // create lookup file
-        std::string sourceFilename = outputName + ".source";
-        FILE *sourceFile = FileUtil::openAndDelete(sourceFilename.c_str(), "w");
         std::string lookupFile = outputName + ".lookup";
         FILE *file = FileUtil::openAndDelete(lookupFile.c_str(), "w");
         std::string buffer;
         size_t maxFileId = 0;
         buffer.reserve(2048);
         DBReader<unsigned int>::LookupEntry entry;
+        std::string sourceFilename = outputName + ".source";
+        FILE *sourceFile = FileUtil::openAndDelete(sourceFilename.c_str(), "w");
+        std::map< std::pair<size_t, unsigned int>, size_t> modelFileIdLookup;
+        size_t globalFileNumber = 0;
+        bool needToWriteSource = false;
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
             entry.entryName = Util::parseFastaHeader(header);
-            size_t fileId = entrynameToFileId[entry.entryName];
-            entry.fileNumber = fileId;
+            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entry.entryName];
+            size_t fileId = fileIdModelEntry.first;
+            if(modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()){
+                modelFileIdLookup[fileIdModelEntry] = globalFileNumber;
+                entry.fileNumber = globalFileNumber;
+                globalFileNumber++;
+                needToWriteSource = true;
+            }else{
+                entry.fileNumber = modelFileIdLookup[fileIdModelEntry];
+                needToWriteSource = false;
+            }
+
             maxFileId = std::max(fileId, maxFileId);
             readerHeader.lookupEntryToBuffer(buffer, entry);
             size_t written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), file);
@@ -712,25 +842,40 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 EXIT(EXIT_FAILURE);
             }
             buffer.clear();
+            if(needToWriteSource) {
+                std::string filename = FileUtil::baseName(fileIdToName[fileId]);
+                if(needToWriteModel) {
+                    filename.append("_MODEL_");
+                    filename.append(SSTR(fileIdModelEntry.second));
+                }
+                buffer.append(SSTR(entry.fileNumber));
+                buffer.push_back('\t');
+                buffer.append(filename);
+                buffer.push_back('\n');
+                written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), sourceFile);
+                if (written != buffer.size()) {
+                    Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
+                    EXIT(EXIT_FAILURE);
+                }
+                buffer.clear();
+            }
+        }
+        if (fclose(file) != 0) {
+            Debug(Debug::ERROR) << "Cannot close lookup file " << lookupFile << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+        if (fclose(sourceFile) != 0) {
+            Debug(Debug::ERROR) << "Cannot close source file " << sourceFilename << "\n";
+            EXIT(EXIT_FAILURE);
         }
         readerHeader.close();
-        for(unsigned int fileId = 0; fileId <= maxFileId; fileId++) {
-            std::string filename = fileIdToName[fileId];
-            buffer.append(SSTR(fileId));
-            buffer.push_back('\t');
-            buffer.append(FileUtil::baseName(fileIdToName[fileId]));
-            buffer.push_back('\n');
-            size_t written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), sourceFile);
-            if (written != buffer.size()) {
-                Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
-                EXIT(EXIT_FAILURE);
-            }
-            buffer.clear();
-        }
     }
-
-
-    Debug(Debug::INFO) << "Ignore " << tooShort+incorrectFiles << " out of " << globalCnt << ".\n";
-    Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect  " << incorrectFiles << ".\n";
+    if (globalCnt == 0) {
+        Debug(Debug::ERROR) << "No structures found in given input.\n";
+        EXIT(EXIT_FAILURE);
+    }
+    
+    Debug(Debug::INFO) << "Ignore " << (tooShort+incorrectFiles+notProtein) << " out of " << globalCnt << ".\n";
+    Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect: " << incorrectFiles << ", not proteins: " << notProtein << ".\n";
     return EXIT_SUCCESS;
 }

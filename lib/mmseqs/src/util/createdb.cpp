@@ -184,7 +184,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             progress.updateProgress();
             const KSeqWrapper::KSeqEntry &e = kseq->entry;
             if (e.name.l == 0) {
-                Debug(Debug::ERROR) << "Fasta entry " << entries_num << " is invalid\n";
+                Debug(Debug::ERROR) << "Fasta entry " << numEntriesInCurrFile << " is invalid\n";
                 EXIT(EXIT_FAILURE);
             }
 
@@ -199,7 +199,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 std::string headerId = Util::parseFastaHeader(header.c_str());
                 if (headerId.empty()) {
                     // An identifier is necessary for these two cases, so we should just give up
-                    Debug(Debug::WARNING) << "Cannot extract identifier from entry " << entries_num << "\n";
+                    Debug(Debug::WARNING) << "Cannot extract identifier from entry " << numEntriesInCurrFile << "\n";
                 }
                 header.push_back('\n');
             }
@@ -228,28 +228,29 @@ int createdb(int argc, const char **argv, const Command& command) {
                     }
                     sampleCount++;
                 }
-                if (par.createdbMode == Parameters::SEQUENCE_SPLIT_MODE_SOFT) {
-                    if (e.newlineCount != 1) {
-                        if (e.newlineCount == 0) {
-                            Debug(Debug::WARNING) << "Fasta entry " << entries_num << " has no newline character\n";
-                        } else if (e.newlineCount > 1) {
-                            Debug(Debug::WARNING) << "Multiline fasta can not be combined with --createdb-mode 0\n";
-                        }
-                        Debug(Debug::WARNING) << "We recompute with --createdb-mode 1\n";
-                        par.createdbMode = Parameters::SEQUENCE_SPLIT_MODE_HARD;
-                        progress.reset(SIZE_MAX);
-                        hdrWriter.close();
-                        seqWriter.close();
-                        delete kseq;
-                        if (fclose(source) != 0) {
-                            Debug(Debug::ERROR) << "Cannot close file " << sourceFile << "\n";
-                            EXIT(EXIT_FAILURE);
-                        }
-                        for (size_t i = 0; i < shuffleSplits; ++i) {
-                            sourceLookup[i].clear();
-                        }
-                        goto redoComputation;
+            }
+
+            if (par.createdbMode == Parameters::SEQUENCE_SPLIT_MODE_SOFT) {
+                if (e.newlineCount != 1) {
+                    if (e.newlineCount == 0) {
+                        Debug(Debug::WARNING) << "Fasta entry " << numEntriesInCurrFile << " has no newline character\n";
+                    } else if (e.newlineCount > 1) {
+                        Debug(Debug::WARNING) << "Multiline fasta can not be combined with --createdb-mode 0\n";
                     }
+                    Debug(Debug::WARNING) << "We recompute with --createdb-mode 1\n";
+                    par.createdbMode = Parameters::SEQUENCE_SPLIT_MODE_HARD;
+                    progress.reset(SIZE_MAX);
+                    hdrWriter.close();
+                    seqWriter.close();
+                    delete kseq;
+                    if (fclose(source) != 0) {
+                        Debug(Debug::ERROR) << "Cannot close file " << sourceFile << "\n";
+                        EXIT(EXIT_FAILURE);
+                    }
+                    for (size_t i = 0; i < shuffleSplits; ++i) {
+                        sourceLookup[i].clear();
+                    }
+                    goto redoComputation;
                 }
             }
 
@@ -272,6 +273,11 @@ int createdb(int argc, const char **argv, const Command& command) {
             numEntriesInCurrFile++;
             header.clear();
         }
+
+        if (numEntriesInCurrFile == 0) {
+            Debug(Debug::WARNING) << "File " << sourceName << " is empty or invalid and was ignored\n";
+        }
+
         delete kseq;
         if (filenames.size() > 1 && par.createdbMode == Parameters::SEQUENCE_SPLIT_MODE_SOFT) {
             size_t fileSize = FileUtil::getFileSize(filenames[fileIdx].c_str());

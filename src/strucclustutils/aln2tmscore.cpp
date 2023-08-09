@@ -64,7 +64,7 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         std::string resultsStr;
         resultsStr.reserve(10 * 1024);
 
-        TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false);
+        TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false, true);
         Coordinate16 qcoords;
         Coordinate16 tcoords;
 

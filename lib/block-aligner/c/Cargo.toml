@@ -1,8 +1,8 @@
 # Minimal Cargo.toml to avoid downloading dependencies.
 
 [package]
-name = "block-aligner"
-version = "0.3.0"
+name = "block-aligner-c"
+version = "0.4.0"
 authors = ["c0deb0t <daniel.liu02@gmail.com>"]
 edition = "2018"
 
@@ -11,12 +11,17 @@ crate-type = ["lib", "cdylib", "staticlib"]
 path = "../src/lib.rs"
 
 [features]
+# Enable SSE2
+simd_sse2 = []
 # Enable AVX2
 simd_avx2 = []
 # Enable WASM SIMD
 simd_wasm = []
 # Enable Neon
 simd_neon = []
+
+# No SIMD
+no_simd = []
 
 # Print lots of debug information
 debug = ["debug_size"]

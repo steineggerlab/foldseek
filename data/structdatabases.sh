@@ -147,14 +147,28 @@ case "${INPUT_TYPE}" in
     "FOLDSEEK_DB")
         eval "set -- $ARR"
         IN="${*}"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" mvdb "${IN}" "${OUTDB}" || fail "mv died"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" mvdb "${IN}_ss" "${OUTDB}_ss" || fail "mv died"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" mvdb "${IN}_h" "${OUTDB}_h" || fail "mv died"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" mvdb "${IN}_ca" "${OUTDB}_ca" || fail "mv died"
+        for SUFFIX in ".source" "_mapping" "_taxonomy"; do
+            if [ -e "${IN}_seq${SUFFIX}" ]; then
+                mv -f -- "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}"
+            fi
+            if [ -e "${IN}${SUFFIX}" ]; then
+                mv -f -- "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}"
+            fi
+        done
+
+        for SUFFIX in "" "_ss" "_h" "_ca"; do
+            if [ -e "${IN}_seq${SUFFIX}.dbtype" ]; then
+                # shellcheck disable=SC2086
+                "${MMSEQS}" mvdb "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}" || fail "mv died"
+            fi
+            # shellcheck disable=SC2086
+            "${MMSEQS}" mvdb "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}" || fail "mv died"
+        done
+
+        if [ -e "${IN}_clu.dbtype" ]; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" mvdb "${IN}_clu" "${OUTDB}_clu" || fail "mv died"
+        fi
     ;;
 esac
 fi
@@ -166,6 +180,10 @@ case "${INPUT_TYPE}" in
         IN="${*}"
         mv -f -- "${IN}_mapping" "${OUTDB}_mapping"
         mv -f -- "${IN}_taxonomy" "${OUTDB}_taxonomy"
+        if [ -e "${IN}_seq.dbtype" ]; then
+            mv -f -- "${IN}_seq_mapping" "${OUTDB}_seq_mapping"
+            mv -f -- "${IN}_seq_taxonomy" "${OUTDB}_seq_taxonomy"
+        fi
     ;;
 esac
 fi

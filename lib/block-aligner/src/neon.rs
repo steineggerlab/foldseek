@@ -122,9 +122,20 @@ macro_rules! simd_sr_i16 {
             debug_assert!($num <= L);
             #[cfg(target_arch = "aarch64")]
             use std::arch::aarch64::*;
-            vextq_s16($b, $a, $num as i32)
+            if $num == L {
+                $a
+            } else {
+                vextq_s16($b, $a, $num as i32)
+            }
         }
     };
+}
+
+// hardcoded to STEP = 8
+#[target_feature(enable = "neon")]
+#[inline]
+pub unsafe fn simd_step(a: Simd, b: Simd) -> Simd {
+    a
 }
 
 macro_rules! simd_sllz_i16 {

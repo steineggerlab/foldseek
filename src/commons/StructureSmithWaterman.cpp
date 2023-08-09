@@ -59,6 +59,7 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     profile->profile_3di_rev_byte = (simd_int*)mem_align(ALIGN_INT, aaSize * segSize * sizeof(simd_int));
     profile->profile_3di_rev_word = (simd_int*)mem_align(ALIGN_INT, aaSize * segSize * sizeof(simd_int));
     // gap penalties
+#ifdef GAP_POS_SCORING
     profile->profile_gDelOpen_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
     profile->profile_gDelOpen_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
     profile->profile_gDelClose_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
@@ -76,6 +77,7 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     profile->gDelOpen_rev = new uint8_t[maxSequenceLength];
     profile->gDelClose_rev = new uint8_t[maxSequenceLength];
     profile->gIns_rev = new uint8_t[maxSequenceLength];
+#endif
     // remaining
     profile->query_aa_rev_sequence = new int8_t[maxSequenceLength];
     profile->query_aa_sequence     = new int8_t[maxSequenceLength];
@@ -126,6 +128,7 @@ StructureSmithWaterman::~StructureSmithWaterman(){
     free(profile->profile_3di_word);
     free(profile->profile_3di_rev_byte);
     free(profile->profile_3di_rev_word);
+#ifdef GAP_POS_SCORING
     free(profile->profile_gDelOpen_byte);
     free(profile->profile_gDelOpen_word);
     free(profile->profile_gDelClose_byte);
@@ -143,6 +146,7 @@ StructureSmithWaterman::~StructureSmithWaterman(){
     delete[] profile->gDelOpen_rev;
     delete[] profile->gDelClose_rev;
     delete[] profile->gIns_rev;
+#endif
     delete [] profile->query_aa_rev_sequence;
     delete [] profile->query_aa_sequence;
     delete [] profile->query_3di_rev_sequence;
@@ -165,7 +169,7 @@ StructureSmithWaterman::~StructureSmithWaterman(){
     delete [] tmp_composition_bias;
     delete [] maxColumn;
     delete profile;
-    block_free_aa_trace(block);
+    block_free_aa_trace_xdrop(block);
 }
 
 
@@ -207,6 +211,7 @@ void StructureSmithWaterman::createQueryProfile(simd_int *profile, const int8_t 
 
 }
 
+#ifdef GAP_POS_SCORING
 template <typename T, size_t Elements>
 void StructureSmithWaterman::createGapProfile(simd_int* profile_gDelOpen, simd_int* profile_gDelClose, simd_int* profile_gIns,
                                               const uint8_t* gDelOpen, const uint8_t* gDelClose, const uint8_t* gIns,
@@ -225,6 +230,7 @@ void StructureSmithWaterman::createGapProfile(simd_int* profile_gDelOpen, simd_i
         }
     }
 }
+#endif
 
 template <unsigned int profile_type>
 StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
@@ -259,13 +265,20 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignScoreEndPos (
 //    if (bests.first.score == 255) {
         if(profile->isProfile) {
             bests = sw_sse2_word<profile_type>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
-                                              gap_open, gap_extend, profile->profile_gDelOpen_word, profile->profile_gDelClose_word,
-                                              profile->profile_gIns_word, profile->profile_aa_word,
+                                              gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                              profile->profile_gDelOpen_word, profile->profile_gDelClose_word, profile->profile_gIns_word,
+#endif
+                                              profile->profile_aa_word,
                                               profile->profile_3di_word, USHRT_MAX, maskLen);
 
         } else {
             bests = sw_sse2_word<SUBSTITUTIONMATRIX>(db_aa_sequence, db_3di_sequence, 0, db_length, query_length,
-                                                     gap_open, gap_extend, NULL, NULL, NULL, profile->profile_aa_word,
+                                                     gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                                     NULL, NULL, NULL,
+#endif
+                                                     profile->profile_aa_word,
                                                      profile->profile_3di_word, USHRT_MAX, maskLen);
         }
         r.word = 1;
@@ -381,7 +394,6 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
 
     }
 
-
     Cigar* cigar = block_new_cigar(queryAlnLen, targetAlnLen);
 
     AlignResult res;
@@ -403,9 +415,10 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
         res = block_res_aa_trace_xdrop(block);
         min_size *= 2;
     }
-    if(res.score != target_score){
+
+    if (res.score != target_score && !(target_score == INT16_MAX && res.score >= target_score)) {
         printf("ERROR: target_score not reached. res.score: %d target_score: %d", res.score, target_score);
-        exit(1);
+        exit(1); // TODO
     }
 
     block_cigar_aa_trace_xdrop(block, res.query_idx, res.reference_idx, cigar);
@@ -497,12 +510,16 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
                                                                      r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
             createQueryProfile<int8_t, VECSIZE_INT * 4, profile_type>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, NULL, profile->rev_alignment_3di_profile,
                                                                      r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
+#ifdef GAP_POS_SCORING
             createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte, profile->profile_gIns_rev_byte,
                                                       profile->gDelOpen_rev, profile->gDelClose_rev, profile->gIns_rev, profile->query_length, queryOffset);
-
+#endif
             bests_reverse = sw_sse2_byte<profile_type>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
-                                                      gap_open, gap_extend, profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte,
-                                                      profile->profile_gIns_rev_byte,profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
+                                                      gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                                      profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte, profile->profile_gIns_rev_byte, 
+#endif
+                                                      profile->profile_aa_rev_byte, profile->profile_3di_rev_byte,
                                                       r.score1, profile->bias, maskLen);
         }else{
             createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_byte, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
@@ -510,7 +527,10 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
             createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_byte, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
                                                                             r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
             bests_reverse = sw_sse2_byte<SUBSTITUTIONMATRIX>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
-                                                             gap_open, gap_extend, NULL, NULL, NULL,
+                                                             gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                                             NULL, NULL, NULL,
+#endif
                                                              profile->profile_aa_rev_byte,profile->profile_3di_rev_byte,
                                                              r.score1, profile->bias, maskLen);
         }
@@ -520,14 +540,19 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
                                                                       r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
             createQueryProfile<int16_t, VECSIZE_INT * 2, profile_type>(profile->profile_3di_rev_word,profile->query_3di_rev_sequence,NULL,profile->rev_alignment_3di_profile,
                                                                       r.qEndPos1 + 1, profile->alphabetSize, 0,queryOffset, profile->query_length);
+#ifdef GAP_POS_SCORING
             createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_rev_word,
                                                        profile->profile_gDelClose_rev_word,
                                                        profile->profile_gIns_rev_word, profile->gDelOpen_rev,
                                                        profile->gDelClose_rev, profile->gIns_rev,
                                                        profile->query_length, queryOffset);
+#endif
             bests_reverse = sw_sse2_word<profile_type>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
-                                                      gap_open, gap_extend, profile->profile_gDelOpen_rev_word, profile->profile_gDelClose_rev_word,
-                                                      profile->profile_gIns_rev_word,profile->profile_aa_rev_word, profile->profile_3di_rev_word,
+                                                      gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                                      profile->profile_gDelOpen_rev_word, profile->profile_gDelClose_rev_word, profile->profile_gIns_rev_word,
+#endif
+                                                      profile->profile_aa_rev_word, profile->profile_3di_rev_word,
                                                       r.score1, maskLen);
         }else{
             createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_aa_rev_word, profile->query_aa_rev_sequence, profile->composition_bias_aa_rev, profile->mat_aa,
@@ -535,7 +560,10 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
             createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_3di_rev_word, profile->query_3di_rev_sequence, profile->composition_bias_ss_rev, profile->mat_3di,
                                                                              r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
             bests_reverse = sw_sse2_word<SUBSTITUTIONMATRIX>(db_aa_sequence, db_3di_sequence, 1, r.dbEndPos1 + 1, r.qEndPos1 + 1,
-                                                             gap_open, gap_extend, NULL, NULL, NULL,
+                                                             gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                                             NULL, NULL, NULL,
+#endif
                                                              profile->profile_aa_rev_word, profile->profile_3di_rev_word,
                                                              r.score1, maskLen);
         }
@@ -576,8 +604,10 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
                                       profile->composition_bias_aa + r.qStartPos1,
                                       profile->composition_bias_ss + r.qStartPos1,
                                       db_length, query_length, r.qStartPos1, r.score1,
-                                      gap_open, gap_extend, profile->gDelOpen + r.qStartPos1,
-                                      profile->gDelClose + r.qStartPos1, profile->gIns + r.qStartPos1,
+                                      gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                      profile->gDelOpen + r.qStartPos1, profile->gDelClose + r.qStartPos1, profile->gIns + r.qStartPos1,
+#endif
                                       band_width,profile->alignment_aa_profile,  profile->query_length,
                                       profile->alignment_3di_profile, profile->query_length);
     } else {
@@ -588,7 +618,10 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktrace (
                                              profile->composition_bias_aa + r.qStartPos1,
                                              profile->composition_bias_ss + r.qStartPos1,
                                              db_length, query_length, r.qStartPos1, r.score1,
-                                             gap_open, gap_extend, NULL, NULL, NULL,
+                                             gap_open, gap_extend,
+#ifdef GAP_POS_SCORING
+                                             NULL, NULL, NULL,
+#endif
                                              band_width, profile->mat_aa,  profile->alphabetSize,
                                              profile->mat_3di, profile->alphabetSize);
     }
@@ -939,9 +972,11 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
                                                                                                                               int32_t query_length,
                                                                                                                               const uint8_t gap_open, /* will be used as - */
                                                                                                                               const uint8_t gap_extend, /* will be used as - */
+#ifdef GAP_POS_SCORING
                                                                                                                               const simd_int *gap_open_del,
                                                                                                                               const simd_int *gap_close_del,
                                                                                                                               const simd_int *gap_open_ins,
+#endif
                                                                                                                               const simd_int* query_aa_profile_byte,
                                                                                                                               const simd_int* query_3di_profile_byte,
                                                                                                                               uint8_t terminate,	/* the best alignment score: used to terminate
@@ -974,10 +1009,14 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
 
     int32_t i, j;
     /* 16 byte insertion begin vector */
+#ifdef GAP_POS_SCORING
     simd_int vGapO;
     if (type != PROFILE_HMM) {
         vGapO = simdi8_set(gap_open);
     }
+#else
+    simd_int vGapO = simdi8_set(gap_open);
+#endif
 
     /* 16 byte insertion extension vector */
     simd_int vGapE = simdi8_set(gap_extend);
@@ -1040,11 +1079,15 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
             /* Get max from vH, vE and vF. */
             e = simdi_load(pvE + j);
             vH = simdui8_max(vH, e);
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 vH = simdui8_max(vH, simdui8_subs(vF, simdi_load(gap_close_del + j)));
             } else {
+#endif
                 vH = simdui8_max(vH, vF);
+#ifdef GAP_POS_SCORING
             }
+#endif
             vMaxColumn = simdui8_max(vMaxColumn, vH);
 
             //	max16(maxColumn[i], vMaxColumn);
@@ -1055,24 +1098,32 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
             simdi_store(pvHStore + j, vH);
 
             /* Update vE value. */
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 // copy vH for update of vF
                 vTemp = vH;
                 vH = simdui8_subs(vH, simdi_load(gap_open_ins + j)); /* saturation arithmetic, result >= 0 */
             } else {
+#endif
                 vH = simdui8_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
+#ifdef GAP_POS_SCORING
             }
+#endif
             e = simdui8_subs(e, vGapE);
             e = simdui8_max(e, vH);
             simdi_store(pvE + j, e);
 
             /* Update vF value. */
             vF = simdui8_subs(vF, vGapE);
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 vF = simdui8_max(vF, simdui8_subs(vTemp, simdi_load(gap_open_del + j)));
             } else {
+#endif
                 vF = simdui8_max(vF, vH);
+#ifdef GAP_POS_SCORING
             }
+#endif
 
             /* Load the next vH. */
             vH = simdi_load(pvHLoad + j);
@@ -1087,21 +1138,29 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
         /*  we are at the end, we need to shift the vF value over */
         /*  to the next column. */
         vF = simdi8_shiftl (vF, 1);
+#ifdef GAP_POS_SCORING
         if (type == PROFILE_HMM) {
             vTemp = simdui8_subs(vH, simdi_load(gap_open_del + j));
         } else {
+#endif
             vTemp = simdui8_subs(vH, vGapO);
+#ifdef GAP_POS_SCORING
         }
+#endif
         vTemp = simdui8_subs (vF, vTemp);
         vTemp = simdi8_eq (vTemp, vZero);
         uint32_t cmp = simdi8_movemask (vTemp);
         while (cmp != SIMD_MOVEMASK_MAX) {
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 vH = simdui8_max (vH, simdui8_subs(vF, simdi_load(gap_close_del + j)));
                 simdi_store(pvE + j, simdui8_max(simdi_load(pvE + j), simdui8_subs(vH, simdi_load(gap_open_ins + j))));
             } else {
+#endif
                 vH = simdui8_max (vH, vF);
+#ifdef GAP_POS_SCORING
             }
+#endif
             vMaxColumn = simdui8_max(vMaxColumn, vH);
             simdi_store (pvHStore + j, vH);
             vF = simdui8_subs (vF, vGapE);
@@ -1112,11 +1171,15 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
                 vF = simdi8_shiftl (vF, 1);
             }
             vH = simdi_load (pvHStore + j);
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 vTemp = simdui8_subs(vH, simdi_load(gap_open_del + j));
             } else {
+#endif
                 vTemp = simdui8_subs(vH, vGapO);
+#ifdef GAP_POS_SCORING
             }
+#endif
             vTemp = simdui8_subs (vF, vTemp);
             vTemp = simdi8_eq (vTemp, vZero);
             cmp  = simdi8_movemask (vTemp);
@@ -1198,9 +1261,11 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
                                                                                                                               int32_t query_length,
                                                                                                                               const uint8_t gap_open, /* will be used as - */
                                                                                                                               const uint8_t gap_extend, /* will be used as - */
+#ifdef GAP_POS_SCORING
                                                                                                                               const simd_int *gap_open_del,
                                                                                                                               const simd_int *gap_close_del,
                                                                                                                               const simd_int *gap_open_ins,
+#endif
                                                                                                                               const simd_int*query_aa_profile_word,
                                                                                                                               const simd_int*query_3di_profile_word,
                                                                                                                               uint16_t terminate,
@@ -1230,10 +1295,14 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
 
     int32_t i, j, k;
     /* 16 byte insertion begin vector */
+#ifdef GAP_POS_SCORING
     simd_int vGapO;
     if (type != PROFILE_HMM) {
         vGapO = simdi16_set(gap_open);
     }
+#else
+    simd_int vGapO = simdi16_set(gap_open);
+#endif
 
     /* 16 byte insertion extension vector */
     simd_int vGapE = simdi16_set(gap_extend);
@@ -1275,35 +1344,47 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
             /* Get max from vH, vE and vF. */
             e = simdi_load(pvE + j);
             vH = simdi16_max(vH, e);
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 vH = simdi16_max(vH, simdui16_subs(vF, simdi_load(gap_close_del + j)));
             } else {
+#endif
                 vH = simdi16_max(vH, vF);
+#ifdef GAP_POS_SCORING
             }
+#endif
             vMaxColumn = simdi16_max(vMaxColumn, vH);
 
             /* Save vH values. */
             simdi_store(pvHStore + j, vH);
 
             /* Update vE value. */
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 // copy vH for update of vF
                 vTemp = vH;
                 vH = simdui16_subs(vH, simdi_load(gap_open_ins + j)); /* saturation arithmetic, result >= 0 */
             } else {
+#endif
                 vH = simdui16_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
+#ifdef GAP_POS_SCORING
             }
+#endif
             e = simdui16_subs(e, vGapE);
             e = simdi16_max(e, vH);
             simdi_store(pvE + j, e);
 
             /* Update vF value. */
             vF = simdui16_subs(vF, vGapE);
+#ifdef GAP_POS_SCORING
             if (type == PROFILE_HMM) {
                 vF = simdi16_max(vF, simdui16_subs(vTemp, simdi_load(gap_open_del + j)));
             } else {
+#endif
                 vF = simdi16_max(vF, vH);
+#ifdef GAP_POS_SCORING
             }
+#endif
 
             /* Load the next vH. */
             vH = simdi_load(pvHLoad + j);
@@ -1314,19 +1395,27 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
             vF = simdi8_shiftl (vF, 2);
             for (j = 0; LIKELY(j < segLen); ++j) {
                 vH = simdi_load(pvHStore + j);
+#ifdef GAP_POS_SCORING
                 if (type == PROFILE_HMM) {
                     vH = simdi16_max(vH, simdui16_subs(vF, simdi_load(gap_close_del + j)));
                     simdi_store(pvE + j, simdi16_max(simdi_load(pvE + j), simdui16_subs(vH, simdi_load(gap_open_ins + j))));
                 } else {
+#endif
                     vH = simdi16_max(vH, vF);
+#ifdef GAP_POS_SCORING
                 }
+#endif
                 vMaxColumn = simdi16_max(vMaxColumn, vH); //newly added line
                 simdi_store(pvHStore + j, vH);
+#ifdef GAP_POS_SCORING
                 if (type == PROFILE_HMM) {
                     vH = simdui16_subs(vH, simdi_load(gap_open_del + j));
                 } else {
+#endif
                     vH = simdui16_subs(vH, vGapO);
+#ifdef GAP_POS_SCORING
                 }
+#endif
                 vF = simdui16_subs(vF, vGapE);
                 if (UNLIKELY(! simdi8_movemask(simdi16_gt(vF, vH)))) goto end;
             }
@@ -1428,6 +1517,7 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
     bool isProfile = Parameters::isEqualDbtype(q_3di->getSequenceType(), Parameters::DBTYPE_HMM_PROFILE) &&
                      Parameters::isEqualDbtype(q_aa->getSequenceType(),  Parameters::DBTYPE_HMM_PROFILE);
     if(isProfile){
+#ifdef GAP_POS_SCORING
         profile->gIns = q_3di->gIns;
         // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
         std::reverse_copy(q_3di->gIns, q_3di->gIns + q_3di->L - 1, profile->gIns_rev);
@@ -1439,7 +1529,7 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
         profile->gDelOpen_rev[0] = 0;
         std::reverse_copy(profile->gDelOpen + 1, profile->gDelOpen + q_3di->L, profile->gDelClose_rev + 1);
         std::reverse_copy(profile->gDelClose + 1, profile->gDelClose + q_3di->L, profile->gDelOpen_rev + 1);
-
+#endif
         memcpy(profile->alignment_aa_profile, q_aa->getAlignmentProfile(), q_aa->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
         memcpy(profile->alignment_3di_profile, q_3di->getAlignmentProfile(), q_3di->L * Sequence::PROFILE_AA_SIZE * sizeof(int8_t));
         // set neutral state 'X' (score=0)
@@ -1486,10 +1576,12 @@ void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
                                                               profile->alignment_aa_profile,q_aa->L, alphabetSize, 0, 0, q_aa->L);
         createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_3di_word,profile->query_3di_sequence,NULL,
                                                               profile->alignment_3di_profile,q_3di->L, alphabetSize, 0, 0, q_3di->L);
+#ifdef GAP_POS_SCORING
         createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte,
                                                   profile->profile_gIns_byte, profile->gDelOpen, profile->gDelClose, q_3di->gIns, q_3di->L, 0);
         createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_word, profile->profile_gDelClose_word, profile->profile_gIns_word,
                                                    profile->gDelOpen, profile->gDelClose, q_3di->gIns, q_3di->L, 0);
+#endif
 
     }else {
         createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_aa_byte,
@@ -1542,7 +1634,10 @@ template <const unsigned int type>
 StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                                                   const int8_t *query_aa_sequence, const int8_t *query_3di_sequence, const int8_t * compositionBiasAA,
                                                                   const int8_t * compositionBiasSS, int32_t db_length, int32_t query_length, int32_t queryStart, int32_t score, const uint32_t gap_open,
-                                                                  const uint32_t gap_extend, uint8_t *gDelOpen, uint8_t *gDelClose, uint8_t *gIns,
+                                                                  const uint32_t gap_extend,
+#ifdef GAP_POS_SCORING
+                                                                  uint8_t *gDelOpen, uint8_t *gDelClose, uint8_t *gIns,
+#endif
                                                                   int32_t band_width, const int8_t *mat_aa, int32_t nAA, const int8_t *mat_3di, int32_t n3Di) {
     /*! @function
      @abstract  Round an integer to the next closest power-2 integer.
@@ -1607,30 +1702,41 @@ StructureSmithWaterman::cigar * StructureSmithWaterman::banded_sw(const unsigned
                 set_d(de, band_width, i, j, 0);
                 set_d(df, band_width, i, j, 1);
                 set_d(dh, band_width, i, j, 2);
-
+#ifdef GAP_POS_SCORING
                 if (type == PROFILE_HMM) {
                     temp1 = i == 0 ? -gap_open : h_b[e] - gDelOpen[i];
                 } else {
+#endif
                     temp1 = i == 0 ? -gap_open : h_b[e] - gap_open;
+#ifdef GAP_POS_SCORING
                 }
+#endif
                 temp2 = i == 0 ? -gap_extend : e_b[e] - gap_extend;
                 e_b[u] = temp1 > temp2 ? temp1 : temp2;
                 direction_line[de] = temp1 > temp2 ? 3 : 2;
 
+#ifdef GAP_POS_SCORING
                 if (type == PROFILE_HMM) {
                     temp1 = h_c[b] - gIns[i];
                 } else {
+#endif
                     temp1 = h_c[b] - gap_open;
+#ifdef GAP_POS_SCORING
                 }
+#endif
                 temp2 = f - gap_extend;
                 f = temp1 > temp2 ? temp1 : temp2;
                 direction_line[df] = temp1 > temp2 ? 5 : 4;
 
+#ifdef GAP_POS_SCORING
                 if (type == PROFILE_HMM) {
                     e1 = std::max(0, e_b[u] - gDelClose[i + 1]);
                 } else {
+#endif
                     e1 = e_b[u] > 0 ? e_b[u] : 0;
+#ifdef GAP_POS_SCORING
                 }
+#endif
                 f1 = f > 0 ? f : 0;
                 temp1 = e1 > f1 ? e1 : f1;
                 if(type == SUBSTITUTIONMATRIX){
