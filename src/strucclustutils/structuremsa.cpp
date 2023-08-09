@@ -891,7 +891,11 @@ std::string fastamsa2profile(std::string & msa, PSSMCalculator &pssmCalculator, 
 
     PSSMCalculator::Profile pssmRes =
             pssmCalculator.computePSSMFromMSA(filteredSetSize, msaResult.centerLength,
-                                              (const char **) msaResult.msaSequence, alnResults, wg, scoreBias);
+                                              (const char **) msaResult.msaSequence,
+#ifdef GAP_POS_SCORING
+                                              alnResults,
+#endif
+                                              wg);
     if (compBiasCorrection == true) {
         SubstitutionMatrix::calcGlobalAaBiasCorrection(&subMat, pssmRes.pssm, pNullBuffer,
                                                        Sequence::PROFILE_AA_SIZE,
@@ -1254,7 +1258,7 @@ Matcher::result_t pairwiseTMAlign(
     char *target_aa_seq = seqDbrAA.getData(tCaId, 0);
 
     float TMscore = 0.0;
-    TMaligner tmaln(std::max(qLen, tLen)+VECSIZE_FLOAT, 1);
+    TMaligner tmaln(std::max(qLen, tLen)+VECSIZE_FLOAT, 1, 0);
     tmaln.initQuery(qCaData, &qCaData[qLen], &qCaData[qLen * 2], merged_aa_seq, qLen);
     Matcher::result_t res = tmaln.align(targetId, tCaData, &tCaData[tLen], &tCaData[tLen * 2], target_aa_seq, tLen, TMscore);
     res.backtrace = Matcher::uncompressAlignment(res.backtrace);
@@ -1510,9 +1514,17 @@ int structuremsa(int argc, const char **argv, const Command& command, bool preCl
 {
     // Initialise alignment objects per thread
     StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat_3di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMat_aa, &subMat_3di);
-    PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+    PSSMCalculator calculator_aa(&subMat_aa, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pcaAa, par.pcbAa
+#ifdef GAP_POS_SCORING
+    , par.gapOpen.values.aminoacid(), par.gapPseudoCount
+#endif
+    );
     MsaFilter filter_aa(maxSeqLength + 1, sequenceCnt + 1, &subMat_aa, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
-    PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+    PSSMCalculator calculator_3di(&subMat_3di, maxSeqLength + 1, sequenceCnt + 1, par.pcmode, par.pca3di, par.pcb3di
+#ifdef GAP_POS_SCORING
+    , par.gapOpen.values.aminoacid(), par.gapPseudoCount
+#endif
+    );
     MsaFilter filter_3di(maxSeqLength + 1, sequenceCnt + 1, &subMat_3di, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid()); 
 
     int index = 0; // in hit list
