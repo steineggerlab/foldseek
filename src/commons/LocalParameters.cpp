@@ -22,6 +22,7 @@ LocalParameters::LocalParameters() :
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
         PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "minimum percentage of assigned chains out of all query chains > thr [0,100] %", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$"),
+        PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
         PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
@@ -60,7 +61,7 @@ LocalParameters::LocalParameters() :
                                     "3: Pretty HTML\n4: BLAST-TAB + column headers\n"
                                     "5: Calpha only PDB super-posed to query\n"
                                     "6: BLAST-TAB + q/db complex tm (only for scorecomplex result)\n"
-                                    "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
+                                  "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
                                     "support custom output formats (--format-output)\n"
                                     "(5) Superposed PDB files (Calpha only)";
 
@@ -76,7 +77,7 @@ LocalParameters::LocalParameters() :
     PARAM_REALIGN.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN_MAX_SEQS.category = MMseqsParameter::COMMAND_HIDDEN;
-    //PARAM_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
+    //PARAM_SCORE_BIAS.category =   MMseqsParameter::COMMAND_HIDDEN;
     PARAM_WRAPPED_SCORING.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_ALPH_SIZE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_INCLUDE_IDENTITY.category = MMseqsParameter::COMMAND_HIDDEN;
@@ -202,7 +203,6 @@ LocalParameters::LocalParameters() :
     structuremsa.push_back(&PARAM_GAP_OPEN);
     structuremsa.push_back(&PARAM_GAP_EXTEND);
     structuremsa.push_back(&PARAM_MASK_PROFILE);
-    structuremsa.push_back(&PARAM_GAP_PSEUDOCOUNT);
     structuremsa.push_back(&PARAM_PC_MODE);
     structuremsa.push_back(&PARAM_PCA_AA);
     structuremsa.push_back(&PARAM_PCB_AA);
@@ -266,7 +266,7 @@ LocalParameters::LocalParameters() :
     chainNameMode = 0;
     writeMapping = 0;
     tmAlignFast = 1;
-    gapOpen = 11;
+    gapOpen = 1;
     gapExtend = 1;
     nsample = 5000;
     maskLowerCaseMode = 1;
