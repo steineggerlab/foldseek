@@ -78,16 +78,24 @@ public:
     // TODO
     static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
     static const unsigned int FORMAT_SCORE_COMPLEX_DEFAULT = 6;
+    static const int STRUCTUREMSA_OUTPUT_MODE_AA = 0;
+    static const int STRUCTUREMSA_OUTPUT_MODE_3DI = 1;
+
     std::vector<MMseqsParameter *> strucclust;
     std::vector<MMseqsParameter *> tmalign;
     std::vector<MMseqsParameter *> structurealign;
     std::vector<MMseqsParameter *> structurerescorediagonal;
     std::vector<MMseqsParameter *> structuresearchworkflow;
     std::vector<MMseqsParameter *> structureclusterworkflow;
+    std::vector<MMseqsParameter *> structuremsa;
+    std::vector<MMseqsParameter *> structuremsacluster;
+    std::vector<MMseqsParameter *> msa2lddt;
+    std::vector<MMseqsParameter *> refinemsa;
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
+    std::vector<MMseqsParameter *> easymsaworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> scorecomplex;
     std::vector<MMseqsParameter *> easyscorecomplexworkflow;
@@ -110,6 +118,26 @@ public:
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
     PARAMETER(PARAM_INDEX_EXCLUDE)
+    
+    PARAMETER(PARAM_PCA_AA)
+    PARAMETER(PARAM_PCB_AA)
+    PARAMETER(PARAM_PCA_3DI)
+    PARAMETER(PARAM_PCB_3DI)
+
+    PARAMETER(PARAM_SCORE_BIAS_AA)
+    PARAMETER(PARAM_SCORE_BIAS_3DI)
+    PARAMETER(PARAM_GUIDE_TREE)
+    PARAMETER(PARAM_RECOMPUTE_SCORES)
+    PARAMETER(PARAM_REGRESSIVE)
+    PARAMETER(PARAM_PRECLUSTER)
+    PARAMETER(PARAM_REFINE_ITERS)
+    PARAMETER(PARAM_BITFACTOR_AA)
+    PARAMETER(PARAM_BITFACTOR_3DI)
+    PARAMETER(PARAM_OUTPUT_MODE)
+
+    // PARAMETER(PARAM_NEWICK_OUTPUT)
+    PARAMETER(PARAM_LDDT_HTML)
+    PARAMETER(PARAM_PAIR_THRESHOLD)
 
     int prefMode;
     float tmScoreThr;
@@ -128,6 +156,25 @@ public:
     std::string fileInclude;
     std::string fileExclude;
     int indexExclude;
+
+    std::string guideTree;
+    bool recomputeScores;
+    bool regressive;
+    bool precluster;
+    int refineIters;
+    int outputmode;
+    float scoreBiasAa;
+    float scoreBias3di;
+    MultiParam<PseudoCounts> pcaAa;
+    MultiParam<PseudoCounts> pcbAa;
+    MultiParam<PseudoCounts> pca3di;
+    MultiParam<PseudoCounts> pcb3di;
+    std::string lddtHtml;
+
+    float bitFactorAa;
+    float bitFactor3Di;
+    
+    float pairThreshold;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner,

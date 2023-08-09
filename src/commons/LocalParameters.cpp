@@ -22,10 +22,26 @@ LocalParameters::LocalParameters() :
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
         PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "minimum percentage of assigned chains out of all query chains > thr [0,100] %", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$"),
-        PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
-        PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT)
+        PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_LDDT_HTML(PARAM_LDDT_HTML_ID, "--lddt-html", "LDDT HTML file", "File to write LDDT MSA HTML visualisation to", typeid(std::string), (void *) &lddtHtml, ""),
+        PARAM_PCA_AA(PARAM_PCA_AA_ID, "--pca-aa", "AA alignment PCA", "", typeid(float), (void *) &pcaAa, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_PCB_AA(PARAM_PCB_AA_ID, "--pcb-aa", "AA alignment PCB", "", typeid(float), (void *) &pcbAa, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_PCA_3DI(PARAM_PCA_3DI_ID, "--pca-3di", "3Di alignment PCA", "", typeid(float), (void *) &pca3di, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_PCB_3DI(PARAM_PCB_3DI_ID, "--pcb-3di", "3Di alignment PCB", "", typeid(float), (void *) &pcb3di, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_SCORE_BIAS_AA(PARAM_SCORE_BIAS_AA_ID, "--score-bias-aa", "AA alignment score bias", "", typeid(float), (void *) &scoreBiasAa, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_SCORE_BIAS_3DI(PARAM_SCORE_BIAS_3DI_ID, "--score-bias-3di", "3Di alignment score bias", "", typeid(float), (void *) &scoreBias3di, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_GUIDE_TREE(PARAM_GUIDE_TREE_ID, "--guide-tree", "Input Newick guide tree", "Guide tree in Newick format", typeid(std::string), (void *) &guideTree, ".*\\.nw"),
+        PARAM_RECOMPUTE_SCORES(PARAM_RECOMPUTE_SCORES_ID, "--recompute-scores", "Recompute scores", "Recompute all-vs-all alignment scores every iteration", typeid(bool), (void *) &recomputeScores, ""),
+        PARAM_REGRESSIVE(PARAM_REGRESSIVE_ID, "--regressive", "Regressive alignment", "Align sequences root-to-leaf", typeid(bool), (void *) &regressive, ""),
+        PARAM_PRECLUSTER(PARAM_PRECLUSTER_ID, "--precluster", "Pre-cluster structures", "Pre-cluster structures before constructing MSA", typeid(bool), (void *) &precluster, ""),
+        PARAM_REFINE_ITERS(PARAM_REFINE_ITERS_ID, "--refine-iters", "Total refinement iterations", "Number of alignment refinement iterations", typeid(int), (void *) &refineIters, "[0-9]{1}[0-9]*$"),
+        PARAM_BITFACTOR_AA(PARAM_BITFACTOR_AA_ID, "--bitfactor-aa", "AA matrix bit factor", "AA matrix bit factor", typeid(float), (void *) &bitFactorAa, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_BITFACTOR_3DI(PARAM_BITFACTOR_3DI_ID, "--bitfactor-3di", "3Di matrix bit factor", "3Di matrix bit factor", typeid(float), (void *) &bitFactor3Di, "^([0-9]*\\.[0-9]*)$"),
+        PARAM_PAIR_THRESHOLD(PARAM_PAIR_THRESHOLD_ID,"--pair-threshold", "LDDT pair threshold", "% of pair subalignments with LDDT information [0.0,1.0]",typeid(float), (void *) &pairThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_OUTPUT_MODE(PARAM_OUTPUT_MODE_ID, "--output-mode", "Alignment output mode", "Output file mode: \n0: Amino acid\n1: 3Di alphabet", typeid(int), (void *) &outputmode, "[0-1]{1}$")
+
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -53,14 +69,14 @@ LocalParameters::LocalParameters() :
     PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
-    PARAM_PCA.category = MMseqsParameter::COMMAND_HIDDEN;
-    PARAM_PCB.category = MMseqsParameter::COMMAND_HIDDEN;
+    //PARAM_PCA.category = MMseqsParameter::COMMAND_HIDDEN;
+    //PARAM_PCB.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_ZDROP.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_CORR_SCORE_WEIGHT.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_REALIGN_MAX_SEQS.category = MMseqsParameter::COMMAND_HIDDEN;
-    PARAM_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
+    //PARAM_SCORE_BIAS.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_WRAPPED_SCORING.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_ALPH_SIZE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_INCLUDE_IDENTITY.category = MMseqsParameter::COMMAND_HIDDEN;
@@ -129,10 +145,12 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
     structuresearchworkflow.push_back(&PARAM_CLUSTER_SEARCH);
 
+    // easystructuresearch
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
+    // structurecluster
     structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
     structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
@@ -145,10 +163,11 @@ LocalParameters::LocalParameters() :
     structureclusterworkflow.push_back(&PARAM_RUNNER);
     structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
 
+    // easystructurecluster
     easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
     easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);
 
-
+    // databases
     databases.push_back(&PARAM_HELP);
     databases.push_back(&PARAM_HELP_LONG);
     databases.push_back(&PARAM_TSV);
@@ -157,7 +176,8 @@ LocalParameters::LocalParameters() :
     databases.push_back(&PARAM_COMPRESSED);
     databases.push_back(&PARAM_THREADS);
     databases.push_back(&PARAM_V);
-    //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
+    
+    // samplemulambda
     samplemulambda.push_back(&PARAM_N_SAMPLE);
     samplemulambda.push_back(&PARAM_THREADS);
     samplemulambda.push_back(&PARAM_V);
@@ -172,7 +192,69 @@ LocalParameters::LocalParameters() :
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, scorecomplex);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, convertalignments);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, createcomplexreport);
-    prefMode = PREF_MODE_KMER;
+    prefMode = PREF_MODE_KMER;    
+    // structuremsa
+    structuremsa.push_back(&PARAM_WG);
+    structuremsa.push_back(&PARAM_MATCH_RATIO);
+    structuremsa.push_back(&PARAM_FILTER_MSA);
+    structuremsa.push_back(&PARAM_FILTER_NDIFF);
+    structuremsa.push_back(&PARAM_FILTER_QSC);
+    structuremsa.push_back(&PARAM_GAP_OPEN);
+    structuremsa.push_back(&PARAM_GAP_EXTEND);
+    structuremsa.push_back(&PARAM_MASK_PROFILE);
+    structuremsa.push_back(&PARAM_GAP_PSEUDOCOUNT);
+    structuremsa.push_back(&PARAM_PC_MODE);
+    structuremsa.push_back(&PARAM_PCA_AA);
+    structuremsa.push_back(&PARAM_PCB_AA);
+    structuremsa.push_back(&PARAM_PCA_3DI);
+    structuremsa.push_back(&PARAM_PCB_3DI);
+    structuremsa.push_back(&PARAM_SCORE_BIAS_AA);
+    structuremsa.push_back(&PARAM_SCORE_BIAS_3DI);
+    structuremsa.push_back(&PARAM_GUIDE_TREE);
+    structuremsa.push_back(&PARAM_RECOMPUTE_SCORES);
+    structuremsa.push_back(&PARAM_REGRESSIVE);
+    structuremsa.push_back(&PARAM_OUTPUT_MODE);
+    structuremsa.push_back(&PARAM_SUB_MAT);
+    structuremsa.push_back(&PARAM_THREADS);
+    structuremsa.push_back(&PARAM_MAX_SEQ_LEN);
+    structuremsa.push_back(&PARAM_REFINE_ITERS);
+    structuremsa.push_back(&PARAM_BITFACTOR_AA);
+    structuremsa.push_back(&PARAM_BITFACTOR_3DI);
+    structuremsa.push_back(&PARAM_PAIR_THRESHOLD);
+
+    structuremsacluster = combineList(structuremsacluster, structuremsa);
+
+    easymsaworkflow = combineList(easymsaworkflow, structurecreatedb);
+    easymsaworkflow = combineList(easymsaworkflow, structuremsa);
+    easymsaworkflow.push_back(&PARAM_PRECLUSTER);
+    
+    pcaAa = 1.1;
+    pcbAa = 4.1;
+    pca3di = 1.4;
+    pcb3di = 1.5;
+    scoreBiasAa = 0.6;
+    scoreBias3di = 0.6;
+    matchRatio = 0.51;
+    guideTree = "";
+    recomputeScores = false;
+    regressive = false;
+    precluster = false;
+    refineIters = 0;
+    bitFactorAa = 1.1;
+    bitFactor3Di = 2.1;
+    outputmode = 0;
+
+    // msa2lddt
+    msa2lddt.push_back(&PARAM_HELP);
+    msa2lddt.push_back(&PARAM_LDDT_HTML);
+    msa2lddt.push_back(&PARAM_THREADS);
+    msa2lddt.push_back(&PARAM_PAIR_THRESHOLD);
+    
+    // refinemsa
+    refinemsa = combineList(refinemsa, structuremsa);
+    
+    pairThreshold = 0.0;
+
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
     tmAlignHitOrder = TMALIGN_HIT_ORDER_AVG;
@@ -184,7 +266,7 @@ LocalParameters::LocalParameters() :
     chainNameMode = 0;
     writeMapping = 0;
     tmAlignFast = 1;
-    gapOpen = 10;
+    gapOpen = 11;
     gapExtend = 1;
     nsample = 5000;
     maskLowerCaseMode = 1;

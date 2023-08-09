@@ -11,6 +11,12 @@ set(strucclustutils_source_files
         strucclustutils/PulchraWrapper.cpp
         strucclustutils/PulchraWrapper.h
         strucclustutils/structurerescorediagonal.cpp
+	strucclustutils/structuremsa.cpp
+	strucclustutils/structuremsa.h
+	strucclustutils/refinemsa.cpp
+	strucclustutils/refinemsa.h
+	strucclustutils/msa2lddt.cpp
+	strucclustutils/msa2lddt.h
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
         strucclustutils/scorecomplex.cpp

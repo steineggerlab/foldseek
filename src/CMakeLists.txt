@@ -6,7 +6,6 @@ add_subdirectory(commons)
 add_subdirectory(version)
 add_subdirectory(workflow)
 
-
 add_executable(foldseek
         ${commons_source_files}
         ${strucclustutils_source_files}

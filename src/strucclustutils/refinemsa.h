@@ -1,0 +1,36 @@
+std::tuple<std::string, std::string> refineMany(
+    int8_t * tinySubMatAA,
+    int8_t * tinySubMat3Di,
+    DBReader<unsigned int> &seqDbrAA,
+    DBReader<unsigned int> &seqDbr3Di,
+    DBReader<unsigned int> &seqDbrCA,
+    std::string msaAa,
+    std::string msa3Di,
+    PSSMCalculator &calculator_aa,
+    MsaFilter &filter_aa,
+    SubstitutionMatrix &subMat_aa,
+    PSSMCalculator &calculator_3di,
+    MsaFilter &filter_3di,
+    SubstitutionMatrix &subMat_3di,
+    StructureSmithWaterman & structureSmithWaterman,
+    int iterations,
+    bool compBiasCorrection,
+    bool wg,
+    float filterMaxSeqId,
+    float matchRatio,
+    float qsc,
+    float scoreBias3Di,
+    float scoreBiasAa,
+    int Ndiff,
+    int filterMinEnable,
+    int filterMsa,
+    int gapExtend,
+    int gapOpen,
+    int maxSeqLen,
+    int sequenceCnt,
+    std::string qid,
+    float pairThreshold
+);
+void deleteGapCols(std::vector<std::string> &sequences);
+void buildSubMSA(std::vector<std::string> &headers, std::vector<std::string> &sequences, std::string &subMSA);
+void makeSubMSA(std::string msa, std::string &subMSA1, std::string &subMSA2, std::vector<bool> &group);
