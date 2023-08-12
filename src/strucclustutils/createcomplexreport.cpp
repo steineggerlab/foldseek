@@ -15,12 +15,16 @@
 #include "LDDT.h"
 #include "CalcProbTP.h"
 #include <map>
+#include <map>
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
 
-void getComplexNameChainName(std::string & chainName, std::pair<std::string, std::string> &compAndChainName) {
+typedef std::pair<std::string, std::string> compNameChainName_t;
+typedef std::pair<unsigned int, std::string> ComplexAlignmentKey_t;
+
+void getComplexNameChainName(std::string &chainName, compNameChainName_t &compAndChainName) {
     size_t pos = chainName.rfind('_');
     std::string comp = chainName.substr(0, pos);
     std::string chain = chainName.substr(pos + 1);
@@ -34,7 +38,7 @@ void getResult (std::vector<std::string> &qChainVector, std::vector<std::string>
     std::string tComplexName;
     std::string qChainString;
     std::string tChainString;
-    std::pair<std::string, std::string> compAndChainName;
+    compNameChainName_t compAndChainName;
     getComplexNameChainName(qChainVector[0], compAndChainName);
     qComplexName = compAndChainName.first;
     qChainString = compAndChainName.second;
@@ -54,6 +58,19 @@ void getResult (std::vector<std::string> &qChainVector, std::vector<std::string>
     complexResVec.emplace_back(ComplexResult(assId, result));
 }
 
+struct ComplexAlignment {
+    ComplexAlignment(){};
+    ComplexAlignment(std::string qChain, std::string tChain, double qTMscore, double tTMscore) : qTMScore(qTMscore),tTMScore(tTMscore){
+        qChainVector = {qChain};
+        tChainVector = {tChain};
+    };
+    std::vector<std::string> qChainVector;
+    std::vector<std::string> tChainVector;
+    double qTMScore;
+    double tTMScore;
+};
+
+
 int createcomplexreport(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
@@ -69,8 +86,8 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
         tDbrHeader = &qDbrHeader;
     } else{
         tDbrHeader = new IndexReader(par.db2, par.threads, IndexReader::SRC_HEADERS, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
-    } 
-    
+    }
+
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
@@ -87,13 +104,9 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
     Debug::Progress progress(alnDbr.getSize());
     std::vector<ComplexResult> complexResVec;
-    unsigned int prevAssId;
-    std::vector<std::string> qChainVector;
-    std::vector<std::string> tChainVector;
-    std::vector<std::string> tVec;
-    std::vector<std::string> uVec;
-    double qTMScore;
-    double tTMScore;
+    Matcher::result_t res;
+    auto complexDataHandler = ComplexDataHandler();
+    std::map<ComplexAlignmentKey_t, ComplexAlignment> complexAlignmentsWithAssId;
 
 #pragma omp parallel num_threads(localThreads)
     {
@@ -107,10 +120,10 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
             const unsigned int queryKey = alnDbr.getDbKey(i);
             size_t qHeaderId = qDbrHeader.sequenceReader->getId(queryKey);
             const char *qHeader = qDbrHeader.sequenceReader->getData(qHeaderId, thread_idx);
+            compNameChainName_t qCompAndChainName;
             std::string queryId = Util::parseFastaHeader(qHeader);
+            getComplexNameChainName(queryId, qCompAndChainName);
             char *data = alnDbr.getData(i, thread_idx);
-            Matcher::result_t res;
-            auto complexDataHandler = ComplexDataHandler();
             while (*data != '\0') {
                 bool isValid = parseScoreComplexResult(data, res, complexDataHandler);
                 if (!isValid) {
@@ -120,21 +133,21 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
                 size_t tHeaderId = tDbrHeader->sequenceReader->getId(res.dbKey);
                 const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
                 std::string targetId = Util::parseFastaHeader(tHeader);
-                unsigned int currAssId = complexDataHandler.assId;
-                if (!qChainVector.empty() && !tChainVector.empty() && currAssId != prevAssId) {
-                    getResult(qChainVector, tChainVector, complexResVec, qTMScore, tTMScore, prevAssId);
-                    qChainVector.clear();
-                    tChainVector.clear();
+                unsigned int assId = complexDataHandler.assId;
+                auto key = ComplexAlignmentKey_t(assId, qCompAndChainName.first);
+                if (complexAlignmentsWithAssId.find(key) == complexAlignmentsWithAssId.end()){
+                    complexAlignmentsWithAssId.insert({key, ComplexAlignment(queryId, targetId, complexDataHandler.qTmScore, complexDataHandler.tTmScore)});
+                } else {
+                    complexAlignmentsWithAssId[key].qChainVector.emplace_back(queryId);
+                    complexAlignmentsWithAssId[key].tChainVector.emplace_back(targetId);
                 }
-                prevAssId = currAssId;
-                qTMScore = complexDataHandler.qTmScore;
-                tTMScore = complexDataHandler.tTmScore;
-                qChainVector.emplace_back(queryId);
-                tChainVector.emplace_back(targetId);
             } // while end
         } // for end
     }
-    getResult(qChainVector, tChainVector, complexResVec, qTMScore, tTMScore, prevAssId);
+    std::map<ComplexAlignmentKey_t, ComplexAlignment>::iterator iter;
+    for (iter = complexAlignmentsWithAssId.begin(); iter != complexAlignmentsWithAssId.end(); iter++) {
+        getResult(iter->second.qChainVector, iter->second.tChainVector, complexResVec, iter->second.qTMScore, iter->second.tTMScore, iter->first.first);
+    }
     SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
     for (size_t i=0; i < complexResVec.size(); i++) {
         resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);
