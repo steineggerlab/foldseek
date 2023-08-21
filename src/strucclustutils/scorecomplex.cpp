@@ -280,10 +280,9 @@ struct ComplexToComplexAln {
     void getTmScore(TMaligner &tmAligner) {
         std::string backtrace(matches, 'M');
         unsigned int normLen = std::min(qResidueLength, dbResidueLength);
-        tmAligner.initQuery(&qCaXVec[0], &qCaYVec[0], &qCaZVec[0], NULL, matches);
-
+        tmAligner.initQuery(&qCaXVec[0], &qCaYVec[0], &qCaZVec[0], NULL, normLen);
         TMaligner::TMscoreResult tmResult= tmAligner.computeTMscore(&dbCaXVec[0], &dbCaYVec[0], &dbCaZVec[0],
-                                          matches,0,0, backtrace,normLen);
+                                                                    normLen,0,0, backtrace,normLen);
         qTmScore = tmResult.tmscore * normLen / qResidueLength;
         dbTmScore = tmResult.tmscore * normLen / dbResidueLength;
     }
