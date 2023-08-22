@@ -43,13 +43,12 @@ LocalParameters::LocalParameters() :
                                     "1: SAM\n2: BLAST-TAB + query/db length\n"
                                     "3: Pretty HTML\n4: BLAST-TAB + column headers\n"
                                     "5: Calpha only PDB super-posed to query\n"
-                                    "6: BLAST-TAB + q/db complex tm (only for scorecomplex result)\n"
                                     "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
                                     "support custom output formats (--format-output)\n"
                                     "(5) Superposed PDB files (Calpha only)";
 
     // TODO
-    PARAM_FORMAT_MODE.regex = "^[0-6]{1}$";
+    PARAM_FORMAT_MODE.regex = "^[0-5]{1}$";
     PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;

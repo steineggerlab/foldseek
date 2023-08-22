@@ -280,9 +280,9 @@ struct ComplexToComplexAln {
     void getTmScore(TMaligner &tmAligner) {
         std::string backtrace(matches, 'M');
         unsigned int normLen = std::min(qResidueLength, dbResidueLength);
-        tmAligner.initQuery(&qCaXVec[0], &qCaYVec[0], &qCaZVec[0], NULL, normLen);
+        tmAligner.initQuery(&qCaXVec[0], &qCaYVec[0], &qCaZVec[0], NULL, matches);
         TMaligner::TMscoreResult tmResult= tmAligner.computeTMscore(&dbCaXVec[0], &dbCaYVec[0], &dbCaZVec[0],
-                                                                    normLen,0,0, backtrace,normLen);
+                                                                    matches,0,0, backtrace,normLen);
         qTmScore = tmResult.tmscore * normLen / qResidueLength;
         dbTmScore = tmResult.tmscore * normLen / dbResidueLength;
     }
@@ -776,13 +776,12 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
             std::vector<Complex> qComplexes = complexScorer.getQComplexes(qComplexId, qChainKeys);
             // for each db complex
             for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
-                Complex qComplex = qComplexes[qComplexIdx];
-                complexScorer.getComplexAlns(qComplex, assignments);
+                complexScorer.getComplexAlns(qComplexes[qComplexIdx], assignments);
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareComplexToComplexAln);
             // for each assignment
             for (unsigned int assignmentId=0; assignmentId < assignments.size(); assignmentId++){
-                ComplexToComplexAln assignment = assignments[assignmentId];
+                ComplexToComplexAln &assignment = assignments[assignmentId];
                 // for each output line from this assignment
                 for (size_t alnIdx=0; alnIdx < assignment.alnResVec.size(); alnIdx++) {
                     snprintf(

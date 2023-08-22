@@ -1049,46 +1049,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                         result.append("\" },\n");
                         break;
                     }
-
-                    case LocalParameters::FORMAT_SCORE_COMPLEX_DEFAULT: {
-                        if (!isScoreComplexDB){
-                            // TODO
-                            Debug(Debug::ERROR) << "This mode is only for scorecomplex result.\n";
-                            EXIT(EXIT_FAILURE);
-                        }
-                        unsigned int assId = complexDataHandler.assId;
-                        double qComplexTm = complexDataHandler.qTmScore;
-                        double tComplexTm = complexDataHandler.tTmScore;
-                        int count = snprintf(
-                                buffer,
-                                sizeof(buffer),
-                                "%s\t%s\t%1.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2E\t%d\t%d\t%d\t%1.5f\t%1.5f\t%d\n",
-                                queryId.c_str(),
-                                targetId.c_str(),
-                                res.seqId,
-                                alnLen,
-                                missMatchCount,
-                                gapOpenCount,
-                                res.qStartPos + 1,
-                                res.qEndPos + 1,
-                                res.dbStartPos + 1,
-                                res.dbEndPos + 1,
-                                res.eval,
-                                res.score,
-                                res.qLen,
-                                res.dbLen,
-                                qComplexTm,
-                                tComplexTm,
-                                assId
-                                );
-
-                        if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
-                            Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
-                            continue;
-                        }
-                        result.append(buffer, count);
-                        break;
-                    }
                     default:
                         Debug(Debug::ERROR) << "Not implemented yet";
                         EXIT(EXIT_FAILURE);

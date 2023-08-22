@@ -15,7 +15,6 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     par.PARAM_ZDROP.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_OVERLAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     for (size_t i = 0; i < par.createdb.size(); i++){
         par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -25,7 +24,13 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    par.parseParameters(argc, argv, command, false, Parameters::PARSE_VARIADIC, 0);
+    if(par.PARAM_FORMAT_OUTPUT.wasSet == false){
+        par.outfmt = "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,assignid";
+    }
+    par.addBacktrace = true;
+    par.PARAM_ADD_BACKTRACE.wasSet = true;
+    par.printParameters(command.cmd, argc, argv, par.searchworkflow);
 
     bool needBacktrace = false;
     bool needTaxonomy = false;
@@ -66,26 +71,8 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    switch (par.formatAlignmentMode) {
-        case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: // 0
-        case Parameters::FORMAT_ALIGNMENT_BLAST_TAB_WITH_HEADERS: // 4
-            cmd.addVariable("OUTPUT", (par.filenames.back()+".m8").c_str());
-            break;
-        case Parameters::FORMAT_ALIGNMENT_BLAST_WITH_LEN: // 2
-        case LocalParameters::FORMAT_SCORE_COMPLEX_DEFAULT: // 6
-            cmd.addVariable("OUTPUT", (par.filenames.back()+".csv").c_str());
-            break;
-        case Parameters::FORMAT_ALIGNMENT_SAM: // 1
-            cmd.addVariable("OUTPUT", (par.filenames.back()+".sam").c_str());
-            break;
-        case Parameters::FORMAT_ALIGNMENT_HTML: // 3
-            cmd.addVariable("OUTPUT", (par.filenames.back()+".html").c_str());
-            break;
-        case LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED: // 5
-            cmd.addVariable("OUTPUT", (par.filenames.back()+"_").c_str());
-            break;
-    }
-    cmd.addVariable("REPORT", (par.filenames.back()+"_report.tsv").c_str());
+    cmd.addVariable("OUTPUT", par.filenames.back().c_str());
+    cmd.addVariable("REPORT", (par.filenames.back()+"_report").c_str());
     par.filenames.pop_back();
     cmd.addVariable("TARGET", par.filenames.back().c_str());
     par.filenames.pop_back();
