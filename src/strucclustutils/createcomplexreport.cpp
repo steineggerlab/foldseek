@@ -103,7 +103,6 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
     const bool isDb = par.dbOut;
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
     Debug::Progress progress(alnDbr.getSize());
-    Matcher::result_t res;
     std::map<ComplexAlignmentKey_t, ComplexAlignment> allAlignmentsWithAssId;
 
 #pragma omp parallel num_threads(localThreads)
@@ -113,6 +112,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
 
+    Matcher::result_t res;
         std::map<ComplexAlignmentKey_t, ComplexAlignment> complexAlignmentsWithAssId;
 
 #pragma omp  for schedule(dynamic, 10)
