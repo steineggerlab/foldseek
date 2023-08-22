@@ -103,10 +103,8 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
     const bool isDb = par.dbOut;
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
     Debug::Progress progress(alnDbr.getSize());
-    std::vector<ComplexResult> complexResVec;
     Matcher::result_t res;
-    auto complexDataHandler = ComplexDataHandler();
-    std::map<ComplexAlignmentKey_t, ComplexAlignment> complexAlignmentsWithAssId;
+    std::map<ComplexAlignmentKey_t, ComplexAlignment> allAlignmentsWithAssId;
 
 #pragma omp parallel num_threads(localThreads)
     {
@@ -114,6 +112,9 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
+
+        std::map<ComplexAlignmentKey_t, ComplexAlignment> complexAlignmentsWithAssId;
+
 #pragma omp  for schedule(dynamic, 10)
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
             progress.updateProgress();
@@ -125,29 +126,37 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
             getComplexNameChainName(queryId, qCompAndChainName);
             char *data = alnDbr.getData(i, thread_idx);
             while (*data != '\0') {
-                bool isValid = parseScoreComplexResult(data, res, complexDataHandler);
-                if (!isValid) {
-                    std::cout << "error message";
+                std::pair<bool, ComplexDataHandler> retComplex = parseScoreComplexResult(data, res);
+                if (retComplex.first == false){
+                    Debug(Debug::ERROR) << "No scorecomplex result provided";
+                    EXIT(EXIT_FAILURE);
                 }
                 data = Util::skipLine(data);
                 size_t tHeaderId = tDbrHeader->sequenceReader->getId(res.dbKey);
                 const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
                 std::string targetId = Util::parseFastaHeader(tHeader);
-                unsigned int assId = complexDataHandler.assId;
+                unsigned int assId = retComplex.second.assId;
                 auto key = ComplexAlignmentKey_t(assId, qCompAndChainName.first);
                 if (complexAlignmentsWithAssId.find(key) == complexAlignmentsWithAssId.end()){
-                    complexAlignmentsWithAssId.insert({key, ComplexAlignment(queryId, targetId, complexDataHandler.qTmScore, complexDataHandler.tTmScore)});
+                    complexAlignmentsWithAssId.insert({key, ComplexAlignment(queryId, targetId, retComplex.second.qTmScore, retComplex.second.tTmScore)});
                 } else {
                     complexAlignmentsWithAssId[key].qChainVector.emplace_back(queryId);
                     complexAlignmentsWithAssId[key].tChainVector.emplace_back(targetId);
                 }
             } // while end
         } // for end
+#pragma omp critical
+        {
+            allAlignmentsWithAssId.insert(complexAlignmentsWithAssId.begin(), complexAlignmentsWithAssId.end());
+        }
     }
     std::map<ComplexAlignmentKey_t, ComplexAlignment>::iterator iter;
-    for (iter = complexAlignmentsWithAssId.begin(); iter != complexAlignmentsWithAssId.end(); iter++) {
+    std::vector<ComplexResult> complexResVec;
+
+    for (iter = allAlignmentsWithAssId.begin(); iter != allAlignmentsWithAssId.end(); iter++) {
         getResult(iter->second.qChainVector, iter->second.tChainVector, complexResVec, iter->second.qTMScore, iter->second.tTMScore, iter->first.first);
     }
+
     SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
     for (size_t i=0; i < complexResVec.size(); i++) {
         resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);

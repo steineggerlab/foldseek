@@ -25,7 +25,7 @@ static bool compareComplexResult(const ComplexResult &first, const ComplexResult
 }
 
 struct ComplexDataHandler {
-    ComplexDataHandler() {}
+    ComplexDataHandler(): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f) {}
     ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string t, std::string u)
             : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), t(t), u(u) {}
     unsigned int assId;
@@ -35,11 +35,12 @@ struct ComplexDataHandler {
     std::string u;
 };
 
-static bool parseScoreComplexResult(const char *data, Matcher::result_t &res, ComplexDataHandler &complexDataHandler) {
+static std::pair<bool, ComplexDataHandler> parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
-    if (columns!=16)
-        return false;
+    if (columns!=16) {
+        return std::make_pair(false, ComplexDataHandler());
+    }
     char key[255];
     ptrdiff_t keySize =  (entry[1] - data);
     strncpy(key, data, keySize);
@@ -66,8 +67,7 @@ static bool parseScoreComplexResult(const char *data, Matcher::result_t &res, Co
     std::string u = std::string(entry[14], entry[15] - entry[14]-1);
     unsigned int assId = Util::fast_atoi<unsigned int>(entry[15]);
     res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
-    complexDataHandler = ComplexDataHandler(assId, qTmScore, tTmScore, t, u);
-    return true;
+    return std::make_pair(true, ComplexDataHandler(assId, qTmScore, tTmScore, t, u));
 }
 
 #endif //FOLDSEEK_CREATECOMPLEXREPORT_H

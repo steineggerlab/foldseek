@@ -548,12 +548,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             }
             char *data = alnDbr.getData(i, thread_idx);
             Matcher::result_t res;
-            auto complexDataHandler = ComplexDataHandler();
             while (*data != '\0') {
                 const char *entry[255];
                 Util::getWordsOfLine(data, entry, 255);
-                isScoreComplexDB = parseScoreComplexResult(data, res, complexDataHandler);
-                if (!isScoreComplexDB) {
+                std::pair<bool, ComplexDataHandler> retComplex = parseScoreComplexResult(data, res);
+                if (retComplex.first == false) {
                     res = Matcher::parseAlignmentRecord(data, true);
                 }
                 data = Util::skipLine(data);
@@ -883,7 +882,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                             Debug(Debug::ERROR) << "The column qcomplextmscore is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
-                                        result.append(SSTR(complexDataHandler.qTmScore));
+                                        result.append(SSTR(retComplex.second.qTmScore));
                                         break;
                                     case LocalParameters::OUTFMT_T_COMPLEX_TMSCORE:
                                         if (!isScoreComplexDB) {
@@ -891,7 +890,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                             Debug(Debug::ERROR) << "The column tcomplextmscore is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
-                                        result.append(SSTR(complexDataHandler.tTmScore));
+                                        result.append(SSTR(retComplex.second.tTmScore));
                                         break;
                                     case LocalParameters::OUTFMT_ASSIGN_ID:
                                         if (!isScoreComplexDB) {
@@ -899,7 +898,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                             Debug(Debug::ERROR) << "The column assignid is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
-                                        result.append(SSTR(complexDataHandler.assId));
+                                        result.append(SSTR(retComplex.second.assId));
                                         break;
                                 }
                                 if (i < outcodes.size() - 1) {
