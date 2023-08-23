@@ -2,8 +2,8 @@
 // Created by Woosub Kim on 2023/06/20.
 //
 
-#ifndef FOLDSEEK_COMPLEXUTIL_H
-#define FOLDSEEK_COMPLEXUTIL_H
+#ifndef FOLDSEEK_CREATECOMPLEXREPORT_H
+#define FOLDSEEK_CREATECOMPLEXREPORT_H
 #include "Matcher.h"
 
 const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
@@ -27,15 +27,18 @@ static bool compareComplexResult(const ComplexResult &first, const ComplexResult
 }
 
 struct ComplexDataHandler {
-    ComplexDataHandler() {}
-    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string t, std::string u)
-            : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), t(t), u(u) {}
+    ComplexDataHandler(): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f) {}
+    ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), isValid(isValid) {}
+    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string t, std::string u, bool isValid)
+            : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), t(t), u(u), isValid(isValid) {}
     unsigned int assId;
     double qTmScore;
     double tTmScore;
     std::string t;
     std::string u;
+    bool isValid;
 };
+
 
 static void getKeyToIdMapIdToKeysMapIdVec(
         const std::string &file,
@@ -68,12 +71,11 @@ static void getKeyToIdMapIdToKeysMapIdVec(
     lookupDB.close();
 }
 
-static bool parseScoreComplexResult(const char *data, Matcher::result_t &res, ComplexDataHandler &complexDataHandler) {
+static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
     if (columns!=16) {
-        std::cout << columns << std::endl;
-        return false;
+        return ComplexDataHandler(false);
     }
     char key[255];
     ptrdiff_t keySize =  (entry[1] - data);
@@ -101,8 +103,7 @@ static bool parseScoreComplexResult(const char *data, Matcher::result_t &res, Co
     std::string u = std::string(entry[14], entry[15] - entry[14]-1);
     unsigned int assId = Util::fast_atoi<unsigned int>(entry[15]);
     res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
-    complexDataHandler = ComplexDataHandler(assId, qTmScore, tTmScore, t, u);
-    return true;
+    return ComplexDataHandler(assId, qTmScore, tTmScore, t, u, true);
 }
 
-#endif //FOLDSEEK_COMPLEXUTIL_H
+#endif //FOLDSEEK_CREATECOMPLEXREPORT_H

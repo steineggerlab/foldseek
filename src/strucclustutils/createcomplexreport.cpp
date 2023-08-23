@@ -9,7 +9,7 @@
 #include "TranslateNucl.h"
 #include "MemoryMapped.h"
 #include "Coordinate16.h"
-#include "complexutil.h"
+#include "createcomplexreport.h"
 #define ZSTD_STATIC_LINKING_ONLY
 #include <zstd.h>
 #include "LDDT.h"
@@ -104,9 +104,9 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
     const bool isDb = par.dbOut;
     std::string qLookupFile = par.db1 + ".lookup";
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
+
     std::vector<ComplexResult> complexResVec;
     Matcher::result_t res;
-    auto complexDataHandler = ComplexDataHandler();
     std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap;
     std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeyMap;
     std::vector<unsigned int> qComplexIdVec;
@@ -122,6 +122,10 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
+
+    Matcher::result_t res;
+        std::map<ComplexAlignmentKey_t, ComplexAlignment> complexAlignmentsWithAssId;
+
 #pragma omp  for schedule(dynamic, 10)
         for (size_t queryIdx = 0; queryIdx < qComplexIdVec.size(); queryIdx++) {
             progress.updateProgress();
@@ -139,32 +143,36 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
                 getComplexNameChainName(queryId, qCompAndChainName);
                 char *data = alnDbr.getData(queryKey, thread_idx);
                 while (*data != '\0') {
-                    parseScoreComplexResult(data, res, complexDataHandler);
-                    // TODO ERROR MSG
+                    ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
+                    if (retComplex.isValid == false){
+                        Debug(Debug::ERROR) << "No scorecomplex result provided";
+                        EXIT(EXIT_FAILURE);
+                    }
                     data = Util::skipLine(data);
                     size_t tHeaderId = tDbrHeader->sequenceReader->getId(res.dbKey);
                     const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
                     std::string targetId = Util::parseFastaHeader(tHeader);
-                    unsigned int assId = complexDataHandler.assId;
+                    unsigned int assId = retComplex.assId;
                     auto key = ComplexAlignmentKey_t(assId, qCompAndChainName.first);
                     unsigned int currIdx = find(complexAlignmentKeys.begin(), complexAlignmentKeys.end(), key) -
                                            complexAlignmentKeys.begin();
                     if (currIdx == complexAlignmentKeys.size()) {
                         complexAlignmentKeys.emplace_back(key);
-                        complexAlignments.emplace_back(ComplexAlignment(queryId, targetId, complexDataHandler.qTmScore,
-                                                                        complexDataHandler.tTmScore, complexDataHandler.t,
-                                                                        complexDataHandler.u));
+                        complexAlignments.emplace_back(
+                                ComplexAlignment(queryId,targetId,retComplex.qTmScore,retComplex.tTmScore,retComplex.t,retComplex.u)
+                                );
                     } else {
                         complexAlignments[currIdx].qChainVector.emplace_back(queryId);
                         complexAlignments[currIdx].tChainVector.emplace_back(targetId);
                     }
                 } // while end
             }
-        } // for end
+        }// for end
     }
     for (size_t complexAlignmentIdx = 0; complexAlignmentIdx < complexAlignmentKeys.size(); complexAlignmentIdx++) {
         getResult(complexAlignments[complexAlignmentIdx].qChainVector, complexAlignments[complexAlignmentIdx].tChainVector, complexResVec, complexAlignments[complexAlignmentIdx].qTMScore, complexAlignments[complexAlignmentIdx].tTMScore, complexAlignments[complexAlignmentIdx].t, complexAlignments[complexAlignmentIdx].u, complexAlignmentKeys[complexAlignmentIdx].first);
     }
+
     SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
     for (size_t i=0; i < complexResVec.size(); i++) {
         resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);
