@@ -2,9 +2,11 @@
 // Created by Woosub Kim on 2023/06/20.
 //
 
-#ifndef FOLDSEEK_CREATECOMPLEXREPORT_H
-#define FOLDSEEK_CREATECOMPLEXREPORT_H
+#ifndef FOLDSEEK_COMPLEXUTIL_H
+#define FOLDSEEK_COMPLEXUTIL_H
 #include "Matcher.h"
+
+const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
 
 struct ComplexResult {
     ComplexResult() {}
@@ -35,11 +37,44 @@ struct ComplexDataHandler {
     std::string u;
 };
 
+static void getKeyToIdMapIdToKeysMapIdVec(
+        const std::string &file,
+        std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
+        std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
+        std::vector<unsigned int> &complexIdVec
+) {
+    if (file.length() == 0) return;
+    MemoryMapped lookupDB(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
+    char *data = (char *) lookupDB.getData();
+    const char *entry[255];
+    int prevComplexId =  -1;
+    while (*data != '\0') {
+        const size_t columns = Util::getWordsOfLine(data, entry, 255);
+        if (columns < 3) {
+            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
+            continue;
+        }
+        auto chainKey = Util::fast_atoi<int>(entry[0]);
+        auto complexId = Util::fast_atoi<int>(entry[2]);
+        chainKeyToComplexIdLookup.emplace(chainKey, complexId);
+        if (complexId != prevComplexId) {
+            complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
+            complexIdVec.emplace_back(complexId);
+            prevComplexId = complexId;
+        }
+        complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
+        data = Util::skipLine(data);
+    }
+    lookupDB.close();
+}
+
 static bool parseScoreComplexResult(const char *data, Matcher::result_t &res, ComplexDataHandler &complexDataHandler) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
-    if (columns!=16)
+    if (columns!=16) {
+        std::cout << columns << std::endl;
         return false;
+    }
     char key[255];
     ptrdiff_t keySize =  (entry[1] - data);
     strncpy(key, data, keySize);
@@ -70,4 +105,4 @@ static bool parseScoreComplexResult(const char *data, Matcher::result_t &res, Co
     return true;
 }
 
-#endif //FOLDSEEK_CREATECOMPLEXREPORT_H
+#endif //FOLDSEEK_COMPLEXUTIL_H

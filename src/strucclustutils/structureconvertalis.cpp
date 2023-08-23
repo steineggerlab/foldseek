@@ -13,7 +13,7 @@
 #include "NcbiTaxonomy.h"
 #include "MappingReader.h"
 #include "Coordinate16.h"
-#include "createcomplexreport.h"
+#include "complexutil.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
 
