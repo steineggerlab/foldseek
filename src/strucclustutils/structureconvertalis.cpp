@@ -233,7 +233,6 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needTaxonomyMapping = false;
     bool needTMaligner = false;
     bool needLDDT = false;
-    bool isScoreComplexDB = false;
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
                                                                   needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
 
@@ -433,11 +432,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     }
 
     Debug::Progress progress(alnDbr.getSize());
-//    std::vector<ComplexResult> complexResVec;
-//    unsigned int prevAssId;
     std::vector<std::string> qChains;
     std::vector<std::string> tChains;
-//    std::pair<double, double> complexTMScores;
 #pragma omp parallel num_threads(localThreads)
     {
         unsigned int thread_idx = 0;
@@ -552,8 +548,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 const char *entry[255];
                 Util::getWordsOfLine(data, entry, 255);
                 ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
-                isScoreComplexDB = retComplex.isValid;
-                if (isScoreComplexDB == false) {
+                if (!retComplex.isValid) {
                     res = Matcher::parseAlignmentRecord(data, true);
                 }
                 data = Util::skipLine(data);
@@ -878,29 +873,40 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                         result.append(SSTR(CalcProbTP::calculate(res.score)));
                                         break;
                                     case LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE:
-                                        if (!isScoreComplexDB) {
-                                            // TODO
+                                        if (!retComplex.isValid) {
                                             Debug(Debug::ERROR) << "The column qcomplextmscore is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
                                         result.append(SSTR(retComplex.qTmScore));
                                         break;
                                     case LocalParameters::OUTFMT_T_COMPLEX_TMSCORE:
-                                        if (!isScoreComplexDB) {
-                                            // TODO
+                                        if (!retComplex.isValid) {
                                             Debug(Debug::ERROR) << "The column tcomplextmscore is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
                                         result.append(SSTR(retComplex.tTmScore));
                                         break;
                                     case LocalParameters::OUTFMT_ASSIGN_ID:
-                                        if (!isScoreComplexDB) {
-                                            // TODO
+                                        if (!retComplex.isValid) {
                                             Debug(Debug::ERROR) << "The column assignid is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
                                         result.append(SSTR(retComplex.assId));
                                         break;
+//                                    case LocalParameters::OUTFMT_COMPLEX_T:
+//                                        if (!retComplex.isValid) {
+//                                            Debug(Debug::ERROR) << "The column complext is only for scorecomplex result.\n";
+//                                            EXIT(EXIT_FAILURE);
+//                                        }
+//                                        result.append(retComplex.tString);
+//                                        break;
+//                                    case LocalParameters::OUTFMT_COMPLEX_U:
+//                                        if (!retComplex.isValid) {
+//                                            Debug(Debug::ERROR) << "The column complexu is only for scorecomplex result.\n";
+//                                            EXIT(EXIT_FAILURE);
+//                                        }
+//                                        result.append(retComplex.uString);
+//                                        break;
                                 }
                                 if (i < outcodes.size() - 1) {
                                     result.push_back('\t');

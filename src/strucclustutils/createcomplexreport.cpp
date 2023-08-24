@@ -159,7 +159,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
                     if (currIdx == complexAlignmentKeys.size()) {
                         complexAlignmentKeys.emplace_back(key);
                         complexAlignments.emplace_back(
-                                ComplexAlignment(queryId,targetId,retComplex.qTmScore,retComplex.tTmScore,retComplex.t,retComplex.u)
+                                ComplexAlignment(queryId,targetId,retComplex.qTmScore,retComplex.tTmScore,retComplex.tString, retComplex.uString)
                                 );
                     } else {
                         complexAlignments[currIdx].qChainVector.emplace_back(queryId);
