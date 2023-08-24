@@ -278,13 +278,13 @@ std::vector<struct Command> commands = {
         {"easy-complexsearch", easycomplexsearch, &localPar.easyscorecomplexworkflow, COMMAND_EASY,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
-                "foldseek easy-complexsearch !/? !/ result tmp\n"
+                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
                 "# Format output differently\n"
-                "foldseek easy-complexsearch !/? !/ result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --format-output query,target,qstart,tstart,cigar\n"
                 "# Align with TMalign (global)\n"
-                "foldseek easy-complexsearch !/? !/ result tmp --alignment-type 1\n"
+                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --alignment-type 1\n"
                 "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
-                "foldseek easy-complexsearch !/? !/ result tmp --exhaustive-search 1\n\n",
+                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
                 CITATION_FOLDSEEK, {
@@ -296,11 +296,12 @@ std::vector<struct Command> commands = {
         },
         {"createcomplexreport", createcomplexreport, &localPar.createcomplexreport, COMMAND_FORMAT_CONVERSION,
                 "Convert complex DB to tsv format\"",
-                "# Create output in tsv format (7 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, assId\n"
+                "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, t, u, assId\n"
                 "#  (1,2) identifiers for query and target complex,\n"
                 "#  (3,4) chains of query complex and target complex,\n"
                 "#  (5,6) tm score based on query and target residue length,\n"
-                "#  (7) assignment id\n"
+                "#  (8,9) u and t,\n"
+                "#  (9) assignment id\n"
                 "foldseek convertalis queryDB targetDB complexDB result.tsv\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDb> <i:targetDb> <i:complexDB> <o:complexFile>",
