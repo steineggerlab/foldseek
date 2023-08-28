@@ -22,7 +22,6 @@
 #endif
 
 typedef std::pair<std::string, std::string> compNameChainName_t;
-typedef std::pair<unsigned int, std::string> ComplexAlignmentKey_t;
 
 void getComplexNameChainName(std::string &chainName, compNameChainName_t &compAndChainName) {
     size_t pos = chainName.rfind('_');
@@ -31,7 +30,7 @@ void getComplexNameChainName(std::string &chainName, compNameChainName_t &compAn
     compAndChainName = {comp, chain};
 }
 
-void getResult (std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector, std::vector<ComplexResult> &complexResVec, float qTMScore, float tTMScore, std::string t, std::string u, int assId) {
+void getResult (std::vector<ComplexResult> &complexResVec, std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector,  float qTMScore, float tTMScore, std::string t, std::string u, int assId) {
     char buffer[1024];
     std::string result;
     std::string qComplexName;
@@ -60,7 +59,7 @@ void getResult (std::vector<std::string> &qChainVector, std::vector<std::string>
 
 struct ComplexAlignment {
     ComplexAlignment(){};
-    ComplexAlignment(std::string qChain, std::string tChain, double qTMscore, double tTMscore, std::string t, std::string u) : qTMScore(qTMscore), tTMScore(tTMscore), t(t), u(u){
+    ComplexAlignment(std::string qChain, std::string tChain, double qTMscore, double tTMscore, std::string t, std::string u, unsigned int assId) : qTMScore(qTMscore), tTMScore(tTMscore), t(t), u(u), assId(assId){
         qChainVector = {qChain};
         tChainVector = {tChain};
     };
@@ -70,6 +69,7 @@ struct ComplexAlignment {
     double tTMScore;
     std::string t;
     std::string u;
+    unsigned int assId;
 };
 
 int createcomplexreport(int argc, const char **argv, const Command &command) {
@@ -105,13 +105,10 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
     std::string qLookupFile = par.db1 + ".lookup";
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
 
-    std::vector<ComplexResult> complexResVec;
     Matcher::result_t res;
     std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap;
     std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeyMap;
     std::vector<unsigned int> qComplexIdVec;
-    std::vector<ComplexAlignmentKey_t> complexAlignmentKeys;
-    std::vector<ComplexAlignment> complexAlignments;
     getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeyMap, qComplexIdVec);
     qChainKeyToComplexIdMap.clear();
     Debug::Progress progress(qComplexIdVec.size());
@@ -122,13 +119,14 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-
-    Matcher::result_t res;
-        std::map<ComplexAlignmentKey_t, ComplexAlignment> complexAlignmentsWithAssId;
+        Matcher::result_t res;
+        std::vector<ComplexResult> complexResVec;
 
 #pragma omp  for schedule(dynamic, 10)
         for (size_t queryIdx = 0; queryIdx < qComplexIdVec.size(); queryIdx++) {
             progress.updateProgress();
+            std::vector<unsigned int> assIdVec;
+            std::vector<ComplexAlignment> compAlns;
             unsigned int qComplexId = qComplexIdVec[queryIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
@@ -153,30 +151,26 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
                     const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
                     std::string targetId = Util::parseFastaHeader(tHeader);
                     unsigned int assId = retComplex.assId;
-                    auto key = ComplexAlignmentKey_t(assId, qCompAndChainName.first);
-                    unsigned int currIdx = find(complexAlignmentKeys.begin(), complexAlignmentKeys.end(), key) -
-                                           complexAlignmentKeys.begin();
-                    if (currIdx == complexAlignmentKeys.size()) {
-                        complexAlignmentKeys.emplace_back(key);
-                        complexAlignments.emplace_back(
-                                ComplexAlignment(queryId,targetId,retComplex.qTmScore,retComplex.tTmScore,retComplex.tString, retComplex.uString)
-                                );
+                    unsigned int compAlnIdx = find(assIdVec.begin(), assIdVec.end(), assId) - assIdVec.begin();
+                    if (compAlnIdx == compAlns.size()) {
+                        assIdVec.emplace_back(assId);
+                        compAlns.emplace_back(ComplexAlignment(queryId, targetId, retComplex.qTmScore, retComplex.tTmScore, retComplex.tString, retComplex.uString, assId));
                     } else {
-                        complexAlignments[currIdx].qChainVector.emplace_back(queryId);
-                        complexAlignments[currIdx].tChainVector.emplace_back(targetId);
+                        compAlns[compAlnIdx].qChainVector.emplace_back(queryId);
+                        compAlns[compAlnIdx].tChainVector.emplace_back(targetId);
                     }
                 } // while end
             }
-        }// for end
-    }
-    for (size_t complexAlignmentIdx = 0; complexAlignmentIdx < complexAlignmentKeys.size(); complexAlignmentIdx++) {
-        getResult(complexAlignments[complexAlignmentIdx].qChainVector, complexAlignments[complexAlignmentIdx].tChainVector, complexResVec, complexAlignments[complexAlignmentIdx].qTMScore, complexAlignments[complexAlignmentIdx].tTMScore, complexAlignments[complexAlignmentIdx].t, complexAlignments[complexAlignmentIdx].u, complexAlignmentKeys[complexAlignmentIdx].first);
-    }
-
-    SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
-    for (size_t i=0; i < complexResVec.size(); i++) {
-        resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);
-    }
+            for (size_t compAlnIdx = 0; compAlnIdx < compAlns.size(); compAlnIdx++) {
+                ComplexAlignment &compAln = compAlns[compAlnIdx];
+                getResult(complexResVec,compAln.qChainVector,compAln.tChainVector,compAln.qTMScore,compAln.tTMScore,compAln.t,compAln.u,compAln.assId);
+            }
+        } // for end
+        SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
+        for (size_t i=0; i < complexResVec.size(); i++) {
+            resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);
+        }
+    } // MP end
     resultWriter.close(true);
     if (isDb == false) {
         FileUtil::remove(par.db4Index.c_str());
