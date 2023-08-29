@@ -11,7 +11,8 @@ set(COMPILED_RESOURCES
         mat3di.out
         encoder_weights_3di.kerasify
         evalue_nn.kerasify
-	result_viz_prelude_fs.html.zst
+        main.js
+        vendor.js.zst
         easycomplexsearch.sh
         )
 
