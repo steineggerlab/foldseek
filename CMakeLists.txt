@@ -47,7 +47,9 @@ elseif(HAVE_ARM8)
 endif()
 
 if (NATIVE_ARCH AND (RUST_FEATURE STREQUAL ""))
-    if(ARM)
+    if(EMSCRIPTEN)
+        set(RUST_FEATURE simd_wasm)
+    elseif(ARM)
         set(RUST_FEATURE simd_neon)
     elseif(X86 OR X64)
         if (HAVE_AVX2_EXTENSIONS)
@@ -62,7 +64,15 @@ if(RUST_FEATURE STREQUAL "")
     message(FATAL_ERROR "No SIMD support for this architecture")
 endif()
 message("-- Rust Feature: ${RUST_FEATURE}")
-corrosion_import_crate(MANIFEST_PATH lib/block-aligner/c/Cargo.toml FEATURES "${RUST_FEATURE}")
+corrosion_import_crate(
+    MANIFEST_PATH lib/block-aligner/c/Cargo.toml
+    FEATURES "${RUST_FEATURE}"
+    CRATE_TYPES staticlib
+)
 include_directories(lib/block-aligner/c)
+if(EMSCRIPTEN)
+    corrosion_add_target_local_rustflags(block-aligner-c "-Clink-args=--no-entry -sRELOCATABLE=1")
+endif()
+
 
 add_subdirectory(src)
