@@ -8,14 +8,15 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-QUERY="$1"
-if [ "$#" -ne 1 ] && notExists "${QUERY}.dbtype"; then
+if notExists "${1}.dbtype"; then
     if notExists "${TMP_PATH}/query.dbtype"; then
         # shellcheck disable=SC2086
         "$MMSEQS" createdb "$@" "${TMP_PATH}/query" ${CREATEDB_PAR} \
             || fail "query createdb died"
     fi
     QUERY="${TMP_PATH}/query"
+else
+    QUERY="$1"
 fi
 
 if notExists "${TARGET}.dbtype"; then
