@@ -194,9 +194,20 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
     bool needTMaligner = (par.tmScoreThr > 0);
     bool needLDDT = (par.lddtThr > 0);
-    if(par.sortByStructureBits){
+    if (par.sortByStructureBits) {
         needLDDT = true;
         needTMaligner = true;
+    } else {
+        if (needTMaligner) {
+            Debug(Debug::WARNING) << "Cannot use --tmscore-threshold with --sort-by-structure-bits 0\n"
+                                  << "Disabling --tmscore-threshold\n";
+            needTMaligner = false;
+        }
+        if (needLDDT) {
+            Debug(Debug::WARNING) << "Cannot use --lddt-threshold with --sort-by-structure-bits 0\n"
+                                  << "Disabling --lddt-threshold\n";
+            needLDDT = false;
+        }
     }
     bool needCalpha = (needTMaligner || needLDDT);
     IndexReader *qcadbr = NULL;
