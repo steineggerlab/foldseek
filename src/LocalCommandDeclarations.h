@@ -3,6 +3,7 @@
 
 #include "Command.h"
 
+extern int structcreatedb(int argc, const char **argv, const Command& command);
 extern int structuresearch(int argc, const char** argv, const Command &command);
 extern int structureindex(int argc, const char** argv, const Command &command);
 extern int structurecluster(int argc, const char** argv, const Command &command);

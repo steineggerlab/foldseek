@@ -27,7 +27,7 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 
 std::vector<struct Command> commands = {
-        {"createdb",             createdb,            &localPar.structurecreatedb,    COMMAND_MAIN,
+        {"createdb",             structcreatedb,                &localPar.structurecreatedb,    COMMAND_MAIN,
                 "Convert PDB/mmCIF/tar[.gz]/DB files to a db",
                 "Convert PDB/mmCIF/tar[.gz]/DB files to a db",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
