@@ -232,17 +232,19 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needLookup = false;
     bool needSource = false;
     bool needTaxonomy = false;
-    bool needCA = false;
+    bool needQCA = false;
+    bool needTCA = false;
     bool needTaxonomyMapping = false;
     bool needTMaligner = false;
     bool needLDDT = false;
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
+                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMaligner, needLDDT);
 
 
     if(LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED == format){
         needTMaligner = true;
-        needCA = true;
+        needQCA = true;
+        needTCA = true;
         needSequenceDB = true;
     }
     NcbiTaxonomy* t = NULL;
@@ -299,7 +301,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     IndexReader *qcadbr = NULL;
     IndexReader *tcadbr = NULL;
 
-    if(needCA) {
+    if(needQCA) {
         qcadbr = new IndexReader(
                 par.db1,
                 par.threads,
@@ -307,6 +309,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 touch ? IndexReader::PRELOAD_INDEX : 0,
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                 "_ca");
+    }
+
+    if(needTCA) {
         if (sameDB) {
             tcadbr = qcadbr;
         } else {
@@ -540,7 +545,7 @@ R"html(<!DOCTYPE html>
                 }
             }
             float *queryCaData = NULL;
-            if (needCA) {
+            if (needQCA) {
                 size_t qSeqId = qDbr.sequenceReader->getId(queryKey);
 		        querySeqLen = qDbr.sequenceReader->getSeqLen(qSeqId);
                 size_t qId = qcadbr->sequenceReader->getId(queryKey);
@@ -600,7 +605,7 @@ R"html(<!DOCTYPE html>
                 const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
                 size_t tHeaderLen = tDbrHeader->sequenceReader->getSeqLen(tHeaderId);
                 float *targetCaData = NULL;
-                if (needCA) {
+                if (needTCA) {
                     size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                     char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
                     size_t tCaLength = tcadbr->sequenceReader->getEntryLen(tId);
@@ -1137,13 +1142,11 @@ R"html(<!DOCTYPE html>
         FileUtil::remove(par.db4Index.c_str());
     }
 
-    if(needCA){
-        if(sameDB){
-            delete qcadbr;
-        }else{
-            delete tcadbr;
-            delete qcadbr;
-        }
+    if (needQCA) {
+        delete qcadbr;
+    }
+    if (needTCA && sameDB == false) {
+        delete tcadbr;
     }
 
     if (needTaxonomy) {

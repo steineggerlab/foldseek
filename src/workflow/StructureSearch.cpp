@@ -54,24 +54,27 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         bool needSequenceDB = false;
         bool needFullHeaders = false;
         bool needSource = false;
-        bool needCA = false;
+        bool needQCA = false;
+        bool needTCA = false;
         bool needTMalign = false;
         bool needLDDT = false;
         LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                         needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT);
+                                         needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT);
 
         // check if databases have Calpha coordinates
-        if (needCA) {
+        if (needQCA) {
+            std::string caDB = par.db1 + "_ca.dbtype";
+            if (!FileUtil::fileExists(caDB.c_str())) {
+                Debug(Debug::ERROR)
+                        << "Query database does not contain C-alpha coordinates. Please recreate the database.";
+                EXIT(EXIT_FAILURE);
+            }
+        }
+        if (needTCA) {
             std::string caDB = par.db2 + "_ca.dbtype";
             if (!FileUtil::fileExists(caDB.c_str())) {
                 Debug(Debug::ERROR)
-                        << "Target database does not contain Calpha coordinates. Please recreate the database.";
-                EXIT(EXIT_FAILURE);
-            }
-            caDB = par.db1 + "_ca.dbtype";
-            if (!FileUtil::fileExists(caDB.c_str())) {
-                Debug(Debug::ERROR)
-                        << "Query database does not contain Calpha coordinates. Please recreate the database.";
+                        << "Target database does not contain C-alpha coordinates. Please recreate the database.";
                 EXIT(EXIT_FAILURE);
             }
         }
