@@ -463,13 +463,8 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
     r.qStartPos1 = (r.qEndPos1 + 1) - queryPos;
     r.dbStartPos1 = (r.dbEndPos1 + 1) - targetPos;
 
-//    r.dbStartPos1 = bests_reverse.first.ref;
-//    r.qStartPos1 = r.qEndPos1 - bests_reverse.first.read;
-
-
-//    r.qCov = computeCov(r.qStartPos1, r.qEndPos1, query_length);
-//    r.tCov = computeCov(r.dbStartPos1, r.dbEndPos1, db_length);
-//    bool hasLowerCoverage = !(Util::hasCoverage(covThr, covMode, r.qCov, r.tCov));
+    r.qCov = computeCov(r.qStartPos1, r.qEndPos1, query_len);
+    r.tCov = computeCov(r.dbStartPos1, r.dbEndPos1, db_length);
 
     block_free_cigar(cigar);
     block_free_padded_aa(query_aa);
