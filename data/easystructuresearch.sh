@@ -47,7 +47,7 @@ fi
 
 if notExists "${TMP_PATH}/alis.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${QUERY}" "${TARGET}${EXPAND_EXT}${INDEXEXT}" "${INTERMEDIATE}" "${RESULTS}" ${CONVERT_PAR} \
+    "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${RESULTS}" ${CONVERT_PAR} \
         || fail "Convert Alignments died"
 fi
 
