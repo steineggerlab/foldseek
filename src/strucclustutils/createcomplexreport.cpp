@@ -21,8 +21,6 @@
 #include <omp.h>
 #endif
 
-typedef std::pair<std::string, std::string> compNameChainName_t;
-
 void getComplexNameChainName(std::string &chainName, compNameChainName_t &compAndChainName) {
     size_t pos = chainName.rfind('_');
     std::string comp = chainName.substr(0, pos);
@@ -30,9 +28,9 @@ void getComplexNameChainName(std::string &chainName, compNameChainName_t &compAn
     compAndChainName = {comp, chain};
 }
 
-void getResult (std::vector<ComplexResult> &complexResVec, std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector,  float qTMScore, float tTMScore, std::string t, std::string u, int assId) {
+void getScoreComplexResults (std::vector<ScoreComplexResult> &scoreComplexResults, std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector, float qTMScore, float tTMScore, std::string u, std::string t, int assId) {
     char buffer[1024];
-    std::string result;
+    resultToWrite_t resultToWrite;
     std::string qComplexName;
     std::string tComplexName;
     std::string qChainString;
@@ -52,14 +50,14 @@ void getResult (std::vector<ComplexResult> &complexResVec, std::vector<std::stri
         getComplexNameChainName(tChainVector[tChainId], compAndChainName);
         tChainString += ',' + compAndChainName.second;
     }
-    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, t.c_str(), u.c_str(), assId);
-    result.append(buffer, count);
-    complexResVec.emplace_back(ComplexResult(assId, result));
+    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), assId);
+    resultToWrite.append(buffer, count);
+    scoreComplexResults.emplace_back(ScoreComplexResult(assId, resultToWrite));
 }
 
 struct ComplexAlignment {
     ComplexAlignment(){};
-    ComplexAlignment(std::string qChain, std::string tChain, double qTMscore, double tTMscore, std::string t, std::string u, unsigned int assId) : qTMScore(qTMscore), tTMScore(tTMscore), t(t), u(u), assId(assId){
+    ComplexAlignment(std::string qChain, std::string tChain, double qTMscore, double tTMscore, std::string u, std::string t,  unsigned int assId) : qTMScore(qTMscore), tTMScore(tTMscore), u(u), t(t), assId(assId){
         qChainVector = {qChain};
         tChainVector = {tChain};
     };
@@ -67,8 +65,8 @@ struct ComplexAlignment {
     std::vector<std::string> tChainVector;
     double qTMScore;
     double tTMScore;
-    std::string t;
     std::string u;
+    std::string t;
     unsigned int assId;
 };
 
@@ -120,7 +118,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         Matcher::result_t res;
-        std::vector<ComplexResult> complexResVec;
+        std::vector<ScoreComplexResult> complexResults;
 
 #pragma omp  for schedule(dynamic, 10)
         for (size_t queryIdx = 0; queryIdx < qComplexIdVec.size(); queryIdx++) {
@@ -154,7 +152,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
                     unsigned int compAlnIdx = find(assIdVec.begin(), assIdVec.end(), assId) - assIdVec.begin();
                     if (compAlnIdx == compAlns.size()) {
                         assIdVec.emplace_back(assId);
-                        compAlns.emplace_back(ComplexAlignment(queryId, targetId, retComplex.qTmScore, retComplex.tTmScore, retComplex.tString, retComplex.uString, assId));
+                        compAlns.emplace_back(ComplexAlignment(queryId, targetId, retComplex.qTmScore, retComplex.tTmScore,  retComplex.uString, retComplex.tString, assId));
                     } else {
                         compAlns[compAlnIdx].qChainVector.emplace_back(queryId);
                         compAlns[compAlnIdx].tChainVector.emplace_back(targetId);
@@ -163,12 +161,12 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
             }
             for (size_t compAlnIdx = 0; compAlnIdx < compAlns.size(); compAlnIdx++) {
                 ComplexAlignment &compAln = compAlns[compAlnIdx];
-                getResult(complexResVec,compAln.qChainVector,compAln.tChainVector,compAln.qTMScore,compAln.tTMScore,compAln.t,compAln.u,compAln.assId);
+                getScoreComplexResults(complexResults,compAln.qChainVector,compAln.tChainVector,compAln.qTMScore,compAln.tTMScore,compAln.u,compAln.t,compAln.assId);
             }
         } // for end
-        SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
-        for (size_t i=0; i < complexResVec.size(); i++) {
-            resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);
+        SORT_SERIAL(complexResults.begin(), complexResults.end(), compareComplexResult);
+        for (size_t complexResIdx=0; complexResIdx < complexResults.size(); complexResIdx++) {
+            resultWriter.writeData(complexResults[complexResIdx].resultToWrite.c_str(), complexResults[complexResIdx].resultToWrite.length(), 0, localThreads - 1, false, false);
         }
     } // MP end
     resultWriter.close(true);

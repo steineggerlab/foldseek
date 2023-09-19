@@ -32,24 +32,24 @@ struct Chain {
     }
 };
 
-struct FeatureVector{
-    FeatureVector() {}
-    FeatureVector(float u[3][3], const float t[3]) {
+struct SuperpositionVector {
+    SuperpositionVector() {}
+    SuperpositionVector(float u[3][3], const float t[3]) {
         for (size_t i=0; i<3; i++) {
             for (size_t j=0; j<3; j++) {
-                features[3*i+j] =  u[i][j];
+                values[3*i+j] =  u[i][j];
             }
-            features[9+i] = t[i];
+            values[9+i] = t[i];
         }
         label = 0;
     }
-    double features[12];
-    int label;
+    double values[12];
+    unsigned int label;
 
-    double getDistance(const FeatureVector &o) {
+    double getDistance(const SuperpositionVector &o) {
         double dist = 0;
         for (size_t i=0; i<12; i++) {
-            dist += std::pow(features[i] - o.features[i], 2);
+            dist += std::pow(values[i] - o.values[i], 2);
         }
         dist = std::sqrt(dist);
         return dist;
@@ -58,14 +58,8 @@ struct FeatureVector{
 
 struct ChainToChainAln {
     ChainToChainAln() {}
-    ChainToChainAln(
-            Chain &queryChain,
-            Chain &targetChain,
-            float *queryCaData,
-            float *targetCaData,
-            Matcher::result_t &alnResult,
-            TMaligner::TMscoreResult &tmResult
-            ) : qChain(queryChain), dbChain(targetChain) {
+    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *queryCaData, float *targetCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult)
+    : qChain(queryChain), dbChain(targetChain) {
         std::vector<float> qCaXVec;
         std::vector<float> qCaYVec;
         std::vector<float> qCaZVec;
@@ -99,37 +93,31 @@ struct ChainToChainAln {
                     dbPos++;
                     break;
 //                default:
-//                    Debug(Debug::WARNING) << "backtrace ???" << "\n";
+//                    Debug(Debug::WARNING) << "wrong backtrace" << "\n";
 //                    break;
             }
         }
         qChain.setCaData(qCaXVec, qCaYVec, qCaZVec);
         dbChain.setCaData(dbCaXVec, dbCaYVec, dbCaZVec);
         alnLength = alnResult.alnLength;
-        featVec = FeatureVector(tmResult.u, tmResult.t);
+        superpositionVector = SuperpositionVector(tmResult.u, tmResult.t);
         char buffer[1024];
         size_t len = Matcher::resultToBuffer(buffer, alnResult, true, true, false);
-        result.append(buffer, len-1);
+        resultToWrite.append(buffer, len-1);
     }
 
     Chain qChain;
     Chain dbChain;
     unsigned int matches;
     unsigned int alnLength;
-    FeatureVector featVec;
-    std::string result;
+    SuperpositionVector superpositionVector;
+    resultToWrite_t resultToWrite;
 };
-
-struct IndexPairWithDist{
-    IndexPairWithDist(unsigned int index1, unsigned int index2, double distance) : indexPair({index1, index2}), distance(distance) {}
-    std::pair<unsigned int, unsigned int> indexPair;
-    double distance;
-};
-
-struct Complex {
-    Complex() {}
-    Complex(std::vector<unsigned int> &chainKeys) : qChainKeys(chainKeys), alnVec({}) {}
-    Complex(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen) : qChainKeys(chainKeys), qResidueLen(qResidueLen), alnVec({}) {}
+// chainToChainAlignments from the same query and target complex
+struct SearchResult {
+    SearchResult() {}
+    SearchResult(std::vector<unsigned int> &chainKeys) : qChainKeys(chainKeys), alnVec({}) {}
+    SearchResult(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen) : qChainKeys(chainKeys), qResidueLen(qResidueLen), alnVec({}) {}
     std::vector<unsigned int> qChainKeys;
     std::vector<unsigned int> dbChainKeys;
     unsigned int qResidueLen;
@@ -141,39 +129,26 @@ struct Complex {
         dbResidueLen = residueLen;
     }
 
+    // DO I NEED?
     void filterAlnVec(float compatibleCheckRatio) {
         if (alnVec.empty())
             return;
-        std::vector<ChainToChainAln> newAlnVec;
-        std::vector<ChainToChainAln> currDbComplexAlnVec;
-        ChainToChainAln firstAln = alnVec[0];
-        unsigned int dbPrevComplexId = firstAln.dbChain.complexId;
+        ChainToChainAln &firstAln = alnVec[0];
         unsigned int qChainCount = 1;
         unsigned int qPrevChainKey = firstAln.qChain.chainKey;
-
         for (auto &aln : alnVec) {
-            if (aln.dbChain.complexId != dbPrevComplexId) {
-                if (qChainCount >= (unsigned int)(qChainKeys.size() * compatibleCheckRatio))
-                    newAlnVec.insert(newAlnVec.end(), currDbComplexAlnVec.begin(), currDbComplexAlnVec.end());
-                currDbComplexAlnVec.clear();
-                dbPrevComplexId = aln.dbChain.complexId;
-                qChainCount = 1;
-                qPrevChainKey = aln.qChain.chainKey;
-                currDbComplexAlnVec.emplace_back(aln);
-            } else if (aln.qChain.chainKey != qPrevChainKey) {
-                qChainCount ++;
-                qPrevChainKey = aln.qChain.chainKey;
-                currDbComplexAlnVec.emplace_back(aln);
-            } else {
-                currDbComplexAlnVec.emplace_back(aln);
-            }
+            if (aln.qChain.chainKey == qPrevChainKey)
+                continue;
+            qChainCount ++;
+            qPrevChainKey = aln.qChain.chainKey;
         }
-        if (qChainCount >= (unsigned int)(qChainKeys.size() * compatibleCheckRatio))
-            newAlnVec.insert(newAlnVec.end(), currDbComplexAlnVec.begin(), currDbComplexAlnVec.end());
-        alnVec = newAlnVec;
+        if (qChainCount < (unsigned int)(qChainKeys.size() * compatibleCheckRatio))
+            alnVec.clear();
     }
 
     void normalize() {
+        if (alnVec.empty())
+            return;
         unsigned int length = alnVec.size();
         double mean[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
         double var[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
@@ -181,12 +156,12 @@ struct Complex {
         double cv[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
         for (size_t i=0; i < length; i++) {
             for (size_t j=0; j<12; j++) {
-                mean[j] += alnVec[i].featVec.features[j] / (double)length;
+                mean[j] += alnVec[i].superpositionVector.values[j] / (double)length;
             }
         }
         for (size_t i=0; i < length; i++) {
             for (size_t j=0; j<12; j++) {
-                double value = alnVec[i].featVec.features[j];
+                double value = alnVec[i].superpositionVector.values[j];
                 value -= mean[j];
                 value *= value;
                 var[j] += value/(double)length;
@@ -194,19 +169,20 @@ struct Complex {
         }
         for (size_t j=0; j<12; j++) {
             sd[j] = std::sqrt(var[j]);
-            cv[j] = abs(mean[j]) > 1.0 ? sd[j]/std::abs(mean[j]) : sd[j];
+            cv[j] = abs(mean[j]) > TOO_SMALL_MEAN ? sd[j]/std::abs(mean[j]) : sd[j];
         }
         for (size_t i=0; i < length; i++) {
             for (size_t j=0; j<12; j++) {
-                alnVec[i].featVec.features[j] = (cv[j] < 0.1) ? 0.0 : (alnVec[i].featVec.features[j] - mean[j]) / sd[j];
+                alnVec[i].superpositionVector.values[j] = (cv[j] < TOO_SMALL_CV) ? FILTERED_OUT : (alnVec[i].superpositionVector.values[j] - mean[j]) / sd[j];
             }
         }
     }
 };
+// Assignment of chainToChainAlignments
+struct Assignment {
+    Assignment() {}
+    Assignment(unsigned int qLength, unsigned int dbLength): qResidueLength(qLength), dbResidueLength(dbLength), matches(0) {}
 
-struct ComplexToComplexAln {
-    ComplexToComplexAln() {}
-    ComplexToComplexAln(unsigned int qLength, unsigned int dbLength): qResidueLength(qLength), dbResidueLength(dbLength), matches(0) {}
     std::vector<unsigned int> qChainKeys;
     std::vector<unsigned int> dbChainKeys;
     unsigned int qResidueLength;
@@ -222,7 +198,10 @@ struct ComplexToComplexAln {
     double dbTmScore;
     std::string tString;
     std::string uString;
-    std::vector<std::string> alnResVec;
+    std::string backtrace;
+    std::string assignmentInfo;
+    std::vector<resultToWrite_t> resultToWriteLines;
+    TMaligner::TMscoreResult tmResult;
 
     void appendChainToChainAln(ChainToChainAln &aln) {
         qChainKeys.emplace_back(aln.qChain.chainKey);
@@ -234,7 +213,7 @@ struct ComplexToComplexAln {
         dbCaXVec.insert(dbCaXVec.end(), aln.dbChain.caVecX.begin(), aln.dbChain.caVecX.end());
         dbCaYVec.insert(dbCaYVec.end(), aln.dbChain.caVecY.begin(), aln.dbChain.caVecY.end());
         dbCaZVec.insert(dbCaZVec.end(), aln.dbChain.caVecZ.begin(), aln.dbChain.caVecZ.end());
-        alnResVec.emplace_back(aln.result);
+        resultToWriteLines.emplace_back(aln.resultToWrite);
     }
     void reset() {
         qChainKeys.clear();
@@ -246,33 +225,50 @@ struct ComplexToComplexAln {
         dbCaXVec.clear();
         dbCaYVec.clear();
         dbCaZVec.clear();
-        alnResVec.clear();
+        resultToWriteLines.clear();
         uString.clear();
         tString.clear();
     }
 
     void getTmScore(TMaligner &tmAligner) {
-        std::string backtrace(matches, 'M');
+        backtrace = std::string(matches, 'M');
         unsigned int normLen = std::min(qResidueLength, dbResidueLength);
         tmAligner.initQuery(&qCaXVec[0], &qCaYVec[0], &qCaZVec[0], NULL, matches);
-        TMaligner::TMscoreResult tmResult= tmAligner.computeTMscore(&dbCaXVec[0], &dbCaYVec[0], &dbCaZVec[0],
-                                                                    matches,0,0, backtrace,normLen);
+        tmResult = tmAligner.computeTMscore(&dbCaXVec[0], &dbCaYVec[0], &dbCaZVec[0],matches,0,0, backtrace,normLen);
         qTmScore = tmResult.tmscore * normLen / qResidueLength;
         dbTmScore = tmResult.tmscore * normLen / dbResidueLength;
-        std::string sep;
-        for (size_t i=0; i<3; i++) {
-            sep = i==2 ? "" : ",";
-            tString.append(std::to_string(tmResult.t[i]) + sep);
-            for (size_t j=0; j<3; j++) {
-                sep = i==2 && j==2 ? "" : ",";
-                uString.append(std::to_string(tmResult.u[i][j]) + sep);
-            }
-        }
+        qCaXVec.clear();
+        qCaYVec.clear();
+        qCaZVec.clear();
+        dbCaXVec.clear();
+        dbCaYVec.clear();
+        dbCaZVec.clear();
         backtrace.clear();
-        sep.clear();
-
     }
 
+    void updateResultToWriteLines() {
+        char sep = ',';
+        unsigned int i = 0;
+        while (true) {
+            tString.append(std::to_string(tmResult.t[i]));
+            unsigned int j = 0;
+            while (true) {
+                uString.append(std::to_string(tmResult.u[i][j]));
+                if (j++==2) break;
+                uString += sep;
+            }
+            if (i++==2) break;
+            tString += sep;
+            uString += sep;
+        }
+        assignmentInfo = '\t' + std::to_string(qTmScore) + '\t' + std::to_string(dbTmScore) + '\t' + uString.c_str() + '\t' + tString.c_str();
+        for (auto &resultToWrite: resultToWriteLines) {
+            resultToWrite += assignmentInfo;
+        }
+        uString.clear();
+        tString.clear();
+        assignmentInfo.clear();
+    }
 };
 
 bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
@@ -283,30 +279,11 @@ bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const Cha
     return false;
 }
 
-bool compareChainToChainAlnByComplexIdAndChainKey(const ChainToChainAln &first, const ChainToChainAln &second) {
-    if (first.qChain.complexId < second.qChain.complexId)
-        return true;
-    if (first.qChain.complexId > second.qChain.complexId)
-        return false;
-    if (first.dbChain.complexId < second.dbChain.complexId)
-        return true;
-    if (first.dbChain.complexId > second.dbChain.complexId)
-        return false;
-    if (first.qChain.chainKey < second.qChain.chainKey)
-        return true;
-    if (first.qChain.chainKey > second.qChain.chainKey)
-        return false;
-    if (first.dbChain.chainKey < second.dbChain.chainKey)
-        return true;
-    if (first.dbChain.chainKey > second.dbChain.chainKey)
-        return false;
-    return false;
-}
 
 bool compareChainToChainAlnByClusterLabel(const ChainToChainAln &first, const ChainToChainAln &second) {
-    if (first.featVec.label < second.featVec.label)
+    if (first.superpositionVector.label < second.superpositionVector.label)
         return true;
-    if (first.featVec.label > second.featVec.label)
+    if (first.superpositionVector.label > second.superpositionVector.label)
         return false;
     if (first.qChain.chainKey < second.qChain.chainKey)
         return true;
@@ -320,218 +297,205 @@ bool compareChainToChainAlnByClusterLabel(const ChainToChainAln &first, const Ch
     return false;
 }
 
-bool compareIndexPairWithDistByDist(const IndexPairWithDist &first, const IndexPairWithDist &second) {
-    if (first.distance < second.distance) {
+bool compareAssignment(const Assignment &first, const Assignment &second) {
+    if (first.qTmScore > second.qTmScore)
         return true;
-    }
-    if (first.distance > second.distance) {
+    if (first.qTmScore < second.qTmScore)
         return false;
-    }
-    return false;
-}
-
-bool compareComplexToComplexAln(const ComplexToComplexAln &first, const ComplexToComplexAln &second) {
-    if (first.qTmScore > second.qTmScore) {
+    if (first.dbTmScore > second.dbTmScore)
         return true;
-    }
-    if (first.qTmScore < second.qTmScore) {
+    if (first.dbTmScore < second.dbTmScore)
         return false;
-    }
-    if (first.dbTmScore > second.dbTmScore) {
-        return true;
-    }
-    if (first.dbTmScore < second.dbTmScore) {
-        return false;
-    }
     return false;
 }
 
 class DBSCANCluster {
 public:
-    DBSCANCluster(unsigned int minSize, float defEps) {
+    DBSCANCluster(unsigned int qChainNums, unsigned int dbChainNums, double minCov, SearchResult &qComplex, bool &isClustered) : searchResult(qComplex), isClustered(isClustered) {
         recursiveNum = 0;
-        minClusterSize = minSize;
-        defaultEps = defEps;
+        cLabel = 0;
+        minClusterSize = (unsigned int) (qChainNums * minCov);
+        eps = DEFAULT_EPS;
+        idealClusterSize = std::min(qChainNums, dbChainNums);
+        bestClusters.clear();
+        prevMaxClusterSize = 0;
+        isClustered = false;
+        fillDistMap();
     }
-    void  clusterAlns(Complex &qComplex, float eps, unsigned int clusterSize) {
-        initializeAlnLabeling(qComplex);
-        if (++recursiveNum > MAX_RECURSIVE_NUM)
-            return;
-        if (clusterSize < minClusterSize)
-            return;
-        if (clusterSize==1)
-            return labelAlns(qComplex);
-        if (clusterSize==2)
-            return getAlnPairs(qComplex);
-        int cLabel = 0;
-        clearClusterVectors();
-        for (size_t i=0; i<qComplex.alnVec.size(); i++) {
-            ChainToChainAln &centerAln = qComplex.alnVec[i];
-            if (centerAln.featVec.label != 0) continue;
-            std::vector<unsigned int> neighbors = getNeighbors(qComplex, i, eps);
-            if (neighbors.size() < MIN_PTS) {
-                centerAln.featVec.label = -1;
+    void clusterAlns() {
+        initializeAlnLabels();
+
+        if (++recursiveNum > MAX_RECURSIVE_NUM) return;
+
+        for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
+            ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
+            if (centerAln.superpositionVector.label != 0) continue;
+            getNeighbors(centerAlnIdx, neighbors);
+            if (neighbors.size() < MIN_PTS) continue;
+            centerAln.superpositionVector.label = ++cLabel;
+            unsigned int i = 0;
+            while (i < neighbors.size()) {
+                unsigned int neighborAlnIdx = neighbors[i++];
+                if (centerAlnIdx == neighborAlnIdx) continue;
+                ChainToChainAln &neighborAln = searchResult.alnVec[neighborAlnIdx];
+                neighborAln.superpositionVector.label = cLabel;
+                getNeighbors(neighborAlnIdx, neighborsOfCurrNeighbor);
+                if (neighborsOfCurrNeighbor.size() < MIN_PTS) continue;
+                for (unsigned int &neighbor : neighborsOfCurrNeighbor) {
+                    if (std::find(neighbors.begin(), neighbors.end(), neighbor) == neighbors.end())
+                        neighbors.emplace_back(neighbor);
+                }
+            }
+
+            if (neighbors.size() > idealClusterSize )
                 continue;
+            else if (checkChainRedundancy())
+                continue;
+            else if (neighbors.size() < maxClusterSize)
+                continue;
+            else if (neighbors.size() == maxClusterSize)
+                currClusters.emplace_back(neighbors);
+            else if (neighbors.size() > maxClusterSize) {
+                maxClusterSize = neighbors.size();
+                currClusters.clear();
+                currClusters.emplace_back(neighbors);
             }
-            centerAln.featVec.label = ++cLabel;
-            std::vector<unsigned int> neighborsOfNeighbors = neighbors;
-            unsigned int j = 0;
-            neighbors.clear();
-            while (j < neighborsOfNeighbors.size()) {
-                unsigned int q = neighborsOfNeighbors[j++];
-                if (i==q) continue;
-                ChainToChainAln &neighborAln = qComplex.alnVec[q];
-                neighborAln.featVec.label = (neighborAln.featVec.label == 0) || (neighborAln.featVec.label == -1) ? cLabel : neighborAln.featVec.label;
-                std::vector<unsigned int> neighborsOfCurrNeighbor = getNeighbors(qComplex, q, eps);
-                if (neighborsOfCurrNeighbor.size() >= MIN_PTS) {
-                    for (unsigned int &neighbor : neighborsOfCurrNeighbor) {
-                        if (std::find(neighborsOfNeighbors.begin(), neighborsOfNeighbors.end(), neighbor) == neighborsOfNeighbors.end())
-                            neighborsOfNeighbors.emplace_back(neighbor);
-                    }
-                }
-            }
-            std::vector<unsigned int> qFoundChainKeys;
-            std::vector<unsigned int> dbFoundChainKeys;
-            bool isDefectiveCluster = false;
-            for (auto neighborIdx : neighborsOfNeighbors) {
-                ChainToChainAln currAln = qComplex.alnVec[neighborIdx];
-                unsigned int qChainKey = currAln.qChain.chainKey;
-                unsigned int dbChainKey = currAln.dbChain.chainKey;
-                bool isNewQChainKey = std::find(qFoundChainKeys.begin(), qFoundChainKeys.end(), qChainKey) == qFoundChainKeys.end();
-                bool isNewDbChainKey = std::find(dbFoundChainKeys.begin(), dbFoundChainKeys.end(), dbChainKey)==dbFoundChainKeys.end();
-                if (isNewQChainKey && isNewDbChainKey) {
-                    qFoundChainKeys.emplace_back(qChainKey);
-                    dbFoundChainKeys.emplace_back(dbChainKey);
-                } else {
-                    isDefectiveCluster = true;
-                    break;
-                }
-            }
-            if (isDefectiveCluster)
-                defectiveClusters.emplace_back(cLabel);
-            else if (neighborsOfNeighbors.size() > clusterSize)
-                bigClusters.emplace_back(cLabel);
-            else if (neighborsOfNeighbors.size() < clusterSize)
-                smallClusters.emplace_back(cLabel);
-            else
-                validClusters.emplace_back(cLabel);
         }
 
-        if (!validClusters.empty()) {
-            keepValidClustersOnly(qComplex);
-            SORT_SERIAL(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByClusterLabel);
-            return;
-        }
-        else if (cLabel==0 || !smallClusters.empty()) return clusterAlns(qComplex, eps * (1 + LEARNING_RATE), clusterSize);
-        else if (!bigClusters.empty()) return clusterAlns(qComplex, eps * (1 - LEARNING_RATE), clusterSize);
-        else if (!defectiveClusters.empty()) return clusterAlns(qComplex, defaultEps, clusterSize - 1);
+        if (maxClusterSize == idealClusterSize) {
+            bestClusters = currClusters;
+            return finishDBSCAN();
+        } else if (maxClusterSize < prevMaxClusterSize)
+            return finishDBSCAN();
+        else if (maxClusterSize == prevMaxClusterSize && currClusters.size() < bestClusters.size())
+            return finishDBSCAN();
+        bestClusters = currClusters;
+        prevMaxClusterSize = maxClusterSize;
+        eps += LEARNING_RATE;
+        return clusterAlns();
     }
 
 private:
+    const unsigned int UNCLUSTERED = 0;
     const unsigned int MAX_RECURSIVE_NUM = 1000;
-    const float LEARNING_RATE = 0.05;
     const unsigned int MIN_PTS = 2;
-    float defaultEps;
+    const float LEARNING_RATE = 0.1;
+    const float DEFAULT_EPS = 0.1;
+    SearchResult &searchResult;
+    float eps;
+    unsigned int cLabel;
+    bool &isClustered;
+    unsigned int prevMaxClusterSize;
+    unsigned int maxClusterSize;
     unsigned int recursiveNum;
+    unsigned int idealClusterSize;
     unsigned int minClusterSize;
-    std::vector<unsigned int> validClusters;
-    std::vector<unsigned int> smallClusters;
-    std::vector<unsigned int> bigClusters;
-    std::vector<unsigned int> defectiveClusters;
+    std::vector<unsigned int> neighbors;
+    std::vector<unsigned int> neighborsOfCurrNeighbor;
+    std::vector<unsigned int> qFoundChainKeys;
+    std::vector<unsigned int> dbFoundChainKeys;
+    distMap_t distMap;
+    cluster_t currClusters;
+    cluster_t bestClusters;
 
-    static std::vector<unsigned int> getNeighbors(Complex &qComplex, unsigned int centerIdx, float eps) {
-        ChainToChainAln centerAln = qComplex.alnVec[centerIdx];
-        std::vector<unsigned int> neighbors;
-        neighbors.emplace_back(centerIdx);
-        for (size_t neighborIdx=0; neighborIdx < qComplex.alnVec.size(); neighborIdx++) {
-            if (neighborIdx == centerIdx) continue;
-            ChainToChainAln neighborAln = qComplex.alnVec[neighborIdx];
-            double dist = centerAln.featVec.getDistance(neighborAln.featVec);
-            if (dist<eps)
-                neighbors.emplace_back(neighborIdx);
-        }
-        return neighbors;
-    }
-
-    static void labelAlns(Complex &qComplex) {
-        int cLabel = 0;
-        for (auto & aln : qComplex.alnVec) {
-            aln.featVec.label = ++cLabel;
-        }
-    }
-
-    static void getAlnPairs(Complex &qComplex) {
-        int cLabel = 0;
-        std::vector<IndexPairWithDist> IndexPairs;
-        for (size_t i=0; i<qComplex.alnVec.size(); i++) {
-            ChainToChainAln prevAln = qComplex.alnVec[i];
-            for (size_t j = i+1; j < qComplex.alnVec.size(); j++) {
-                ChainToChainAln currAln = qComplex.alnVec[j];
-                if (qComplex.alnVec[i].qChain.chainKey==qComplex.alnVec[j].qChain.chainKey || qComplex.alnVec[i].dbChain.chainKey==qComplex.alnVec[j].dbChain.chainKey) continue;
-                double dist = prevAln.featVec.getDistance(currAln.featVec);
-                IndexPairs.emplace_back(IndexPairWithDist(i, j, dist));
+    void fillDistMap() {
+        distMap.clear();
+        for (size_t i=0; i < searchResult.alnVec.size(); i++) {
+            ChainToChainAln &prevAln = searchResult.alnVec[i];
+            for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
+                ChainToChainAln &currAln = searchResult.alnVec[j];
+//                if (prevAln.qChain.chainKey == currAln.qChain.chainKey || prevAln.dbChain.chainKey == currAln.dbChain.chainKey)
+//                    continue;
+                double dist = prevAln.superpositionVector.getDistance(currAln.superpositionVector);
+                distMap.insert({{i,j}, dist});
             }
         }
-        SORT_SERIAL(IndexPairs.begin(), IndexPairs.end(), compareIndexPairWithDistByDist);
-        if (IndexPairs.empty())
-            return labelAlns(qComplex);
-        for (auto &IndexPair : IndexPairs) {
-            unsigned int alnIdx1 = IndexPair.indexPair.first;
-            unsigned int alnIdx2 = IndexPair.indexPair.second;
-            if (qComplex.alnVec[alnIdx1].featVec.label > 0 || qComplex.alnVec[alnIdx2].featVec.label > 0) continue;
-            qComplex.alnVec[alnIdx1].featVec.label = ++cLabel;
-            qComplex.alnVec[alnIdx2].featVec.label = cLabel;
-        }
-        SORT_SERIAL(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByClusterLabel);
     }
 
-    static void initializeAlnLabeling(Complex &qComplex) {
-        for (auto &aln : qComplex.alnVec) {
-            aln.featVec.label=0;
+
+    void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
+        neighborVec.clear();
+        neighborVec.emplace_back(centerIdx);
+        for (size_t neighborIdx = 0; neighborIdx < searchResult.alnVec.size(); neighborIdx++) {
+            double dist = centerIdx < neighborIdx ? distMap[{centerIdx, neighborIdx}] : distMap[{neighborIdx, centerIdx}];
+            if (neighborIdx == centerIdx || dist >= eps)
+                continue;
+            neighborVec.emplace_back(neighborIdx);
         }
     }
 
-    void clearClusterVectors() {
-        validClusters.clear();
-        smallClusters.clear();
-        bigClusters.clear();
-        defectiveClusters.clear();
+    void initializeAlnLabels() {
+        for (auto &aln : searchResult.alnVec) {
+            aln.superpositionVector.label = UNCLUSTERED;
+        }
+        cLabel = UNCLUSTERED;
+        maxClusterSize = 0;
+        currClusters.clear();
     }
 
-    void keepValidClustersOnly(Complex &qComplex) {
-        for (auto &aln : qComplex.alnVec) {
-            aln.featVec.label = std::find(validClusters.begin(), validClusters.end(), aln.featVec.label) == validClusters.end() ? -1 : aln.featVec.label;
+    bool checkChainRedundancy() {
+        qFoundChainKeys.clear();
+        dbFoundChainKeys.clear();
+        for (auto neighborIdx : neighbors) {
+            unsigned int qChainKey = searchResult.alnVec[neighborIdx].qChain.chainKey;
+            unsigned int dbChainKey = searchResult.alnVec[neighborIdx].dbChain.chainKey;
+            if (std::find(qFoundChainKeys.begin(), qFoundChainKeys.end(), qChainKey) != qFoundChainKeys.end())
+                return true;
+            if (std::find(dbFoundChainKeys.begin(), dbFoundChainKeys.end(), dbChainKey) != dbFoundChainKeys.end())
+                return true;
+            qFoundChainKeys.emplace_back(qChainKey);
+            dbFoundChainKeys.emplace_back(dbChainKey);
         }
+        return false;
     }
+
+    void finishDBSCAN() {
+        initializeAlnLabels();
+        if (prevMaxClusterSize < minClusterSize)
+            return;
+        isClustered = true;
+        cLabel = 1;
+        for (auto &cluster: bestClusters) {
+            for (auto alnIdx: cluster) {
+                searchResult.alnVec[alnIdx].superpositionVector.label = cLabel;
+            }
+            cLabel++;
+        }
+        SORT_SERIAL(searchResult.alnVec.begin(), searchResult.alnVec.end(), compareChainToChainAlnByClusterLabel);
+    }
+
+//    void free() {
+//        neighbors.clear();
+//        neighborsOfCurrNeighbor.clear();
+//        qFoundChainKeys.clear();
+//        dbFoundChainKeys.clear();
+//        distMap.clear();
+//        currClusters.clear();
+//        bestClusters.clear();
+//    }
+
 };
 
 class ComplexScorer {
 public:
     ComplexScorer(
             IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr,
-            IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, float minAssignedChainsRatio
+            IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio
             ) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx),
         minAssignedChainsRatio(minAssignedChainsRatio) {
-        maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen() + 1,
-                               tDbr3Di->sequenceReader->getMaxSeqLen() + 1);
+        maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen()+1, tDbr3Di->sequenceReader->getMaxSeqLen()+1);
         q3diDbr = qDbr3Di;
         t3diDbr = tDbr3Di;
         maxResLen = maxChainLen * 2;
         tmAligner = new TMaligner(maxResLen, false, true);
     }
 
-    std::vector<Complex> getQComplexes(
-            unsigned int qComplexId, std::vector<unsigned int> &qChainKeys,
-            std::map<unsigned int, unsigned int> &dbChainKeyToComplexIdLookup,
-            std::map<unsigned int, std::vector<unsigned int>> &dbComplexIdToChainKeysLookup
-            ) {
-        std::vector<Complex> qComplexes;
-        std::vector<ChainToChainAln> parsedAlns;
+    void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
+        searchResults.clear();
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
-        if (qResLen == 0) {
-            return qComplexes;
-        }
-        Complex qComplex = Complex(qChainKeys, qResLen);
+        if (qResLen == 0)
+            return;
+        searchResult = SearchResult(qChainKeys, qResLen);
         for (auto qChainKey: qChainKeys) {
             unsigned int qKey = alnDbr.getId(qChainKey);
             if (qKey == NOT_AVAILABLE_CHAIN_KEY)
@@ -542,10 +506,10 @@ public:
             size_t qId = qCaDbr->sequenceReader->getId(qChainKey);
             char *qCaData = qCaDbr->sequenceReader->getData(qId, thread_idx);
             size_t qCaLength = qCaDbr->sequenceReader->getEntryLen(qId);
+            unsigned int &qLen = qAlnResult.qLen;
             float *queryCaData = qCoords.read(qCaData, qAlnResult.qLen, qCaLength);
             Chain qChain = Chain(qComplexId, qChainKey);
-            tmAligner->initQuery(queryCaData, &queryCaData[qAlnResult.qLen], &queryCaData[qAlnResult.qLen * 2], NULL,
-                                 qAlnResult.qLen);
+            tmAligner->initQuery(queryCaData, &queryCaData[qLen], &queryCaData[qLen * 2], NULL, qLen);
             while (*data != '\0') {
                 char dbKeyBuffer[255 + 1];
                 Util::parseKey(data, dbKeyBuffer);
@@ -557,82 +521,77 @@ public:
                 size_t tCaLength = tCaDbr->sequenceReader->getEntryLen(tCaId);
                 float *targetCaData = tCoords.read(tCaData, alnResult.dbLen, tCaLength);
                 Chain dbChain = Chain(dbComplexId, dbKey);
-                TMaligner::TMscoreResult tmResult = tmAligner->computeTMscore(targetCaData,
-                                                                              &targetCaData[alnResult.dbLen],
-                                                                              &targetCaData[alnResult.dbLen +
-                                                                                            alnResult.dbLen],
-                                                                              alnResult.dbLen, alnResult.qStartPos,
-                                                                              alnResult.dbStartPos,
-                                                                              Matcher::uncompressAlignment(
-                                                                                      alnResult.backtrace),
-                                                                              alnResult.alnLength);
+                TMaligner::TMscoreResult tmResult = tmAligner->computeTMscore(
+                        targetCaData, &targetCaData[alnResult.dbLen], &targetCaData[alnResult.dbLen + alnResult.dbLen],
+                        alnResult.dbLen, alnResult.qStartPos, alnResult.dbStartPos,
+                        Matcher::uncompressAlignment(alnResult.backtrace), alnResult.alnLength
+                        );
                 ChainToChainAln chainAln(qChain, dbChain, queryCaData, targetCaData, alnResult, tmResult);
-                parsedAlns.emplace_back(chainAln);
-
+                alnsFromCurrentQuery.emplace_back(chainAln);
                 data = Util::skipLine(data);
             }
         }
-        if (parsedAlns.empty())
-            return qComplexes;
-        SORT_SERIAL(parsedAlns.begin(), parsedAlns.end(), compareChainToChainAlnByDbComplexId);
-        unsigned int currDbComplexId = parsedAlns[0].dbChain.complexId;
-        std::vector<unsigned int> currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
+        if (alnsFromCurrentQuery.empty())
+            return;
+        SORT_SERIAL(alnsFromCurrentQuery.begin(), alnsFromCurrentQuery.end(), compareChainToChainAlnByDbComplexId);
+        unsigned int currDbComplexId = alnsFromCurrentQuery[0].dbChain.complexId;
+        std::vector<unsigned int> &currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
         unsigned int currDbResLen = getDbResidueLength(currDbChainKeys);
-        qComplex.resetDbComplex(currDbChainKeys, currDbResLen);
-        for (auto &aln: parsedAlns) {
-            if (aln.dbChain.complexId != currDbComplexId) {
-                qComplex.filterAlnVec(1.0);
-                if (!qComplex.alnVec.empty() && currDbResLen > 0) {
-                    qComplex.normalize();
-                    qComplexes.emplace_back(qComplex);
-                }
-                qComplex.alnVec.clear();
-                currDbComplexId = aln.dbChain.complexId;
-                currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
-                currDbResLen = getDbResidueLength(currDbChainKeys);
-                qComplex.resetDbComplex(currDbChainKeys, currDbResLen);
+        searchResult.resetDbComplex(currDbChainKeys, currDbResLen);
+        for (auto &aln: alnsFromCurrentQuery) {
+            if (aln.dbChain.complexId == currDbComplexId) {
+                searchResult.alnVec.emplace_back(aln);
+                continue;
             }
-            qComplex.alnVec.emplace_back(aln);
+            searchResult.filterAlnVec(1.0);
+            searchResult.normalize();
+            if (!searchResult.alnVec.empty() && currDbResLen > 0)
+                searchResults.emplace_back(searchResult);
+            searchResult.alnVec.clear();
+            currDbComplexId = aln.dbChain.complexId;
+            currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
+            currDbResLen = getDbResidueLength(currDbChainKeys);
+            searchResult.resetDbComplex(currDbChainKeys, currDbResLen);
+            searchResult.alnVec.emplace_back(aln);
         }
-        qComplex.filterAlnVec(1.0);
-        if (!qComplex.alnVec.empty() && currDbResLen > 0) {
-            qComplex.normalize();
-            SORT_SERIAL(qComplex.alnVec.begin(), qComplex.alnVec.end(), compareChainToChainAlnByComplexIdAndChainKey);
-            qComplexes.emplace_back(qComplex);
-        }
-        return qComplexes;
+        alnsFromCurrentQuery.clear();
+        searchResult.filterAlnVec(1.0);
+        searchResult.normalize();
+        if (!searchResult.alnVec.empty() && currDbResLen > 0)
+            searchResults.emplace_back(searchResult);
+        searchResult.alnVec.clear();
+        return;
     }
 
-    void getComplexAlns(Complex &qComplex, std::vector<ComplexToComplexAln> &results) {
+    void getAssignments(SearchResult &qComplex, std::vector<Assignment> &assignments) {
         if (maxResLen < maxChainLen * qComplex.qChainKeys.size() ||
             maxResLen < maxChainLen * qComplex.dbChainKeys.size()) {
             delete tmAligner;
             maxResLen = std::max(maxChainLen * qComplex.qChainKeys.size(), maxChainLen * qComplex.dbChainKeys.size());
             tmAligner = new TMaligner(maxResLen, false, true);
         }
-        DBSCANCluster dbscanCluster = DBSCANCluster(
-                (unsigned int) std::ceil(qComplex.qChainKeys.size() * minAssignedChainsRatio), 0.5);
-        dbscanCluster.clusterAlns(qComplex, 0.5, std::min(qComplex.qChainKeys.size(), qComplex.dbChainKeys.size()));
-        int currLabel = 0;
-        ComplexToComplexAln complexAln = ComplexToComplexAln(qComplex.qResidueLen, qComplex.dbResidueLen);
+        bool isClustered;
+        DBSCANCluster dbscanCluster = DBSCANCluster(qComplex.qChainKeys.size(), qComplex.dbChainKeys.size(), minAssignedChainsRatio, qComplex, isClustered);
+        dbscanCluster.clusterAlns();
+        if (!isClustered)
+            return;
+        unsigned int currLabel = 1;
+        assignment = Assignment(qComplex.qResidueLen, qComplex.dbResidueLen);
         for (auto &currAln: qComplex.alnVec) {
-            if (currAln.featVec.label == 0 || currAln.featVec.label == -1) continue;
-            if (currAln.featVec.label == currLabel) {
-                complexAln.appendChainToChainAln(currAln);
-            } else {
-                if (currLabel > 0) {
-                    complexAln.getTmScore(*tmAligner);
-                    results.emplace_back(complexAln);
-                }
-                complexAln.reset();
-                complexAln.appendChainToChainAln(currAln);
-                currLabel = currAln.featVec.label;
+            if (currAln.superpositionVector.label == UN_CLUSTERED_ALN) continue;
+            if (currAln.superpositionVector.label != currLabel) {
+                assignment.getTmScore(*tmAligner);
+                assignment.updateResultToWriteLines();
+                assignments.emplace_back(assignment);
+                assignment.reset();
+                currLabel = currAln.superpositionVector.label;
             }
+            assignment.appendChainToChainAln(currAln);
         }
-        if (currLabel > 0) {
-            complexAln.getTmScore(*tmAligner);
-            results.emplace_back(complexAln);
-        }
+        assignment.getTmScore(*tmAligner);
+        assignment.updateResultToWriteLines();
+        assignments.emplace_back(assignment);
+        assignment.reset();
     }
 
     void free() {
@@ -640,6 +599,7 @@ public:
     }
 
 private:
+    const static unsigned int UN_CLUSTERED_ALN = 0;
     TMaligner *tmAligner;
     unsigned int maxChainLen;
     DBReader<unsigned int> &alnDbr;
@@ -650,17 +610,18 @@ private:
     Coordinate16 qCoords;
     Coordinate16 tCoords;
     unsigned int thread_idx;
-    float minAssignedChainsRatio;
+    double minAssignedChainsRatio;
     unsigned int maxResLen;
+    std::vector<ChainToChainAln> alnsFromCurrentQuery;
+    SearchResult searchResult;
+    Assignment assignment;
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
         for (auto qChainKey: qChainKeys) {
             size_t id = q3diDbr->sequenceReader->getId(qChainKey);
-            if (id == NOT_AVAILABLE_CHAIN_KEY) {
-                // Not accessible
-                return 0;
-            }
+            // Not accessible
+            if (id == NOT_AVAILABLE_CHAIN_KEY) return 0;
             qResidueLen += q3diDbr->sequenceReader->getSeqLen(id);
         }
         return qResidueLen;
@@ -670,10 +631,8 @@ private:
         unsigned int dbResidueLen = 0;
         for (auto dbChainKey: dbChainKeys) {
             size_t id = t3diDbr->sequenceReader->getId(dbChainKey);
-            if (id == NOT_AVAILABLE_CHAIN_KEY) {
-                // Not accessible
-                return 0;
-            }
+            // Not accessible
+            if (id == NOT_AVAILABLE_CHAIN_KEY) return 0;
             dbResidueLen += t3diDbr->sequenceReader->getSeqLen(id);
         }
         return dbResidueLen;
@@ -705,19 +664,19 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_ALIGNMENT_RES);
     resultWriter.open();
-    float minAssignedChainsRatio = par.minAssignedChainsThreshold > 1.0 ? 1.0 : par.minAssignedChainsThreshold;
+    double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
 
-    std::vector<unsigned int> qComplexIdVec;
+    std::vector<unsigned int> qComplexIndeces;
     std::vector<unsigned int> dbComplexIdVec;
-    std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap;
-    std::map<unsigned int, unsigned int> dbChainKeyToComplexIdMap;
-    std::map<unsigned int, std::vector<unsigned int>> dbComplexIdToChainKeysMap;
-    std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeysMap;
-    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIdVec);
+    chainKeyToComplexId_t qChainKeyToComplexIdMap;
+    chainKeyToComplexId_t dbChainKeyToComplexIdMap;
+    complexIdToChainKeys_t dbComplexIdToChainKeysMap;
+    complexIdToChainKeys_t qComplexIdToChainKeysMap;
+    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndeces);
     getKeyToIdMapIdToKeysMapIdVec(dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIdVec);
     qChainKeyToComplexIdMap.clear();
     dbComplexIdVec.clear();
-    Debug::Progress progress(qComplexIdVec.size());
+    Debug::Progress progress(qComplexIndeces.size());
 
 #pragma omp parallel
     {
@@ -726,36 +685,38 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        std::vector<ComplexToComplexAln> assignments;
-        std::vector<std::string> resultToWriteLines;
+        std::vector<SearchResult> searchResults;
+        std::vector<Assignment> assignments;
+        std::vector<resultToWrite_t> resultToWriteLines;
         ComplexScorer complexScorer(&q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
-        for (size_t queryIdx = 0; queryIdx < qComplexIdVec.size(); queryIdx++) {
+        for (size_t qId = 0; qId < qComplexIndeces.size(); qId++) {
             progress.updateProgress();
-            unsigned int qComplexId = qComplexIdVec[queryIdx];
+            unsigned int qComplexId = qComplexIndeces[qId];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            std::vector<Complex> qComplexes = complexScorer.getQComplexes(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap);
+            complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
-            for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
-                complexScorer.getComplexAlns(qComplexes[qComplexIdx], assignments);
+            for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
+                complexScorer.getAssignments(searchResults[dbId], assignments);
             }
-            SORT_SERIAL(assignments.begin(), assignments.end(), compareComplexToComplexAln);
-            // for each assignment
+            SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
+            // for each query chain key
             for (unsigned int qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
                 resultToWriteLines.emplace_back("");
             }
-            for (unsigned int assignmentId=0; assignmentId < assignments.size(); assignmentId++){
-                ComplexToComplexAln &assignment = assignments[assignmentId];
+            // for each assignment
+            for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
+                Assignment &assignment = assignments[assignmentId];
                 // for each output line from this assignment
-                for (size_t alnIdx=0; alnIdx < assignment.alnResVec.size(); alnIdx++) {
-                    unsigned int qKey = assignment.qChainKeys[alnIdx];
-                    snprintf(buffer,sizeof(buffer), "%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n", assignment.alnResVec[alnIdx].c_str(), assignment.qTmScore, assignment.dbTmScore, assignment.tString.c_str(), assignment.uString.c_str(), assignmentId);
+                for (size_t resultToWriteIdx = 0; resultToWriteIdx < assignment.resultToWriteLines.size(); resultToWriteIdx++) {
+                    unsigned int qKey = assignment.qChainKeys[resultToWriteIdx];
+                    snprintf(buffer, sizeof(buffer), "%s\t%d\n", assignment.resultToWriteLines[resultToWriteIdx].c_str(), assignmentId);
                     unsigned int currIdx = find(qChainKeys.begin(), qChainKeys.end(), qKey) - qChainKeys.begin();
                     resultToWriteLines[currIdx].append(buffer);
                 }
             }
-            for (size_t qChainKeyIdx=0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
+            for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
                 resultWriter.writeData(resultToWriteLines[qChainKeyIdx].c_str(), resultToWriteLines[qChainKeyIdx].length(), qChainKeys[qChainKeyIdx], thread_idx);
             }
             assignments.clear();
@@ -763,7 +724,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         }
         complexScorer.free();
     }
-    qComplexIdVec.clear();
+    qComplexIndeces.clear();
     dbChainKeyToComplexIdMap.clear();
     dbComplexIdToChainKeysMap.clear();
     qComplexIdToChainKeysMap.clear();

@@ -276,7 +276,7 @@ std::vector<struct Command> commands = {
                                    }
         },
         {"easy-complexsearch", easycomplexsearch, &localPar.easyscorecomplexworkflow, COMMAND_EASY,
-                "Complex level search",
+                "SearchResult level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
                 "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
                 "# Format output differently\n"
@@ -296,13 +296,13 @@ std::vector<struct Command> commands = {
         },
         {"createcomplexreport", createcomplexreport, &localPar.createcomplexreport, COMMAND_FORMAT_CONVERSION,
                 "Convert complex DB to tsv format\"",
-                "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, t, u, assId\n"
+                "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u, t, assId\n"
                 "#  (1,2) identifiers for query and target complex,\n"
                 "#  (3,4) chains of query complex and target complex,\n"
                 "#  (5,6) tm score based on query and target residue length,\n"
                 "#  (8,9) u and t,\n"
                 "#  (9) assignment id\n"
-                "foldseek convertalis queryDB targetDB complexDB result.tsv\n",
+                "foldseek createcomplexreport queryDB targetDB complexDB result.tsv\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDb> <i:targetDb> <i:complexDB> <o:complexFile>",
                 CITATION_FOLDSEEK, {
