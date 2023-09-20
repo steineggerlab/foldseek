@@ -937,20 +937,20 @@ R"html(<!DOCTYPE html>
                                         }
                                         result.append(SSTR(retComplex.assId));
                                         break;
-//                                    case LocalParameters::OUTFMT_COMPLEX_T:
-//                                        if (!retComplex.isValid) {
-//                                            Debug(Debug::ERROR) << "The column complext is only for scorecomplex result.\n";
-//                                            EXIT(EXIT_FAILURE);
-//                                        }
-//                                        result.append(retComplex.tString);
-//                                        break;
-//                                    case LocalParameters::OUTFMT_COMPLEX_U:
-//                                        if (!retComplex.isValid) {
-//                                            Debug(Debug::ERROR) << "The column complexu is only for scorecomplex result.\n";
-//                                            EXIT(EXIT_FAILURE);
-//                                        }
-//                                        result.append(retComplex.uString);
-//                                        break;
+                                    case LocalParameters::OUTFMT_COMPLEX_T:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column complext is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(retComplex.tString);
+                                        break;
+                                    case LocalParameters::OUTFMT_COMPLEX_U:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column complexu is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(retComplex.uString);
+                                        break;
                                 }
                                 if (i < outcodes.size() - 1) {
                                     result.push_back('\t');
