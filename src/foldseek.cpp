@@ -276,7 +276,7 @@ std::vector<struct Command> commands = {
                                    }
         },
         {"easy-complexsearch", easycomplexsearch, &localPar.easyscorecomplexworkflow, COMMAND_EASY,
-                "SearchResult level search",
+                "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
                 "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
                 "# Format output differently\n"

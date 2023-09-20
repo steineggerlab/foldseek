@@ -197,7 +197,7 @@ LocalParameters::LocalParameters() :
 
     //rewrite param vals.
 //    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\n";
-    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\nqcomplextmscore,tcomplextmscore,assignid\n"; //"complext,complexu"
+    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\nqcomplextmscore,tcomplextmscore,complexu,complext,assignid\n"; //"complext,complexu"
 }
 
 
@@ -264,8 +264,8 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("qcomplextmscore")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
         else if (outformatSplit[i].compare("tcomplextmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
         else if (outformatSplit[i].compare("assignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
-//        else if (outformatSplit[i].compare("complext")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
-//        else if (outformatSplit[i].compare("complexu")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
+        else if (outformatSplit[i].compare("complexu")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
+        else if (outformatSplit[i].compare("complext")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

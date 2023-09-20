@@ -63,8 +63,8 @@ public:
     static const int OUTFMT_Q_COMPLEX_TMSCORE = 53;
     static const int OUTFMT_T_COMPLEX_TMSCORE = 54;
     static const int OUTFMT_ASSIGN_ID = 55;
-//    static const int OUTFMT_COMPLEX_T = 56;
-//    static const int OUTFMT_COMPLEX_U = 57;
+    static const int OUTFMT_COMPLEX_U = 56;
+    static const int OUTFMT_COMPLEX_T = 57;
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
