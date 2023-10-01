@@ -72,7 +72,23 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     if (hasLowerEvalue) {
         return -1;
     }
-    if (structureSmithWaterman.isProfileSearch()) {
+
+    bool blockAlignFailed = false;
+    if (structureSmithWaterman.isProfileSearch() == false) {
+        StructureSmithWaterman::s_align alignTmp = structureSmithWaterman.alignStartPosBacktraceBlock(
+            tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+            par.gapExtend.values.aminoacid(), backtrace, align
+        );
+
+        if (align.score1 == UINT32_MAX) {
+            Debug(Debug::WARNING) << "block-align failed, falling back to normal alignment\n";
+            blockAlignFailed = true;
+        } else {
+            align = alignTmp;
+        }
+    }
+
+    if (blockAlignFailed || structureSmithWaterman.isProfileSearch()) {
         align = structureSmithWaterman.alignStartPosBacktrace<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence,
                                                                                                tSeq3Di.numSequence,
                                                                                                targetSeqLen,
@@ -82,9 +98,6 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
                                                                                                backtrace, align,
                                                                                                par.covMode, par.covThr,
                                                                                                querySeqLen / 2);
-    }else{
-        align = structureSmithWaterman.alignStartPosBacktraceBlock(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
-                                                                   par.gapExtend.values.aminoacid(), backtrace, align);
     }
 
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
