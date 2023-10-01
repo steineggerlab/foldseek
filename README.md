@@ -6,7 +6,7 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 ## Publications
 [van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist C, Söding J, and Steinegger M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
 
-[Barrio-Hernandez I, Yeo J, Jänes J, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. biorxiv, doi:10.1101/2023.03.09.531927 (2023)](https://www.biorxiv.org/content/10.1101/2023.03.09.531927v1)
+[Barrio-Hernandez I, Yeo J, Jänes J, Mirdita M, Gilchrist LMC, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. Nature, doi:10.1038/s41586-023-06510-w (2023)](https://www.nature.com/articles/s41586-023-06510-w)
 # Table of Contents
 
 - [Foldseek](#foldseek)
