@@ -26,7 +26,7 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
 
     par.parseParameters(argc, argv, command, false, Parameters::PARSE_VARIADIC, 0);
     if(par.PARAM_FORMAT_OUTPUT.wasSet == false){
-        par.outfmt = "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,assignid";
+        par.outfmt = "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid";
     }
     par.addBacktrace = true;
     par.PARAM_ADD_BACKTRACE.wasSet = true;
