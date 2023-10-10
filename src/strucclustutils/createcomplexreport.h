@@ -12,16 +12,17 @@ const double TOO_SMALL_MEAN = 1.0;
 const double TOO_SMALL_CV = 0.1;
 const double FILTERED_OUT = 0.0;
 const unsigned int UNCLUSTERED = 0;
+const unsigned int CLUSTERED = 1;
 const unsigned int MAX_RECURSIVE_NUM = 1000;
 const unsigned int MIN_PTS = 2;
-const float LEARNING_RATE = 0.1;
-const float DEFAULT_EPS = 0.1;
+
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;
 typedef std::vector<std::vector<unsigned int>> cluster_t;
 typedef std::map<std::pair<unsigned int, unsigned int>, double> distMap_t;
 typedef std::string resultToWrite_t;
+typedef std::pair<unsigned int, resultToWrite_t> resultToWriteWithKey_t;
 
 struct ScoreComplexResult {
     ScoreComplexResult() {}
