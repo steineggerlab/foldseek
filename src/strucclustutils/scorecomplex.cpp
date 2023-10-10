@@ -487,6 +487,10 @@ public:
                 const auto dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
                 const unsigned int dbComplexId = dbChainKeyToComplexIdLookup.at(dbChainKey);
                 dbAlnResult = Matcher::parseAlignmentRecord(data);
+                if (dbAlnResult.backtrace.empty()) {
+                    Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
+                    EXIT(EXIT_FAILURE);
+                }
                 size_t tCaId = tCaDbr->sequenceReader->getId(dbChainKey);
                 char *tCaData = tCaDbr->sequenceReader->getData(tCaId, thread_idx);
                 size_t tCaLength = tCaDbr->sequenceReader->getEntryLen(tCaId);
