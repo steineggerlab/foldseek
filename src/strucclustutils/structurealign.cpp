@@ -211,12 +211,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
         needLDDT = true;
         needTMaligner = true;
     } else {
-        if (needTMaligner) {
+        if (needTMaligner && (db1CaExist == false || db2CaExist == false)) {
             Debug(Debug::WARNING) << "Cannot use --tmscore-threshold with --sort-by-structure-bits 0\n"
                                   << "Disabling --tmscore-threshold\n";
             needTMaligner = false;
         }
-        if (needLDDT) {
+        if (needLDDT && (db1CaExist == false || db2CaExist == false)) {
             Debug(Debug::WARNING) << "Cannot use --lddt-threshold with --sort-by-structure-bits 0\n"
                                   << "Disabling --lddt-threshold\n";
             needLDDT = false;
