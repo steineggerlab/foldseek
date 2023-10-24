@@ -160,6 +160,12 @@ LocalParameters::LocalParameters() :
     samplemulambda.push_back(&PARAM_N_SAMPLE);
     samplemulambda.push_back(&PARAM_THREADS);
     samplemulambda.push_back(&PARAM_V);
+
+    //compressca
+    compressca.push_back(&PARAM_COORD_STORE_MODE);
+    compressca.push_back(&PARAM_THREADS);
+    compressca.push_back(&PARAM_V);
+
     //scorecomplex
     scorecomplex.push_back(&PARAM_THREADS);
     scorecomplex.push_back(&PARAM_V);

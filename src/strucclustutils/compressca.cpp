@@ -11,7 +11,7 @@
 #endif
 
 int compressca(int argc, const char **argv, const Command& command) {
-    Parameters& par = Parameters::getInstance();
+    LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     std::string caDbData = par.db1 + "_ca";
@@ -44,18 +44,33 @@ int compressca(int argc, const char **argv, const Command& command) {
             unsigned int seqId = seqDb.getId(key);
             size_t chainLen = seqDb.getSeqLen(seqId);
 
-            if (length >= (chainLen * (3 * sizeof(float)))) {
-                camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
-                int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
-                // check if any of the coordinates is too large to be stored as int16_t
-                if (!Coordinate16::convertToDiff16(chainLen, (float*)(data) + 0 * chainLen, camolf16, 1)
-                 && !Coordinate16::convertToDiff16(chainLen, (float*)(data) + 1 * chainLen, camolf16 + 1 * (chainLen + 1), 1)
-                 && !Coordinate16::convertToDiff16(chainLen, (float*)(data) + 2 * chainLen, camolf16 + 2 * (chainLen + 1), 1)) {
-                    writer.writeData((const char*)camol.data(), (chainLen - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), key, thread_idx);
-                    continue;
+            const size_t uncompressedSize = chainLen * (3 * sizeof(float));
+
+            if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
+                if (length >= uncompressedSize) {
+                    // coords in COORD_STORE_MODE_CA_FLOAT, so convert to diff
+                    camol.resize((chainLen - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
+                    int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
+                    // check if any of the coordinates is too large to be stored as int16_t
+                    if (!Coordinate16::convertToDiff16(chainLen, (float*)(data) + 0 * chainLen, camolf16, 1)
+                    && !Coordinate16::convertToDiff16(chainLen, (float*)(data) + 1 * chainLen, camolf16 + 1 * (chainLen + 1), 1)
+                    && !Coordinate16::convertToDiff16(chainLen, (float*)(data) + 2 * chainLen, camolf16 + 2 * (chainLen + 1), 1)) {
+                        writer.writeData((const char*)camol.data(), (chainLen - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), key, thread_idx);
+                        continue;
+                    }
+                }
+                // if we didn't get into the if above, the coordinates were already in diff mode or conversion failed
+                writer.writeData(data, length, key, thread_idx);
+            } else {
+                if (length >= uncompressedSize) {
+                    // already in COORD_STORE_MODE_CA_FLOAT, so directly write the data
+                    writer.writeData(data, length, key, thread_idx);
+                } else {
+                    // need to convert the coordinates to COORD_STORE_MODE_CA_FLOAT
+                    float* uncompressed = coords.read(data, chainLen, length);
+                    writer.writeData((const char*)uncompressed, uncompressedSize, key, thread_idx);
                 }
             }
-            writer.writeData(data, length, key, thread_idx);
         }
     }
 

@@ -89,6 +89,7 @@ public:
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
+    std::vector<MMseqsParameter *> compressca;
     std::vector<MMseqsParameter *> scorecomplex;
     std::vector<MMseqsParameter *> easyscorecomplexworkflow;
     std::vector<MMseqsParameter *> createcomplexreport;
