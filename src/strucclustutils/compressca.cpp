@@ -79,7 +79,7 @@ int compressca(int argc, const char **argv, const Command& command) {
             } else if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_PLAIN_TEXT) {
                     float* uncompressed = coords.read(data, chainLen, length);
                     plain.append(SSTR(uncompressed[0]));
-                    for (size_t i = 1; i < chainLen; i++) {
+                    for (size_t i = 1; i < (chainLen * 3); i++) {
                         plain.append(",");
                         plain.append(SSTR(uncompressed[i]));
                     }
