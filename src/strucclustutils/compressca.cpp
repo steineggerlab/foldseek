@@ -19,11 +19,16 @@ int compressca(int argc, const char **argv, const Command& command) {
     std::string caDbIndex = par.db1 + "_ca.index";
     DBReader<unsigned int> caDb(caDbData.c_str(), caDbIndex.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     caDb.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    const bool isPlainTextCA = caDb.getDbtype() == LocalParameters::DBTYPE_GENERIC_DB;
 
     DBReader<unsigned int> seqDb(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX);
     seqDb.open(DBReader<unsigned int>::NOSORT);
 
-    DBWriter writer(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
+    int dbtype = LocalParameters::DBTYPE_CA_ALPHA;
+    if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_PLAIN_TEXT) {
+        dbtype = LocalParameters::DBTYPE_GENERIC_DB;
+    }
+    DBWriter writer(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, dbtype);
     writer.open();
 
     Debug::Progress progress(caDb.getSize());
@@ -40,6 +45,7 @@ int compressca(int argc, const char **argv, const Command& command) {
         if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_PLAIN_TEXT) {
             plain.reserve(10 * 1024);
         }
+        std::vector<float> floatCoords;
 
 #pragma omp for schedule(dynamic, 10)
         for (size_t i = 0; i < caDb.getSize(); i++) {
@@ -50,8 +56,23 @@ int compressca(int argc, const char **argv, const Command& command) {
             unsigned int seqId = seqDb.getId(key);
             size_t chainLen = seqDb.getSeqLen(seqId);
 
-            const size_t uncompressedSize = chainLen * (3 * sizeof(float));
+            if (isPlainTextCA) {
+                floatCoords.clear();
+                char *next;
+                char *current = data;
+                while (current < data + length) {
+                    floatCoords.push_back(strtof(current, &next));
+                    if (next == current) {
+                        break;
+                    }
+                    current = next + 1;
+                }
 
+                data = reinterpret_cast<char*>(floatCoords.data());
+                length = floatCoords.size() * sizeof(float);
+            }
+
+            const size_t uncompressedSize = chainLen * (3 * sizeof(float));
             if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_DIFF) {
                 if (length >= uncompressedSize) {
                     // coords in COORD_STORE_MODE_CA_FLOAT, so convert to diff
@@ -77,15 +98,15 @@ int compressca(int argc, const char **argv, const Command& command) {
                     writer.writeData((const char*)uncompressed, uncompressedSize, key, thread_idx);
                 }
             } else if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_PLAIN_TEXT) {
-                    float* uncompressed = coords.read(data, chainLen, length);
-                    plain.append(SSTR(uncompressed[0]));
-                    for (size_t i = 1; i < (chainLen * 3); i++) {
-                        plain.append(",");
-                        plain.append(SSTR(uncompressed[i]));
-                    }
-                    plain.append("\n");
-                    writer.writeData(plain.c_str(), plain.size(), key, thread_idx);
-                    plain.clear();
+                float* uncompressed = coords.read(data, chainLen, length);
+                plain.append(SSTR(uncompressed[0]));
+                for (size_t i = 1; i < (chainLen * 3); i++) {
+                    plain.append(",");
+                    plain.append(SSTR(uncompressed[i]));
+                }
+                plain.append("\n");
+                writer.writeData(plain.c_str(), plain.size(), key, thread_idx);
+                plain.clear();
             } else {
                 Debug(Debug::ERROR) << "Unknown storage mode: " << par.coordStoreMode << "\n";
                 EXIT(EXIT_FAILURE);
