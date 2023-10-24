@@ -274,7 +274,8 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
 
             names.push_back(name);
             int taxId = -1;
-            for (gemmi::Residue &res : ch.residues) {
+            gemmi::ResidueSpan polymer = ch.get_polymer();
+            for (gemmi::Residue &res : polymer.first_conformer()) {
                 if (taxId == -1) {
                     auto it = entity_to_tax_id.find(res.entity_id);
                     if (it != entity_to_tax_id.end()) {
