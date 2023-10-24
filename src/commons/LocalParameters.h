@@ -68,6 +68,7 @@ public:
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
+    static const int COORD_STORE_MODE_CA_PLAIN_TEXT  = 3;
 
     static const unsigned int INDEX_DB_CA_KEY_DB1 = 500;
     static const unsigned int INDEX_DB_CA_KEY_DB2 = 502;

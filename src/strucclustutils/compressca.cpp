@@ -12,6 +12,7 @@
 
 int compressca(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
+    par.overrideParameterDescription(par.PARAM_COORD_STORE_MODE, "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)\n3: Plain text list of floats", "^[1-3]{1}$", 0);
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     std::string caDbData = par.db1 + "_ca";
@@ -34,6 +35,11 @@ int compressca(int argc, const char **argv, const Command& command) {
 #endif
         Coordinate16 coords;
         std::vector<int8_t> camol;
+
+        std::string plain;
+        if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_PLAIN_TEXT) {
+            plain.reserve(10 * 1024);
+        }
 
 #pragma omp for schedule(dynamic, 10)
         for (size_t i = 0; i < caDb.getSize(); i++) {
@@ -61,7 +67,7 @@ int compressca(int argc, const char **argv, const Command& command) {
                 }
                 // if we didn't get into the if above, the coordinates were already in diff mode or conversion failed
                 writer.writeData(data, length, key, thread_idx);
-            } else {
+            } else if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_FLOAT) {
                 if (length >= uncompressedSize) {
                     // already in COORD_STORE_MODE_CA_FLOAT, so directly write the data
                     writer.writeData(data, length, key, thread_idx);
@@ -70,6 +76,19 @@ int compressca(int argc, const char **argv, const Command& command) {
                     float* uncompressed = coords.read(data, chainLen, length);
                     writer.writeData((const char*)uncompressed, uncompressedSize, key, thread_idx);
                 }
+            } else if (par.coordStoreMode == LocalParameters::COORD_STORE_MODE_CA_PLAIN_TEXT) {
+                    float* uncompressed = coords.read(data, chainLen, length);
+                    plain.append(SSTR(uncompressed[0]));
+                    for (size_t i = 1; i < chainLen; i++) {
+                        plain.append(",");
+                        plain.append(SSTR(uncompressed[i]));
+                    }
+                    plain.append("\n");
+                    writer.writeData(plain.c_str(), plain.size(), key, thread_idx);
+                    plain.clear();
+            } else {
+                Debug(Debug::ERROR) << "Unknown storage mode: " << par.coordStoreMode << "\n";
+                EXIT(EXIT_FAILURE);
             }
         }
     }
