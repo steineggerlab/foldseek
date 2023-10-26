@@ -274,8 +274,7 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
 
             names.push_back(name);
             int taxId = -1;
-            gemmi::ResidueSpan polymer = ch.get_polymer();
-            for (gemmi::Residue &res : polymer.first_conformer()) {
+            for (gemmi::Residue &res : ch.first_conformer()) {
                 if (taxId == -1) {
                     auto it = entity_to_tax_id.find(res.entity_id);
                     if (it != entity_to_tax_id.end()) {
@@ -286,6 +285,10 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 if (isHetAtomInList == false && res.het_flag != 'A')
                     continue;
                 if (isHetAtomInList) {
+                    bool notPolymer = res.entity_type != gemmi::EntityType::Polymer;
+                    if (notPolymer == true) {
+                        continue;
+                    }
                     bool hasCA = false;
                     for (gemmi::Atom &atom : res.atoms) {
                         if (atom.name == "CA") {
