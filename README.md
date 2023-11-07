@@ -1,3 +1,4 @@
+
 # Foldseek 
 Foldseek enables fast and sensitive comparisons of large structure sets.
 
@@ -25,6 +26,9 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
   - [Cluster](#cluster)
     - [Output](#output-cluster)
     - [Important Parameters](#important-cluster-parameters)
+  - [Scorecomplex](#scorecomplex)
+    - [Output](#output-scorecomplex)
+    - [Important Paramters](#important-scorecomplex-parameters)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -214,6 +218,44 @@ MCAR...Q
 | --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
 | --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
 | --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
+
+### Scorecomplex
+The `easy-complexsearch` module allows to search single or multiple query protein complexes, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or single protein complexes. In default it outputs the alignment information as a [tab-separated file](#tab-separated-complex) but we support also [report](#report) or a HTML output.
+
+    foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz aln tmpFolder
+
+#### Output Scorecomplex
+##### Tab-separated-complex
+The default fields are containing the following fields: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid` but they can be customized with the `--format-output` option e.g. `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` returns the query and target accession, the tm scores of complex alignment normalized with query and target lengthes, and assignment id. You can choose many different output columns.
+| Code | Description |
+| --- | --- |
+| **Commons** |
+|query | Query sequence identifier |
+|target | Target sequence identifier |
+| **Only for scorecomplex** |
+|complexqtmscore| TM-score of Complex alignment normalized by the query length |
+|complexttmscore| TM-score of Complex alignment normalized by the target length |
+|complexu       | Rotation matrix of Complex alignment (computed to by TM-score) |
+|complext       | Translation vector of Complex alignment (computed to by TM-score) |
+|complexassignid| Index of Complex alignment |
+
+##### Report
+Reports are containing the following fields:
+| Column | Description |
+| --- | --- |
+| (1,2) | Identifiers for query and target complex |
+| (3,4) | Chains of query complex and target complex |
+| (5,6) | TM scores based on query and target residue length |
+| (8,9) | Rotation matrix (u) and Translation vector(t) |
+| (9)   | Assignment id |
+
+<!-- ##### Interactive HTML -->
+#### Important Scorecomplex parameters
+##### For chain-to-chain alignment
+  `-a`: Add backtrace string (**Required** when you run Foldseek search and Foldseek scorecomplex respectively.)<br/>
+Refer [Important Search Parameters](#important-search-parameters).
+##### For complex-to-complex alignment
+  `--min-assigned-chains-ratio`: minimum percentage of assigned chains out of all query chains (> thr [0,100] %) 
 
 
 ## Main Modules
