@@ -28,7 +28,6 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
     - [Important Parameters](#important-cluster-parameters)
   - [Complexsearch](#complexsearch)
     - [Output](#output-complexsearch)
-    - [Important Paramters](#important-scorecomplex-parameters)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
