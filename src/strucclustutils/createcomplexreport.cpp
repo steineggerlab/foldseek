@@ -15,26 +15,27 @@
 #include "LDDT.h"
 #include "CalcProbTP.h"
 #include <map>
+#include <map>
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
 
-void getComplexNameChainName(std::string & chainName, std::pair<std::string, std::string> &compAndChainName) {
+void getComplexNameChainName(std::string &chainName, compNameChainName_t &compAndChainName) {
     size_t pos = chainName.rfind('_');
     std::string comp = chainName.substr(0, pos);
     std::string chain = chainName.substr(pos + 1);
     compAndChainName = {comp, chain};
 }
 
-void getResult (std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector, std::vector<ComplexResult> &complexResVec, float qTMScore, float tTMScore, int assId) {
+void getScoreComplexResults (std::vector<ScoreComplexResult> &scoreComplexResults, std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector, float qTMScore, float tTMScore, std::string u, std::string t, int assId) {
     char buffer[1024];
-    std::string result;
+    resultToWrite_t resultToWrite;
     std::string qComplexName;
     std::string tComplexName;
     std::string qChainString;
     std::string tChainString;
-    std::pair<std::string, std::string> compAndChainName;
+    compNameChainName_t compAndChainName;
     getComplexNameChainName(qChainVector[0], compAndChainName);
     qComplexName = compAndChainName.first;
     qChainString = compAndChainName.second;
@@ -49,10 +50,25 @@ void getResult (std::vector<std::string> &qChainVector, std::vector<std::string>
         getComplexNameChainName(tChainVector[tChainId], compAndChainName);
         tChainString += ',' + compAndChainName.second;
     }
-    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, assId);
-    result.append(buffer, count);
-    complexResVec.emplace_back(ComplexResult(assId, result));
+    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), assId);
+    resultToWrite.append(buffer, count);
+    scoreComplexResults.emplace_back(ScoreComplexResult(assId, resultToWrite));
 }
+
+struct ComplexAlignment {
+    ComplexAlignment(){};
+    ComplexAlignment(std::string qChain, std::string tChain, double qTMscore, double tTMscore, std::string u, std::string t,  unsigned int assId) : qTMScore(qTMscore), tTMScore(tTMscore), u(u), t(t), assId(assId){
+        qChainVector = {qChain};
+        tChainVector = {tChain};
+    };
+    std::vector<std::string> qChainVector;
+    std::vector<std::string> tChainVector;
+    double qTMScore;
+    double tTMScore;
+    std::string u;
+    std::string t;
+    unsigned int assId;
+};
 
 int createcomplexreport(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -69,8 +85,8 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
         tDbrHeader = &qDbrHeader;
     } else{
         tDbrHeader = new IndexReader(par.db2, par.threads, IndexReader::SRC_HEADERS, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
-    } 
-    
+    }
+
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
@@ -84,16 +100,16 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), localThreads, shouldCompress, dbType);
     resultWriter.open();
     const bool isDb = par.dbOut;
+    std::string qLookupFile = par.db1 + ".lookup";
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
-    Debug::Progress progress(alnDbr.getSize());
-    std::vector<ComplexResult> complexResVec;
-    unsigned int prevAssId;
-    std::vector<std::string> qChainVector;
-    std::vector<std::string> tChainVector;
-    std::vector<std::string> tVec;
-    std::vector<std::string> uVec;
-    double qTMScore;
-    double tTMScore;
+
+    Matcher::result_t res;
+    std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap;
+    std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeyMap;
+    std::vector<unsigned int> qComplexIdVec;
+    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeyMap, qComplexIdVec);
+    qChainKeyToComplexIdMap.clear();
+    Debug::Progress progress(qComplexIdVec.size());
 
 #pragma omp parallel num_threads(localThreads)
     {
@@ -101,44 +117,58 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
+        Matcher::result_t res;
+        std::vector<ScoreComplexResult> complexResults;
+
 #pragma omp  for schedule(dynamic, 10)
-        for (size_t i = 0; i < alnDbr.getSize(); i++) {
+        for (size_t queryIdx = 0; queryIdx < qComplexIdVec.size(); queryIdx++) {
             progress.updateProgress();
-            const unsigned int queryKey = alnDbr.getDbKey(i);
-            size_t qHeaderId = qDbrHeader.sequenceReader->getId(queryKey);
-            const char *qHeader = qDbrHeader.sequenceReader->getData(qHeaderId, thread_idx);
-            std::string queryId = Util::parseFastaHeader(qHeader);
-            char *data = alnDbr.getData(i, thread_idx);
-            Matcher::result_t res;
-            auto complexDataHandler = ComplexDataHandler();
-            while (*data != '\0') {
-                bool isValid = parseScoreComplexResult(data, res, complexDataHandler);
-                if (!isValid) {
-                    std::cout << "error message";
-                }
-                data = Util::skipLine(data);
-                size_t tHeaderId = tDbrHeader->sequenceReader->getId(res.dbKey);
-                const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
-                std::string targetId = Util::parseFastaHeader(tHeader);
-                unsigned int currAssId = complexDataHandler.assId;
-                if (!qChainVector.empty() && !tChainVector.empty() && currAssId != prevAssId) {
-                    getResult(qChainVector, tChainVector, complexResVec, qTMScore, tTMScore, prevAssId);
-                    qChainVector.clear();
-                    tChainVector.clear();
-                }
-                prevAssId = currAssId;
-                qTMScore = complexDataHandler.qTmScore;
-                tTMScore = complexDataHandler.tTmScore;
-                qChainVector.emplace_back(queryId);
-                tChainVector.emplace_back(targetId);
-            } // while end
+            std::vector<unsigned int> assIdVec;
+            std::vector<ComplexAlignment> compAlns;
+            unsigned int qComplexId = qComplexIdVec[queryIdx];
+            std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
+            for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
+                unsigned int qChainKey = qChainKeys[qChainIdx];
+                unsigned int queryKey = alnDbr.getId(qChainKey);
+                if (queryKey == NOT_AVAILABLE_CHAIN_KEY)
+                    continue;
+                size_t qHeaderId = qDbrHeader.sequenceReader->getId(queryKey);
+                const char *qHeader = qDbrHeader.sequenceReader->getData(qHeaderId, thread_idx);
+                compNameChainName_t qCompAndChainName;
+                std::string queryId = Util::parseFastaHeader(qHeader);
+                getComplexNameChainName(queryId, qCompAndChainName);
+                char *data = alnDbr.getData(queryKey, thread_idx);
+                while (*data != '\0') {
+                    ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
+                    if (retComplex.isValid == false){
+                        Debug(Debug::ERROR) << "No scorecomplex result provided";
+                        EXIT(EXIT_FAILURE);
+                    }
+                    data = Util::skipLine(data);
+                    size_t tHeaderId = tDbrHeader->sequenceReader->getId(res.dbKey);
+                    const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
+                    std::string targetId = Util::parseFastaHeader(tHeader);
+                    unsigned int assId = retComplex.assId;
+                    unsigned int compAlnIdx = find(assIdVec.begin(), assIdVec.end(), assId) - assIdVec.begin();
+                    if (compAlnIdx == compAlns.size()) {
+                        assIdVec.emplace_back(assId);
+                        compAlns.emplace_back(ComplexAlignment(queryId, targetId, retComplex.qTmScore, retComplex.tTmScore,  retComplex.uString, retComplex.tString, assId));
+                    } else {
+                        compAlns[compAlnIdx].qChainVector.emplace_back(queryId);
+                        compAlns[compAlnIdx].tChainVector.emplace_back(targetId);
+                    }
+                } // while end
+            }
+            for (size_t compAlnIdx = 0; compAlnIdx < compAlns.size(); compAlnIdx++) {
+                ComplexAlignment &compAln = compAlns[compAlnIdx];
+                getScoreComplexResults(complexResults,compAln.qChainVector,compAln.tChainVector,compAln.qTMScore,compAln.tTMScore,compAln.u,compAln.t,compAln.assId);
+            }
         } // for end
-    }
-    getResult(qChainVector, tChainVector, complexResVec, qTMScore, tTMScore, prevAssId);
-    SORT_SERIAL(complexResVec.begin(), complexResVec.end(), compareComplexResult);
-    for (size_t i=0; i < complexResVec.size(); i++) {
-        resultWriter.writeData(complexResVec[i].result.c_str(), complexResVec[i].result.length(), 0, localThreads - 1, false, false);
-    }
+        SORT_SERIAL(complexResults.begin(), complexResults.end(), compareComplexResult);
+        for (size_t complexResIdx=0; complexResIdx < complexResults.size(); complexResIdx++) {
+            resultWriter.writeData(complexResults[complexResIdx].resultToWrite.c_str(), complexResults[complexResIdx].resultToWrite.length(), 0, localThreads - 1, false, false);
+        }
+    } // MP end
     resultWriter.close(true);
     if (isDb == false) {
         FileUtil::remove(par.db4Index.c_str());

@@ -58,15 +58,17 @@ public:
     static const int OUTFMT_QTMSCORE = 49;
     static const int OUTFMT_TTMSCORE = 50;
     // for scorecomplex
-//    static const int DBTYPE_SCORE_COMPRLEX_RES = 21;
     static const int OUTFMT_QUERY_COMPLEX = 51;
     static const int OUTFMT_TARGET_COMPLEX = 52;
     static const int OUTFMT_Q_COMPLEX_TMSCORE = 53;
     static const int OUTFMT_T_COMPLEX_TMSCORE = 54;
     static const int OUTFMT_ASSIGN_ID = 55;
+    static const int OUTFMT_COMPLEX_U = 56;
+    static const int OUTFMT_COMPLEX_T = 57;
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
+    static const int COORD_STORE_MODE_CA_PLAIN_TEXT  = 3;
 
     static const unsigned int INDEX_DB_CA_KEY_DB1 = 500;
     static const unsigned int INDEX_DB_CA_KEY_DB2 = 502;
@@ -77,7 +79,6 @@ public:
 
     // TODO
     static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
-    static const unsigned int FORMAT_SCORE_COMPLEX_DEFAULT = 6;
     static const int STRUCTUREMSA_OUTPUT_MODE_AA = 0;
     static const int STRUCTUREMSA_OUTPUT_MODE_3DI = 1;
 
@@ -97,6 +98,7 @@ public:
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> easymsaworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
+    std::vector<MMseqsParameter *> compressca;
     std::vector<MMseqsParameter *> scorecomplex;
     std::vector<MMseqsParameter *> easyscorecomplexworkflow;
     std::vector<MMseqsParameter *> createcomplexreport;
@@ -177,7 +179,7 @@ public:
     float pairThreshold;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner,
+                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
                                             bool &needLDDT);
 
 

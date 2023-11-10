@@ -72,7 +72,23 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     if (hasLowerEvalue) {
         return -1;
     }
-    if (structureSmithWaterman.isProfileSearch()) {
+
+    bool blockAlignFailed = false;
+    if (structureSmithWaterman.isProfileSearch() == false) {
+        StructureSmithWaterman::s_align alignTmp = structureSmithWaterman.alignStartPosBacktraceBlock(
+            tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
+            par.gapExtend.values.aminoacid(), backtrace, align
+        );
+
+        if (align.score1 == UINT32_MAX) {
+            Debug(Debug::WARNING) << "block-align failed, falling back to normal alignment\n";
+            blockAlignFailed = true;
+        } else {
+            align = alignTmp;
+        }
+    }
+
+    if (blockAlignFailed || structureSmithWaterman.isProfileSearch()) {
         align = structureSmithWaterman.alignStartPosBacktrace<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence,
                                                                                                tSeq3Di.numSequence,
                                                                                                targetSeqLen,
@@ -82,9 +98,6 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
                                                                                                backtrace, align,
                                                                                                par.covMode, par.covThr,
                                                                                                querySeqLen / 2);
-    }else{
-        align = structureSmithWaterman.alignStartPosBacktraceBlock(tSeqAA.numSequence, tSeq3Di.numSequence, targetSeqLen, par.gapOpen.values.aminoacid(),
-                                                                   par.gapExtend.values.aminoacid(), backtrace, align);
     }
 
     unsigned int alnLength = Matcher::computeAlnLength(align.qStartPos1, align.qEndPos1, align.dbStartPos1, align.dbEndPos1);
@@ -194,9 +207,20 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
     bool needTMaligner = (par.tmScoreThr > 0);
     bool needLDDT = (par.lddtThr > 0);
-    if(par.sortByStructureBits){
+    if (par.sortByStructureBits) {
         needLDDT = true;
         needTMaligner = true;
+    } else {
+        if (needTMaligner && (db1CaExist == false || db2CaExist == false)) {
+            Debug(Debug::WARNING) << "Cannot use --tmscore-threshold with --sort-by-structure-bits 0\n"
+                                  << "Disabling --tmscore-threshold\n";
+            needTMaligner = false;
+        }
+        if (needLDDT && (db1CaExist == false || db2CaExist == false)) {
+            Debug(Debug::WARNING) << "Cannot use --lddt-threshold with --sort-by-structure-bits 0\n"
+                                  << "Disabling --lddt-threshold\n";
+            needLDDT = false;
+        }
     }
     bool needCalpha = (needTMaligner || needLDDT);
     IndexReader *qcadbr = NULL;

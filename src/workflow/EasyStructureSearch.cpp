@@ -63,11 +63,12 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         bool needSequenceDB = false;
         bool needFullHeaders = false;
         bool needSource = false;
-        bool needCA = false;
+        bool needQCA = false;
+        bool needTCA = false;
         bool needTMalign = false;
         bool needLDDT = false;
         LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                    needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMalign, needLDDT);
+                                    needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT);
     }
 
     if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM ||
@@ -111,11 +112,6 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
-    if(par.clusterSearch == 1 && isIndex == false) {
-        cmd.addVariable("EXPAND_EXT", "_seq");
-    }else{
-        cmd.addVariable("EXPAND_EXT", "");
-    }
 
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());

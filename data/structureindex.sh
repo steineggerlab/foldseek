@@ -41,12 +41,16 @@ fi
     || fail "createindex died"
 
 if [ -n "$INCLUDE_CA" ]; then
-  # shellcheck disable=SC2086
-  "$MMSEQS" appenddbtoindex "${DB}_ca" "${DB}.idx" --id-list ${INDEX_DB_CA_KEY_DB1} ${VERBOSITY_PAR} \
-      || fail "appenddbtoindex died"
-  if [ -f "${DB}_seq_ca.dbtype" ] && [ "$IS_CLUDDB" = "1" ]; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" appenddbtoindex "${DB}_seq_ca" "${DB}.idx" --id-list ${INDEX_DB_CA_KEY_DB2} ${VERBOSITY_PAR} \
-        || fail "appenddbtoindex died"
-  fi
+    if [ -z "$(awk -v key="${INDEX_DB_CA_KEY_DB1}" '$1 == key;' "${DB}.idx.index")" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" appenddbtoindex "${DB}_ca" "${DB}.idx" --id-list ${INDEX_DB_CA_KEY_DB1} ${VERBOSITY_PAR} \
+            || fail "appenddbtoindex died"
+    fi
+    if [ -f "${DB}_seq_ca.dbtype" ] && [ "$IS_CLUDDB" = "1" ]; then
+        if [ -z "$(awk -v key="${INDEX_DB_CA_KEY_DB2}" '$1 == key;' "${DB}.idx.index")" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" appenddbtoindex "${DB}_seq_ca" "${DB}.idx" --id-list ${INDEX_DB_CA_KEY_DB2} ${VERBOSITY_PAR} \
+                || fail "appenddbtoindex died"
+        fi
+    fi
 fi

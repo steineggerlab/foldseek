@@ -1,18 +1,19 @@
+
 # Foldseek 
 Foldseek enables fast and sensitive comparisons of large structure sets.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
 ## Publications
-[van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist C, Söding J, and Steinegger M. Foldseek: fast and accurate protein structure search. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
+[van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist C, Söding J, and Steinegger M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
 
-[Barrio-Hernandez I, Yeo J, Jänes J, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. biorxiv, doi:10.1101/2023.03.09.531927 (2023)](https://www.biorxiv.org/content/10.1101/2023.03.09.531927v1)
+[Barrio-Hernandez I, Yeo J, Jänes J, Mirdita M, Gilchrist LMC, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. Nature, doi:10.1038/s41586-023-06510-w (2023)](https://www.nature.com/articles/s41586-023-06510-w)
 # Table of Contents
 
 - [Foldseek](#foldseek)
 - [Webserver](#webserver)
 - [Installation](#installation)
-- [Memory requirments](#memory-requirments)
+- [Memory requirements](#memory-requirements)
 - [Tutorial Video](#tutorial-video)
 - [Documentation](#documentation)
 - [Quick Start](#quick-start)
@@ -25,6 +26,8 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
   - [Cluster](#cluster)
     - [Output](#output-cluster)
     - [Important Parameters](#important-cluster-parameters)
+  - [Complexsearch](#complexsearch)
+    - [Output](#output-complexsearch)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -36,8 +39,11 @@ Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.a
 # Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
 wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
-# Linux SSE4.1 build (check using: cat /proc/cpuinfo | grep sse4_1)
-wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+# Linux SSE2 build (check using: cat /proc/cpuinfo | grep sse2)
+wget https://mmseqs.com/foldseek/foldseek-linux-sse2.tar.gz; tar xvzf foldseek-linux-sse2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+
+# Linux ARM64 build
+wget https://mmseqs.com/foldseek/foldseek-linux-arm64.tar.gz; tar xvzf foldseek-linux-arm64.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
 # MacOS
 wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
@@ -47,7 +53,7 @@ conda install -c conda-forge -c bioconda foldseek
 ```
 Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
-## Memory requirments 
+## Memory requirements 
 For optimal software performance, consider three options based on your RAM and search requirements:
 
 1. **With Cα info (default).** 
@@ -209,7 +215,54 @@ MCAR...Q
 | -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
 | --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
+| --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
+| --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
 
+### Complexsearch 
+The `easy-complexsearch` module allows to search single or multiple query protein complexes, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or single protein complexes. In default it outputs the alignment information as a [tab-separated file](#tab-separated-complex) but we support also [report](#report). <!-- or a HTML output. -->
+
+    foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz aln tmpFolder
+
+#### Output Complexsearch
+##### Tab-separated-complex
+The default fields are containing the following fields: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid` but they can be customized with the `--format-output` option e.g. `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` returns the query and target accession, the tm scores of complex alignment normalized with query and target lengthes, and assignment id. You can choose many different output columns.
+| Code | Description |
+| --- | --- |
+| **Commons** |
+|query | Query sequence identifier |
+|target | Target sequence identifier |
+| **Only for scorecomplex** |
+|complexqtmscore| TM-score of Complex alignment normalized by the query length |
+|complexttmscore| TM-score of Complex alignment normalized by the target length |
+|complexu       | Rotation matrix of Complex alignment (computed to by TM-score) |
+|complext       | Translation vector of Complex alignment (computed to by TM-score) |
+|complexassignid| Index of Complex alignment |
+```
+1tim.pdb.gz_A   8tim.pdb.gz_A   0.967   247 8   0   1   247 1   247 5.412E-43   1527    0
+1tim.pdb.gz_B   8tim.pdb.gz_B   0.967   247 8   0   1   247 1   247 1.050E-43   1551    0
+```
+##### Report
+Reports are containing the following fields:
+| Column | Description |
+| --- | --- |
+| (1,2) | Identifiers for query and target complex |
+| (3,4) | Chains of query complex and target complex |
+| (5,6) | TM scores based on query and target residue length |
+| (8,9) | Rotation matrix (u) and Translation vector(t) |
+| (9)   | Assignment id |
+```
+1tim.pdb.gz 8tim.pdb.gz A,B A,B 0.98941 0.98941 0.999983,0.000332,0.005813,-0.000373,0.999976,0.006884,-0.005811,-0.006886,0.999959 0.298992,0.060047,0.565875  0
+```
+<!-- 
+##### Interactive HTML 
+Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
+
+```
+foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
+```
+
+<p align="center"><img src="./.github/results.png" height="400"/></p> 
+-->
 
 ## Main Modules
 - `easy-search`       fast protein structure search  

@@ -243,7 +243,7 @@ void sortDatafileByIdOrder(DBWriter & dbw,
     }
 }
 
-int createdb(int argc, const char **argv, const Command& command) {
+int structcreatedb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_COMMON);
 

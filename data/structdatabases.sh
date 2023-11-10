@@ -97,12 +97,23 @@ case "${SELECTION}" in
         push_back "${TMP_PATH}/afdb"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
-    "Alphafold/UniProt50")
+    "Alphafold/UniProt50-minimal")
         if notExists "${TMP_PATH}/afdb50.tar.gz"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb50.tar.gz" "${TMP_PATH}/afdb50.tar.gz"
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb50.version" "${TMP_PATH}/version"
         fi
         tar xvfz "${TMP_PATH}/afdb50.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/afdb50"
+        INPUT_TYPE="FOLDSEEK_DB"
+    ;;
+    "Alphafold/UniProt50")
+        if notExists "${TMP_PATH}/afdb50.tar.gz"; then
+            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb50.tar.gz" "${TMP_PATH}/afdb50.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb50clusearch.tar.gz" "${TMP_PATH}/afdb50clusearch.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/afdb50.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/afdb50.tar.gz" -C "${TMP_PATH}"
+        tar xvfz "${TMP_PATH}/afdb50clusearch.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/afdb50"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;

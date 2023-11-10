@@ -19,7 +19,10 @@
 
 
 #include <zstd.h>
-#include "result_viz_prelude_fs.html.zst.h"
+
+#include "main.js.h"
+#include "vendor.js.zst.h"
+
 #include "TMaligner.h"
 #include "LDDT.h"
 #include "CalcProbTP.h"
@@ -229,18 +232,19 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     bool needLookup = false;
     bool needSource = false;
     bool needTaxonomy = false;
-    bool needCA = false;
+    bool needQCA = false;
+    bool needTCA = false;
     bool needTaxonomyMapping = false;
     bool needTMaligner = false;
     bool needLDDT = false;
-    bool isScoreComplexDB = false;
     std::vector<int> outcodes = LocalParameters::getOutputFormat(format, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needCA, needTMaligner, needLDDT);
+                                                                  needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMaligner, needLDDT);
 
 
     if(LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED == format){
         needTMaligner = true;
-        needCA = true;
+        needQCA = true;
+        needTCA = true;
         needSequenceDB = true;
     }
     NcbiTaxonomy* t = NULL;
@@ -297,7 +301,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     IndexReader *qcadbr = NULL;
     IndexReader *tcadbr = NULL;
 
-    if(needCA) {
+    if(needQCA) {
         qcadbr = new IndexReader(
                 par.db1,
                 par.threads,
@@ -305,6 +309,9 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 touch ? IndexReader::PRELOAD_INDEX : 0,
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                 "_ca");
+    }
+
+    if(needTCA) {
         if (sameDB) {
             tcadbr = qcadbr;
         } else {
@@ -414,12 +421,46 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         }
         delete[] headerWritten;
     } else if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
-        size_t dstSize = ZSTD_findDecompressedSize(result_viz_prelude_fs_html_zst, result_viz_prelude_fs_html_zst_len);
+        // size_t dstSize = ZSTD_findDecompressedSize(result_viz_prelude_fs_html_zst, result_viz_prelude_fs_html_zst_len);
+        // char* dst = (char*)malloc(sizeof(char) * dstSize);
+        // size_t realSize = ZSTD_decompress(dst, dstSize, result_viz_prelude_fs_html_zst, result_viz_prelude_fs_html_zst_len);
+        
+        size_t dstSize = ZSTD_findDecompressedSize(vendor_js_zst, vendor_js_zst_len);
         char* dst = (char*)malloc(sizeof(char) * dstSize);
-        size_t realSize = ZSTD_decompress(dst, dstSize, result_viz_prelude_fs_html_zst, result_viz_prelude_fs_html_zst_len);
+        size_t realSize = ZSTD_decompress(dst, dstSize, vendor_js_zst, vendor_js_zst_len);
+        
+        std::string mainJS(const_cast<char *>(reinterpret_cast<const char *>(main_js)), main_js_len);
+        std::string htmlTemplate(
+R"html(<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= STRINGS.APP_NAME %> Search Server</title>
+</head>
+<div id="app"></div>
+)html");
+        
+        resultWriter.writeData(htmlTemplate.c_str(), htmlTemplate.size(), 0, 0, false, false);
+
+        std::string scriptStart = "<script>";
+        std::string scriptEnd   = "</script>";
+
+        // vendor.js
+        resultWriter.writeData(scriptStart.c_str(), scriptStart.size(), 0, 0, false, false);
         resultWriter.writeData(dst, realSize, 0, 0, false, false);
-        const char* scriptBlock = "<script>render([";
-        resultWriter.writeData(scriptBlock, strlen(scriptBlock), 0, 0, false, false);
+        resultWriter.writeData(scriptEnd.c_str(), scriptEnd.size(), 0, 0, false, false);
+        
+        // main.js
+        resultWriter.writeData(scriptStart.c_str(), scriptStart.size(), 0, 0, false, false);
+        resultWriter.writeData(mainJS.c_str(), mainJS.size(), 0, 0, false, false);
+        resultWriter.writeData(scriptEnd.c_str(), scriptEnd.size(), 0, 0, false, false);
+        
+        // Data <div>
+        const char* dataStart = "<div id=\"data\" style=\"display: none;\">\n[";
+        resultWriter.writeData(dataStart, strlen(dataStart), 0, 0, false, false);
+
         free(dst);
     } else if (addColumnHeaders == true && outcodes.empty() == false) {
         std::vector<std::string> outfmt = Util::split(par.outfmt, ",");
@@ -433,11 +474,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     }
 
     Debug::Progress progress(alnDbr.getSize());
-//    std::vector<ComplexResult> complexResVec;
-//    unsigned int prevAssId;
     std::vector<std::string> qChains;
     std::vector<std::string> tChains;
-//    std::pair<double, double> complexTMScores;
 #pragma omp parallel num_threads(localThreads)
     {
         unsigned int thread_idx = 0;
@@ -507,7 +545,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 }
             }
             float *queryCaData = NULL;
-            if (needCA) {
+            if (needQCA) {
                 size_t qSeqId = qDbr.sequenceReader->getId(queryKey);
 		        querySeqLen = qDbr.sequenceReader->getSeqLen(qSeqId);
                 size_t qId = qcadbr->sequenceReader->getId(queryKey);
@@ -528,7 +566,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             }
 
             if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
-                const char* jsStart = "{\"query\": {\"accession\": \"%s\",\"sequence\": \"";
+                const char* jsStart = "{\"query\": {\"header\": \"%s\",\"sequence\": \"";
                 int count = snprintf(buffer, sizeof(buffer), jsStart, queryId.c_str(), querySeqData);
                 if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
                     Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
@@ -540,20 +578,21 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 } else {
                     result.append(querySeqData, querySeqLen);
                 }
-                result.append("\", \"qca\": \"");
+                result.append("\", \"qCa\": \"");
                 caStr.clear();
                 caToStr(queryCaData, querySeqLen, caStr);
                 result.append(caStr, 0, caStr.size()-1);
-                result.append("\"}, \"alignments\": [\n");
+                result.append("\"}, \"results\": [\n{\"db\": \"");
+                result.append(par.db2);
+                result.append("\", \"alignments\": [");
             }
             char *data = alnDbr.getData(i, thread_idx);
             Matcher::result_t res;
-            auto complexDataHandler = ComplexDataHandler();
             while (*data != '\0') {
                 const char *entry[255];
                 Util::getWordsOfLine(data, entry, 255);
-                isScoreComplexDB = parseScoreComplexResult(data, res, complexDataHandler);
-                if (!isScoreComplexDB) {
+                ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
+                if (!retComplex.isValid) {
                     res = Matcher::parseAlignmentRecord(data, true);
                 }
                 data = Util::skipLine(data);
@@ -566,7 +605,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                 const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
                 size_t tHeaderLen = tDbrHeader->sequenceReader->getSeqLen(tHeaderId);
                 float *targetCaData = NULL;
-                if (needCA) {
+                if (needTCA) {
                     size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
                     char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
                     size_t tCaLength = tcadbr->sequenceReader->getEntryLen(tId);
@@ -878,28 +917,39 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                         result.append(SSTR(CalcProbTP::calculate(res.score)));
                                         break;
                                     case LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE:
-                                        if (!isScoreComplexDB) {
-                                            // TODO
+                                        if (!retComplex.isValid) {
                                             Debug(Debug::ERROR) << "The column qcomplextmscore is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
-                                        result.append(SSTR(complexDataHandler.qTmScore));
+                                        result.append(SSTR(retComplex.qTmScore));
                                         break;
                                     case LocalParameters::OUTFMT_T_COMPLEX_TMSCORE:
-                                        if (!isScoreComplexDB) {
-                                            // TODO
+                                        if (!retComplex.isValid) {
                                             Debug(Debug::ERROR) << "The column tcomplextmscore is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
-                                        result.append(SSTR(complexDataHandler.tTmScore));
+                                        result.append(SSTR(retComplex.tTmScore));
                                         break;
                                     case LocalParameters::OUTFMT_ASSIGN_ID:
-                                        if (!isScoreComplexDB) {
-                                            // TODO
+                                        if (!retComplex.isValid) {
                                             Debug(Debug::ERROR) << "The column assignid is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
-                                        result.append(SSTR(complexDataHandler.assId));
+                                        result.append(SSTR(retComplex.assId));
+                                        break;
+                                    case LocalParameters::OUTFMT_COMPLEX_T:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column complext is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(retComplex.tString);
+                                        break;
+                                    case LocalParameters::OUTFMT_COMPLEX_U:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column complexu is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(retComplex.uString);
                                         break;
                                 }
                                 if (i < outcodes.size() - 1) {
@@ -1000,9 +1050,11 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                         break;
                     }
                     case Parameters::FORMAT_ALIGNMENT_HTML: {
-                        const char* jsAln = "{\"target\": \"%s\", \"seqId\": %1.3f, \"alnLength\": %d, \"mismatch\": %d, \"gapopen\": %d, \"qStartPos\": %d, \"qEndPos\": %d, \"dbStartPos\": %d, \"dbEndPos\": %d, \"eval\": %.2E, \"score\": %d, \"qLen\": %d, \"dbLen\": %d, \"qAln\": \"";
+                        const char* jsAln = "{\"target\": \"%s\", \"prob\": %1.2f, \"seqId\": %1.3f, \"alnLength\": %d, \"mismatch\": %d, \"gapopen\": %d, \"qStartPos\": %d, \"qEndPos\": %d, \"dbStartPos\": %d, \"dbEndPos\": %d, \"eval\": %.2E, \"score\": %d, \"qLen\": %d, \"dbLen\": %d, \"qAln\": \"";
                         int count = snprintf(buffer, sizeof(buffer), jsAln,
-                                             targetId.c_str(), res.seqId, alnLen,
+                                             targetId.c_str(),
+                                             CalcProbTP::calculate(res.score),
+                                             res.seqId, alnLen,
                                              missMatchCount, gapOpenCount,
                                              res.qStartPos + 1, res.qEndPos + 1,
                                              res.dbStartPos + 1, res.dbEndPos + 1,
@@ -1038,55 +1090,15 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                                                (res.dbStartPos > res.dbEndPos),
                                                (isTranslatedSearch == true && targetNucs == true), translateNucl);
                         }
-                        result.append("\", \"tca\": \"");
+                        result.append("\", \"tCa\": \"");
                         caStr.clear();
                         caToStr(targetCaData, res.dbLen, caStr);
                         result.append(caStr, 0, caStr.size()-1);
                         
-                        result.append("\", \"tseq\": \"");
+                        result.append("\", \"tSeq\": \"");
                         result.append(targetSeqData, 0, res.dbLen);
 
                         result.append("\" },\n");
-                        break;
-                    }
-
-                    case LocalParameters::FORMAT_SCORE_COMPLEX_DEFAULT: {
-                        if (!isScoreComplexDB){
-                            // TODO
-                            Debug(Debug::ERROR) << "This mode is only for scorecomplex result.\n";
-                            EXIT(EXIT_FAILURE);
-                        }
-                        unsigned int assId = complexDataHandler.assId;
-                        double qComplexTm = complexDataHandler.qTmScore;
-                        double tComplexTm = complexDataHandler.tTmScore;
-                        int count = snprintf(
-                                buffer,
-                                sizeof(buffer),
-                                "%s\t%s\t%1.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2E\t%d\t%d\t%d\t%1.5f\t%1.5f\t%d\n",
-                                queryId.c_str(),
-                                targetId.c_str(),
-                                res.seqId,
-                                alnLen,
-                                missMatchCount,
-                                gapOpenCount,
-                                res.qStartPos + 1,
-                                res.qEndPos + 1,
-                                res.dbStartPos + 1,
-                                res.dbEndPos + 1,
-                                res.eval,
-                                res.score,
-                                res.qLen,
-                                res.dbLen,
-                                qComplexTm,
-                                tComplexTm,
-                                assId
-                                );
-
-                        if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
-                            Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
-                            continue;
-                        }
-                        result.append(buffer, count);
                         break;
                     }
                     default:
@@ -1096,7 +1108,8 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             }
 
             if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
-                result.append("]},\n");
+                result.erase(result.end() - 2); // remove ,\n of last entry
+                result.append("]}]},\n");
             }
             resultWriter.writeData(result.c_str(), result.size(), queryKey, thread_idx, isDb);
             result.clear();
@@ -1108,23 +1121,32 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             delete lddtcalculator;
         }
     }
+    const char* htmlEndBlock = "]\n</div>";
     if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
-        const char* endBlock = "]);</script>";
-        resultWriter.writeData(endBlock, strlen(endBlock), 0, localThreads - 1, false, false);
+        resultWriter.writeData(htmlEndBlock, strlen(htmlEndBlock), 0, localThreads - 1, false, false);
     }
     // tsv output
     resultWriter.close(true);
+
+    if (format == Parameters::FORMAT_ALIGNMENT_HTML) {
+        // replace last , to make this valid json
+        FILE* handle = FileUtil::openFileOrDie(par.db4.c_str(), "r+b", true);
+        // + newline + comma
+        fseek(handle, -(strlen(htmlEndBlock) + 2), SEEK_END);
+        const char space = ' ';
+        fwrite(&space, 1, 1, handle);
+        fclose(handle);
+    }
+    
     if (isDb == false) {
         FileUtil::remove(par.db4Index.c_str());
     }
 
-    if(needCA){
-        if(sameDB){
-            delete qcadbr;
-        }else{
-            delete tcadbr;
-            delete qcadbr;
-        }
+    if (needQCA) {
+        delete qcadbr;
+    }
+    if (needTCA && sameDB == false) {
+        delete tcadbr;
     }
 
     if (needTaxonomy) {

@@ -60,13 +60,12 @@ LocalParameters::LocalParameters() :
                                     "1: SAM\n2: BLAST-TAB + query/db length\n"
                                     "3: Pretty HTML\n4: BLAST-TAB + column headers\n"
                                     "5: Calpha only PDB super-posed to query\n"
-                                    "6: BLAST-TAB + q/db complex tm (only for scorecomplex result)\n"
-                                  "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
+                                    "BLAST-TAB (0) and BLAST-TAB + column headers (4)"
                                     "support custom output formats (--format-output)\n"
                                     "(5) Superposed PDB files (Calpha only)";
 
     // TODO
-    PARAM_FORMAT_MODE.regex = "^[0-6]{1}$";
+    PARAM_FORMAT_MODE.regex = "^[0-5]{1}$";
     PARAM_SEARCH_TYPE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_TRANSLATION_TABLE.category = MMseqsParameter::COMMAND_HIDDEN;
@@ -182,6 +181,12 @@ LocalParameters::LocalParameters() :
     samplemulambda.push_back(&PARAM_N_SAMPLE);
     samplemulambda.push_back(&PARAM_THREADS);
     samplemulambda.push_back(&PARAM_V);
+
+    //compressca
+    compressca.push_back(&PARAM_COORD_STORE_MODE);
+    compressca.push_back(&PARAM_THREADS);
+    compressca.push_back(&PARAM_V);
+
     //scorecomplex
     scorecomplex.push_back(&PARAM_THREADS);
     scorecomplex.push_back(&PARAM_V);
@@ -279,20 +284,20 @@ LocalParameters::LocalParameters() :
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
 
     //rewrite param vals.
-//    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\n";
-    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\nqcomplextmscore,tcomplextmscore,assignid\n";
+    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
 }
 
 
 
 std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needCa, bool &needTMaligner,
+                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
                                              bool &needLDDT) {
     std::vector<int> formatCodes;
     if (formatMode == Parameters::FORMAT_ALIGNMENT_SAM || formatMode == Parameters::FORMAT_ALIGNMENT_HTML) {
         needSequences = true;
         needBacktrace = true;
-	needCa = true;
+	    needQCa = true;
+        needTCa = true;
         return formatCodes;
     }
     std::vector<std::string> outformatSplit = Util::split(outformat, ",");
@@ -323,14 +328,14 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("mismatch") == 0){ code = Parameters::OUTFMT_MISMATCH;}
         else if (outformatSplit[i].compare("qcov") == 0){ code = Parameters::OUTFMT_QCOV;}
         else if (outformatSplit[i].compare("tcov") == 0){ code = Parameters::OUTFMT_TCOV;}
-        else if (outformatSplit[i].compare("qca") == 0){ needCa = true; code = LocalParameters::OUTFMT_QCA;}
-        else if (outformatSplit[i].compare("tca") == 0){ needCa = true; code = LocalParameters::OUTFMT_TCA;}
-        else if (outformatSplit[i].compare("u") == 0){ needCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_U;}
-        else if (outformatSplit[i].compare("t") == 0){ needCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_T;}
-        else if (outformatSplit[i].compare("alntmscore") == 0){ needCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_ALNTMSCORE;}
-        else if (outformatSplit[i].compare("qtmscore") == 0){ needCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_QTMSCORE;}
-        else if (outformatSplit[i].compare("ttmscore") == 0){ needCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_TTMSCORE;}
-        else if (outformatSplit[i].compare("rmsd") == 0){ needCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_RMSD;}
+        else if (outformatSplit[i].compare("qca") == 0){ needQCa = true; code = LocalParameters::OUTFMT_QCA;}
+        else if (outformatSplit[i].compare("tca") == 0){ needTCa = true; code = LocalParameters::OUTFMT_TCA;}
+        else if (outformatSplit[i].compare("u") == 0){ needQCa = true; needTCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_U;}
+        else if (outformatSplit[i].compare("t") == 0){ needQCa = true; needTCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_T;}
+        else if (outformatSplit[i].compare("alntmscore") == 0){ needQCa = true; needTCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_ALNTMSCORE;}
+        else if (outformatSplit[i].compare("qtmscore") == 0){ needQCa = true; needTCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_QTMSCORE;}
+        else if (outformatSplit[i].compare("ttmscore") == 0){ needQCa = true; needTCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_TTMSCORE;}
+        else if (outformatSplit[i].compare("rmsd") == 0){ needQCa = true; needTCa = true; needTMaligner = true; needBacktrace=true; code = LocalParameters::OUTFMT_RMSD;}
         else if (outformatSplit[i].compare("qset") == 0){ needLookup = true; needSource = true; code = Parameters::OUTFMT_QSET;}
         else if (outformatSplit[i].compare("qsetid") == 0){ needLookup = true; needSource = true; code = Parameters::OUTFMT_QSETID;}
         else if (outformatSplit[i].compare("tset") == 0){ needLookup = true; code = Parameters::OUTFMT_TSET;}
@@ -339,13 +344,15 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("taxname") == 0){ needTaxonomyMapping = true; needTaxonomy = true; code = Parameters::OUTFMT_TAXNAME;}
         else if (outformatSplit[i].compare("taxlineage") == 0){ needTaxonomyMapping = true; needTaxonomy = true; code = Parameters::OUTFMT_TAXLIN;}
         else if (outformatSplit[i].compare("empty") == 0){ code = Parameters::OUTFMT_EMPTY;}
-        else if (outformatSplit[i].compare("lddt") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT; }
-        else if (outformatSplit[i].compare("lddtfull") == 0) { needCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
-        else if (outformatSplit[i].compare("prob") == 0) { needCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
+        else if (outformatSplit[i].compare("lddt") == 0) { needQCa = true; needTCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT; }
+        else if (outformatSplit[i].compare("lddtfull") == 0) { needQCa = true; needTCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
+        else if (outformatSplit[i].compare("prob") == 0) { needQCa = true; needTCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
         // TODO
-        else if (outformatSplit[i].compare("qcomplextmscore")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
-        else if (outformatSplit[i].compare("tcomplextmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
-        else if (outformatSplit[i].compare("assignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
+        else if (outformatSplit[i].compare("complexqtmscore")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
+        else if (outformatSplit[i].compare("complexttmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
+        else if (outformatSplit[i].compare("complexassignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
+        else if (outformatSplit[i].compare("complexu")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
+        else if (outformatSplit[i].compare("complext")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

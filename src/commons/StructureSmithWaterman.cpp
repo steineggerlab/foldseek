@@ -416,9 +416,12 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
         min_size *= 2;
     }
 
+    size_t cigar_len, queryPos, targetPos;
+    uint32_t aaIds;
+
     if (res.score != target_score && !(target_score == INT16_MAX && res.score >= target_score)) {
-        printf("ERROR: target_score not reached. res.score: %d target_score: %d", res.score, target_score);
-        exit(1); // TODO
+        r.score1 = UINT32_MAX;
+        goto cleanup;
     }
 
     block_cigar_aa_trace_xdrop(block, res.query_idx, res.reference_idx, cigar);
@@ -432,12 +435,11 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
 //           res.reference_idx);
 
 
-    size_t cigar_len = block_len_cigar(cigar);
-
+    cigar_len = block_len_cigar(cigar);
     // Note: 'M' signals either query_aa match or mismatch
-    uint32_t aaIds = 0;
-    size_t queryPos = 0;
-    size_t targetPos = 0;
+    aaIds = 0;
+    queryPos = 0;
+    targetPos = 0;
     for (size_t i = 0; i < cigar_len; i++) {
         OpLen o = block_get_cigar(cigar, i);
         //printf("%lu%c", o.len, ops_char[o.op]);
@@ -464,15 +466,12 @@ StructureSmithWaterman::s_align StructureSmithWaterman::alignStartPosBacktraceBl
     r.qStartPos1 = (r.qEndPos1 + 1) - queryPos;
     r.dbStartPos1 = (r.dbEndPos1 + 1) - targetPos;
 
-//    r.dbStartPos1 = bests_reverse.first.ref;
-//    r.qStartPos1 = r.qEndPos1 - bests_reverse.first.read;
-
-
-//    r.qCov = computeCov(r.qStartPos1, r.qEndPos1, query_length);
-//    r.tCov = computeCov(r.dbStartPos1, r.dbEndPos1, db_length);
-//    bool hasLowerCoverage = !(Util::hasCoverage(covThr, covMode, r.qCov, r.tCov));
+    r.qCov = computeCov(r.qStartPos1, r.qEndPos1, query_len);
+    r.tCov = computeCov(r.dbStartPos1, r.dbEndPos1, db_length);
 
     block_free_cigar(cigar);
+
+cleanup:
     block_free_padded_aa(query_aa);
     block_free_padded_aa(query_3di);
     block_free_pos_bias(query_bias);

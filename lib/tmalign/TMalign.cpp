@@ -1369,7 +1369,6 @@ double standard_TMscore(Coordinates &r1, Coordinates &r2, Coordinates &xtm, Coor
                         float score_d8, float t[3], float u[3][3], float * mem)
 {
     D0_MIN = 0.5;
-    Lnorm = ylen;
     if (Lnorm > 21)
         d0 = (1.24*pow((Lnorm*1.0 - 15), 1.0 / 3) - 1.8);
     else
