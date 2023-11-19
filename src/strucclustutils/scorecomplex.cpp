@@ -651,7 +651,6 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     std::vector<unsigned int> qComplexIndices;
     getKeyToIdVec(qLookupFile, qComplexIndices);
     Debug::Progress progress(qComplexIndices.size());
-    Debug::Progress progress(qComplexIndices.size());
 
 #pragma omp parallel
     {
@@ -714,11 +713,15 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
             resultToWriteLines.clear();
         }
         complexScorer.free();
+        qComplexIndices.clear();
+        dbChainKeyToComplexIdMap.clear();
+        dbComplexIdToChainKeysMap.clear();
+        qComplexIdToChainKeysMap.clear();
     }
-    qComplexIndices.clear();
-    dbChainKeyToComplexIdMap.clear();
-    dbComplexIdToChainKeysMap.clear();
-    qComplexIdToChainKeysMap.clear();
+    // qComplexIndices.clear();
+    // dbChainKeyToComplexIdMap.clear();
+    // dbComplexIdToChainKeysMap.clear();
+    // qComplexIdToChainKeysMap.clear();
     alnDbr.close();
     delete qCaDbr;
     if (!sameDB) {
