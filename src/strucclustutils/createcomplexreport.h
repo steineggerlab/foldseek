@@ -85,6 +85,28 @@ static void getKeyToIdMapIdToKeysMapIdVec(
     }
     lookupDB.close();
 }
+static void getKeyToIdVec(const std::string &file, std::vector<unsigned int> &complexIdVec) {
+    if (file.length() == 0) return;
+    MemoryMapped lookupDB(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
+    char *data = (char *) lookupDB.getData();
+    const char *entry[255];
+    int prevComplexId =  -1;
+    while (*data != '\0') {
+        const size_t columns = Util::getWordsOfLine(data, entry, 255);
+        if (columns < 3) {
+            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
+            continue;
+        }
+        auto chainKey = Util::fast_atoi<int>(entry[0]);
+        auto complexId = Util::fast_atoi<int>(entry[2]);
+        if (complexId != prevComplexId) {
+            complexIdVec.emplace_back(complexId);
+            prevComplexId = complexId;
+        }
+        data = Util::skipLine(data);
+    }
+    lookupDB.close();
+}
 
 static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
