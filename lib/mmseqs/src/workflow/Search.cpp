@@ -256,6 +256,8 @@ int search(int argc, const char **argv, const Command& command) {
         }
     }
 
+
+
     const bool isUngappedMode = par.alignmentMode == Parameters::ALIGNMENT_MODE_UNGAPPED;
     if (isUngappedMode && (searchMode & (Parameters::SEARCH_MODE_FLAG_QUERY_PROFILE |Parameters::SEARCH_MODE_FLAG_TARGET_PROFILE ))) {
         par.printUsageMessage(command, MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_PREFILTER);
@@ -316,6 +318,19 @@ int search(int argc, const char **argv, const Command& command) {
     } else {
         cmd.addVariable("ALIGN_MODULE", "align");
     }
+
+    switch(par.prefMode){
+        case Parameters::PREF_MODE_KMER:
+            cmd.addVariable("PREFMODE", "KMER");
+            break;
+        case Parameters::PREF_MODE_UNGAPPED:
+            cmd.addVariable("PREFMODE", "UNGAPPED");
+            break;
+        case Parameters::PREF_MODE_EXHAUSTIVE:
+            cmd.addVariable("PREFMODE", "EXHAUSTIVE");
+            break;
+    }
+
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     std::string program;
     cmd.addVariable("RUNNER", par.runner.c_str());
@@ -334,8 +349,11 @@ int search(int argc, const char **argv, const Command& command) {
         par.covMode = Util::swapCoverageMode(par.covMode);
         size_t maxResListLen = par.maxResListLen;
         par.maxResListLen = std::max((size_t)300, queryDbSize);
-        par.compBiasCorrectionScale = 0.15;
-        cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
+        if(par.prefMode == Parameters::PREF_MODE_KMER){
+            cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
+        } else if (par.prefMode == Parameters::PREF_MODE_UNGAPPED) {
+            cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
+        }
         par.maxResListLen = maxResListLen;
         double originalEvalThr = par.evalThr;
         par.evalThr = std::numeric_limits<double>::max();
@@ -388,9 +406,13 @@ int search(int argc, const char **argv, const Command& command) {
             if (i == (par.numIterations - 1)) {
                 par.evalThr = originalEval;
             }
-            par.compBiasCorrectionScale = 0.15;
-            cmd.addVariable(std::string("PREFILTER_PAR_" + SSTR(i)).c_str(),
-                            par.createParameterString(par.prefilter).c_str());
+            if (par.prefMode == Parameters::PREF_MODE_KMER) {
+                cmd.addVariable(std::string("PREFILTER_PAR_" + SSTR(i)).c_str(),
+                                par.createParameterString(par.prefilter).c_str());
+            } else if (par.prefMode == Parameters::PREF_MODE_UNGAPPED) {
+                cmd.addVariable(std::string("UNGAPPEDPREFILTER_PAR_" + SSTR(i)).c_str(),
+                                par.createParameterString(par.ungappedprefilter).c_str());
+            }
             if (isUngappedMode) {
                 par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
                 par.compBiasCorrectionScale = 0.5;
@@ -447,9 +469,14 @@ int search(int argc, const char **argv, const Command& command) {
             if (i == (par.numIterations - 1)) {
                 par.evalThr = originalEval;
             }
-            par.compBiasCorrectionScale = 0.15;
-            cmd.addVariable(std::string("PREFILTER_PAR_" + SSTR(i)).c_str(),
-                            par.createParameterString(par.prefilter).c_str());
+
+            if (par.prefMode == Parameters::PREF_MODE_KMER) {
+                cmd.addVariable(std::string("PREFILTER_PAR_" + SSTR(i)).c_str(),
+                                par.createParameterString(par.prefilter).c_str());
+            } else if (par.prefMode == Parameters::PREF_MODE_UNGAPPED) {
+                cmd.addVariable(std::string("UNGAPPEDPREFILTER_PAR_" + SSTR(i)).c_str(),
+                                par.createParameterString(par.ungappedprefilter).c_str());
+            }
             if (isUngappedMode) {
                 par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
                 par.compBiasCorrectionScale = 0.5;
@@ -498,8 +525,11 @@ int search(int argc, const char **argv, const Command& command) {
                 prefilterWithoutS.push_back(par.prefilter[i]);
             }
         }
-        par.compBiasCorrectionScale = 0.15;
-        cmd.addVariable("PREFILTER_PAR", par.createParameterString(prefilterWithoutS).c_str());
+        if (par.prefMode == Parameters::PREF_MODE_KMER) {
+            cmd.addVariable("PREFILTER_PAR", par.createParameterString(prefilterWithoutS).c_str());
+        } else if (par.prefMode == Parameters::PREF_MODE_UNGAPPED) {
+            cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
+        }
         if (isUngappedMode) {
             par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
             par.compBiasCorrectionScale = 0.5;
