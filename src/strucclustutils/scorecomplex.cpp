@@ -638,16 +638,19 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     resultWriter.open();
     double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
 
+    // std::vector<unsigned int> qComplexIndices;
+    // std::vector<unsigned int> dbComplexIndices;
+    // chainKeyToComplexId_t qChainKeyToComplexIdMap;
+    // chainKeyToComplexId_t dbChainKeyToComplexIdMap;
+    // complexIdToChainKeys_t dbComplexIdToChainKeysMap;
+    // complexIdToChainKeys_t qComplexIdToChainKeysMap;
+    // getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
+    // getKeyToIdMapIdToKeysMapIdVec(dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
+    // qChainKeyToComplexIdMap.clear();
+    // dbComplexIndices.clear();
     std::vector<unsigned int> qComplexIndices;
-    std::vector<unsigned int> dbComplexIndices;
-    chainKeyToComplexId_t qChainKeyToComplexIdMap;
-    chainKeyToComplexId_t dbChainKeyToComplexIdMap;
-    complexIdToChainKeys_t dbComplexIdToChainKeysMap;
-    complexIdToChainKeys_t qComplexIdToChainKeysMap;
-    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
-    getKeyToIdMapIdToKeysMapIdVec(dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
-    qChainKeyToComplexIdMap.clear();
-    dbComplexIndices.clear();
+    getKeyToIdVec(qLookupFile, qComplexIndices);
+    Debug::Progress progress(qComplexIndices.size());
     Debug::Progress progress(qComplexIndices.size());
 
 #pragma omp parallel
@@ -661,6 +664,19 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         std::vector<Assignment> assignments;
         std::vector<resultToWrite_t> resultToWriteLines;
         ComplexScorer complexScorer(&q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio);
+        //
+        std::vector<unsigned int> foo;
+        std::vector<unsigned int> dbComplexIndices;
+        chainKeyToComplexId_t qChainKeyToComplexIdMap;
+        chainKeyToComplexId_t dbChainKeyToComplexIdMap;
+        complexIdToChainKeys_t dbComplexIdToChainKeysMap;
+        complexIdToChainKeys_t qComplexIdToChainKeysMap;
+        getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, foo);
+        getKeyToIdMapIdToKeysMapIdVec(dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
+        qChainKeyToComplexIdMap.clear();
+        dbComplexIndices.clear();
+        foo.clear();
+        //
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qId = 0; qId < qComplexIndices.size(); qId++) {
