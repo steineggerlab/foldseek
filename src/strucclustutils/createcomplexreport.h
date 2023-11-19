@@ -97,7 +97,7 @@ static void getKeyToIdVec(const std::string &file, std::vector<unsigned int> &co
             Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
             continue;
         }
-        auto chainKey = Util::fast_atoi<int>(entry[0]);
+        // auto chainKey = Util::fast_atoi<int>(entry[0]);
         auto complexId = Util::fast_atoi<int>(entry[2]);
         if (complexId != prevComplexId) {
             complexIdVec.emplace_back(complexId);
