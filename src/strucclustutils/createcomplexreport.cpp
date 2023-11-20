@@ -8,15 +8,10 @@
 #include "FileUtil.h"
 #include "TranslateNucl.h"
 #include "MemoryMapped.h"
-#include "Coordinate16.h"
 #include "createcomplexreport.h"
-#define ZSTD_STATIC_LINKING_ONLY
-#include <zstd.h>
 #include "LDDT.h"
 #include "CalcProbTP.h"
 #include <map>
-#include <map>
-
 #ifdef OPENMP
 #include <omp.h>
 #endif
@@ -28,7 +23,7 @@ void getComplexNameChainName(std::string &chainName, compNameChainName_t &compAn
     compAndChainName = {comp, chain};
 }
 
-void getScoreComplexResults (std::vector<ScoreComplexResult> &scoreComplexResults, std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector, float qTMScore, float tTMScore, std::string u, std::string t, int assId) {
+void getScoreComplexResults (std::vector<ScoreComplexResult> &scoreComplexResults, std::vector<std::string> &qChainVector, std::vector<std::string> &tChainVector, double qTMScore, double tTMScore, std::string &u, const std::string &t, unsigned int assId) {
     char buffer[1024];
     resultToWrite_t resultToWrite;
     std::string qComplexName;
@@ -52,17 +47,17 @@ void getScoreComplexResults (std::vector<ScoreComplexResult> &scoreComplexResult
     }
     int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), assId);
     resultToWrite.append(buffer, count);
-    scoreComplexResults.emplace_back(ScoreComplexResult(assId, resultToWrite));
+    scoreComplexResults.emplace_back(assId, resultToWrite);
 }
 
 struct ComplexAlignment {
     ComplexAlignment(){};
-    ComplexAlignment(std::string qChain, std::string tChain, double qTMscore, double tTMscore, std::string u, std::string t,  unsigned int assId) : qTMScore(qTMscore), tTMScore(tTMscore), u(u), t(t), assId(assId){
-        qChainVector = {qChain};
-        tChainVector = {tChain};
+    ComplexAlignment(chainName_t &qChainName, chainName_t &tChainName, double qTmScore, double tTmScore, std::string &u, std::string &t,  unsigned int assId) : qTMScore(qTmScore), tTMScore(tTmScore), u(u), t(t), assId(assId){
+        qChainNames = {qChainName};
+        tChainNames = {tChainName};
     };
-    std::vector<std::string> qChainVector;
-    std::vector<std::string> tChainVector;
+    std::vector<chainName_t> qChainNames;
+    std::vector<chainName_t> tChainNames;
     double qTMScore;
     double tTMScore;
     std::string u;
@@ -121,47 +116,47 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
         std::vector<ScoreComplexResult> complexResults;
 
 #pragma omp  for schedule(dynamic, 10)
-        for (size_t queryIdx = 0; queryIdx < qComplexIdVec.size(); queryIdx++) {
+        for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
             progress.updateProgress();
             std::vector<unsigned int> assIdVec;
             std::vector<ComplexAlignment> compAlns;
-            unsigned int qComplexId = qComplexIdVec[queryIdx];
+            unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
-                unsigned int queryKey = alnDbr.getId(qChainKey);
-                if (queryKey == NOT_AVAILABLE_CHAIN_KEY)
+                unsigned int qChainDbKey = alnDbr.getId(qChainKey);
+                if (qChainDbKey == NOT_AVAILABLE_CHAIN_KEY)
                     continue;
-                size_t qHeaderId = qDbrHeader.sequenceReader->getId(queryKey);
+                size_t qHeaderId = qDbrHeader.sequenceReader->getId(qChainKey);
                 const char *qHeader = qDbrHeader.sequenceReader->getData(qHeaderId, thread_idx);
                 compNameChainName_t qCompAndChainName;
-                std::string queryId = Util::parseFastaHeader(qHeader);
-                getComplexNameChainName(queryId, qCompAndChainName);
-                char *data = alnDbr.getData(queryKey, thread_idx);
+                chainName_t queryChainName = Util::parseFastaHeader(qHeader);
+                getComplexNameChainName(queryChainName, qCompAndChainName);
+                char *data = alnDbr.getData(qChainDbKey, thread_idx);
                 while (*data != '\0') {
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
-                    if (retComplex.isValid == false){
+                    if (!retComplex.isValid){
                         Debug(Debug::ERROR) << "No scorecomplex result provided";
                         EXIT(EXIT_FAILURE);
                     }
                     data = Util::skipLine(data);
                     size_t tHeaderId = tDbrHeader->sequenceReader->getId(res.dbKey);
                     const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, thread_idx);
-                    std::string targetId = Util::parseFastaHeader(tHeader);
+                    chainName_t targetChainName = Util::parseFastaHeader(tHeader);
                     unsigned int assId = retComplex.assId;
                     unsigned int compAlnIdx = find(assIdVec.begin(), assIdVec.end(), assId) - assIdVec.begin();
                     if (compAlnIdx == compAlns.size()) {
                         assIdVec.emplace_back(assId);
-                        compAlns.emplace_back(ComplexAlignment(queryId, targetId, retComplex.qTmScore, retComplex.tTmScore,  retComplex.uString, retComplex.tString, assId));
+                        compAlns.emplace_back(queryChainName, targetChainName, retComplex.qTmScore, retComplex.tTmScore, retComplex.uString, retComplex.tString, assId);
                     } else {
-                        compAlns[compAlnIdx].qChainVector.emplace_back(queryId);
-                        compAlns[compAlnIdx].tChainVector.emplace_back(targetId);
+                        compAlns[compAlnIdx].qChainNames.emplace_back(queryChainName);
+                        compAlns[compAlnIdx].tChainNames.emplace_back(targetChainName);
                     }
                 } // while end
             }
             for (size_t compAlnIdx = 0; compAlnIdx < compAlns.size(); compAlnIdx++) {
                 ComplexAlignment &compAln = compAlns[compAlnIdx];
-                getScoreComplexResults(complexResults,compAln.qChainVector,compAln.tChainVector,compAln.qTMScore,compAln.tTMScore,compAln.u,compAln.t,compAln.assId);
+                getScoreComplexResults(complexResults,compAln.qChainNames,compAln.tChainNames,compAln.qTMScore,compAln.tTMScore,compAln.u,compAln.t,compAln.assId);
             }
         } // for end
         SORT_SERIAL(complexResults.begin(), complexResults.end(), compareComplexResult);
