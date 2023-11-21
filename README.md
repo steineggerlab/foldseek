@@ -27,7 +27,7 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
     - [Output](#output-cluster)
     - [Important Parameters](#important-cluster-parameters)
   - [Complexsearch](#complexsearch)
-    - [Output](#output-complexsearch)
+    - [Output](#complex-search-output)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -218,14 +218,26 @@ MCAR...Q
 | --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
 | --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
 
-### Complexsearch 
-The `easy-complexsearch` module allows to search single or multiple query protein complexes, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or single protein complexes. In default it outputs the alignment information as a [tab-separated file](#tab-separated-complex) but we support also [report](#report). <!-- or a HTML output. -->
 
-    foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz aln tmpFolder
+### Complexsearch
+The `easy-complexsearch` module is a tool for searching single or multiple query protein complexes (PDB/mmCIF, flat or gzipped) against a  target database of protein complexes. It reports the similarity metrices of the complexes like TMscore.
 
-#### Output Complexsearch
+#### Using Complexsearch
+To pairwise compare complexes use `easy-complexsearch`, run the following command:
+```
+foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFolder
+```
+This command searches the specified protein complexe `1tim.pdb.gz` against 8tim.pdb.gz, producing alignment information.
+Foldseek  `easy-complexsearch` can also be used to search full databases: 
+```
+foldseek databases PDB100 pdb tmp 
+foldseek easy-complexsearch example/1tim.pdb.gz pdb result tmpFolder
+```
+
+#### Complex Search Output
 ##### Tab-separated-complex
-The default fields are containing the following fields: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid` but they can be customized with the `--format-output` option e.g. `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` returns the query and target accession, the tm scores of complex alignment normalized with query and target lengthes, and assignment id. You can choose many different output columns.
+By default, `easy-complexsearch` outputs the alignment as a tab-separated file. The standard fields include `query, target, fident, alnlen, mismatch, gapopen, qstart, qend, tstart, tend, evalue, bits, complexassignid`. Customize output with the `--format-output` option. For example, `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` alters the output to show specific scores and identifiers. 
+
 | Code | Description |
 | --- | --- |
 | **Commons** |
@@ -237,22 +249,31 @@ The default fields are containing the following fields: `query,target,fident,aln
 |complexu       | Rotation matrix of Complex alignment (computed to by TM-score) |
 |complext       | Translation vector of Complex alignment (computed to by TM-score) |
 |complexassignid| Index of Complex alignment |
+
+**Example Output:**
 ```
 1tim.pdb.gz_A   8tim.pdb.gz_A   0.967   247 8   0   1   247 1   247 5.412E-43   1527    0
 1tim.pdb.gz_B   8tim.pdb.gz_B   0.967   247 8   0   1   247 1   247 1.050E-43   1551    0
 ```
-##### Report
-Reports are containing the following fields:
+
+##### Complex Report
+`easy-complexsearch` also generates a report format (prefixed `_report`), which provides a summary ot the inter complex chain matching, including identifiers, chains, TM scores, rotation matrices, translation vectors, and assignment IDs. Reports are containing the following fields:
 | Column | Description |
 | --- | --- |
-| (1,2) | Identifiers for query and target complex |
-| (3,4) | Chains of query complex and target complex |
-| (5,6) | TM scores based on query and target residue length |
+| 1 | Identifiers for query complex |
+| 2 | Identifiers for query complex |
+| 3 | Matched chains of query complex |
+| 4 | Matched chains of target complex |
+| 5 | TM scores normalized by query length |
+| 6 | TM scores normalized by target length |
 | (8,9) | Rotation matrix (u) and Translation vector(t) |
-| (9)   | Assignment id |
+| 9   | Complex Assignment Id |
+
+**Example Output:**
 ```
 1tim.pdb.gz 8tim.pdb.gz A,B A,B 0.98941 0.98941 0.999983,0.000332,0.005813,-0.000373,0.999976,0.006884,-0.005811,-0.006886,0.999959 0.298992,0.060047,0.565875  0
 ```
+
 <!-- 
 ##### Interactive HTML 
 Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
@@ -301,6 +322,7 @@ foldseek createtsv db db clu clu.tsv
 ### Query centered multiple sequence alignment 
 Foldseek can generate a3m based multiple sequence alignments using the following commands. 
 a3m can be converted to fasta format using [reformat.pl](https://raw.githubusercontent.com/soedinglab/hh-suite/master/scripts/reformat.pl) (`reformat.pl in.a3m out.fas`).
+
 ```
 foldseek createdb example/ targetDB
 foldseek createdb example/ queryDB
