@@ -1,5 +1,6 @@
 #include <cstddef>
 #include "Command.h"
+#include "LocalParameters.h"
 
 const char* binary_name = "foldseek";
 const char* tool_name = "foldseek";
@@ -18,3 +19,4 @@ void init() {
     registerCommands(&foldseekCommands);
 }
 void (*initCommands)(void) = init;
+void initParameterSingleton() { new LocalParameters; }
