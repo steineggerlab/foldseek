@@ -274,11 +274,6 @@ By default, `easy-complexsearch` outputs the alignment as a tab-separated file. 
 1tim.pdb.gz 8tim.pdb.gz A,B A,B 0.98941 0.98941 0.999983,0.000332,0.005813,-0.000373,0.999976,0.006884,-0.005811,-0.006886,0.999959 0.298992,0.060047,0.565875  0
 ```
 
----
-
-Feel free to copy and paste this directly into your GitHub README. Make sure to replace the placeholder link with an actual link to your detailed documentation if available.
-
-
 <!-- 
 ##### Interactive HTML 
 Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
