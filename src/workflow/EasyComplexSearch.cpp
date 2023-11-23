@@ -5,7 +5,7 @@
 #include "CommandCaller.h"
 #include "Util.h"
 #include "Debug.h"
-#include "Parameters.h"
+
 #include "easycomplexsearch.sh.h"
 
 int easycomplexsearch(int argc, const char **argv, const Command &command) {
@@ -30,13 +30,12 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     }
     par.addBacktrace = true;
     par.PARAM_ADD_BACKTRACE.wasSet = true;
-    par.printParameters(command.cmd, argc, argv, par.searchworkflow);
+    par.printParameters(command.cmd, argc, argv, *command.params);
 
     bool needBacktrace = false;
     bool needTaxonomy = false;
     bool needTaxonomyMapping = false;
     bool needLookup = false;
-
     {
         bool needSequenceDB = false;
         bool needFullHeaders = false;
@@ -59,7 +58,7 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
         par.addBacktrace = true;
         par.PARAM_ADD_BACKTRACE.wasSet = true;
     }
-    if(needLookup){
+    if (needLookup) {
         par.writeLookup = true;
     }
 
@@ -73,7 +72,6 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());
-    cmd.addVariable("REPORT", (par.filenames.back()+"_report").c_str());
     par.filenames.pop_back();
     cmd.addVariable("TARGET", par.filenames.back().c_str());
     par.filenames.pop_back();

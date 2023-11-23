@@ -147,7 +147,6 @@ LocalParameters::LocalParameters() :
     easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
     easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);
 
-
     databases.push_back(&PARAM_HELP);
     databases.push_back(&PARAM_HELP_LONG);
     databases.push_back(&PARAM_TSV);
@@ -177,8 +176,7 @@ LocalParameters::LocalParameters() :
     createcomplexreport.push_back(&PARAM_V);
 
     // easyscorecomplexworkflow
-    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, structurecreatedb);
-    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, structuresearchworkflow);
+    easyscorecomplexworkflow = combineList(structurecreatedb, structuresearchworkflow);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, scorecomplex);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, convertalignments);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, createcomplexreport);

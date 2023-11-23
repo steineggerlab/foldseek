@@ -26,39 +26,31 @@ if notExists "${TARGET}.dbtype"; then
     TARGET="${TMP_PATH}/target"
 fi
 
-
-SEARCH_RESULT="${TMP_PATH}/result"
-if notExists "${SEARCH_RESULT}.dbtype"; then
+if notExists "${TMP_PATH}/result.dbtype"; then
     # shellcheck disable=SC2086
-
-    "$MMSEQS" search "${QUERY}" "${TARGET}" "${SEARCH_RESULT}" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
+    "$MMSEQS" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
         || fail "Search died"
 fi
 
-SCORECOMPLEX_RESULT="${TMP_PATH}/result2"
-if notExists "${SCORECOMPLEX_RESULT}/.dbtype"; then
+if notExists "${TMP_PATH}/result2.dbtype"; then
     # shellcheck disable=SC2086
-    $MMSEQS scorecomplex "${QUERY}" "${TARGET}" "${SEARCH_RESULT}" ${SCORECOMPLEX_RESULT} ${SCORECOMPLEX_PAR} \
+    $MMSEQS scorecomplex "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/result2" ${SCORECOMPLEX_PAR} \
         || fail "ScoreComplex died"
 fi
 
-if notExists "${TMP_PATH}/alis.dbtype"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${OUTPUT}" ${CONVERT_PAR} \
-        || fail "Convert Alignments died"
-fi
 # shellcheck disable=SC2086
-"$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${SCORECOMPLEX_RESULT}" "${REPORT}" ${REPORT_PAR}\
-    || fail "Createcomplexreport dies"
+"$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/result2" "${OUTPUT}" ${CONVERT_PAR} \
+    || fail "Convert Alignments died"
 
-
-
-
-
+# shellcheck disable=SC2086
+"$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${TMP_PATH}/result2" "${OUTPUT}_report" ${REPORT_PAR} \
+    || fail "createcomplexreport died"
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/result2" ${VERBOSITY}
     if [ -z "${LEAVE_INPUT}" ]; then
         if [ -f "${TMP_PATH}/target" ]; then
             # shellcheck disable=SC2086
