@@ -16,7 +16,7 @@ set(FRAMEWORK_ONLY 1 CACHE INTERNAL "" FORCE)
 include(MMseqsSetupDerivedTarget)
 add_subdirectory(lib/mmseqs EXCLUDE_FROM_ALL)
 
-set(FOLDSEEK_FRAMEWORK_ONLY 0 CACHE INTERNAL "" FORCE)
+set(FOLDSEEK_FRAMEWORK_ONLY 0 CACHE BOOL "Framework mode (don't create foldseek executable)")
 if (FOLDSEEK_FRAMEWORK_ONLY)
     set(FRAMEWORK_ONLY 1 CACHE INTERNAL "" FORCE)
 endif()

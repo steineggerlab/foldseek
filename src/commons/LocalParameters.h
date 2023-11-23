@@ -134,9 +134,7 @@ public:
 
 
 private:
-
     LocalParameters(LocalParameters const&);
-    ~LocalParameters() {};
     void operator=(LocalParameters const&);
 };
 #endif
