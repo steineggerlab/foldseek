@@ -1,7 +1,3 @@
-//
-// Created by Woosub Kim on 2023/06/20.
-//
-
 #ifndef FOLDSEEK_CREATECOMPLEXREPORT_H
 #define FOLDSEEK_CREATECOMPLEXREPORT_H
 #include "Matcher.h"
@@ -43,7 +39,6 @@ static bool compareComplexResult(const ScoreComplexResult &first, const ScoreCom
 }
 
 struct ComplexDataHandler {
-//    ComplexDataHandler(): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f) {}
     ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), isValid(isValid) {}
     ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string &uString, std::string &tString, bool isValid)
             : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), uString(uString), tString(tString), isValid(isValid) {}
@@ -62,12 +57,15 @@ static void getKeyToIdMapIdToKeysMapIdVec(
         std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
         std::vector<unsigned int> &complexIdVec
 ) {
-    if (file.length() == 0) return;
+    if (file.length() == 0) {
+        return;
+    }
     MemoryMapped lookupDB(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
     char *data = (char *) lookupDB.getData();
+    char *end = data + lookupDB.mappedSize();
     const char *entry[255];
     int prevComplexId =  -1;
-    while (*data != '\0') {
+    while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
             Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
