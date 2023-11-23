@@ -15,13 +15,10 @@ struct FoldSeekDbValidator : public DbValidator {
 
 class LocalParameters : public Parameters {
 public:
-    static void initInstance() {
-        new LocalParameters;
-    }
     LocalParameters();
     static LocalParameters& getLocalInstance() {
         if (instance == NULL) {
-            initInstance();
+            initParameterSingleton();
         }
         return static_cast<LocalParameters&>(LocalParameters::getInstance());
     }
@@ -137,9 +134,7 @@ public:
 
 
 private:
-
     LocalParameters(LocalParameters const&);
-    ~LocalParameters() {};
     void operator=(LocalParameters const&);
 };
 #endif
