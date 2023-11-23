@@ -144,38 +144,39 @@ int structurealign(int argc, const char **argv, const Command& command) {
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
-    IndexReader qdbrAA(par.db1, par.threads, IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
-    IndexReader qdbr3Di(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
 
-    IndexReader *t3DiDbr = NULL;
-    IndexReader *tAADbr = NULL;
     bool sameDB = false;
     uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
     bool alignmentIsExtended = extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC;
+    IndexReader tAADbr(par.db2, par.threads,
+                             alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+                             (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+
+    std::string t3DiDbrName =  StructureUtil::getIndexWithSuffix(par.db2, "_ss");
+    bool is3DiIdx = Parameters::isEqualDbtype(FileUtil::parseDbType(t3DiDbrName.c_str()),
+                                              Parameters::DBTYPE_INDEX_DB);
+
+    IndexReader t3DiDbr(is3DiIdx ? t3DiDbrName : par.db2, par.threads,
+                              alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+                              (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0,
+                              DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                              alignmentIsExtended ? "_seq_ss" : "_ss");
+
+    IndexReader *q3DiDbr = NULL;
+    IndexReader *qAADbr = NULL;
 
     if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
-        t3DiDbr = &qdbr3Di;
-        tAADbr = &qdbrAA;
+        q3DiDbr = &t3DiDbr;
+        qAADbr = &tAADbr;
     } else {
-        tAADbr = new IndexReader(par.db2, par.threads,
-                                 alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-                                 (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
-
-        std::string t3DiDbrName =  StructureUtil::getIndexWithSuffix(par.db2, "_ss");
-        bool is3DiIdx = Parameters::isEqualDbtype(FileUtil::parseDbType(t3DiDbrName.c_str()),
-                                                  Parameters::DBTYPE_INDEX_DB);
-
-        t3DiDbr = new IndexReader(is3DiIdx ? t3DiDbrName : par.db2, par.threads,
-                                  alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-                                  (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0,
-                                  DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-                                  alignmentIsExtended ? "_seq_ss" : "_ss");
+        qAADbr = new IndexReader(par.db1, par.threads, IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+        q3DiDbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     }
 
     bool db1CaExist = FileUtil::fileExists((par.db1 + "_ca.dbtype").c_str());
     bool db2CaExist = FileUtil::fileExists((par.db2 + "_ca.dbtype").c_str());
-    if(Parameters::isEqualDbtype(tAADbr->getDbtype(), Parameters::DBTYPE_INDEX_DB)){
+    if(Parameters::isEqualDbtype(tAADbr.getDbtype(), Parameters::DBTYPE_INDEX_DB)){
         db2CaExist = true;
     }
     if(par.sortByStructureBits) {
@@ -286,21 +287,21 @@ int structurealign(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        EvalueNeuralNet evaluer(tAADbr->sequenceReader->getAminoAcidDBSize(), &subMat3Di);
+        EvalueNeuralNet evaluer(tAADbr.sequenceReader->getAminoAcidDBSize(), &subMat3Di);
         std::vector<Matcher::result_t> alignmentResult;
         StructureSmithWaterman structureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMatAA, &subMat3Di);
         StructureSmithWaterman reverseStructureSmithWaterman(par.maxSeqLen, subMat3Di.alphabetSize, par.compBiasCorrection, par.compBiasCorrectionScale, &subMatAA, &subMat3Di);
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(qdbr3Di.sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false, true);
+                    std::max(q3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr.sequenceReader->getMaxSeqLen() + 1), false, true);
         }
         LDDTCalculator *lddtcalculator = NULL;
         if(needLDDT) {
-            lddtcalculator = new LDDTCalculator(qdbr3Di.sequenceReader->getMaxSeqLen() + 1,  t3DiDbr->sequenceReader->getMaxSeqLen() + 1);
+            lddtcalculator = new LDDTCalculator(q3DiDbr->sequenceReader->getMaxSeqLen() + 1,  t3DiDbr.sequenceReader->getMaxSeqLen() + 1);
         }
-        Sequence qSeqAA(par.maxSeqLen, qdbrAA.getDbtype(), (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
-        Sequence qSeq3Di(par.maxSeqLen, qdbr3Di.getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
+        Sequence qSeqAA(par.maxSeqLen, qAADbr->getDbtype(), (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
+        Sequence qSeq3Di(par.maxSeqLen, q3DiDbr->getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         Sequence tSeqAA(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
         Sequence tSeq3Di(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         std::string backtrace;
@@ -320,11 +321,11 @@ int structurealign(int argc, const char **argv, const Command& command) {
             char *data = resultReader.getData(id, thread_idx);
             size_t queryKey = resultReader.getDbKey(id);
             if(*data != '\0') {
-                unsigned int queryId = qdbr3Di.sequenceReader->getId(queryKey);
+                unsigned int queryId = q3DiDbr->sequenceReader->getId(queryKey);
 
-                char *querySeqAA = qdbrAA.sequenceReader->getData(queryId, thread_idx);
-                char *querySeq3Di = qdbr3Di.sequenceReader->getData(queryId, thread_idx);
-                unsigned int querySeqLen = qdbr3Di.sequenceReader->getSeqLen(queryId);
+                char *querySeqAA = qAADbr->sequenceReader->getData(queryId, thread_idx);
+                char *querySeq3Di = q3DiDbr->sequenceReader->getData(queryId, thread_idx);
+                unsigned int querySeqLen = q3DiDbr->sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
                 if(needCalpha){
@@ -351,12 +352,12 @@ int structurealign(int argc, const char **argv, const Command& command) {
                     Util::parseKey(data, dbKeyBuffer);
                     data = Util::skipLine(data);
                     const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-                    unsigned int targetId = t3DiDbr->sequenceReader->getId(dbKey);
+                    unsigned int targetId = t3DiDbr.sequenceReader->getId(dbKey);
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB))? true : false;
 
-                    char * targetSeq3Di = t3DiDbr->sequenceReader->getData(targetId, thread_idx);
-                    char * targetSeqAA = tAADbr->sequenceReader->getData(targetId, thread_idx);
-                    const int targetSeqLen = static_cast<int>(t3DiDbr->sequenceReader->getSeqLen(targetId));
+                    char * targetSeq3Di = t3DiDbr.sequenceReader->getData(targetId, thread_idx);
+                    char * targetSeqAA = tAADbr.sequenceReader->getData(targetId, thread_idx);
+                    const int targetSeqLen = static_cast<int>(t3DiDbr.sequenceReader->getSeqLen(targetId));
 
                     tSeq3Di.mapSequence(targetId, dbKey, targetSeq3Di, targetSeqLen);
                     tSeqAA.mapSequence(targetId, dbKey, targetSeqAA, targetSeqLen);
@@ -471,8 +472,8 @@ int structurealign(int argc, const char **argv, const Command& command) {
     }
 
     if (sameDB == false) {
-        delete t3DiDbr;
-        delete tAADbr;
+        delete q3DiDbr;
+        delete qAADbr;
     }
 
     return EXIT_SUCCESS;
