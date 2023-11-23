@@ -109,6 +109,7 @@ public:
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
     PARAMETER(PARAM_INDEX_EXCLUDE)
+    PARAMETER(PARAM_COMPLEX_REPORT_MODE)
 
     int prefMode;
     float tmScoreThr;
@@ -127,6 +128,7 @@ public:
     std::string fileInclude;
     std::string fileExclude;
     int indexExclude;
+    int complexReportMode;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,

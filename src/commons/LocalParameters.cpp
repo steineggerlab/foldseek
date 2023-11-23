@@ -25,7 +25,8 @@ LocalParameters::LocalParameters() :
         PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
-        PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT)
+        PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_COMPLEX_REPORT_MODE(PARAM_COMPLEX_REPORT_MODE_ID, "--complex-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &complexReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT)
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -180,6 +181,7 @@ LocalParameters::LocalParameters() :
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, scorecomplex);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, convertalignments);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, createcomplexreport);
+    easyscorecomplexworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
 
     prefMode = PREF_MODE_KMER;
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
@@ -203,6 +205,7 @@ LocalParameters::LocalParameters() :
     fileExclude = "^$";
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
+    complexReportMode = 1;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
 
     //rewrite param vals.

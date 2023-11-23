@@ -70,6 +70,7 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
     par.filenames.pop_back();
     CommandCaller cmd;
+    cmd.addVariable("NO_REPORT", par.complexReportMode == 0 ? "TRUE" : NULL);
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());
     par.filenames.pop_back();

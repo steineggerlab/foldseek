@@ -42,9 +42,11 @@ fi
 "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/result2" "${OUTPUT}" ${CONVERT_PAR} \
     || fail "Convert Alignments died"
 
-# shellcheck disable=SC2086
-"$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${TMP_PATH}/result2" "${OUTPUT}_report" ${REPORT_PAR} \
-    || fail "createcomplexreport died"
+if [ -z "${NO_REPORT}" ]; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${TMP_PATH}/result2" "${OUTPUT}_report" ${REPORT_PAR} \
+        || fail "createcomplexreport died"
+fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
