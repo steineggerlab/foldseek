@@ -58,7 +58,7 @@ struct ChainToChainAln {
                     break;
             }
         }
-        char buffer[1024];
+        char buffer[4096];
         label = 0;
         superposition[0] = tmResult.u[0][0];
         superposition[1] = tmResult.u[0][1];
@@ -644,7 +644,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
-        char buffer[1024];
+        char buffer[4096];
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
