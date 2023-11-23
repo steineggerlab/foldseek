@@ -139,7 +139,7 @@ In case of the alignment type (`--alignment-type 1`) tmalign, we sort the result
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
     
     # pdb  
-    foldseek databases PDB100 pdb tmp 
+    foldseek databases PDB pdb tmp 
     # alphafold db
     foldseek databases Alphafold/Proteome afdb tmp 
 
@@ -230,7 +230,7 @@ foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFo
 This command searches the specified protein complexe `1tim.pdb.gz` against 8tim.pdb.gz, producing alignment information.
 Foldseek  `easy-complexsearch` can also be used to search full databases: 
 ```
-foldseek databases PDB100 pdb tmp 
+foldseek databases PDB pdb tmp 
 foldseek easy-complexsearch example/1tim.pdb.gz pdb result tmpFolder
 ```
 
