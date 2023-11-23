@@ -170,13 +170,19 @@ LocalParameters::LocalParameters() :
     scorecomplex.push_back(&PARAM_THREADS);
     scorecomplex.push_back(&PARAM_V);
     scorecomplex.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
+
+    // createcomplexreport
+    createcomplexreport.push_back(&PARAM_DB_OUTPUT);
     createcomplexreport.push_back(&PARAM_THREADS);
     createcomplexreport.push_back(&PARAM_V);
+
+    // easyscorecomplexworkflow
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, structurecreatedb);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, structuresearchworkflow);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, scorecomplex);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, convertalignments);
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, createcomplexreport);
+
     prefMode = PREF_MODE_KMER;
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
