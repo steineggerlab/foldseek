@@ -16,6 +16,7 @@ set(strucclustutils_source_files
         strucclustutils/scorecomplex.cpp
         strucclustutils/createcomplexreport.cpp
         strucclustutils/createcomplexreport.h
+        strucclustutils/expandcomplex.cpp
         PARENT_SCOPE
         )
 

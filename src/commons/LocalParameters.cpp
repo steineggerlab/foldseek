@@ -183,6 +183,10 @@ LocalParameters::LocalParameters() :
     easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, createcomplexreport);
     easyscorecomplexworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
 
+    //
+    expandcomplex.push_back(&PARAM_THREADS);
+    expandcomplex.push_back(&PARAM_V);
+
     prefMode = PREF_MODE_KMER;
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;

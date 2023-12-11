@@ -70,6 +70,44 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
     par.filenames.pop_back();
     CommandCaller cmd;
+    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
+        cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "tmalign");
+        cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.tmalign).c_str());
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
+        cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "structurealign");
+        cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.structurealign).c_str());
+    }
+
+//    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
+//        cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
+//        cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
+//        cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
+//        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+//        par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_ONLY;
+//        par.sortByStructureBits = 0;
+//        //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
+//        cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
+//    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
+//        cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
+//        cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
+//        cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
+//        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
+//    }
+
+    switch(par.prefMode){
+        case LocalParameters::PREF_MODE_KMER:
+            cmd.addVariable("PREFMODE", "KMER");
+            break;
+        case LocalParameters::PREF_MODE_UNGAPPED:
+            cmd.addVariable("PREFMODE", "UNGAPPED");
+            break;
+        case LocalParameters::PREF_MODE_EXHAUSTIVE:
+            cmd.addVariable("PREFMODE", "EXHAUSTIVE");
+            break;
+    }
+    if(par.exhaustiveSearch){
+        cmd.addVariable("PREFMODE", "EXHAUSTIVE");
+    }
     cmd.addVariable("NO_REPORT", par.complexReportMode == 0 ? "TRUE" : NULL);
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());

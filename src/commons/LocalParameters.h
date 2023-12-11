@@ -91,6 +91,7 @@ public:
     std::vector<MMseqsParameter *> scorecomplex;
     std::vector<MMseqsParameter *> easyscorecomplexworkflow;
     std::vector<MMseqsParameter *> createcomplexreport;
+    std::vector<MMseqsParameter *> expandcomplex;
 
     PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)

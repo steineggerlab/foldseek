@@ -123,7 +123,7 @@ struct SearchResult {
     void filterAlnVec(double minAlignedQueryChainRatio) {
         if (dbResidueLen == 0)
             alnVec.clear();
-        if (alnVec.empty())
+        if (alnVec.empty() || minAlignedQueryChainRatio==0)
             return;
         ChainToChainAln &firstAln = alnVec[0];
         unsigned int minAlignedQueryChainNum = qChainKeys.size() * minAlignedQueryChainRatio;
@@ -142,7 +142,7 @@ struct SearchResult {
         if (alnVec.empty())
             return;
 
-        auto length =  (double)alnVec.size();
+        double length = alnVec.size();
         double mean[12] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         double var[12] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         double sd[12] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -153,15 +153,18 @@ struct SearchResult {
                 mean[i] += aln.superposition[i] / length;
             }
         }
+
         for (auto &aln: alnVec) {
             for (size_t i = 0; i < 12; i++ ) {
                 var[i] += std::pow(aln.superposition[i] - mean[i], 2) / length;
             }
         }
+
         for (size_t i=0; i<12; i++) {
             sd[i] = std::sqrt(var[i]);
             cv[i] = (abs(mean[i]) > TOO_SMALL_MEAN) ? sd[i]/std::abs(mean[i]) : sd[i];
         }
+
         for (auto &aln: alnVec) {
             for (size_t i = 0; i < 12; i++ ) {
                 aln.superposition[i] = cv[i] < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean[i]) / sd[i];
@@ -290,7 +293,7 @@ public:
     DBSCANCluster(SearchResult &searchResult, double minCov) : searchResult(searchResult) {
         recursiveNum = 0;
         cLabel = 0;
-        minClusterSize = (unsigned int) ((double)searchResult.qChainKeys.size() * minCov);
+        minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         eps = DEFAULT_EPS;
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         bestClusters.clear();
@@ -339,10 +342,12 @@ public:
             }
         }
 
-        if (maxClusterSize == idealClusterSize) {
-            bestClusters = currClusters;
-            return finishDBSCAN();
-        } else if (maxClusterSize < prevMaxClusterSize)
+//        if (maxClusterSize == idealClusterSize) {
+//            bestClusters = currClusters;
+//            prevMaxClusterSize = maxClusterSize;
+//            return finishDBSCAN();
+//        } else
+        if (maxClusterSize < prevMaxClusterSize)
             return finishDBSCAN();
         else if (maxClusterSize == prevMaxClusterSize && currClusters.size() < bestClusters.size())
             return finishDBSCAN();
@@ -455,7 +460,6 @@ public:
     }
 
     void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
-        searchResults.clear();
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
         if (qResLen == 0) return;
         SearchResult paredSearchResult = SearchResult(qChainKeys, qResLen);
@@ -655,7 +659,6 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
-            progress.updateProgress();
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
@@ -687,9 +690,12 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
             }
             assignments.clear();
             resultToWriteLines.clear();
+            searchResults.clear();
+            progress.updateProgress();
         }
         complexScorer.free();
     }
+
     qComplexIndices.clear();
     dbChainKeyToComplexIdMap.clear();
     dbComplexIdToChainKeysMap.clear();

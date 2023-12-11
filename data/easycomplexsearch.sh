@@ -31,28 +31,44 @@ if notExists "${TMP_PATH}/result.dbtype"; then
     "$MMSEQS" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
         || fail "Search died"
 fi
+RESULT="${TMP_PATH}/result"
 
-if notExists "${TMP_PATH}/result2.dbtype"; then
+if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
+      if notExists "${TMP_PATH}/result_expand_pref.dbtype"; then
+            "$MMSEQS" expandcomplex "${QUERY}" "${TARGET}" "${RESULT}" "${TMP_PATH}/result_expand_pref" \
+            || fail "Expandcomplex died"
+      fi
+      if notExists "${TMP_PATH}/result_expand_aligned.dbtype"; then
+        echo "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" ${COMPLEX_ALIGN_PAR};
+            "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" ${COMPLEX_ALIGN_PAR} \
+            || fail "something died"
+      fi
+      RESULT="${TMP_PATH}/result_expand_aligned"
+fi
+if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
-    $MMSEQS scorecomplex "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/result2" ${SCORECOMPLEX_PAR} \
+    $MMSEQS scorecomplex "${QUERY}" "${TARGET}" "${RESULT}" "${TMP_PATH}/complex_result" ${SCORECOMPLEX_PAR} \
         || fail "ScoreComplex died"
 fi
 
 # shellcheck disable=SC2086
-"$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/result2" "${OUTPUT}" ${CONVERT_PAR} \
+"$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${OUTPUT}" ${CONVERT_PAR} \
     || fail "Convert Alignments died"
 
 if [ -z "${NO_REPORT}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${TMP_PATH}/result2" "${OUTPUT}_report" ${REPORT_PAR} \
+    "$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${OUTPUT}_report" ${REPORT_PAR} \
         || fail "createcomplexreport died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
+    if [ "$PREFMODE" -ne "EXHAUSTIVE" ]; then
+      "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
+    fi
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/result2" ${VERBOSITY}
+    "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY}
     if [ -z "${LEAVE_INPUT}" ]; then
         if [ -f "${TMP_PATH}/target" ]; then
             # shellcheck disable=SC2086
