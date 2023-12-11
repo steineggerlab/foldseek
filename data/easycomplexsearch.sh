@@ -39,8 +39,8 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
             || fail "Expandcomplex died"
       fi
       if notExists "${TMP_PATH}/result_expand_aligned.dbtype"; then
-        echo "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" ${COMPLEX_ALIGN_PAR};
-            "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" ${COMPLEX_ALIGN_PAR} \
+        echo "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" "${COMPLEX_ALIGN_PAR}";
+            "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" "${COMPLEX_ALIGN_PAR}" \
             || fail "something died"
       fi
       RESULT="${TMP_PATH}/result_expand_aligned"
@@ -65,7 +65,7 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
     if [ "$PREFMODE" -ne "EXHAUSTIVE" ]; then
-      "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
+      "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" "${VERBOSITY}"
     fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY}
