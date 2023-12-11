@@ -39,8 +39,7 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
             || fail "Expandcomplex died"
       fi
       if notExists "${TMP_PATH}/result_expand_aligned.dbtype"; then
-        echo "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" "${COMPLEX_ALIGN_PAR}";
-            "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" "${COMPLEX_ALIGN_PAR}" \
+            "$MMSEQS" "$COMPLEX_ALIGNMENT_ALGO" "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" "${COMPLEX_ALIGN_PAR}" \
             || fail "something died"
       fi
       RESULT="${TMP_PATH}/result_expand_aligned"
