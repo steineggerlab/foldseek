@@ -31,18 +31,20 @@ if notExists "${TMP_PATH}/result.dbtype"; then
     "$MMSEQS" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
         || fail "Search died"
 fi
-RESULT="${TMP_PATH}/result"
 
+RESULT="${TMP_PATH}/result"
 if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
-      if notExists "${TMP_PATH}/result_expand_pref.dbtype"; then
-            "$MMSEQS" expandcomplex "${QUERY}" "${TARGET}" "${RESULT}" "${TMP_PATH}/result_expand_pref" \
+    if notExists "${TMP_PATH}/result_expand_pref.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" expandcomplex "${QUERY}" "${TARGET}" "${RESULT}" "${TMP_PATH}/result_expand_pref" ${THREADS_PAR} \
             || fail "Expandcomplex died"
-      fi
-      if notExists "${TMP_PATH}/result_expand_aligned.dbtype"; then
-            "$MMSEQS" "$COMPLEX_ALIGNMENT_ALGO" "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" "${COMPLEX_ALIGN_PAR}" \
+    fi
+    if notExists "${TMP_PATH}/result_expand_aligned.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${QUERY}" "${TARGET}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" ${COMPLEX_ALIGN_PAR} \
             || fail "something died"
-      fi
-      RESULT="${TMP_PATH}/result_expand_aligned"
+    fi
+    RESULT="${TMP_PATH}/result_expand_aligned"
 fi
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
@@ -63,8 +65,9 @@ fi
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
-    if [ "$PREFMODE" -ne "EXHAUSTIVE" ]; then
-      "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" "${VERBOSITY}"
+    if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
     fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY}
