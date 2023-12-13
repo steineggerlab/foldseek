@@ -1,6 +1,6 @@
 
 # Foldseek 
-Foldseek enables fast and sensitive comparisons of large structure sets.
+Foldseek enables fast and sensitive comparisons of large protein structure sets.
 
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
@@ -32,7 +32,7 @@ Foldseek enables fast and sensitive comparisons of large structure sets.
 - [Examples](#examples)
 
 ## Webserver 
-Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using our Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
+Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using the Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
 
 ## Installation
 ```
@@ -66,7 +66,7 @@ For optimal software performance, consider three options based on your RAM and s
    Use the `--prefilter-mode 1`, which isn't memory-limited and computes all ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries.
 
 ## Tutorial Video
-We presented a Foldseek tutorial at the SBGrid where we demonstrate the webserver and command line interface of foldseek. 
+We presented a Foldseek tutorial at the SBGrid where we demonstrated Foldseek's webserver and command line interface. 
 Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
 
 <a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
@@ -77,14 +77,14 @@ Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information a
 ## Quick start
 
 ### Search
-The `easy-search` module allows to search single or multiple query structures, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or single protein structures. In default it outputs the alignment information as a [tab-separated file](#tab-separated) but we support also [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) or a [HTML](#interactive-html) output.
+The `easy-search` module allows to search single or multiple query structures, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or single protein structures. The default alignment information output is a [tab-separated file](#tab-separated) but Foldseek also supports [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) and [HTML](#interactive-html).
 
     foldseek easy-search example/d1asha_ example/ aln tmpFolder
     
 #### Output Search
 ##### Tab-separated
   
-The default fields are containing the following fields: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits` but they can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different output columns.
+The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits` but they can be customized with the `--format-output` option e.g., `--format-output "query,target,qaln,taln"` returns the query and target accessions and the pairwise alignments in tab-separated format. You can choose many different output columns.
 
 | Code | Description |
 | --- | --- |
@@ -101,14 +101,14 @@ The default fields are containing the following fields: `query,target,fident,aln
 |lddtfull   | LDDT per aligned position |
 |prob       | Estimated probability for query and target to be homologous (e.g. being within the same SCOPe superfamily) |
 
-Check out the [MMseqs2 documentation for more format output codes](https://github.com/soedinglab/MMseqs2/wiki#custom-alignment-format-with-convertalis).
+Check out the [MMseqs2 documentation for additional output format codes](https://github.com/soedinglab/MMseqs2/wiki#custom-alignment-format-with-convertalis).
 
 ##### Superpositioned Cα only PDB files
-Foldseek's `--format-mode 5` generates PDB files with all Cα atoms superimposed based on the aligned coordinates on to the query structure. 
-For each pairwise alignment it will write a single PDB files, so be carefull when using this options for large searches. 
+Foldseek's `--format-mode 5` generates PDB files with all Cα atoms superimposed based on the aligned coordinates onto the query structure. 
+For each pairwise alignment it will write its own PDB file, so be careful when using this options for large searches. 
 
 ##### Interactive HTML
-Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
+Locally run Foldseek can generate an HTML search result, similar to the one produced by the [webserver](https://search.foldseek.com) by specifying `--format-mode 3`
 
 ```
 foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
@@ -129,11 +129,11 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
 
 #### Alignment Mode
-In default Foldseek uses its local 3Di+AA strutural alignment but it also supports to realign hits using the global TMalign as well as rescoring alignments using TMscore. 
+By default, Foldseek uses its local 3Di+AA structural alignment but it also supports realigning hits using the global TMalign as well as rescoring alignments using TMscore. 
 
     foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 
-In case of the alignment type (`--alignment-type 1`) tmalign, we sort the results by the TMscore normalized by query length. We write the TMscore into the e-value=(qTMscore+tTMscore)/2 as well as into the score(=qTMscore*100) field. All output fields (like pident, fident, and alnlen) are calculated from the TMalign alignment.
+If alignment type is set to tmalign (`--alignment-type 1`), the results will be sorted by the TMscore normalized by query length. The TMscore is used for reporting two fields: the e-value=(qTMscore+tTMscore)/2 and the score=(qTMscore*100). All output fields (e.g., pident, fident, and alnlen) are calculated based on the TMalign alignment.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
@@ -155,14 +155,14 @@ We currently support the following databases:
 ```
 
 #### Create custom databases and indexes
-The target database can be pre-processed by `createdb`. This make sense if searched multiple times. 
+The target database can be pre-processed by `createdb`. This is useful when searching multiple times against the same set of target structures. 
  
     foldseek createdb example/ targetDB
     foldseek createindex targetDB tmp  #OPTIONAL generates and stores the index on disk
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
 
 ### Cluster
-The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein using structural alignment. It accepts input in either PDB or mmCIF format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
+The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein structure using structural alignment. It accepts input in either PDB or mmCIF format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
 
     foldseek easy-cluster example/ res tmp -c 0.9 
     
@@ -187,7 +187,7 @@ MCAT...Q
 ```
 
 ##### All member fasta
-In `_allseq.fasta` file all sequences of the cluster are present. A new cluster is marked by two identical name lines of the representative sequence, where the first line stands for the cluster and the second is the name line of the first cluster sequence. It is followed by the fasta formatted sequences of all its members.
+In the `_allseq.fasta` file all sequences of the cluster are present. A new cluster is marked by two identical name lines of the representative sequence, where the first line stands for the cluster and the second is the name line of the first cluster sequence. It is followed by the fasta formatted sequences of all its members.
 
 ```
 >Q0KJ32	
@@ -220,15 +220,14 @@ MCAR...Q
 
 
 ### Complexsearch
-The `easy-complexsearch` module is a tool for searching single or multiple query protein complexes (PDB/mmCIF, flat or gzipped) against a  target database of protein complexes. It reports the similarity metrices of the complexes like TMscore.
+The `easy-complexsearch` module is designed for searching single or multiple query protein complexes (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
 
 #### Using Complexsearch
-To pairwise compare complexes use `easy-complexsearch`, run the following command:
+For a pairwise alignment of complexes using `easy-complexsearch`, run the following command:
 ```
 foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFolder
 ```
-This command searches the specified protein complexe `1tim.pdb.gz` against 8tim.pdb.gz, producing alignment information.
-Foldseek  `easy-complexsearch` can also be used to search full databases: 
+Foldseek `easy-complexsearch` can also be used for searching one or more query complexes against a target database: 
 ```
 foldseek databases PDB pdb tmp 
 foldseek easy-complexsearch example/1tim.pdb.gz pdb result tmpFolder
@@ -236,7 +235,8 @@ foldseek easy-complexsearch example/1tim.pdb.gz pdb result tmpFolder
 
 #### Complex Search Output
 ##### Tab-separated-complex
-By default, `easy-complexsearch` outputs the alignment as a tab-separated file. The standard fields include `query, target, fident, alnlen, mismatch, gapopen, qstart, qend, tstart, tend, evalue, bits, complexassignid`. Customize output with the `--format-output` option. For example, `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` alters the output to show specific scores and identifiers. 
+By default, `easy-complexsearch` reports the output alignment in a tab-separated file.
+The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid` but they can be customized with the `--format-output` option e.g., `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` alters the output to show specific scores and identifiers.
 
 | Code | Description |
 | --- | --- |
@@ -257,7 +257,7 @@ By default, `easy-complexsearch` outputs the alignment as a tab-separated file. 
 ```
 
 ##### Complex Report
-`easy-complexsearch` also generates a report format (prefixed `_report`), which provides a summary ot the inter complex chain matching, including identifiers, chains, TM scores, rotation matrices, translation vectors, and assignment IDs. Reports are containing the following fields:
+`easy-complexsearch` also generates a report format (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
 | Column | Description |
 | --- | --- |
 | 1 | Identifiers for query complex |
@@ -274,17 +274,6 @@ By default, `easy-complexsearch` outputs the alignment as a tab-separated file. 
 1tim.pdb.gz 8tim.pdb.gz A,B A,B 0.98941 0.98941 0.999983,0.000332,0.005813,-0.000373,0.999976,0.006884,-0.005811,-0.006886,0.999959 0.298992,0.060047,0.565875  0
 ```
 
-<!-- 
-##### Interactive HTML 
-Foldseek can locally generate a search result HTML similiar to the [webserver](https://search.foldseek.com) by specifying the format mode `--format-mode 3`
-
-```
-foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
-```
-
-<p align="center"><img src="./.github/results.png" height="400"/></p> 
--->
-
 ## Main Modules
 - `easy-search`       fast protein structure search  
 - `easy-cluster`      fast protein structure clustering  
@@ -293,7 +282,7 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 
 ## Examples
 ### Rescore aligments using TMscore
-Easiest way to get the alignment TMscore normalized by min(alnLen,qLen,targetLen) as well as a rotation matrix is through the following command:
+The easiest way to get the alignment TMscore normalized by min(alnLen,qLen,targetLen) as well as a rotation matrix is through the following command:
 ```
 foldseek easy-search example/ example/ aln tmp --format-output query,target,alntmscore,u,t
 ```
