@@ -116,6 +116,8 @@ int expandcomplex(int argc, const char **argv, const Command &command) {
                 result.append(SSTR(chainKeyPairs[chainKeyPairIdx].second));
                 result.push_back('\n');
             }
+            resultWriter.writeData(result.c_str(),result.length(),qPrevChainKey,thread_idx);
+            result.clear();
             progress.updateProgress();
         }
     }
