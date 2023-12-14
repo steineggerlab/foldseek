@@ -77,7 +77,7 @@ Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information a
 ## Quick start
 
 ### Search
-The `easy-search` module allows to search single or multiple query structures, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or single protein structures. The default alignment information output is a [tab-separated file](#tab-separated) but Foldseek also supports [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) and [HTML](#interactive-html).
+The `easy-search` module allows to query one or more single-chain protein structures, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or individual single-chain protein structures (for multi-chain proteins see [complexsearch](#complexsearch)). The default alignment information output is a [tab-separated file](#tab-separated) but Foldseek also supports [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) and [HTML](#interactive-html).
 
     foldseek easy-search example/d1asha_ example/ aln tmpFolder
     
