@@ -104,7 +104,7 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 Check out the [MMseqs2 documentation for additional output format codes](https://github.com/soedinglab/MMseqs2/wiki#custom-alignment-format-with-convertalis).
 
 ##### Superpositioned Cα only PDB files
-Foldseek's `--format-mode 5` generates PDB files with all Cα atoms superimposed based on the aligned coordinates onto the query structure. 
+Foldseek's `--format-mode 5` generates PDB files with all target Cα atoms superimposed onto the query structure based on the aligned coordinates. 
 For each pairwise alignment it will write its own PDB file, so be careful when using this options for large searches. 
 
 ##### Interactive HTML
