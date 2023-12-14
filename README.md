@@ -223,6 +223,9 @@ MCAR...Q
 The `easy-complexsearch` module is designed for searching single or multiple query protein complexes (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
 
 #### Using Complexsearch
+The examples below use files that can be found in the `example` directory, which is part of the Foldseek repo, if you clone it. 
+If you use the precompiled version of the software, you can download the files directly: [1tim.pdb.gz](https://github.com/steineggerlab/foldseek/raw/master/example/1tim.pdb.gz) and [8tim.pdb.gz](https://github.com/steineggerlab/foldseek/raw/master/example/8tim.pdb.gz).
+
 For a pairwise alignment of complexes using `easy-complexsearch`, run the following command:
 ```
 foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFolder
