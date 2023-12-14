@@ -176,14 +176,16 @@ LocalParameters::LocalParameters() :
     createcomplexreport.push_back(&PARAM_THREADS);
     createcomplexreport.push_back(&PARAM_V);
 
-    // easyscorecomplexworkflow
-    easyscorecomplexworkflow = combineList(structurecreatedb, structuresearchworkflow);
-    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, scorecomplex);
-    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, convertalignments);
-    easyscorecomplexworkflow = combineList(easyscorecomplexworkflow, createcomplexreport);
-    easyscorecomplexworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
+    // complexsearchworkflow
+    complexsearchworkflow = combineList(structuresearchworkflow, scorecomplex);
 
-    //
+    // easycomplexsearchworkflow
+    easyscomplexsearchworkflow = combineList(structurecreatedb, complexsearchworkflow);
+    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, convertalignments);
+    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, createcomplexreport);
+    easyscomplexsearchworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
+
+    // expandcomplex
     expandcomplex.push_back(&PARAM_THREADS);
     expandcomplex.push_back(&PARAM_V);
 

@@ -263,7 +263,26 @@ std::vector<Command> foldseekCommands = {
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb}
                                    }
         },
-        {"easy-complexsearch", easycomplexsearch, &localPar.easyscorecomplexworkflow, COMMAND_EASY,
+        {"complexsearch", complexsearch, &localPar.complexsearchworkflow, COMMAND_MAIN,
+                "Complex level search",
+                "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
+                "foldseek complexsearch queryDB targetDB result tmp\n"
+                "# Format output differently\n"
+                "foldseek easy-complexsearch queryDB targetDB result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "# Align with TMalign (global)\n"
+                "foldseek complexsearch queryDB targetDB result tmp --alignment-type 1\n"
+                "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
+                "foldseek complexsearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
+                "Woosub Kim <woosubgo@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <o:outputFileName> <tmpDir>",
+                CITATION_FOLDSEEK, {
+                                           {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                                           {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
+                                           {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
+                                   }
+        },
+        {"easy-complexsearch", easycomplexsearch, &localPar.easyscomplexsearchworkflow, COMMAND_EASY,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
                 "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
