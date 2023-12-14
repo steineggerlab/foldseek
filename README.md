@@ -220,7 +220,7 @@ MCAR...Q
 
 
 ### Complexsearch
-The `easy-complexsearch` module is designed for searching single or multiple query protein complexes (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
+The `easy-complexsearch` module is designed for querying one or more protein complex (multi-chain) structures (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
 
 #### Using Complexsearch
 The examples below use files that can be found in the `example` directory, which is part of the Foldseek repo, if you clone it. 
@@ -260,7 +260,7 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 ```
 
 ##### Complex Report
-`easy-complexsearch` also generates a report format (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
+`easy-complexsearch` also generates a report (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
 | Column | Description |
 | --- | --- |
 | 1 | Identifiers for query complex |
@@ -290,7 +290,7 @@ The easiest way to get the alignment TMscore normalized by min(alnLen,qLen,targe
 foldseek easy-search example/ example/ aln tmp --format-output query,target,alntmscore,u,t
 ```
 
-Alternative, it is possible to compute TMscores for the kind of alignment output (e.g. 3Di/AA) using the following commands: 
+Alternatively, it is possible to compute TMscores for the kind of alignment output (e.g., 3Di+AA) using the following commands: 
 ```
 foldseek createdb example/ targetDB
 foldseek createdb example/ queryDB
@@ -299,10 +299,10 @@ foldseek aln2tmscore queryDB targetDB aln aln_tmscore
 foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
-Output format `aln_tmscore.tsv`: query and target identifier, TMscore, translation(3) and rotation vector=(3x3)
+Output format `aln_tmscore.tsv`: query and target identifiers, TMscore, translation(3) and rotation vector=(3x3)
 
 ### Cluster search results 
-The following command aligns the input structures all-against-all and keeps only alignments with 80% of the sequence covered by the alignment (-c 0.8) (read more about alignment coverage [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster)). It then clusters the results using greedy set cover algorithm. The clustering mode can be adjusted using --cluster-mode, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
+The following command performs an all-against-all alignments of the input structures and retains only the alignments, which cover 80% of the sequence (-c 0.8) (read more about alignment coverage options [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster)). It then clusters the results using a greedy set cover algorithm. The clustering mode can be adjusted using --cluster-mode, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
 
 ```
 foldseek createdb example/ db
@@ -312,8 +312,8 @@ foldseek createtsv db db clu clu.tsv
 ```
 
 ### Query centered multiple sequence alignment 
-Foldseek can generate a3m based multiple sequence alignments using the following commands. 
-a3m can be converted to fasta format using [reformat.pl](https://raw.githubusercontent.com/soedinglab/hh-suite/master/scripts/reformat.pl) (`reformat.pl in.a3m out.fas`).
+Foldseek can output multiple sequence alignments in a3m format using the following commands. 
+To convert a3m to FASTA format, the following script can be used [reformat.pl](https://raw.githubusercontent.com/soedinglab/hh-suite/master/scripts/reformat.pl) (`reformat.pl in.a3m out.fas`).
 
 ```
 foldseek createdb example/ targetDB
