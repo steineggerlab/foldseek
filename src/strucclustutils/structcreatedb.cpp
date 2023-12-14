@@ -46,6 +46,199 @@ static int structure_file_gzclose(mtar_t *tar) {
     return MTAR_ESUCCESS;
 }
 
+struct FoldseekProteinStructure{
+    std::vector<std::string> alphabetAA;
+    std::vector<std::string> alphabet3di;
+    std::vector<std::string> header;
+    std::vector<std::pair<size_t, size_t>> chainStartLen;
+    // all data below contains concatted chain data
+    std::string seqAA;
+    std::string seq3Di;
+    std::vector<Vec3> coordsCalpha;
+    std::vector<Vec3> coordsN;
+    std::vector<Vec3> coordsC;
+    std::vector<Vec3> coordsCbeta;
+    void clear(){
+        header.clear();
+        alphabetAA.clear();
+        alphabet3di.clear();
+        chainStartLen.clear();
+        seqAA.clear();
+        seq3Di.clear();
+        coordsCalpha.clear();
+        coordsN.clear();
+        coordsC.clear();
+        coordsCbeta.clear();
+    }
+};
+
+
+void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t> res1, std::pair<size_t, size_t> res2,
+                           std::vector<size_t> & resIdx1, std::vector<size_t> & resIdx2)
+{
+    for (size_t res1Idx = res1.first; res1Idx < res1.second; res1Idx++) {
+        float shortestDistance = std::numeric_limits<float>::infinity();
+        size_t shortestDistanceRes2 = 0;
+        for (size_t res2Idx = res2.first; res2Idx < res2.second; res2Idx++) {
+            float D2 = 0;
+            D2 += (readStructure.cb[res1Idx].x - readStructure.cb[res2Idx].x) *
+                  (readStructure.cb[res1Idx].x - readStructure.cb[res2Idx].x);
+            D2 += (readStructure.cb[res1Idx].y - readStructure.cb[res2Idx].y) *
+                  (readStructure.cb[res1Idx].y - readStructure.cb[res2Idx].y);
+            D2 += (readStructure.cb[res1Idx].z - readStructure.cb[res2Idx].z) *
+                  (readStructure.cb[res1Idx].z - readStructure.cb[res2Idx].z);
+            float distance = sqrt(D2);
+            if (distance < shortestDistance) {
+                shortestDistance = distance;
+                shortestDistanceRes2 = res2Idx;
+            }
+        }
+        if (shortestDistance < 8.0) {
+            resIdx1.push_back(res1Idx);
+//            resIdx2.push_back(shortestDistanceRes2);
+        }
+    }
+}
+
+void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di) {
+    std::vector<size_t> resIdx1, resIdx2;
+    std::vector<Vec3> ca, n, c, cb;
+    std::vector<char> interfaceSeq3di, interfaceAmi;
+    std::vector<Vec3> interfaceCa;
+    std::vector<std::string> interfaceNames, interfaceChainName;
+    std::vector<std::pair<size_t, size_t>> interfaceChain;
+    size_t prevInterfaceChainLen = 0;
+    for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
+        for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
+            findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1, resIdx2);
+            for(size_t i = 0; i < resIdx1.size(); i++){
+                ca.push_back(readStructure.ca[resIdx1[i]]);
+                n.push_back(readStructure.n[resIdx1[i]]);
+                c.push_back(readStructure.c[resIdx1[i]]);
+                cb.push_back(readStructure.cb[resIdx1[i]]);
+            }
+            std::sort(resIdx2.begin(), resIdx2.end());
+            findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2, resIdx1);
+            for(size_t i = 0; i < resIdx2.size(); i++){
+                ca.push_back(readStructure.ca[resIdx2[i]]);
+                n.push_back(readStructure.n[resIdx2[i]]);
+                c.push_back(readStructure.c[resIdx2[i]]);
+                cb.push_back(readStructure.cb[resIdx2[i]]);
+            }
+//            if(resIdx1.size() != resIdx2.size() ){
+//                std::cout << "ERROR: resIdx1.size() != resIdx2.size() " << resIdx1.size() << " != " << resIdx2.size() << std::endl;
+//                exit(1);
+//            }
+            char *states = structureTo3Di.structure2states(ca.data(),
+                                                           n.data(),
+                                                           c.data(),
+                                                           cb.data(),
+                                                           resIdx1.size() + resIdx2.size());
+            for (size_t i = 0; i < resIdx1.size(); i++) {
+                interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[i])]);
+                interfaceAmi.push_back(readStructure.ami[resIdx1[i]]);
+                interfaceCa.push_back(readStructure.ca[resIdx1[i]]);
+            }
+            for (size_t i = 0; i < resIdx2.size(); i++) {
+                interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[resIdx1.size()+i])]);
+                interfaceAmi.push_back(readStructure.ami[resIdx2[i]]);
+                interfaceCa.push_back(readStructure.ca[resIdx2[i]]);
+            }
+            interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx1.size()));
+            prevInterfaceChainLen += resIdx1.size();
+            interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx2.size()));
+            prevInterfaceChainLen += resIdx2.size();
+            interfaceNames.push_back(readStructure.names[ch1]);
+            interfaceNames.push_back(readStructure.names[ch2]);
+            interfaceChainName.push_back(readStructure.chainNames[ch1]);
+            interfaceChainName.push_back(readStructure.chainNames[ch2]);
+            resIdx1.clear();
+            resIdx2.clear();
+            ca.clear();
+            n.clear();
+            c.clear();
+            cb.clear();
+        }
+    }
+    // copy interface data to readStructure
+    // this overwrites the original data (clear and push_back)
+    readStructure.ca.clear();
+    readStructure.ca.insert(readStructure.ca.begin(), interfaceCa.begin(), interfaceCa.end());
+    readStructure.ami.clear();
+    readStructure.ami.insert(readStructure.ami.begin(), interfaceAmi.begin(), interfaceAmi.end());
+    readStructure.seq3di.clear();
+    readStructure.seq3di.insert(readStructure.seq3di.begin(), interfaceSeq3di.begin(), interfaceSeq3di.end());
+    readStructure.chain.clear();
+    readStructure.chain.insert(readStructure.chain.begin(), interfaceChain.begin(), interfaceChain.end());
+    readStructure.names.clear();
+    readStructure.names.insert(readStructure.names.begin(), interfaceNames.begin(), interfaceNames.end());
+    readStructure.chainNames.clear();
+    readStructure.chainNames.insert(readStructure.chainNames.begin(), interfaceChainName.begin(), interfaceChainName.end());
+}
+
+void compute3Di(GemmiWrapper &readStructure, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, float maskBfactorThreshold) {
+    for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
+        size_t chainStart = readStructure.chain[ch].first;
+        size_t chainLen = readStructure.chain[ch].second - readStructure.chain[ch].first;
+        char *states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
+                                                       &readStructure.n[chainStart],
+                                                       &readStructure.c[chainStart],
+                                                       &readStructure.cb[chainStart],
+                                                       chainLen);
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            if (readStructure.ca_bfactor[pos] < maskBfactorThreshold) {
+                readStructure.seq3di.push_back(tolower(mat3Di.num2aa[static_cast<int>(states[pos])]));
+                readStructure.ami[chainStart + pos] = tolower(readStructure.ami[chainStart + pos]);
+            } else {
+                readStructure.seq3di.push_back(mat3Di.num2aa[static_cast<int>(states[pos])]);
+                readStructure.ami[chainStart + pos] = toupper(readStructure.ami[chainStart + pos]);
+            }
+        }
+    }
+}
+
+
+void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pulchra){
+    for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+        size_t chainStart = readStructure.chain[ch].first;
+        size_t chainLen = readStructure.chain[ch].second - readStructure.chain[ch].first;
+        // Detect if structure is Ca only
+        if (std::isnan(readStructure.n[chainStart + 0].x) &&
+            std::isnan(readStructure.n[chainStart + 1].x) &&
+            std::isnan(readStructure.n[chainStart + 2].x) &&
+            std::isnan(readStructure.n[chainStart + 3].x) &&
+            std::isnan(readStructure.c[chainStart + 0].x) &&
+            std::isnan(readStructure.c[chainStart + 1].x) &&
+            std::isnan(readStructure.c[chainStart + 2].x) &&
+            std::isnan(readStructure.c[chainStart + 3].x)) {
+            pulchra.rebuildBackbone(&readStructure.ca[chainStart],
+                                    &readStructure.n[chainStart],
+                                    &readStructure.c[chainStart],
+                                    &readStructure.ami[chainStart],
+                                    chainLen);
+        }
+    }
+}
+
+void nameChains(GemmiWrapper &readStructure, int chainNameMode){
+    for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+        if (readStructure.modelCount > 1) {
+            readStructure.names[ch].append("_MODEL_");
+            readStructure.names[ch].append(std::to_string(readStructure.modelIndices[ch]));
+        }
+        if (chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
+            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)) {
+            readStructure.names[ch].push_back('_');
+            readStructure.names[ch].append(readStructure.chainNames[ch]);
+        }
+        if (readStructure.title.size() > 0) {
+            readStructure.names[ch].push_back(' ');
+            readStructure.names[ch].append(readStructure.title);
+        }
+    }
+}
+
+
 int structure_mtar_gzopen(mtar_t *tar, const char *filename) {
     // Init tar struct and functions
     memset(tar, 0, sizeof(*tar));
@@ -74,94 +267,22 @@ static inline bool compareByFirst(const std::pair<T, U>& a, const std::pair<T, U
     return a.first < b.first;
 }
 
-size_t
-writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
-                    PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
-                    std::vector<int8_t> & camol, std::string & header, std::string & name,
-                    DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
-                    float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
-                    std::string & filename,  size_t & fileidCnt,
-                    std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
-                    std::map<std::string, size_t> & filenameToFileId,
-                    std::map<size_t, std::string> & fileIdToName,
-                    DBWriter* mappingWriter) {
+void
+
+writeStructureEntry(GemmiWrapper & readStructure, DBWriter & aadbw,
+                         DBWriter & hdbw, DBWriter & seq3didbw, DBWriter & cadbw,
+                         size_t & globalCnt, int thread_idx, int coordStoreMode, std::vector<int8_t> & camol,
+                         std::string & filename, size_t & fileidCnt,
+                         std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
+                         std::map<std::string, size_t> & filenameToFileId,
+                         std::map<size_t, std::string> & fileIdToName,
+                         DBWriter* mappingWriter) {
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
-    size_t entriesAdded = 0;
-    for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
+    for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
         size_t dbKey = id + ch;
         size_t chainStart = readStructure.chain[ch].first;
-        size_t chainEnd = readStructure.chain[ch].second;
-        size_t chainLen = chainEnd - chainStart;
-        if (chainLen <= 3) {
-            tooShort++;
-            continue;
-        }
-
-        bool allX = true;
-        for (size_t pos = 0; pos < chainLen; pos++) {
-            const char aa = readStructure.ami[chainStart+pos];
-            if (aa != 'X' && aa != 'x') {
-                allX = false;
-                break;
-            }
-        }
-        if (allX) {
-            notProtein++;
-            continue;
-        }
-
-        // Detect if structure is Ca only
-        if (std::isnan(readStructure.n[chainStart + 0].x) &&
-            std::isnan(readStructure.n[chainStart + 1].x) &&
-            std::isnan(readStructure.n[chainStart + 2].x) &&
-            std::isnan(readStructure.n[chainStart + 3].x) &&
-            std::isnan(readStructure.c[chainStart + 0].x) &&
-            std::isnan(readStructure.c[chainStart + 1].x) &&
-            std::isnan(readStructure.c[chainStart + 2].x) &&
-            std::isnan(readStructure.c[chainStart + 3].x))
-        {
-            pulchra.rebuildBackbone(&readStructure.ca[chainStart],
-                                    &readStructure.n[chainStart],
-                                    &readStructure.c[chainStart],
-                                    &readStructure.ami[chainStart],
-                                    chainLen);
-        }
-
-        char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
-                                                        &readStructure.n[chainStart],
-                                                        &readStructure.c[chainStart],
-                                                        &readStructure.cb[chainStart],
-                                                        chainLen);
-        for(size_t pos = 0; pos < chainLen; pos++){
-            if(readStructure.ca_bfactor[pos] < maskBfactorThreshold){
-                alphabet3di.push_back(tolower(mat.num2aa[static_cast<int>(states[pos])]));
-                alphabetAA.push_back(tolower(readStructure.ami[chainStart+pos]));
-            }else{
-                alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
-                alphabetAA.push_back(readStructure.ami[chainStart+pos]);
-            }
-        }
-        alphabet3di.push_back('\n');
-        alphabetAA.push_back('\n');
-        torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
-        aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
-        header.clear();
-        header.append(readStructure.names[ch]);
-        if(readStructure.modelCount > 1){
-            header.append("_MODEL_");
-            header.append(std::to_string(readStructure.modelIndices[ch]));
-        }
-        if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-           (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
-            header.push_back('_');
-            header.append(readStructure.chainNames[ch]);
-        }
-        if(readStructure.title.size() > 0){
-            header.push_back(' ');
-            header.append(readStructure.title);
-        }
-        header.push_back('\n');
-        std::string entryName = Util::parseFastaHeader(header.c_str());
+        size_t chainLen = readStructure.chain[ch].second - readStructure.chain[ch].first;
+        std::string entryName = Util::parseFastaHeader(readStructure.names[ch].c_str());
 #pragma omp critical
         {
             std::map<std::string, size_t>::iterator it = filenameToFileId.find(filename);
@@ -176,8 +297,22 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             }
             entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
         }
-        hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
-        name.clear();
+        char newLine = '\n';
+        hdbw.writeStart(thread_idx);
+        hdbw.writeAdd(readStructure.names[ch].c_str(), readStructure.names[ch].size(), thread_idx);
+        hdbw.writeAdd(&newLine, 1, thread_idx);
+        hdbw.writeEnd(dbKey, thread_idx);
+
+        // write aa
+        aadbw.writeStart(thread_idx);
+        aadbw.writeAdd(readStructure.ami.data() + chainStart, chainLen, thread_idx);
+        aadbw.writeAdd(&newLine, 1, thread_idx);
+        aadbw.writeEnd(dbKey, thread_idx);
+        // write 3di
+        seq3didbw.writeStart(thread_idx);
+        seq3didbw.writeAdd(readStructure.seq3di.data() + chainStart, chainLen, thread_idx);
+        seq3didbw.writeAdd(&newLine, 1, thread_idx);
+        seq3didbw.writeEnd(dbKey, thread_idx);
 
         if (mappingWriter != NULL) {
             std::string taxId = SSTR(readStructure.taxIds[ch]);
@@ -191,37 +326,33 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             int16_t* camolf16 = reinterpret_cast<int16_t*>(camol.data());
             // check if any of the coordinates is too large to be stored as int16_t
             if (Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 0, camolf16)
-             || Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1))
-             || Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1))) {
+                || Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 1, camolf16 + 1 * (chainLen + 1))
+                || Coordinate16::convertToDiff16(chainLen, (double*)(readStructure.ca.data() + chainStart) + 2, camolf16 + 2 * (chainLen + 1))) {
                 // store all coordinates as float instead
                 goto overflow;
             }
             cadbw.writeData((const char*)camol.data(), (chainLen - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), dbKey, thread_idx);
             goto cleanup;
         }
-overflow:
+        overflow:
         camol.resize(chainLen * 3 * sizeof(float));
         camolf32 = reinterpret_cast<float*>(camol.data());
         for (size_t pos = 0; pos < chainLen; pos++) {
             camolf32[(0 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].x))
-                        ? 0.0 : readStructure.ca[chainStart+pos].x;
+                                             ? 0.0 : readStructure.ca[chainStart+pos].x;
         }
         for (size_t pos = 0; pos < chainLen; pos++) {
             camolf32[(1 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].y))
-                        ? 0.0 : readStructure.ca[chainStart+pos].y;
+                                             ? 0.0 : readStructure.ca[chainStart+pos].y;
         }
         for (size_t pos = 0; pos < chainLen; pos++) {
             camolf32[(2 * chainLen) + pos] = (std::isnan(readStructure.ca[chainStart+pos].z))
-                        ? 0.0 : readStructure.ca[chainStart+pos].z;
+                                             ? 0.0 : readStructure.ca[chainStart+pos].z;
         }
         cadbw.writeData((const char*)camol.data(), chainLen * 3 * sizeof(float), dbKey, thread_idx);
-cleanup:
-        alphabet3di.clear();
-        alphabetAA.clear();
+        cleanup:
         camol.clear();
-        entriesAdded++;
     }
-    return entriesAdded;
 }
 
 void sortDatafileByIdOrder(DBWriter & dbw,
@@ -241,6 +372,28 @@ void sortDatafileByIdOrder(DBWriter & dbw,
             dbw.writeData(data, (length == 0 ? 0 : length - 1), dbr.getDbKey(id), thread_idx);
         }
     }
+}
+
+void processAndWriteStructure(LocalParameters & par, GemmiWrapper & readStructure, PulchraWrapper & pulchra,
+                              StructureTo3Di & structureTo3Di, SubstitutionMatrix & mat3di,
+                              std::string &filename, std::vector<int8_t> & camol,
+                              size_t & globalCnt, size_t & globalFileidCnt,
+                              std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
+                              std::map<std::string, size_t>& filenameToFileId, std::map<size_t, std::string> & fileIdToName,
+                              DBWriter & aadbw, DBWriter & hdbw,
+                              DBWriter & ssdbw, DBWriter & cadbw, DBWriter * mappingWriter, int thread_idx){
+
+    addMissingAtomsInStructure(readStructure, pulchra);
+    if(par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
+        compute3DiInterfaces(readStructure, structureTo3Di, mat3di);
+    }else{
+        compute3Di(readStructure, structureTo3Di, mat3di, par.maskBfactorThreshold);
+    }
+    nameChains(readStructure, par.chainNameMode);
+    writeStructureEntry(readStructure, aadbw, hdbw, ssdbw, cadbw,
+                        globalCnt, thread_idx, par.coordStoreMode, camol,
+                        filename, globalFileidCnt, entrynameToFileId, filenameToFileId,
+                        fileIdToName, mappingWriter);
 }
 
 int structcreatedb(int argc, const char **argv, const Command& command) {
@@ -271,7 +424,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     std::string fullpath = dir + "/" + filename;
                     struct stat info;
                     stat(fullpath.c_str(), &info);
-		    if (info.st_mode & S_IFDIR) {
+                    if (info.st_mode & S_IFDIR) {
                         dirs.push_back(fullpath);
                     } else {
                         if (include.isMatch(filename.c_str()) == true && exclude.isMatch(filename.c_str()) == false) {
@@ -314,12 +467,12 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
     for (size_t i = 0; i < par.filenames.size(); ++i) {
         if (Util::endsWith(".tar.gz", par.filenames[i])
-                || Util::endsWith(".tgz", par.filenames[i])
-                || Util::endsWith(".tar", par.filenames[i])) {
+            || Util::endsWith(".tgz", par.filenames[i])
+            || Util::endsWith(".tar", par.filenames[i])) {
             tarFiles.push_back(par.filenames[i]);
         }
 #ifdef HAVE_GCS
-        else if (Util::startWith("gcs://", par.filenames[i])) {
+            else if (Util::startWith("gcs://", par.filenames[i])) {
             gcsPaths.push_back(par.filenames[i]);
         }
 #endif
@@ -441,7 +594,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << name << "\n";
                                 EXIT(EXIT_FAILURE);
                             }
-                            if (includeThread.isMatch(name.c_str()) == false || excludeThread.isMatch(name.c_str()) == true) {
+                            if (includeThread.isMatch(name.c_str()) == false ||
+                                excludeThread.isMatch(name.c_str()) == true) {
                                 proceed = true;
                                 writeEntry = false;
                             } else {
@@ -493,18 +647,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     }
                     if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name) == false) {
                         incorrectFiles++;
-                        continue;
+                    }else {
+                        __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
+                        processAndWriteStructure(par, readStructure, pulchra,
+                                                 structureTo3Di, mat, name, camol,
+                                                 globalCnt, globalFileidCnt, entrynameToFileId,
+                                                 filenameToFileId, fileIdToName, aadbw, hdbw,
+                                                 torsiondbw, cadbw, mappingWriter, thread_idx);
                     }
-
-                    __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
-
-                    writeStructureEntry(
-                        mat, readStructure, structureTo3Di, pulchra,
-                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                        par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                        name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter
-                    );
                 }
             } // end while
             free(inflateBuffer);
@@ -541,13 +691,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
             __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
             // clear memory
-            writeStructureEntry(
-                mat, readStructure, structureTo3Di,  pulchra,
-                alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                mappingWriter
-            );
+            processAndWriteStructure(par, readStructure, pulchra,
+                                     structureTo3Di, mat, looseFiles[i], camol,
+                                     globalCnt, globalFileidCnt, entrynameToFileId,
+                                     filenameToFileId, fileIdToName, aadbw, hdbw,
+                                     torsiondbw, cadbw, mappingWriter, thread_idx);
         }
     }
 
@@ -604,13 +752,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                 incorrectFiles++;
                             } else {
                                 __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
-                                writeStructureEntry(
-                                    mat, readStructure, structureTo3Di,  pulchra,
-                                    alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                                    par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                                    obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                                    mappingWriter
-                                );
+                                processAndWriteStructure(par, readStructure, pulchra,
+                                             structureTo3Di, mat, name, camol,
+                                             globalCnt, globalFileidCnt, entrynameToFileId,
+                                             filenameToFileId, fileIdToName, aadbw, hdbw,
+                                             torsiondbw, cadbw, mappingWriter, thread_idx);
                             }
                         }
                     }
@@ -655,13 +801,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     incorrectFiles++;
                 } else {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
-                    writeStructureEntry(
-                        mat, readStructure, structureTo3Di,  pulchra,
-                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
-                        par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                        dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter
-                    );
+                    processAndWriteStructure(par, readStructure, pulchra,
+                                             structureTo3Di, mat, name, camol,
+                                             globalCnt, globalFileidCnt, entrynameToFileId,
+                                             filenameToFileId, fileIdToName, aadbw, hdbw,
+                                             torsiondbw, cadbw, mappingWriter, thread_idx);
                 }
             }
         }
@@ -874,8 +1018,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         Debug(Debug::ERROR) << "No structures found in given input.\n";
         EXIT(EXIT_FAILURE);
     }
-    
+
     Debug(Debug::INFO) << "Ignore " << (tooShort+incorrectFiles+notProtein) << " out of " << globalCnt << ".\n";
     Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect: " << incorrectFiles << ", not proteins: " << notProtein << ".\n";
     return EXIT_SUCCESS;
 }
+
+

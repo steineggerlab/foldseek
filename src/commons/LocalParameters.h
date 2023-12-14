@@ -63,6 +63,10 @@ public:
     static const int OUTFMT_COMPLEX_U = 56;
     static const int OUTFMT_COMPLEX_T = 57;
 
+
+    static const int DB_EXTRACT_MODE_CHAIN = 0;
+    static const int DB_EXTRACT_MODE_INTERFACE = 1;
+
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
     static const int COORD_STORE_MODE_CA_PLAIN_TEXT  = 3;
@@ -95,6 +99,7 @@ public:
     std::vector<MMseqsParameter *> expandcomplex;
 
     PARAMETER(PARAM_PREF_MODE)
+    PARAMETER(PARAM_DB_EXTRACTION_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
     PARAMETER(PARAM_LDDT_THRESHOLD)
@@ -114,6 +119,7 @@ public:
     PARAMETER(PARAM_COMPLEX_REPORT_MODE)
 
     int prefMode;
+    int dbExtractionMode;
     float tmScoreThr;
     int tmAlignHitOrder;
     float lddtThr;

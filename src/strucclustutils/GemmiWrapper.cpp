@@ -16,7 +16,7 @@ GemmiWrapper::GemmiWrapper(){
                      {"HIS",'H'},  {"ILE",'I'},  {"LEU",'L'}, {"LYS",'K'},
                      {"MET",'M'},  {"PHE",'F'},  {"PRO",'P'}, {"SER",'S'},
                      {"THR",'T'},  {"TRP",'W'},  {"TYR",'Y'}, {"VAL",'V'},
-                     // modified res
+            // modified res
                      {"MSE",'M'}, {"MLY",'K'}, {"FME",'M'}, {"HYP",'P'},
                      {"TPO",'T'}, {"CSO",'C'}, {"SEP",'S'}, {"M3L",'K'},
                      {"HSK",'H'}, {"SAC",'S'}, {"PCA",'E'}, {"DAL",'A'},
@@ -31,16 +31,16 @@ GemmiWrapper::GemmiWrapper(){
                      {"TRQ",'W'}, {"B3Y",'Y'}, {"PHI",'F'}, {"PTR",'Y'},
                      {"TYS",'Y'}, {"IAS",'D'}, {"GPL",'K'}, {"KYN",'W'},
                      {"CSD",'C'}, {"SEC",'C'},
-                     // unknown
+            // unknown
                      {"UNK",'X'}};
 }
 
 std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document& doc) {
     std::unordered_map<std::string, int> entity_to_taxid;
     static const std::vector<std::pair<std::string, std::string>> loops_with_taxids = {
-        { "_entity_src_nat.", "?pdbx_ncbi_taxonomy_id"},
-        { "_entity_src_gen.", "?pdbx_gene_src_ncbi_taxonomy_id"},
-        { "_pdbx_entity_src_syn.", "?ncbi_taxonomy_id"}
+            { "_entity_src_nat.", "?pdbx_ncbi_taxonomy_id"},
+            { "_entity_src_gen.", "?pdbx_gene_src_ncbi_taxonomy_id"},
+            { "_pdbx_entity_src_syn.", "?ncbi_taxonomy_id"}
     };
     for (gemmi::cif::Block& block : doc.blocks) {
         for (auto&& [loop, taxid] : loops_with_taxids) {
@@ -250,6 +250,7 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
     cb.clear();
     n.clear();
     ami.clear();
+    seq3di.clear();
     taxIds.clear();
     title.append(st->get_info("_struct.title"));
     size_t currPos = 0;
@@ -261,6 +262,29 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
             std::string name = (std::string::npos == pos)
                                ? filename
                                : filename.substr(pos+1, filename.length());
+
+            size_t chainLen = ch.residues.size();
+            if (chainLen <= 3) {
+                //tooShort++;
+                continue;
+            }
+
+            bool allX = true;
+            for (gemmi::Residue &res : ch.residues) {
+                char aa = 'X';
+                if (threeAA2oneAA.find(res.name) != threeAA2oneAA.end()) {
+                    aa = threeAA2oneAA[res.name];
+                }
+                if (aa != 'X' && aa != 'x') {
+                    allX = false;
+                    break;
+                }
+            }
+            if (allX) {
+                //notProtein++;
+                continue;
+            }
+
             //name.push_back('_');
             chainNames.push_back(ch.name);
             char* rest;
@@ -274,7 +298,7 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
 
             names.push_back(name);
             int taxId = -1;
-            for (gemmi::Residue &res : ch.first_conformer()) {
+            for (gemmi::Residue &res : ch.residues) {
                 if (taxId == -1) {
                     auto it = entity_to_tax_id.find(res.entity_id);
                     if (it != entity_to_tax_id.end()) {
@@ -285,10 +309,6 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 if (isHetAtomInList == false && res.het_flag != 'A')
                     continue;
                 if (isHetAtomInList) {
-                    bool notPolymer = res.entity_type != gemmi::EntityType::Polymer;
-                    if (notPolymer == true) {
-                        continue;
-                    }
                     bool hasCA = false;
                     for (gemmi::Atom &atom : res.atoms) {
                         if (atom.name == "CA") {
