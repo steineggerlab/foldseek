@@ -28,7 +28,7 @@ fi
 
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" complexsearch "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${SCORECOMPLEX_PAR} \
+    "$MMSEQS" complexsearch "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
     || fail "ComplexSearch died"
 fi
 
