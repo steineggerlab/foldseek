@@ -274,7 +274,7 @@ std::vector<Command> foldseekCommands = {
                 "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
                 "foldseek complexsearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
-                "<i:queryDB> <i:targetDB> <o:outputFileName> <tmpDir>",
+                "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
                 CITATION_FOLDSEEK, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},

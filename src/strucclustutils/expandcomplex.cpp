@@ -6,7 +6,7 @@
 #include "LocalParameters.h"
 #include "MemoryMapped.h"
 #include "createcomplexreport.h"
-
+#include <set>
 #ifdef OPENMP
 #include <omp.h>
 #endif
@@ -53,7 +53,7 @@ int expandcomplex(int argc, const char **argv, const Command &command) {
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         resultToWrite_t result;
-        std::vector<unsigned int> dbFoundIndices;
+        std::set<unsigned int> dbFoundIndices;
         std::vector<ChainKeyPair_t>  chainKeyPairs;
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
@@ -72,20 +72,23 @@ int expandcomplex(int argc, const char **argv, const Command &command) {
                     const auto dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
                     const unsigned int dbComplexId = dbChainKeyToComplexIdMap.at(dbChainKey);
                     // find all db complex aligned to the query complex.
-                    if (std::find(dbFoundIndices.begin(), dbFoundIndices.end(), dbComplexId) == dbFoundIndices.end())
-                        dbFoundIndices.emplace_back(dbComplexId);
+                    dbFoundIndices.insert(dbComplexId);
                     data = Util::skipLine(data);
                 }
             }
-            if (dbFoundIndices.empty())
+            if (dbFoundIndices.empty()) {
+                for (size_t qChainIdx=0; qChainIdx<qChainKeys.size(); qChainIdx++) {
+                    resultWriter.writeData(result.c_str(),result.length(),qChainKeys[qChainIdx],thread_idx);
+                }
                 continue;
+            }
             // Among all db complexes aligned to query complex
-            for (size_t dbIdx=0; dbIdx<dbFoundIndices.size(); dbIdx++) {
-                std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(dbFoundIndices[dbIdx]);
+            for (auto dbIter = dbFoundIndices.begin(); dbIter != dbFoundIndices.end(); dbIter++) {
+                std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(*dbIter);
                 // for all query chains
                 for (size_t qChainIdx=0; qChainIdx<qChainKeys.size(); qChainIdx++) {
                     // and target chains
-                    for (size_t dbChainIdx=0; dbChainIdx<dbChainKeys.size(); dbChainIdx++) {
+                    for (size_t dbChainIdx = 0; dbChainIdx < dbChainKeys.size(); dbChainIdx++) {
                         // get all possible alignments
                         chainKeyPairs.emplace_back(qChainKeys[qChainIdx], dbChainKeys[dbChainIdx]);
                     }
