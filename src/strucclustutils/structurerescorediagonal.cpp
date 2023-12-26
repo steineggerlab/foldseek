@@ -358,7 +358,6 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                                                                    res.backtrace,
                                                                    targetCaData, &targetCaData[res.dbLen],
                                                                    &targetCaData[res.dbLen+res.dbLen]);
-                        std::cout << lddtres.avgLddtScore << std::endl;
                         if(lddtres.avgLddtScore < par.lddtThr){
                             continue;
                         }
