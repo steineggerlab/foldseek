@@ -342,15 +342,12 @@ public:
             }
         }
 
-//        if (maxClusterSize == idealClusterSize) {
-//            bestClusters = currClusters;
-//            prevMaxClusterSize = maxClusterSize;
-//            return finishDBSCAN();
-//        } else
         if (maxClusterSize < prevMaxClusterSize)
             return finishDBSCAN();
-        else if (maxClusterSize == prevMaxClusterSize && currClusters.size() < bestClusters.size())
+
+        if (maxClusterSize == prevMaxClusterSize && currClusters.size() < bestClusters.size())
             return finishDBSCAN();
+
         bestClusters = currClusters;
         prevMaxClusterSize = maxClusterSize;
         eps += LEARNING_RATE;
