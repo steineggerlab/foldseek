@@ -1,6 +1,7 @@
 #ifndef FOLDSEEK_CREATECOMPLEXREPORT_H
 #define FOLDSEEK_CREATECOMPLEXREPORT_H
 #include "Matcher.h"
+#include "MemoryMapped.h"
 
 const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
 const double MAX_ASSIGNED_CHAIN_RATIO = 1.0;

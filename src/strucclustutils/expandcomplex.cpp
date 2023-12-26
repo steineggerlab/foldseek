@@ -32,7 +32,9 @@ int expandcomplex(int argc, const char **argv, const Command &command) {
     std::string dbLookupFile = par.db2 + ".lookup";
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
-    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_PREFILTER_RES);
+    int dbType = Parameters::DBTYPE_PREFILTER_RES;
+    dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
+    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
     resultWriter.open();
     std::vector<unsigned int> qComplexIndices;
     std::vector<unsigned int> dbComplexIndices;
