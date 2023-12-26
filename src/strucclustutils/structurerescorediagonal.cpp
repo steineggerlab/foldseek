@@ -13,6 +13,7 @@
 #include "QueryMatcher.h"
 #include "TMaligner.h"
 #include "Coordinate16.h"
+#include "LDDT.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -124,13 +125,10 @@ Matcher::result_t ungappedAlignStructure(Sequence & qSeqAA, Sequence & qSeq3Di, 
         dbEndPos = res.endPos + distanceToDiagonal;
     }
     unsigned int alnLength = Matcher::computeAlnLength(qStartPos, qEndPos, dbStartPos, dbEndPos);
-    char buffer[256];
-    char *end = Itoa::i32toa_sse2(alnLength, buffer);
-    size_t len = end - buffer;
     if (par.addBacktrace) {
-        backtrace=std::string(buffer, len - 1);
-        backtrace.push_back('M');
+        backtrace.append(alnLength, 'M');
     }
+
     queryCov = SmithWaterman::computeCov(qStartPos, qEndPos, qSeqAA.L);
     targetCov = SmithWaterman::computeCov(dbStartPos, dbEndPos, tSeqAA.L);
 
@@ -178,9 +176,12 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
     }
 
     bool needTMaligner = (par.tmScoreThr > 0);
+    bool needLDDT = (par.lddtThr > 0);
+
     IndexReader *qcadbr = NULL;
     IndexReader *tcadbr = NULL;
-    if(needTMaligner){
+    if(needTMaligner || needLDDT){
+        par.addBacktrace = 1;
         qcadbr = new IndexReader(
                 par.db1,
                 par.threads,
@@ -261,7 +262,11 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(t3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false, true);
+                    std::max(qdbr3Di.sequenceReader->getMaxSeqLen() + 1, t3DiDbr->sequenceReader->getMaxSeqLen() + 1), false, true);
+        }
+        LDDTCalculator *lddtcalculator = NULL;
+        if(needLDDT) {
+            lddtcalculator = new LDDTCalculator(qdbr3Di.sequenceReader->getMaxSeqLen() + 1,  t3DiDbr->sequenceReader->getMaxSeqLen() + 1);
         }
 
         Coordinate16 qcoords;
@@ -287,12 +292,17 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                 unsigned int querySeqLen = qdbr3Di.sequenceReader->getSeqLen(queryId);
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
-                if(needTMaligner){
+                if(needLDDT || needTMaligner){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
                     char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
                     size_t qCaLength = qcadbr->sequenceReader->getEntryLen(qId);
                     float* queryCaData = qcoords.read(qcadata, qSeq3Di.L, qCaLength);
-                    tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
+                    if(needTMaligner){
+                        tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
+                    }
+                    if(needLDDT){
+                        lddtcalculator->initQuery(qSeq3Di.L, queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L]);
+                    }
                 }
                 qRevSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qRevSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
@@ -339,6 +349,20 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                             continue;
                         }
                     }
+                    if(needLDDT){
+                        size_t tId = tcadbr->sequenceReader->getId(res.dbKey);
+                        char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
+                        size_t tCaLength = tcadbr->sequenceReader->getEntryLen(tId);
+                        float* targetCaData = tcoords.read(tcadata, res.dbLen, tCaLength);
+                        LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator->computeLDDTScore(res.dbLen, res.qStartPos, res.dbStartPos,
+                                                                   res.backtrace,
+                                                                   targetCaData, &targetCaData[res.dbLen],
+                                                                   &targetCaData[res.dbLen+res.dbLen]);
+                        std::cout << lddtres.avgLddtScore << std::endl;
+                        if(lddtres.avgLddtScore < par.lddtThr){
+                            continue;
+                        }
+                    }
 
                     if (Alignment::checkCriteria(res, isIdentity, par.evalThr, par.seqIdThr, par.alnLenThr, par.covMode, par.covThr)) {
                         alignmentResult.emplace_back(res);
@@ -364,6 +388,9 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
         }
         if(needTMaligner){
             delete tmaligner;
+        }
+        if(needLDDT){
+            delete lddtcalculator;
         }
     }
 
