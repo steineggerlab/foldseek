@@ -5,11 +5,9 @@
 #include "Util.h"
 #include "LocalParameters.h"
 #include "Matcher.h"
-#include "structureto3diseqdist.h"
 #include "StructureUtil.h"
 #include "TMaligner.h"
 #include "Coordinate16.h"
-#include "MemoryMapped.h"
 #include "createcomplexreport.h"
 
 #ifdef OPENMP
@@ -606,28 +604,65 @@ private:
 int scorecomplex(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
-    const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
-    IndexReader q3DiDbr(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
-    IndexReader *t3DiDbr = NULL;
-    auto *qCaDbr = new IndexReader(par.db1, par.threads, IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1), touch ? IndexReader::PRELOAD_INDEX : 0, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA, "_ca" );
-    IndexReader *tCaDbr = NULL;
-    bool sameDB = false;
-    if (par.db1 == par.db2) {
-        sameDB = true;
-        t3DiDbr = &q3DiDbr;
-        tCaDbr = qCaDbr;
-    } else {
-        t3DiDbr = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
-        tCaDbr = new IndexReader(par.db2, par.threads, IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1), touch ? IndexReader::PRELOAD_INDEX : 0, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA, "_ca");
-    }
-
-    std::string qLookupFile = par.db1 + ".lookup";
-    std::string dbLookupFile = par.db2 + ".lookup";
 
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
-    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_ALIGNMENT_RES);
+    uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(alnDbr.getDbtype());
+    int dbType = Parameters::DBTYPE_ALIGNMENT_RES;
+    bool needSrc = false;
+    if (extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC) {
+        needSrc = true;
+        dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
+    }
+    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
     resultWriter.open();
+
+    const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
+
+    std::string t3DiDbrName =  StructureUtil::getIndexWithSuffix(par.db2, "_ss");
+    bool is3DiIdx = Parameters::isEqualDbtype(FileUtil::parseDbType(t3DiDbrName.c_str()), Parameters::DBTYPE_INDEX_DB);
+    IndexReader t3DiDbr(
+        is3DiIdx ? t3DiDbrName : par.db2,
+        par.threads,
+        needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+        touch ? IndexReader::PRELOAD_INDEX : 0,
+        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+        needSrc ? "_seq_ss" : "_ss"
+    );
+    IndexReader tCaDbr(
+        par.db2,
+        par.threads,
+        needSrc
+            ? IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB2)
+            : IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
+        touch ? IndexReader::PRELOAD_INDEX : 0,
+        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+        needSrc ? "_seq_ca" : "_ca"
+    );
+    IndexReader* q3DiDbr = NULL;
+    IndexReader* qCaDbr = NULL;
+    bool sameDB = false;
+    if (par.db1 == par.db2) {
+        sameDB = true;
+        q3DiDbr = &t3DiDbr;
+        qCaDbr = &tCaDbr;
+    } else {
+        q3DiDbr = new IndexReader(
+            StructureUtil::getIndexWithSuffix(par.db1, "_ss"),
+            par.threads, IndexReader::SEQUENCES,
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA
+        );
+        qCaDbr = new IndexReader(
+            par.db1,
+            par.threads,
+            IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            "_ca"
+        );
+    }
+
     double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
 
     std::vector<unsigned int> qComplexIndices;
@@ -636,6 +671,8 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     chainKeyToComplexId_t dbChainKeyToComplexIdMap;
     complexIdToChainKeys_t dbComplexIdToChainKeysMap;
     complexIdToChainKeys_t qComplexIdToChainKeysMap;
+    std::string qLookupFile = par.db1 + ".lookup";
+    std::string dbLookupFile = par.db2 + ".lookup";
     getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
     getKeyToIdMapIdToKeysMapIdVec(dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
     qChainKeyToComplexIdMap.clear();
@@ -652,7 +689,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
         std::vector<resultToWrite_t> resultToWriteLines;
-        ComplexScorer complexScorer(&q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio);
+        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
@@ -698,10 +735,9 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     dbComplexIdToChainKeysMap.clear();
     qComplexIdToChainKeysMap.clear();
     alnDbr.close();
-    delete qCaDbr;
     if (!sameDB) {
-        delete t3DiDbr;
-        delete tCaDbr;
+        delete q3DiDbr;
+        delete qCaDbr;
     }
     resultWriter.close(true);
     return EXIT_SUCCESS;
