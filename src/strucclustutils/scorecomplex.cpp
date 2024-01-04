@@ -301,14 +301,10 @@ public:
 
     unsigned int clusterAlns() {
         initializeAlnLabels();
-        if (++recursiveNum > MAX_RECURSIVE_NUM) return UNCLUSTERED;
-        if (searchResult.alnVec.size() == idealClusterSize) {
-            for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
-                neighbors.emplace_back(alnIdx);
-            }
-            bestClusters.emplace_back(neighbors);
-            return finishDBSCAN();
+        if (recursiveNum==0 && searchResult.alnVec.size() == idealClusterSize) {
+            checkClusteringNecessity();
         }
+        if (++recursiveNum > MAX_RECURSIVE_NUM) return UNCLUSTERED;
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0) continue;
@@ -438,6 +434,16 @@ private:
         }
         SORT_SERIAL(searchResult.alnVec.begin(), searchResult.alnVec.end(), compareChainToChainAlnByClusterLabel);
         return CLUSTERED;
+    }
+
+    unsigned int checkClusteringNecessity() {
+        for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
+            neighbors.emplace_back(alnIdx);
+        }
+        if (checkChainRedundancy())
+            return UNCLUSTERED;
+        bestClusters.emplace_back(neighbors);
+        return finishDBSCAN();
     }
 
 //    void free() {
