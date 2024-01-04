@@ -301,7 +301,7 @@ public:
 
     unsigned int clusterAlns() {
         initializeAlnLabels();
-        if (recursiveNum==0 && searchResult.alnVec.size() == idealClusterSize) {
+        if (recursiveNum==0 && searchResult.alnVec.size() <= idealClusterSize) {
             checkClusteringNecessity();
         }
         if (++recursiveNum > MAX_RECURSIVE_NUM) return UNCLUSTERED;
@@ -424,7 +424,7 @@ private:
 
     unsigned int finishDBSCAN() {
         initializeAlnLabels();
-        if (prevMaxClusterSize < minClusterSize) return UNCLUSTERED;
+        if (prevMaxClusterSize < minClusterSize || bestClusters.empty()) return UNCLUSTERED;
         cLabel = CLUSTERED;
         for (auto &cluster: bestClusters) {
             for (auto alnIdx: cluster) {
@@ -442,6 +442,7 @@ private:
         }
         if (checkChainRedundancy())
             return UNCLUSTERED;
+        prevMaxClusterSize = neighbors.size();
         bestClusters.emplace_back(neighbors);
         return finishDBSCAN();
     }
