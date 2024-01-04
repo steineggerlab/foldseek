@@ -302,6 +302,13 @@ public:
     unsigned int clusterAlns() {
         initializeAlnLabels();
         if (++recursiveNum > MAX_RECURSIVE_NUM) return UNCLUSTERED;
+        if (searchResult.alnVec.size() == idealClusterSize) {
+            for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
+                neighbors.emplace_back(alnIdx);
+            }
+            bestClusters.emplace_back(neighbors);
+            return finishDBSCAN();
+        }
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0) continue;
