@@ -53,11 +53,11 @@ int complexsearch(int argc, const char **argv, const Command &command) {
         par.greedyBestHits) {
         needBacktrace = true;
     }
-    if (needBacktrace) {
-        Debug(Debug::INFO) << "Alignment backtraces will be computed, since they were requested by output format.\n";
-        par.addBacktrace = true;
-        par.PARAM_ADD_BACKTRACE.wasSet = true;
-    }
+//    if (needBacktrace) {
+//        Debug(Debug::INFO) << "Alignment backtraces will be computed, since they were requested by output format.\n";
+//        par.addBacktrace = true;
+//        par.PARAM_ADD_BACKTRACE.wasSet = true;
+//    }
     if (needLookup) {
         par.writeLookup = true;
     }
@@ -101,6 +101,11 @@ int complexsearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("QUERYDB", par.filenames.back().c_str());
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
     par.filenames.pop_back();
+
+    // initial search speed up!
+    par.addBacktrace = par.exhaustiveSearch;
+    par.alignmentType = par.exhaustiveSearch ? par.alignmentType : LocalParameters::ALIGNMENT_TYPE_3DI_AA;
+
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
     cmd.addVariable("SCORECOMPLEX_PAR", par.createParameterString(par.scorecomplex).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

@@ -424,7 +424,8 @@ private:
 
     unsigned int finishDBSCAN() {
         initializeAlnLabels();
-        if (prevMaxClusterSize < minClusterSize || bestClusters.empty()) return UNCLUSTERED;
+        if (prevMaxClusterSize < minClusterSize || bestClusters.empty())
+            return UNCLUSTERED;
         cLabel = CLUSTERED;
         for (auto &cluster: bestClusters) {
             for (auto alnIdx: cluster) {
@@ -440,22 +441,12 @@ private:
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
-        if (checkChainRedundancy())
+        if (bestClusters.empty() || checkChainRedundancy())
             return UNCLUSTERED;
         prevMaxClusterSize = neighbors.size();
         bestClusters.emplace_back(neighbors);
         return finishDBSCAN();
     }
-
-//    void free() {
-//        neighbors.clear();
-//        neighborsOfCurrNeighbor.clear();
-//        qFoundChainKeys.clear();
-//        dbFoundChainKeys.clear();
-//        distMap.clear();
-//        currClusters.clear();
-//        bestClusters.clear();
-//    }
 };
 
 class ComplexScorer {
