@@ -9,6 +9,7 @@
 #include "TMaligner.h"
 #include "Coordinate16.h"
 #include "createcomplexreport.h"
+#include "set"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -302,9 +303,9 @@ public:
     unsigned int getAlnClusters() {
         if (searchResult.alnVec.size() <= idealClusterSize)
             return checkClusteringNecessity();
-        
+
         // TO skip single chained complex
-        if (idealClusterSize==1)
+        if (idealClusterSize <= SINGLE_CHAINED_COMPLEX)
             return UNCLUSTERED;
 
         return runDBSCAN();
@@ -313,6 +314,7 @@ public:
 private:
     const double LEARNING_RATE = 0.1;
     const double DEFAULT_EPS = 0.1;
+    unsigned int SINGLE_CHAINED_COMPLEX = 1;
     SearchResult &searchResult;
     double eps;
     unsigned int cLabel;
@@ -361,23 +363,23 @@ private:
             if (neighbors.size() < maxClusterSize)
                 continue;
             else if (neighbors.size() == maxClusterSize)
-                currClusters.emplace_back(neighbors);
+                currClusters.insert(neighbors);
                 // new Biggest cluster
             else if (neighbors.size() > maxClusterSize) {
                 maxClusterSize = neighbors.size();
                 currClusters.clear();
-                currClusters.emplace_back(neighbors);
+                currClusters.insert(neighbors);
             }
         }
 
         if (maxClusterSize < prevMaxClusterSize)
             return finishDBSCAN();
 
-        if (maxClusterSize == prevMaxClusterSize && currClusters.size() < bestClusters.size())
-            return finishDBSCAN();
+        if (maxClusterSize == prevMaxClusterSize)
+            bestClusters.insert(currClusters.begin(), currClusters.end());
 
-        bestClusters = currClusters;
-        prevMaxClusterSize = maxClusterSize;
+        bestClusters = maxClusterSize > prevMaxClusterSize ? currClusters : bestClusters;
+        prevMaxClusterSize = maxClusterSize > prevMaxClusterSize ? maxClusterSize : prevMaxClusterSize;
         eps += LEARNING_RATE;
         return runDBSCAN();
     }
@@ -457,7 +459,7 @@ private:
             runDBSCAN();
 
         prevMaxClusterSize = neighbors.size();
-        bestClusters.emplace_back(neighbors);
+        bestClusters.insert(neighbors);
         return finishDBSCAN();
     }
 };
