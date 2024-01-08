@@ -263,14 +263,15 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 `easy-complexsearch` also generates a report (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
 | Column | Description |
 | --- | --- |
-| 1 | Identifiers for query complex |
-| 2 | Identifiers for query complex |
-| 3 | Matched chains of query complex |
-| 4 | Matched chains of target complex |
-| 5 | TM scores normalized by query length |
-| 6 | TM scores normalized by target length |
-| (8,9) | Rotation matrix (u) and Translation vector(t) |
-| 9   | Complex Assignment Id |
+| 1 | Identifier of the query complex |
+| 2 | Identifier of the target complex |
+| 3 | Comma separated matched chains in the query complex |
+| 4 | Comma separated matched chains in the target complex |
+| 5 | TM score normalized by query length [0-1] |
+| 6 | TM score normalized by target length [0-1] |
+| 7 | Comma separated nine rotation matrix (U) values |
+| 8 | Comma separated three translation vector (T) values |
+| 9 | Complex alignment ID |
 
 **Example Output:**
 ```
