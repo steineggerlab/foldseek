@@ -2,6 +2,7 @@
 #define FOLDSEEK_CREATECOMPLEXREPORT_H
 #include "Matcher.h"
 #include "MemoryMapped.h"
+#include "set"
 
 const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
 const double MAX_ASSIGNED_CHAIN_RATIO = 1.0;
@@ -16,7 +17,8 @@ const unsigned int MIN_PTS = 2;
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;
-typedef std::vector<std::vector<unsigned int>> cluster_t;
+//typedef std::vector<std::vector<unsigned int>> cluster_t;
+typedef std::set<std::vector<unsigned int>> cluster_t;
 typedef std::map<std::pair<unsigned int, unsigned int>, double> distMap_t;
 typedef std::string resultToWrite_t;
 typedef std::string chainName_t;
