@@ -299,11 +299,38 @@ public:
         fillDistMap();
     }
 
-    unsigned int clusterAlns() {
+    unsigned int getAlnClusters() {
+        if (searchResult.alnVec.size() <= idealClusterSize)
+            return checkClusteringNecessity();
+        
+        // TO skip single chained complex
+        if (idealClusterSize==1)
+            return UNCLUSTERED;
+
+        return runDBSCAN();
+    }
+
+private:
+    const double LEARNING_RATE = 0.1;
+    const double DEFAULT_EPS = 0.1;
+    SearchResult &searchResult;
+    double eps;
+    unsigned int cLabel;
+    unsigned int prevMaxClusterSize;
+    unsigned int maxClusterSize;
+    unsigned int recursiveNum;
+    unsigned int idealClusterSize;
+    unsigned int minClusterSize;
+    std::vector<unsigned int> neighbors;
+    std::vector<unsigned int> neighborsOfCurrNeighbor;
+    std::vector<unsigned int> qFoundChainKeys;
+    std::vector<unsigned int> dbFoundChainKeys;
+    distMap_t distMap;
+    cluster_t currClusters;
+    cluster_t bestClusters;
+
+    unsigned int runDBSCAN() {
         initializeAlnLabels();
-        if (recursiveNum==0 && searchResult.alnVec.size() <= idealClusterSize) {
-            checkClusteringNecessity();
-        }
         if (++recursiveNum > MAX_RECURSIVE_NUM) return UNCLUSTERED;
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
@@ -335,7 +362,7 @@ public:
                 continue;
             else if (neighbors.size() == maxClusterSize)
                 currClusters.emplace_back(neighbors);
-            // new Biggest cluster
+                // new Biggest cluster
             else if (neighbors.size() > maxClusterSize) {
                 maxClusterSize = neighbors.size();
                 currClusters.clear();
@@ -352,27 +379,8 @@ public:
         bestClusters = currClusters;
         prevMaxClusterSize = maxClusterSize;
         eps += LEARNING_RATE;
-        return clusterAlns();
+        return runDBSCAN();
     }
-
-private:
-    const double LEARNING_RATE = 0.1;
-    const double DEFAULT_EPS = 0.1;
-    SearchResult &searchResult;
-    double eps;
-    unsigned int cLabel;
-    unsigned int prevMaxClusterSize;
-    unsigned int maxClusterSize;
-    unsigned int recursiveNum;
-    unsigned int idealClusterSize;
-    unsigned int minClusterSize;
-    std::vector<unsigned int> neighbors;
-    std::vector<unsigned int> neighborsOfCurrNeighbor;
-    std::vector<unsigned int> qFoundChainKeys;
-    std::vector<unsigned int> dbFoundChainKeys;
-    distMap_t distMap;
-    cluster_t currClusters;
-    cluster_t bestClusters;
 
     void fillDistMap() {
         distMap.clear();
@@ -441,8 +449,13 @@ private:
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
-        if (bestClusters.empty() || checkChainRedundancy())
+
+        if (neighbors.empty())
             return UNCLUSTERED;
+
+        if (checkChainRedundancy())
+            runDBSCAN();
+
         prevMaxClusterSize = neighbors.size();
         bestClusters.emplace_back(neighbors);
         return finishDBSCAN();
@@ -524,7 +537,7 @@ public:
         alnsFromCurrentQuery.clear();
         paredSearchResult.filterAlnVec(minAssignedChainsRatio);
         paredSearchResult.standardize();
-        if (!paredSearchResult.alnVec.empty())
+        if (!paredSearchResult.alnVec.empty()) // && currDbChainKeys.size() > 1
             searchResults.emplace_back(paredSearchResult);
         paredSearchResult.alnVec.clear();
     }
@@ -537,7 +550,7 @@ public:
         }
         unsigned int currLabel;
         DBSCANCluster dbscanCluster = DBSCANCluster(searchResult,  minAssignedChainsRatio);
-        currLabel = dbscanCluster.clusterAlns();
+        currLabel = dbscanCluster.getAlnClusters();
         if (currLabel == UNCLUSTERED) return;
         assignment = Assignment(searchResult.qResidueLen, searchResult.dbResidueLen);
         for (auto &currAln: searchResult.alnVec) {
@@ -700,6 +713,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
+//            if (qChainKeys.size()==1) continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
             for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
