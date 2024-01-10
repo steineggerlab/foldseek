@@ -242,9 +242,11 @@ struct Assignment {
         uString.append(std::to_string(tmResult.u[1][0]) + sep + std::to_string(tmResult.u[1][1]) + sep + std::to_string(tmResult.u[1][2]) + sep);
         uString.append(std::to_string(tmResult.u[2][0]) + sep + std::to_string(tmResult.u[2][1]) + sep + std::to_string(tmResult.u[2][2]));
         assignmentInfo = tab + std::to_string(qTmScore) + tab + std::to_string(dbTmScore) + tab + uString + tab + tString;
+
         for (auto &resultToWrite: resultToWriteLines) {
             resultToWrite.second.append(assignmentInfo);
         }
+
         uString.clear();
         tString.clear();
         assignmentInfo.clear();
@@ -295,16 +297,17 @@ public:
         minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         eps = DEFAULT_EPS;
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
-        bestClusters.clear();
+        finalClusters.clear();
         prevMaxClusterSize = 0;
         fillDistMap();
     }
 
     unsigned int getAlnClusters() {
+        // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= idealClusterSize)
             return checkClusteringNecessity();
 
-        // TO skip single chained complex
+        // To skip single chained complex
         if (idealClusterSize <= SINGLE_CHAINED_COMPLEX)
             return UNCLUSTERED;
 
@@ -312,9 +315,6 @@ public:
     }
 
 private:
-    const double LEARNING_RATE = 0.1;
-    const double DEFAULT_EPS = 0.1;
-    unsigned int SINGLE_CHAINED_COMPLEX = 1;
     SearchResult &searchResult;
     double eps;
     unsigned int cLabel;
@@ -328,21 +328,21 @@ private:
     std::vector<unsigned int> qFoundChainKeys;
     std::vector<unsigned int> dbFoundChainKeys;
     distMap_t distMap;
-    cluster_t currClusters;
-    cluster_t bestClusters;
+    std::vector<cluster_t> currClusters;
+    std::set<cluster_t> finalClusters;
 
     unsigned int runDBSCAN() {
         initializeAlnLabels();
-        if (++recursiveNum > MAX_RECURSIVE_NUM) return UNCLUSTERED;
+        if (++recursiveNum > MAX_RECURSIVE_NUM) return finishDBSCAN();
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0) continue;
             getNeighbors(centerAlnIdx, neighbors);
             if (neighbors.size() < MIN_PTS) continue;
             centerAln.label = ++cLabel;
-            unsigned int i = 0;
-            while (i < neighbors.size()) {
-                unsigned int neighborAlnIdx = neighbors[i++];
+            unsigned int neighborIdx = 0;
+            while (neighborIdx < neighbors.size()) {
+                unsigned int neighborAlnIdx = neighbors[neighborIdx++];
                 if (centerAlnIdx == neighborAlnIdx) continue;
                 ChainToChainAln &neighborAln = searchResult.alnVec[neighborAlnIdx];
                 neighborAln.label = cLabel;
@@ -353,44 +353,52 @@ private:
                         neighbors.emplace_back(neighbor);
                 }
             }
+
             // too big cluster
-            if (neighbors.size() > idealClusterSize )
+            if (neighbors.size() > idealClusterSize)
                 continue;
+
             // redundant chains
             if (checkChainRedundancy())
                 continue;
+
             // too small cluster
             if (neighbors.size() < maxClusterSize)
                 continue;
-            else if (neighbors.size() == maxClusterSize)
-                currClusters.insert(neighbors);
-                // new Biggest cluster
-            else if (neighbors.size() > maxClusterSize) {
+
+            // new Biggest cluster
+            if (neighbors.size() > maxClusterSize) {
                 maxClusterSize = neighbors.size();
                 currClusters.clear();
-                currClusters.insert(neighbors);
             }
+
+            currClusters.emplace_back(neighbors);
         }
+
+        if (!finalClusters.empty() && currClusters.empty())
+            return finishDBSCAN();
 
         if (maxClusterSize < prevMaxClusterSize)
             return finishDBSCAN();
 
-        if (maxClusterSize == prevMaxClusterSize)
-            bestClusters.insert(currClusters.begin(), currClusters.end());
+        if (maxClusterSize > prevMaxClusterSize) {
+            finalClusters.clear();
+            prevMaxClusterSize = maxClusterSize;
+        }
 
-        bestClusters = maxClusterSize > prevMaxClusterSize ? currClusters : bestClusters;
-        prevMaxClusterSize = maxClusterSize > prevMaxClusterSize ? maxClusterSize : prevMaxClusterSize;
+        finalClusters.insert(currClusters.begin(), currClusters.end());
         eps += LEARNING_RATE;
         return runDBSCAN();
     }
 
     void fillDistMap() {
+        double dist;
         distMap.clear();
         for (size_t i=0; i < searchResult.alnVec.size(); i++) {
             ChainToChainAln &prevAln = searchResult.alnVec[i];
             for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
                 ChainToChainAln &currAln = searchResult.alnVec[j];
-                double dist = prevAln.getDistance(currAln);
+                dist = prevAln.getDistance(currAln);
                 distMap.insert({{i,j}, dist});
             }
         }
@@ -419,48 +427,54 @@ private:
     bool checkChainRedundancy() {
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
+
         for (auto neighborIdx : neighbors) {
             unsigned int qChainKey = searchResult.alnVec[neighborIdx].qChain.chainKey;
             unsigned int dbChainKey = searchResult.alnVec[neighborIdx].dbChain.chainKey;
+
             if (std::find(qFoundChainKeys.begin(), qFoundChainKeys.end(), qChainKey) != qFoundChainKeys.end())
                 return true;
+
             if (std::find(dbFoundChainKeys.begin(), dbFoundChainKeys.end(), dbChainKey) != dbFoundChainKeys.end())
                 return true;
+
             qFoundChainKeys.emplace_back(qChainKey);
             dbFoundChainKeys.emplace_back(dbChainKey);
         }
+
         return false;
     }
 
-    unsigned int finishDBSCAN() {
-        initializeAlnLabels();
-        if (prevMaxClusterSize < minClusterSize || bestClusters.empty())
-            return UNCLUSTERED;
-        cLabel = CLUSTERED;
-        for (auto &cluster: bestClusters) {
-            for (auto alnIdx: cluster) {
-                searchResult.alnVec[alnIdx].label = cLabel;
-            }
-            cLabel++;
-        }
-        SORT_SERIAL(searchResult.alnVec.begin(), searchResult.alnVec.end(), compareChainToChainAlnByClusterLabel);
-        return CLUSTERED;
-    }
-
     unsigned int checkClusteringNecessity() {
+        if (searchResult.alnVec.empty())
+            return UNCLUSTERED;
+
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
-
-        if (neighbors.empty())
-            return UNCLUSTERED;
 
         if (checkChainRedundancy())
             runDBSCAN();
 
         prevMaxClusterSize = neighbors.size();
-        bestClusters.insert(neighbors);
+        finalClusters.insert(neighbors);
         return finishDBSCAN();
+    }
+
+    unsigned int finishDBSCAN() {
+        initializeAlnLabels();
+        if (prevMaxClusterSize < minClusterSize || finalClusters.empty()) return UNCLUSTERED;
+
+        cLabel = CLUSTERED;
+        for (auto &cluster: finalClusters) {
+            for (auto alnIdx: cluster) {
+                searchResult.alnVec[alnIdx].label = cLabel;
+            }
+            cLabel++;
+        }
+
+        SORT_SERIAL(searchResult.alnVec.begin(), searchResult.alnVec.end(), compareChainToChainAlnByClusterLabel);
+        return CLUSTERED;
     }
 };
 
@@ -715,7 +729,8 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-//            if (qChainKeys.size()==1) continue;
+            if (qChainKeys.size() <= SINGLE_CHAINED_COMPLEX)
+                continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
             for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
