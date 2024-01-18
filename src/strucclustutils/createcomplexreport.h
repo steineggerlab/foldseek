@@ -10,7 +10,6 @@ const double TOO_SMALL_CV = 0.1;
 const double FILTERED_OUT = 0.0;
 const unsigned int UNCLUSTERED = 0;
 const unsigned int CLUSTERED = 1;
-const unsigned int MAX_RECURSIVE_NUM = 1000;
 const unsigned int MIN_PTS = 2;
 const unsigned int SINGLE_CHAINED_COMPLEX = 1;
 const double LEARNING_RATE = 0.1;

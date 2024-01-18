@@ -292,13 +292,13 @@ bool compareAssignment(const Assignment &first, const Assignment &second) {
 class DBSCANCluster {
 public:
     DBSCANCluster(SearchResult &searchResult, double minCov) : searchResult(searchResult) {
-        recursiveNum = 0;
         cLabel = 0;
         minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         eps = DEFAULT_EPS;
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         finalClusters.clear();
         prevMaxClusterSize = 0;
+        maxDist = 0;
         fillDistMap();
     }
 
@@ -318,9 +318,9 @@ private:
     SearchResult &searchResult;
     double eps;
     unsigned int cLabel;
+    double maxDist;
     unsigned int prevMaxClusterSize;
     unsigned int maxClusterSize;
-    unsigned int recursiveNum;
     unsigned int idealClusterSize;
     unsigned int minClusterSize;
     std::vector<unsigned int> neighbors;
@@ -333,7 +333,7 @@ private:
 
     unsigned int runDBSCAN() {
         initializeAlnLabels();
-        if (++recursiveNum > MAX_RECURSIVE_NUM) return finishDBSCAN();
+        if (eps > maxDist) return finishDBSCAN();
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0) continue;
@@ -399,6 +399,7 @@ private:
             for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
+                maxDist = std::max(maxDist, dist);
                 distMap.insert({{i,j}, dist});
             }
         }
@@ -454,7 +455,7 @@ private:
         }
 
         if (checkChainRedundancy())
-            runDBSCAN();
+            return runDBSCAN();
 
         prevMaxClusterSize = neighbors.size();
         finalClusters.insert(neighbors);
