@@ -8,6 +8,7 @@
 
 #include "complexsearch.sh.h"
 
+
 int complexsearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -70,14 +71,17 @@ int complexsearch(int argc, const char **argv, const Command &command) {
     tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
     par.filenames.pop_back();
     CommandCaller cmd;
+    double eval =  par.evalThr;
     if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
+        par.evalThr = par.eValueThrExpandComplex;
         cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "tmalign");
         cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.tmalign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
+        par.evalThr = par.eValueThrExpandComplex;
         cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "structurealign");
         cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.structurealign).c_str());
     }
-
+    par.evalThr = eval;
     switch(par.prefMode){
         case LocalParameters::PREF_MODE_KMER:
             cmd.addVariable("PREFMODE", "KMER");
