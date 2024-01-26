@@ -397,5 +397,13 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "https://www.rcsb.org",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
+        },
+        {
+                "CATH50",
+                "CATH domain database (combined AlphaFold and PDB CATH clustered at 50% seq.id.).",
+                "Bordin et al. AlphaFold2 reveals commonalities and novelties in protein structure space for 21 model organisms. Communications Biology, 6, 160 (2023)",
+                "https://www.cath.info",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
         }
 };

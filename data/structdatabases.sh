@@ -150,8 +150,16 @@ case "${SELECTION}" in
         push_back "${TMP_PATH}/pdb"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
+    "CATH50")
+        if notExists "${TMP_PATH}/cath50.tar.gz"; then
+            downloadFile "https://foldseek.steineggerlab.workers.dev/cath50.tar.gz" "${TMP_PATH}/cath50.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/cath50.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/cath50.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/cath50"
+        INPUT_TYPE="FOLDSEEK_DB"
+    ;;
 esac
-
 
 if notExists "${OUTDB}.dbtype"; then
 case "${INPUT_TYPE}" in
