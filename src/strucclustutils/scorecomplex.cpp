@@ -27,7 +27,7 @@ struct Chain {
 
 struct ChainToChainAln {
     ChainToChainAln() {}
-    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain) {
+    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), evalue(alnResult.eval) {
         alnLength = alnResult.alnLength;
         matches = 0;
         unsigned int qPos = alnResult.qStartPos;
@@ -82,6 +82,7 @@ struct ChainToChainAln {
     resultToWrite_t resultToWrite;
     double superposition[12];
     unsigned int label;
+    double evalue;
 
     double getDistance(const ChainToChainAln &o) {
         double dist = 0;
@@ -299,18 +300,15 @@ public:
         finalClusters.clear();
         prevMaxClusterSize = 0;
         maxDist = 0;
-        fillDistMap();
     }
 
     unsigned int getAlnClusters() {
+        // rbh filter
+        filterAlnsByRBH();
         // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= idealClusterSize)
             return checkClusteringNecessity();
-
-        // To skip single chained complex
-        if (idealClusterSize <= SINGLE_CHAINED_COMPLEX)
-            return UNCLUSTERED;
-
+        fillDistMap();
         return runDBSCAN();
     }
 
@@ -330,7 +328,8 @@ private:
     distMap_t distMap;
     std::vector<cluster_t> currClusters;
     std::set<cluster_t> finalClusters;
-
+    std::map<unsigned int, double> qBestEvalues;
+    std::map<unsigned int, double> dbBestEvalues;
     unsigned int runDBSCAN() {
         initializeAlnLabels();
         if (eps > maxDist) return finishDBSCAN();
@@ -403,6 +402,7 @@ private:
                 distMap.insert({{i,j}, dist});
             }
         }
+
     }
 
     void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
@@ -476,6 +476,40 @@ private:
 
         SORT_SERIAL(searchResult.alnVec.begin(), searchResult.alnVec.end(), compareChainToChainAlnByClusterLabel);
         return CLUSTERED;
+    }
+
+    void filterAlnsByRBH() {
+        unsigned int alnIdx = 0;
+        double evalue;
+        unsigned int qKey;
+        unsigned int dbKey;
+
+        for (auto qChainKey: searchResult.qChainKeys) {
+            qBestEvalues.insert({qChainKey, -1.0});
+        }
+
+        for (auto dbChainKey: searchResult.dbChainKeys) {
+            dbBestEvalues.insert({dbChainKey, -1.0});
+        }
+
+        for (auto &aln: searchResult.alnVec) {
+            qKey = aln.qChain.chainKey;
+            dbKey = aln.dbChain.chainKey;
+            evalue = aln.evalue;
+            qBestEvalues[qKey] = qBestEvalues[qKey]==-1.0 ? evalue : std::min(evalue, qBestEvalues[qKey]);
+            dbBestEvalues[dbKey] = dbBestEvalues[dbKey]==-1.0 ? evalue : std::min(evalue, dbBestEvalues[dbKey]);
+        }
+
+        while (alnIdx < searchResult.alnVec.size()) {
+            qKey = searchResult.alnVec[alnIdx].qChain.chainKey;
+            dbKey = searchResult.alnVec[alnIdx].dbChain.chainKey;
+            evalue = searchResult.alnVec[alnIdx].evalue;
+            if (evalue < std::min(qBestEvalues[qKey], dbBestEvalues[dbKey]) * EVALUE_MARGIN) {
+                alnIdx ++;
+                continue;
+            }
+            searchResult.alnVec.erase(searchResult.alnVec.begin() + alnIdx);
+        }
     }
 };
 

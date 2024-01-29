@@ -14,6 +14,7 @@ const unsigned int MIN_PTS = 2;
 const unsigned int SINGLE_CHAINED_COMPLEX = 1;
 const double LEARNING_RATE = 0.1;
 const double DEFAULT_EPS = 0.1;
+const double EVALUE_MARGIN = 100.0;
 
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
