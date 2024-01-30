@@ -338,6 +338,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     bool needsReorderingAtTheEnd = false;
     size_t needToWriteModel = 0;
 
+    const int inputFormat = par.inputFormat;
+
     // Process tar files!
     for(size_t i = 0; i < tarFiles.size(); i++) {
         mtar_t tar;
@@ -365,7 +367,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
 #endif
 
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -491,7 +493,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     } else {
                         pdbFile.append(dataBuffer, tarHeader.size);
                     }
-                    if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name) == false) {
+                    if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name, (GemmiWrapper::Format)inputFormat) == false) {
                         incorrectFiles++;
                         continue;
                     }
@@ -515,7 +517,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -535,7 +537,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
 
-            if(readStructure.load(looseFiles[i]) == false){
+            if(readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false){
                 incorrectFiles++;
                 continue;
             }
@@ -570,7 +572,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -600,7 +602,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                             Debug(Debug::ERROR) << reader.status().message() << "\n";
                         } else {
                             std::string contents{std::istreambuf_iterator<char>{reader}, {}};
-                            if (readStructure.loadFromBuffer(contents.c_str(), contents.size(), obj_name) == false) {
+                            if (readStructure.loadFromBuffer(contents.c_str(), contents.size(), obj_name, inputFormat) == false) {
                                 incorrectFiles++;
                             } else {
                                 __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
@@ -624,7 +626,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -651,7 +653,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 size_t lookupId = reader.getLookupIdByKey(reader.getDbKey(i));
                 std::string name = reader.getLookupEntryName(lookupId);
 
-                if (readStructure.loadFromBuffer(data, len, name) == false) {
+                if (readStructure.loadFromBuffer(data, len, name, (GemmiWrapper::Format)inputFormat) == false) {
                     incorrectFiles++;
                 } else {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));

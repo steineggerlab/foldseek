@@ -27,7 +27,8 @@ LocalParameters::LocalParameters() :
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
         PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_COMPLEX_REPORT_MODE(PARAM_COMPLEX_REPORT_MODE_ID, "--complex-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &complexReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
-        PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN)
+        PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
+        PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$")
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -78,6 +79,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
     structurecreatedb.push_back(&PARAM_TAR_INCLUDE);
     structurecreatedb.push_back(&PARAM_TAR_EXCLUDE);
+    structurecreatedb.push_back(&PARAM_INPUT_FORMAT);
     // protein chain only
     structurecreatedb.push_back(&PARAM_FILE_INCLUDE);
     structurecreatedb.push_back(&PARAM_FILE_EXCLUDE);
@@ -209,6 +211,7 @@ LocalParameters::LocalParameters() :
     maskLowerCaseMode = 1;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     clusterSearch = 0;
+    inputFormat = 0; // auto detect
     fileInclude = ".*";
     fileExclude = "^$";
     dbSuffixList = "_h,_ss,_ca";
