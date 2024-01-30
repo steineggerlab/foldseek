@@ -12,10 +12,11 @@ const unsigned int UNCLUSTERED = 0;
 const unsigned int CLUSTERED = 1;
 const unsigned int MIN_PTS = 2;
 const unsigned int SINGLE_CHAINED_COMPLEX = 1;
-const double LEARNING_RATE = 0.1;
-const double DEFAULT_EPS = 0.1;
-const double EVALUE_MARGIN = 100.0;
-
+const float BIT_SCORE_MARGIN = 0.9;
+const float CLUSTERING_STEPS = 100.0;
+const float DEF_DIST = -1.0;
+const float DEF_BIT_SCORE = -1.0;
+const int UNINITIALIZED = 0;
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;

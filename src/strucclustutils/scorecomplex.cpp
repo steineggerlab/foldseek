@@ -27,7 +27,7 @@ struct Chain {
 
 struct ChainToChainAln {
     ChainToChainAln() {}
-    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), evalue(alnResult.eval) {
+    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), bitScore((float)alnResult.score) {
         alnLength = alnResult.alnLength;
         matches = 0;
         unsigned int qPos = alnResult.qStartPos;
@@ -82,10 +82,10 @@ struct ChainToChainAln {
     resultToWrite_t resultToWrite;
     double superposition[12];
     unsigned int label;
-    double evalue;
+    float bitScore;
 
-    double getDistance(const ChainToChainAln &o) {
-        double dist = 0;
+    float getDistance(const ChainToChainAln &o) {
+        float dist = 0;
         for (size_t i=0; i<12; i++) {
             dist += std::pow(superposition[i] - o.superposition[i], 2);
         }
@@ -295,7 +295,6 @@ public:
     DBSCANCluster(SearchResult &searchResult, double minCov) : searchResult(searchResult) {
         cLabel = 0;
         minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
-        eps = DEFAULT_EPS;
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         finalClusters.clear();
         prevMaxClusterSize = 0;
@@ -314,9 +313,11 @@ public:
 
 private:
     SearchResult &searchResult;
-    double eps;
+    float eps;
+    float maxDist;
+    float minDist;
+    float learningRate;
     unsigned int cLabel;
-    double maxDist;
     unsigned int prevMaxClusterSize;
     unsigned int maxClusterSize;
     unsigned int idealClusterSize;
@@ -328,25 +329,35 @@ private:
     distMap_t distMap;
     std::vector<cluster_t> currClusters;
     std::set<cluster_t> finalClusters;
-    std::map<unsigned int, double> qBestEvalues;
-    std::map<unsigned int, double> dbBestEvalues;
+    std::map<unsigned int, float> qBestBitScore;
+    std::map<unsigned int, float> dbBestBitScore;
     unsigned int runDBSCAN() {
         initializeAlnLabels();
         if (eps > maxDist) return finishDBSCAN();
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
-            if (centerAln.label != 0) continue;
+            if (centerAln.label != 0)
+                continue;
+
             getNeighbors(centerAlnIdx, neighbors);
-            if (neighbors.size() < MIN_PTS) continue;
+            if (neighbors.size() < MIN_PTS)
+                continue;
+
             centerAln.label = ++cLabel;
             unsigned int neighborIdx = 0;
+
             while (neighborIdx < neighbors.size()) {
                 unsigned int neighborAlnIdx = neighbors[neighborIdx++];
-                if (centerAlnIdx == neighborAlnIdx) continue;
+
+                if (centerAlnIdx == neighborAlnIdx)
+                    continue;
+
                 ChainToChainAln &neighborAln = searchResult.alnVec[neighborAlnIdx];
                 neighborAln.label = cLabel;
                 getNeighbors(neighborAlnIdx, neighborsOfCurrNeighbor);
-                if (neighborsOfCurrNeighbor.size() < MIN_PTS) continue;
+                if (neighborsOfCurrNeighbor.size() < MIN_PTS)
+                    continue;
+
                 for (auto neighbor : neighborsOfCurrNeighbor) {
                     if (std::find(neighbors.begin(), neighbors.end(), neighbor) == neighbors.end())
                         neighbors.emplace_back(neighbor);
@@ -386,12 +397,13 @@ private:
         }
 
         finalClusters.insert(currClusters.begin(), currClusters.end());
-        eps += LEARNING_RATE;
+        eps += learningRate;
         return runDBSCAN();
     }
 
     void fillDistMap() {
-        double dist;
+        float dist;
+        minDist = DEF_DIST;
         distMap.clear();
         for (size_t i=0; i < searchResult.alnVec.size(); i++) {
             ChainToChainAln &prevAln = searchResult.alnVec[i];
@@ -399,18 +411,21 @@ private:
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
                 maxDist = std::max(maxDist, dist);
+                minDist = minDist<UNINITIALIZED ? dist : std::min(minDist, dist);
                 distMap.insert({{i,j}, dist});
             }
         }
-
+        eps = minDist;
+        learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
     }
 
     void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
         neighborVec.clear();
         neighborVec.emplace_back(centerIdx);
         for (size_t neighborIdx = 0; neighborIdx < searchResult.alnVec.size(); neighborIdx++) {
-            double dist = centerIdx < neighborIdx ? distMap[{centerIdx, neighborIdx}] : distMap[{neighborIdx, centerIdx}];
-            if (neighborIdx == centerIdx || dist >= eps)
+            if (neighborIdx == centerIdx)
+                continue;
+            if ((centerIdx < neighborIdx ? distMap[{centerIdx, neighborIdx}] : distMap[{neighborIdx, centerIdx}]) >= eps)
                 continue;
             neighborVec.emplace_back(neighborIdx);
         }
@@ -480,31 +495,31 @@ private:
 
     void filterAlnsByRBH() {
         unsigned int alnIdx = 0;
-        double evalue;
+        float bitScore;
         unsigned int qKey;
         unsigned int dbKey;
 
         for (auto qChainKey: searchResult.qChainKeys) {
-            qBestEvalues.insert({qChainKey, -1.0});
+            qBestBitScore.insert({qChainKey, DEF_BIT_SCORE});
         }
 
         for (auto dbChainKey: searchResult.dbChainKeys) {
-            dbBestEvalues.insert({dbChainKey, -1.0});
+            dbBestBitScore.insert({dbChainKey, DEF_BIT_SCORE});
         }
 
         for (auto &aln: searchResult.alnVec) {
             qKey = aln.qChain.chainKey;
             dbKey = aln.dbChain.chainKey;
-            evalue = aln.evalue;
-            qBestEvalues[qKey] = qBestEvalues[qKey]==-1.0 ? evalue : std::min(evalue, qBestEvalues[qKey]);
-            dbBestEvalues[dbKey] = dbBestEvalues[dbKey]==-1.0 ? evalue : std::min(evalue, dbBestEvalues[dbKey]);
+            bitScore = aln.bitScore;
+            qBestBitScore[qKey] = qBestBitScore[qKey]<UNINITIALIZED ? bitScore : std::max(bitScore, qBestBitScore[qKey]);
+            dbBestBitScore[dbKey] = dbBestBitScore[dbKey]<UNINITIALIZED ? bitScore : std::max(bitScore, dbBestBitScore[dbKey]);
         }
 
         while (alnIdx < searchResult.alnVec.size()) {
             qKey = searchResult.alnVec[alnIdx].qChain.chainKey;
             dbKey = searchResult.alnVec[alnIdx].dbChain.chainKey;
-            evalue = searchResult.alnVec[alnIdx].evalue;
-            if (evalue < std::min(qBestEvalues[qKey], dbBestEvalues[dbKey]) * EVALUE_MARGIN) {
+            bitScore = searchResult.alnVec[alnIdx].bitScore;
+            if (bitScore >= std::max(qBestBitScore[qKey], dbBestBitScore[dbKey]) * BIT_SCORE_MARGIN) {
                 alnIdx ++;
                 continue;
             }
