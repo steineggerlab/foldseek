@@ -11,11 +11,21 @@
 
 class GemmiWrapper {
 public:
+    enum class Format {
+        Detect = 0,
+        Pdb,
+        Mmcif,
+        Mmjson,
+        ChemComp,
+        Foldcomp,
+        Unknown
+    };
+
     GemmiWrapper();
 
-    bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name);
+    bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, Format format = Format::Detect);
 
-    bool load(std::string & filename);
+    bool load(const std::string& filename, Format format = Format::Detect);
 
     std::pair<size_t, size_t> nextChain();
 
