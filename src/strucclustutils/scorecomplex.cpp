@@ -332,6 +332,7 @@ private:
     std::set<cluster_t> finalClusters;
     std::map<unsigned int, float> qBestBitScore;
     std::map<unsigned int, float> dbBestBitScore;
+
     unsigned int runDBSCAN() {
         initializeAlnLabels();
         if (eps > maxDist) return finishDBSCAN();
@@ -416,10 +417,10 @@ private:
                 distMap.insert({{i,j}, dist});
             }
         }
-        // eps = minDist;
-        // learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
-        eps = 0.1;
-        learningRate = 0.1;
+         eps = minDist;
+         learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
+//        eps = 0.1;
+//        learningRate = 0.1;
     }
 
     void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
@@ -467,14 +468,13 @@ private:
     unsigned int checkClusteringNecessity() {
         if (searchResult.alnVec.empty())
             return UNCLUSTERED;
-
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
-
-        if (checkChainRedundancy())
+        if (checkChainRedundancy()) {
+            fillDistMap();
             return runDBSCAN();
-
+        }
         prevMaxClusterSize = neighbors.size();
         finalClusters.insert(neighbors);
         return finishDBSCAN();
@@ -483,7 +483,6 @@ private:
     unsigned int finishDBSCAN() {
         initializeAlnLabels();
         if (prevMaxClusterSize < minClusterSize || finalClusters.empty()) return UNCLUSTERED;
-
         cLabel = CLUSTERED;
         for (auto &cluster: finalClusters) {
             for (auto alnIdx: cluster) {
@@ -491,7 +490,6 @@ private:
             }
             cLabel++;
         }
-
         SORT_SERIAL(searchResult.alnVec.begin(), searchResult.alnVec.end(), compareChainToChainAlnByClusterLabel);
         return CLUSTERED;
     }
