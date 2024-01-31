@@ -416,8 +416,10 @@ private:
                 distMap.insert({{i,j}, dist});
             }
         }
-        eps = minDist;
-        learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
+        // eps = minDist;
+        // learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
+        eps = 0.1;
+        learningRate = 0.1;
     }
 
     void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
