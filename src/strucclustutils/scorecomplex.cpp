@@ -300,6 +300,8 @@ public:
         finalClusters.clear();
         prevMaxClusterSize = 0;
         maxDist = 0;
+        eps = DEFAULT_EPS;
+        learningRate = LEARNING_RATE;
     }
 
     unsigned int getAlnClusters() {
@@ -316,7 +318,7 @@ private:
     SearchResult &searchResult;
     float eps;
     float maxDist;
-    float minDist;
+//    float minDist;
     float learningRate;
     unsigned int cLabel;
     unsigned int prevMaxClusterSize;
@@ -405,7 +407,7 @@ private:
 
     void fillDistMap() {
         float dist;
-        minDist = DEF_DIST;
+//        minDist = DEF_DIST;
         distMap.clear();
         for (size_t i=0; i < searchResult.alnVec.size(); i++) {
             ChainToChainAln &prevAln = searchResult.alnVec[i];
@@ -413,12 +415,12 @@ private:
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
                 maxDist = std::max(maxDist, dist);
-                minDist = minDist<UNINITIALIZED ? dist : std::min(minDist, dist);
+//                minDist = minDist<UNINITIALIZED ? dist : std::min(minDist, dist);
                 distMap.insert({{i,j}, dist});
             }
         }
-         eps = minDist;
-         learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
+//         eps = minDist;
+//         learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
 //        eps = 0.1;
 //        learningRate = 0.1;
     }
