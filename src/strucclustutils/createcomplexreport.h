@@ -101,7 +101,7 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     key[keySize] = '\0';
     auto dbKey = Util::fast_atoi<unsigned int>(key);
     int score = Util::fast_atoi<int>(entry[1]);
-    double seqId = strtod(entry[2],NULL);
+    float seqId = strtof(entry[2],NULL);
     double eval = strtod(entry[3],NULL);
     int qStartPos =  Util::fast_atoi<int>(entry[4]);
     int qEndPos = Util::fast_atoi<int>(entry[5]);
@@ -110,8 +110,8 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     int dbEndPos = Util::fast_atoi<int>(entry[8]);
     int dbLen = Util::fast_atoi<int>(entry[9]);
     auto backtrace = std::string(entry[10], entry[11] - entry[10]);
-    double qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
-    double dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
+    float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
+    float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
     size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
     double qTmScore = std::stod(entry[11]);
     double tTmScore = std::stod(entry[12]);

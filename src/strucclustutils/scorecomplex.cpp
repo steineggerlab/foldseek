@@ -170,6 +170,7 @@ struct SearchResult {
                 aln.superposition[i] = cv[i] < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean[i]) / sd[i];
             }
         }
+//        return;
     }
 };
 
@@ -525,6 +526,7 @@ private:
             }
             searchResult.alnVec.erase(searchResult.alnVec.begin() + alnIdx);
         }
+//        return;
     }
 };
 
@@ -541,7 +543,8 @@ public:
     void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
         if (qResLen == 0) return;
-        SearchResult paredSearchResult = SearchResult(qChainKeys, qResLen);
+        paredSearchResult = SearchResult(qChainKeys, qResLen);
+        // for each chain from the query Complex
         for (auto qChainKey: qChainKeys) {
             unsigned int qKey = alnDbr.getId(qChainKey);
             if (qKey == NOT_AVAILABLE_CHAIN_KEY) continue;
@@ -555,6 +558,7 @@ public:
             float *queryCaData = qCoords.read(qCaData, qAlnResult.qLen, qCaLength);
             qChain = Chain(qComplexId, qChainKey);
             tmAligner->initQuery(queryCaData, &queryCaData[qLen], &queryCaData[qLen * 2], NULL, qLen);
+            // for each alignment from the query chain
             while (*data != '\0') {
                 char dbKeyBuffer[255 + 1];
                 Util::parseKey(data, dbKeyBuffer);
@@ -572,19 +576,22 @@ public:
                 float *targetCaData = tCoords.read(tCaData, dbLen, tCaLength);
                 dbChain = Chain(dbComplexId, dbChainKey);
                 tmResult = tmAligner->computeTMscore(targetCaData,&targetCaData[dbLen],&targetCaData[dbLen * 2],dbLen,dbAlnResult.qStartPos,dbAlnResult.dbStartPos,Matcher::uncompressAlignment(dbAlnResult.backtrace),dbAlnResult.alnLength);
-                alnFromCurrentQuery =  ChainToChainAln(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
-                alnsFromCurrentQuery.emplace_back(alnFromCurrentQuery);
-                alnFromCurrentQuery.free();
+                currAln =  ChainToChainAln(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
+                currAlns.emplace_back(currAln);
+                currAln.free();
                 data = Util::skipLine(data);
-            }
-        }
-        if (alnsFromCurrentQuery.empty()) return;
-        SORT_SERIAL(alnsFromCurrentQuery.begin(), alnsFromCurrentQuery.end(), compareChainToChainAlnByDbComplexId);
-        unsigned int currDbComplexId = alnsFromCurrentQuery[0].dbChain.complexId;
+            } // while end
+        } // for end
+
+        if (currAlns.empty())
+            return;
+
+        SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAlnByDbComplexId);
+        unsigned int currDbComplexId = currAlns[0].dbChain.complexId;
         std::vector<unsigned int> currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
         unsigned int currDbResLen = getDbResidueLength(currDbChainKeys);
         paredSearchResult.resetDbComplex(currDbChainKeys, currDbResLen);
-        for (auto &aln: alnsFromCurrentQuery) {
+        for (auto &aln: currAlns) {
             if (aln.dbChain.complexId == currDbComplexId) {
                 paredSearchResult.alnVec.emplace_back(aln);
                 continue;
@@ -600,11 +607,12 @@ public:
             paredSearchResult.resetDbComplex(currDbChainKeys, currDbResLen);
             paredSearchResult.alnVec.emplace_back(aln);
         }
-        alnsFromCurrentQuery.clear();
+        currAlns.clear();
         paredSearchResult.filterAlnVec(minAssignedChainsRatio);
         paredSearchResult.standardize();
         if (!paredSearchResult.alnVec.empty()) // && currDbChainKeys.size() > 1
             searchResults.emplace_back(paredSearchResult);
+
         paredSearchResult.alnVec.clear();
     }
 
@@ -658,9 +666,10 @@ private:
     unsigned int maxResLen;
     Chain qChain;
     Chain dbChain;
-    ChainToChainAln alnFromCurrentQuery;
-    std::vector<ChainToChainAln> alnsFromCurrentQuery;
+    ChainToChainAln currAln;
+    std::vector<ChainToChainAln> currAlns;
     Assignment assignment;
+    SearchResult paredSearchResult;
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
