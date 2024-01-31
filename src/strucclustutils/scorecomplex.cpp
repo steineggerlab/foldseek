@@ -335,7 +335,7 @@ private:
 
     unsigned int runDBSCAN() {
         initializeAlnLabels();
-        if (eps > maxDist) return finishDBSCAN();
+        if (eps >= maxDist) return finishDBSCAN();
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0)
@@ -472,6 +472,9 @@ private:
             neighbors.emplace_back(alnIdx);
         }
         if (checkChainRedundancy()) {
+            neighbors.clear();
+            if (searchResult.alnVec.size() < FINISH_CLUSTERING)
+                finishDBSCAN();
             fillDistMap();
             return runDBSCAN();
         }
