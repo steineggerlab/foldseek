@@ -24,7 +24,7 @@ typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;
 typedef std::vector<unsigned int> cluster_t;
-typedef std::map<std::pair<unsigned int, unsigned int>, double> distMap_t;
+typedef std::map<std::pair<unsigned int, unsigned int>, float> distMap_t;
 typedef std::string resultToWrite_t;
 typedef std::string chainName_t;
 typedef std::pair<unsigned int, resultToWrite_t> resultToWriteWithKey_t;

@@ -255,6 +255,12 @@ struct Assignment {
     }
 };
 
+struct NeighborsWithDist {
+    NeighborsWithDist(unsigned int neighbor, float dist) : neighbor(neighbor), dist(dist) {}
+    unsigned int neighbor;
+    float dist;
+};
+
 bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
     if (first.dbChain.complexId < second.dbChain.complexId)
         return true;
@@ -289,6 +295,16 @@ bool compareAssignment(const Assignment &first, const Assignment &second) {
     if (first.dbTmScore < second.dbTmScore)
         return false;
     return false;
+}
+
+bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWithDist &second) {
+    if (first.dist < second.dist)
+        return true;
+    if (first.dist > second.dist)
+        return false;
+
+    return false;
+
 }
 
 class DBSCANCluster {
@@ -327,8 +343,9 @@ private:
     unsigned int minClusterSize;
     std::vector<unsigned int> neighbors;
     std::vector<unsigned int> neighborsOfCurrNeighbor;
-    std::vector<unsigned int> qFoundChainKeys;
-    std::vector<unsigned int> dbFoundChainKeys;
+    std::vector<NeighborsWithDist> neighborsWithDist;
+    std::set<unsigned int> qFoundChainKeys;
+    std::set<unsigned int> dbFoundChainKeys;
     distMap_t distMap;
     std::vector<cluster_t> currClusters;
     std::set<cluster_t> finalClusters;
@@ -368,13 +385,8 @@ private:
                 }
             }
 
-            // too big cluster
-            if (neighbors.size() > idealClusterSize)
-                continue;
-
-            // redundant chains
-            if (checkChainRedundancy())
-                continue;
+            if (neighbors.size() > idealClusterSize || checkChainRedundancy())
+                getNearestNeighbors(centerAlnIdx);
 
             // too small cluster
             if (neighbors.size() < maxClusterSize)
@@ -407,7 +419,6 @@ private:
 
     void fillDistMap() {
         float dist;
-//        minDist = DEF_DIST;
         distMap.clear();
         for (size_t i=0; i < searchResult.alnVec.size(); i++) {
             ChainToChainAln &prevAln = searchResult.alnVec[i];
@@ -415,14 +426,9 @@ private:
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
                 maxDist = std::max(maxDist, dist);
-//                minDist = minDist<UNINITIALIZED ? dist : std::min(minDist, dist);
                 distMap.insert({{i,j}, dist});
             }
         }
-//         eps = minDist;
-//         learningRate = (maxDist - minDist) / CLUSTERING_STEPS;
-//        eps = 0.1;
-//        learningRate = 0.1;
     }
 
     void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
@@ -451,19 +457,12 @@ private:
         dbFoundChainKeys.clear();
 
         for (auto neighborIdx : neighbors) {
-            unsigned int qChainKey = searchResult.alnVec[neighborIdx].qChain.chainKey;
-            unsigned int dbChainKey = searchResult.alnVec[neighborIdx].dbChain.chainKey;
-
-            if (std::find(qFoundChainKeys.begin(), qFoundChainKeys.end(), qChainKey) != qFoundChainKeys.end())
+            if (!qFoundChainKeys.insert(searchResult.alnVec[neighborIdx].qChain.chainKey).second)
                 return true;
 
-            if (std::find(dbFoundChainKeys.begin(), dbFoundChainKeys.end(), dbChainKey) != dbFoundChainKeys.end())
+            if (!dbFoundChainKeys.insert(searchResult.alnVec[neighborIdx].dbChain.chainKey).second)
                 return true;
-
-            qFoundChainKeys.emplace_back(qChainKey);
-            dbFoundChainKeys.emplace_back(dbChainKey);
         }
-
         return false;
     }
 
@@ -530,6 +529,32 @@ private:
                 continue;
             }
             searchResult.alnVec.erase(searchResult.alnVec.begin() + alnIdx);
+        }
+//        return;
+    }
+
+    void getNearestNeighbors(unsigned int centerIdx) {
+        qFoundChainKeys.clear();
+        dbFoundChainKeys.clear();
+        neighborsWithDist.clear();
+
+        for (auto neighborIdx: neighbors) {
+            if (neighborIdx == centerIdx) {
+                neighborsWithDist.emplace_back(neighborIdx, 0.0);
+                continue;
+            }
+            neighborsWithDist.emplace_back(neighborIdx, neighborIdx < centerIdx ? distMap[{neighborIdx, centerIdx}] : distMap[{centerIdx, neighborIdx}]);
+        }
+        SORT_SERIAL(neighborsWithDist.begin(), neighborsWithDist.end(), compareNeighborWithDist);
+        neighbors.clear();
+        for (auto neighborWithDist : neighborsWithDist) {
+            if (!qFoundChainKeys.insert(searchResult.alnVec[neighborWithDist.neighbor].qChain.chainKey).second)
+                break;
+
+            if (!dbFoundChainKeys.insert(searchResult.alnVec[neighborWithDist.neighbor].dbChain.chainKey).second)
+                break;
+
+            neighbors.emplace_back(neighborWithDist.neighbor);
         }
 //        return;
     }
