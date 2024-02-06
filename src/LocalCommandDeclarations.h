@@ -21,6 +21,7 @@ extern int structureungappedalign(int argc, const char** argv, const Command &co
 extern int convert2pdb(int argc, const char** argv, const Command &command);
 extern int compressca(int argc, const char** argv, const Command &command);
 extern int scorecomplex(int argc, const char **argv, const Command& command);
+extern int filtercomplex(int argc, const char **argv, const Command& command);
 extern int easycomplexsearch(int argc, const char **argv, const Command &command);
 extern int createcomplexreport(int argc, const char **argv, const Command &command);
 extern int expandcomplex(int argc, const char **argv, const Command &command);

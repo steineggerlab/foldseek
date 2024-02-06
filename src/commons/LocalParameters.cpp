@@ -174,6 +174,12 @@ LocalParameters::LocalParameters() :
     scorecomplex.push_back(&PARAM_V);
     scorecomplex.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
 
+    //filtercomplex
+    filtercomplex.push_back(&PARAM_V);
+    filtercomplex.push_back(&PARAM_THREADS);
+    filtercomplex.push_back(&PARAM_C);
+    filtercomplex.push_back(&PARAM_COV_MODE);
+
     // createcomplexreport
     createcomplexreport.push_back(&PARAM_DB_OUTPUT);
     createcomplexreport.push_back(&PARAM_THREADS);

@@ -14,6 +14,7 @@ set(strucclustutils_source_files
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
         strucclustutils/scorecomplex.cpp
+        strucclustutils/filtercomplex.cpp
         strucclustutils/createcomplexreport.cpp
         strucclustutils/createcomplexreport.h
         strucclustutils/expandcomplex.cpp

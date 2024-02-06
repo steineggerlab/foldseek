@@ -263,6 +263,18 @@ std::vector<Command> foldseekCommands = {
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb}
                                    }
         },
+        {"filtercomplex", filtercomplex, &localPar.filtercomplex, COMMAND_HIDDEN,
+                "Filters complexes",
+                "foldseek filtercomplex queryDB targetDB alignmentDB complexDB -c 0.8 --cov-mode 1\n",
+                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:clustDB>",
+                CITATION_FOLDSEEK, {
+                                           {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                           {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                           {"clustDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb }
+                                   }
+        },
         {"complexsearch", complexsearch, &localPar.complexsearchworkflow, COMMAND_MAIN,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
