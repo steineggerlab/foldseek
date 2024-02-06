@@ -32,7 +32,7 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
 - [Examples](#examples)
 
 ## Webserver 
-Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using the Foldseek webserver: [search.foldseek.com](https://search.foldseek.com) 🚀
+Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using the Foldseek webserver ([code](https://github.com/soedinglab/mmseqs2-app)): [search.foldseek.com](https://search.foldseek.com) 🚀
 
 ## Installation
 ```
