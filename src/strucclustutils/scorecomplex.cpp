@@ -123,17 +123,22 @@ struct SearchResult {
     void filterAlnVec(double minAlignedQueryChainRatio) {
         if (dbResidueLen == 0)
             alnVec.clear();
+
         if (alnVec.empty() || minAlignedQueryChainRatio==0)
             return;
+
         ChainToChainAln &firstAln = alnVec[0];
         unsigned int minAlignedQueryChainNum = qChainKeys.size() * minAlignedQueryChainRatio;
         unsigned int qChainCount = 1;
         unsigned int qPrevChainKey = firstAln.qChain.chainKey;
+
         for (auto &aln : alnVec) {
             if (aln.qChain.chainKey == qPrevChainKey)
                 continue;
+
             qPrevChainKey = aln.qChain.chainKey;
-            if (++qChainCount >= minAlignedQueryChainNum) return;
+            if (++qChainCount >= minAlignedQueryChainNum)
+                return;
         }
         alnVec.clear();
     }
@@ -207,6 +212,7 @@ struct Assignment {
         dbCaZVec.insert(dbCaZVec.end(), aln.dbChain.caVecZ.begin(), aln.dbChain.caVecZ.end());
         resultToWriteLines.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
     }
+
     void reset() {
         matches = 0;
         qCaXVec.clear();
@@ -302,9 +308,7 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
         return true;
     if (first.dist > second.dist)
         return false;
-
     return false;
-
 }
 
 class DBSCANCluster {
@@ -334,7 +338,6 @@ private:
     SearchResult &searchResult;
     float eps;
     float maxDist;
-//    float minDist;
     float learningRate;
     unsigned int cLabel;
     unsigned int prevMaxClusterSize;
@@ -354,7 +357,9 @@ private:
 
     unsigned int runDBSCAN() {
         initializeAlnLabels();
-        if (eps >= maxDist) return finishDBSCAN();
+        if (eps >= maxDist)
+            return finishDBSCAN();
+
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0)
@@ -366,10 +371,8 @@ private:
 
             centerAln.label = ++cLabel;
             unsigned int neighborIdx = 0;
-
             while (neighborIdx < neighbors.size()) {
                 unsigned int neighborAlnIdx = neighbors[neighborIdx++];
-
                 if (centerAlnIdx == neighborAlnIdx)
                     continue;
 
@@ -435,12 +438,16 @@ private:
         neighborVec.clear();
         neighborVec.emplace_back(centerIdx);
         for (size_t neighborIdx = 0; neighborIdx < searchResult.alnVec.size(); neighborIdx++) {
+
             if (neighborIdx == centerIdx)
                 continue;
+
             if ((centerIdx < neighborIdx ? distMap[{centerIdx, neighborIdx}] : distMap[{neighborIdx, centerIdx}]) >= eps)
                 continue;
+
             neighborVec.emplace_back(neighborIdx);
         }
+//        return;
     }
 
     void initializeAlnLabels() {
@@ -630,6 +637,7 @@ public:
             paredSearchResult.standardize();
             if (!paredSearchResult.alnVec.empty())
                 searchResults.emplace_back(paredSearchResult);
+
             paredSearchResult.alnVec.clear();
             currDbComplexId = aln.dbChain.complexId;
             currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
@@ -658,7 +666,9 @@ public:
         if (currLabel == UNCLUSTERED) return;
         assignment = Assignment(searchResult.qResidueLen, searchResult.dbResidueLen);
         for (auto &currAln: searchResult.alnVec) {
-            if (currAln.label == UNCLUSTERED) continue;
+            if (currAln.label == UNCLUSTERED)
+                continue;
+
             if (currAln.label != currLabel) {
                 assignment.getTmScore(*tmAligner);
                 assignment.updateResultToWriteLines();
@@ -706,7 +716,9 @@ private:
         for (auto qChainKey: qChainKeys) {
             size_t id = q3diDbr->sequenceReader->getId(qChainKey);
             // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY) return 0;
+            if (id == NOT_AVAILABLE_CHAIN_KEY)
+                return 0;
+
             qResidueLen += q3diDbr->sequenceReader->getSeqLen(id);
         }
         return qResidueLen;
@@ -717,7 +729,9 @@ private:
         for (auto dbChainKey: dbChainKeys) {
             size_t id = t3diDbr->sequenceReader->getId(dbChainKey);
             // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY) return 0;
+            if (id == NOT_AVAILABLE_CHAIN_KEY)
+                return 0;
+
             dbResidueLen += t3diDbr->sequenceReader->getSeqLen(id);
         }
         return dbResidueLen;
