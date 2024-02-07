@@ -338,7 +338,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     bool needsReorderingAtTheEnd = false;
     size_t needToWriteModel = 0;
 
-    const int inputFormat = par.inputFormat;
+    // cannot be const for compatibility with older compilers/openmp and omp shared
+    int inputFormat = par.inputFormat;
 
     // Process tar files!
     for(size_t i = 0; i < tarFiles.size(); i++) {
@@ -367,7 +368,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
 #endif
 
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -517,7 +518,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -572,7 +573,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -626,7 +627,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
