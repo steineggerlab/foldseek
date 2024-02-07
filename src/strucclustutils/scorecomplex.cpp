@@ -456,7 +456,7 @@ private:
             SORT_SERIAL(neighbors.begin(), neighbors.end());
             finalClusters.insert(neighbors);
         }
-        finishDBSCAN();
+        return finishDBSCAN();
     }
 
 //    void fillDistMap() {
