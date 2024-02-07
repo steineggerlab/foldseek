@@ -338,7 +338,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     bool needsReorderingAtTheEnd = false;
     size_t needToWriteModel = 0;
 
-    const int inputFormat = par.inputFormat;
+    // cannot be const for compatibility with older compilers/openmp and omp shared
+    int inputFormat = par.inputFormat;
 
     // Process tar files!
     for(size_t i = 0; i < tarFiles.size(); i++) {

@@ -357,7 +357,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "Alphafold/UniProt",
                 "AlphaFold UniProt Protein Structure Database (including C-alpha, ~700GB download, ~950GB extracted).",
-                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "Varadi et al. AlphaFold Protein Structure Database in 2024: providing structure coverage for over 214 million protein sequences. Nucleic Acids Research, (2024)",
                 "https://alphafold.ebi.ac.uk/",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
@@ -365,7 +365,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "Alphafold/UniProt50-minimal",
                 "AlphaFold UniProt Protein Structure Database clustered with MMseqs2 at 50% sequence identity and 90% bidrectional coverage (representative only).",
-                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "Varadi et al. AlphaFold Protein Structure Database in 2024: providing structure coverage for over 214 million protein sequences. Nucleic Acids Research, (2024)",
                 "https://alphafold.ebi.ac.uk/",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
@@ -373,7 +373,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "Alphafold/UniProt50",
                 "AlphaFold UniProt Protein Structure Database clustered with MMseqs2 at 50% sequence identity and 90% bidrectional coverage.",
-                "Jumper et al. Highly accurate protein structure prediction with AlphaFold. Nature, (2021)",
+                "Varadi et al. AlphaFold Protein Structure Database in 2024: providing structure coverage for over 214 million protein sequences. Nucleic Acids Research, (2024)",
                 "https://alphafold.ebi.ac.uk/",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
@@ -397,7 +397,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "ESMAtlas30",
                 "ESM Metagenomic Atlas clustered at 30% sequence identity.",
-                "Lin et al. Evolutionary-scale prediction of atomic level protein structure with a language model. bioRxiv, (2022)",
+                "Lin et al. Evolutionary-scale prediction of atomic-level protein structure with a language model. Science, (2023)",
                 "https://esmatlas.com",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
