@@ -430,7 +430,7 @@ private:
             dbFoundChainKeys.clear();
             neighborsWithDist.emplace_back(i, 0.0);
             ChainToChainAln &prevAln = searchResult.alnVec[i];
-            for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
+            for (size_t j = 0; j < searchResult.alnVec.size(); j++) {
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
                 neighborsWithDist.emplace_back(j, dist);
