@@ -327,10 +327,10 @@ public:
     unsigned int getAlnClusters() {
         // rbh filter
         filterAlnsByRBH();
+        fillDistMap();
         // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= idealClusterSize)
             return checkClusteringNecessity();
-//        fillDistMap();
 //        return runDBSCAN();
         return getNearestNeighbors();
     }
@@ -350,7 +350,7 @@ private:
     std::vector<NeighborsWithDist> neighborsWithDist;
     std::set<unsigned int> qFoundChainKeys;
     std::set<unsigned int> dbFoundChainKeys;
-//    distMap_t distMap;
+    distMap_t distMap;
 //    std::vector<cluster_t> currClusters;
     std::set<cluster_t> finalClusters;
     std::map<unsigned int, float> qBestBitScore;
@@ -428,11 +428,13 @@ private:
             neighborsWithDist.clear();
             qFoundChainKeys.clear();
             dbFoundChainKeys.clear();
-            neighborsWithDist.emplace_back(i, 0.0);
+//            neighborsWithDist.emplace_back(i, 0.0);
             ChainToChainAln &prevAln = searchResult.alnVec[i];
+//            for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
             for (size_t j = 0; j < searchResult.alnVec.size(); j++) {
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
+//                dist = i == j ? 0.0 : distMap[{std::min(i, j), std::max(i, j)}];
                 neighborsWithDist.emplace_back(j, dist);
             }
             SORT_SERIAL(neighborsWithDist.begin(), neighborsWithDist.end(), compareNeighborWithDist);
@@ -460,19 +462,19 @@ private:
         return finishDBSCAN();
     }
 
-//    void fillDistMap() {
-//        float dist;
-//        distMap.clear();
-//        for (size_t i=0; i < searchResult.alnVec.size(); i++) {
-//            ChainToChainAln &prevAln = searchResult.alnVec[i];
-//            for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
-//                ChainToChainAln &currAln = searchResult.alnVec[j];
-//                dist = prevAln.getDistance(currAln);
+    void fillDistMap() {
+        float dist;
+        distMap.clear();
+        for (size_t i=0; i < searchResult.alnVec.size(); i++) {
+            ChainToChainAln &prevAln = searchResult.alnVec[i];
+            for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
+                ChainToChainAln &currAln = searchResult.alnVec[j];
+                dist = prevAln.getDistance(currAln);
 //                maxDist = std::max(maxDist, dist);
-//                distMap.insert({{i,j}, dist});
-//            }
-//        }
-//    }
+                distMap.insert({{i,j}, dist});
+            }
+        }
+    }
 
 //    void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
 //        neighborVec.clear();
@@ -523,7 +525,6 @@ private:
             neighbors.clear();
             if (searchResult.alnVec.size() < NOT_SINGLE_CHAIN)
                 finishDBSCAN();
-//            fillDistMap();
 //            return runDBSCAN();
             return getNearestNeighbors();
         }
