@@ -123,17 +123,22 @@ struct SearchResult {
     void filterAlnVec(double minAlignedQueryChainRatio) {
         if (dbResidueLen == 0)
             alnVec.clear();
+
         if (alnVec.empty() || minAlignedQueryChainRatio==0)
             return;
+
         ChainToChainAln &firstAln = alnVec[0];
         unsigned int minAlignedQueryChainNum = qChainKeys.size() * minAlignedQueryChainRatio;
         unsigned int qChainCount = 1;
         unsigned int qPrevChainKey = firstAln.qChain.chainKey;
+
         for (auto &aln : alnVec) {
             if (aln.qChain.chainKey == qPrevChainKey)
                 continue;
+
             qPrevChainKey = aln.qChain.chainKey;
-            if (++qChainCount >= minAlignedQueryChainNum) return;
+            if (++qChainCount >= minAlignedQueryChainNum)
+                return;
         }
         alnVec.clear();
     }
@@ -207,6 +212,7 @@ struct Assignment {
         dbCaZVec.insert(dbCaZVec.end(), aln.dbChain.caVecZ.begin(), aln.dbChain.caVecZ.end());
         resultToWriteLines.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
     }
+
     void reset() {
         matches = 0;
         qCaXVec.clear();
@@ -321,11 +327,10 @@ public:
     unsigned int getAlnClusters() {
         // rbh filter
         filterAlnsByRBH();
-        fillDistMap();
         // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= idealClusterSize)
             return checkClusteringNecessity();
-
+        fillDistMap();
         return runDBSCAN();
     }
 
@@ -341,6 +346,7 @@ private:
     unsigned int minClusterSize;
     std::vector<unsigned int> neighbors;
     std::vector<unsigned int> neighborsOfCurrNeighbor;
+    std::vector<NeighborsWithDist> neighborsWithDist;
     std::set<unsigned int> qFoundChainKeys;
     std::set<unsigned int> dbFoundChainKeys;
     distMap_t distMap;
@@ -348,11 +354,12 @@ private:
     std::set<cluster_t> finalClusters;
     std::map<unsigned int, float> qBestBitScore;
     std::map<unsigned int, float> dbBestBitScore;
-    std::vector<NeighborsWithDist> neighborsWithDist;
 
     unsigned int runDBSCAN() {
         initializeAlnLabels();
-        if (eps >= maxDist) return finishDBSCAN();
+        if (eps >= maxDist)
+            return finishDBSCAN();
+
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0)
@@ -364,10 +371,8 @@ private:
 
             centerAln.label = ++cLabel;
             unsigned int neighborIdx = 0;
-
             while (neighborIdx < neighbors.size()) {
                 unsigned int neighborAlnIdx = neighbors[neighborIdx++];
-
                 if (centerAlnIdx == neighborAlnIdx)
                     continue;
 
@@ -433,12 +438,16 @@ private:
         neighborVec.clear();
         neighborVec.emplace_back(centerIdx);
         for (size_t neighborIdx = 0; neighborIdx < searchResult.alnVec.size(); neighborIdx++) {
+
             if (neighborIdx == centerIdx)
                 continue;
+
             if ((centerIdx < neighborIdx ? distMap[{centerIdx, neighborIdx}] : distMap[{neighborIdx, centerIdx}]) >= eps)
                 continue;
+
             neighborVec.emplace_back(neighborIdx);
         }
+//        return;
     }
 
     void initializeAlnLabels() {
@@ -474,7 +483,7 @@ private:
             neighbors.clear();
             if (searchResult.alnVec.size() < MULTIPLE_CHAIN)
                 finishDBSCAN();
-
+            fillDistMap();
             return runDBSCAN();
         }
         prevMaxClusterSize = neighbors.size();
@@ -628,6 +637,7 @@ public:
             paredSearchResult.standardize();
             if (!paredSearchResult.alnVec.empty())
                 searchResults.emplace_back(paredSearchResult);
+
             paredSearchResult.alnVec.clear();
             currDbComplexId = aln.dbChain.complexId;
             currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
@@ -656,7 +666,9 @@ public:
         if (currLabel == UNCLUSTERED) return;
         assignment = Assignment(searchResult.qResidueLen, searchResult.dbResidueLen);
         for (auto &currAln: searchResult.alnVec) {
-            if (currAln.label == UNCLUSTERED) continue;
+            if (currAln.label == UNCLUSTERED)
+                continue;
+
             if (currAln.label != currLabel) {
                 assignment.getTmScore(*tmAligner);
                 assignment.updateResultToWriteLines();
@@ -704,7 +716,9 @@ private:
         for (auto qChainKey: qChainKeys) {
             size_t id = q3diDbr->sequenceReader->getId(qChainKey);
             // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY) return 0;
+            if (id == NOT_AVAILABLE_CHAIN_KEY)
+                return 0;
+
             qResidueLen += q3diDbr->sequenceReader->getSeqLen(id);
         }
         return qResidueLen;
@@ -715,7 +729,9 @@ private:
         for (auto dbChainKey: dbChainKeys) {
             size_t id = t3diDbr->sequenceReader->getId(dbChainKey);
             // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY) return 0;
+            if (id == NOT_AVAILABLE_CHAIN_KEY)
+                return 0;
+
             dbResidueLen += t3diDbr->sequenceReader->getSeqLen(id);
         }
         return dbResidueLen;
@@ -743,22 +759,22 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     std::string t3DiDbrName =  StructureUtil::getIndexWithSuffix(par.db2, "_ss");
     bool is3DiIdx = Parameters::isEqualDbtype(FileUtil::parseDbType(t3DiDbrName.c_str()), Parameters::DBTYPE_INDEX_DB);
     IndexReader t3DiDbr(
-        is3DiIdx ? t3DiDbrName : par.db2,
-        par.threads,
-        needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-        touch ? IndexReader::PRELOAD_INDEX : 0,
-        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-        needSrc ? "_seq_ss" : "_ss"
+            is3DiIdx ? t3DiDbrName : par.db2,
+            par.threads,
+            needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            needSrc ? "_seq_ss" : "_ss"
     );
     IndexReader tCaDbr(
-        par.db2,
-        par.threads,
-        needSrc
+            par.db2,
+            par.threads,
+            needSrc
             ? IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB2)
             : IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
-        touch ? IndexReader::PRELOAD_INDEX : 0,
-        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-        needSrc ? "_seq_ca" : "_ca"
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            needSrc ? "_seq_ca" : "_ca"
     );
     IndexReader* q3DiDbr = NULL;
     IndexReader* qCaDbr = NULL;
@@ -769,18 +785,18 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         qCaDbr = &tCaDbr;
     } else {
         q3DiDbr = new IndexReader(
-            StructureUtil::getIndexWithSuffix(par.db1, "_ss"),
-            par.threads, IndexReader::SEQUENCES,
-            touch ? IndexReader::PRELOAD_INDEX : 0,
-            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA
+                StructureUtil::getIndexWithSuffix(par.db1, "_ss"),
+                par.threads, IndexReader::SEQUENCES,
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA
         );
         qCaDbr = new IndexReader(
-            par.db1,
-            par.threads,
-            IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
-            touch ? IndexReader::PRELOAD_INDEX : 0,
-            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-            "_ca"
+                par.db1,
+                par.threads,
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                "_ca"
         );
     }
 
