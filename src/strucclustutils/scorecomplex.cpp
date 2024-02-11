@@ -327,10 +327,11 @@ public:
     unsigned int getAlnClusters() {
         // rbh filter
         filterAlnsByRBH();
+        fillDistMap();
         // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= idealClusterSize)
             return checkClusteringNecessity();
-        fillDistMap();
+
         return runDBSCAN();
     }
 
@@ -483,7 +484,7 @@ private:
             neighbors.clear();
             if (searchResult.alnVec.size() < MULTIPLE_CHAIN)
                 finishDBSCAN();
-            fillDistMap();
+
             return runDBSCAN();
         }
         prevMaxClusterSize = neighbors.size();
