@@ -16,7 +16,7 @@ const float DEF_BIT_SCORE = -1.0;
 const int UNINITIALIZED = 0;
 const float LEARNING_RATE = 0.1;
 const float DEFAULT_EPS = 0.1;
-const unsigned int MULTIPLE_CHAIN = 2;
+const unsigned int MULTIPLE_CHAINED_COMPOLEX = 2;
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;

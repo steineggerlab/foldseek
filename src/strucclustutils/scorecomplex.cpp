@@ -482,7 +482,7 @@ private:
         }
         if (checkChainRedundancy()) {
             neighbors.clear();
-            if (searchResult.alnVec.size() < MULTIPLE_CHAIN)
+            if (searchResult.alnVec.size() < MULTIPLE_CHAINED_COMPOLEX)
                 finishDBSCAN();
 
             return runDBSCAN();
@@ -649,7 +649,7 @@ public:
         currAlns.clear();
         paredSearchResult.filterAlnVec(minAssignedChainsRatio);
         paredSearchResult.standardize();
-        if (!paredSearchResult.alnVec.empty()) // && currDbChainKeys.size() > 1
+        if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPOLEX)
             searchResults.emplace_back(paredSearchResult);
 
         paredSearchResult.alnVec.clear();
@@ -833,7 +833,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (qChainKeys.size() < MULTIPLE_CHAIN)
+            if (qChainKeys.size() < MULTIPLE_CHAINED_COMPOLEX)
                 continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
