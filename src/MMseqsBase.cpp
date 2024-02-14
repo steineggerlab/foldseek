@@ -39,9 +39,9 @@ std::vector<Command> baseCommands = {
                 "Slower, sensitive clustering",
                 "mmseqs easy-cluster examples/DB.fasta result tmp\n"
                 "# Cluster output\n"
-                "#  - result_rep_seq.fasta: Representatives\n"
-                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
-                "#  - result_cluster.tsv:   Adjacency list\n\n"
+                "#  - result_rep_seq.fasta:  Representatives\n"
+                "#  - result_all_seqs.fasta: FASTA-like per cluster\n"
+                "#  - result_cluster.tsv:    Adjacency list\n\n"
                 "# Important parameter: --min-seq-id, --cov-mode and -c \n"
                 "#                  --cov-mode \n"
                 "#                  0    1    2\n"
@@ -62,9 +62,9 @@ std::vector<Command> baseCommands = {
                 "Fast linear time cluster, less sensitive clustering",
                 "mmseqs easy-linclust examples/DB.fasta result tmp\n\n"
                 "# Linclust output\n"
-                "#  - result_rep_seq.fasta: Representatives\n"
-                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
-                "#  - result_cluster.tsv:   Adjecency list\n\n"
+                "#  - result_rep_seq.fasta:  Representatives\n"
+                "#  - result_all_seqs.fasta: FASTA-like per cluster\n"
+                "#  - result_cluster.tsv:    Adjecency list\n\n"
                 "# Important parameter: --min-seq-id, --cov-mode and -c \n"
                 "#                  --cov-mode \n"
                 "#                  0    1    2\n"
@@ -130,6 +130,13 @@ std::vector<Command> baseCommands = {
                 "<i:fastaFile1[.gz|.bz2]> ... <i:fastaFileN[.gz|.bz2]>|<i:stdin> <o:sequenceDB>",
                 CITATION_MMSEQS2, {{"fast[a|q]File[.gz|bz2]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
+        {"makepaddedseqdb",               makepaddedseqdb,              &par.onlyverbosity,              COMMAND_HIDDEN,
+                "Generate a padded sequence DB",
+                "Generate a padded sequence DB",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:sequenceDB> <o:sequenceDB>",
+                CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                          {"sequenceIndexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
         {"appenddbtoindex",      appenddbtoindex,      &par.appenddbtoindex,      COMMAND_HIDDEN,
                 NULL,
                 NULL,
@@ -137,7 +144,7 @@ std::vector<Command> baseCommands = {
                 "<i:DB1> ... <i:DBN> <o:DB>",
                 CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::allDb },
                                    {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
-       {"indexdb",               indexdb,              &par.indexdb,              COMMAND_HIDDEN,
+        {"indexdb",               indexdb,              &par.indexdb,              COMMAND_HIDDEN,
                 NULL,
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
