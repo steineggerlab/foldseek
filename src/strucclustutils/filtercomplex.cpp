@@ -86,8 +86,8 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
 #endif
         Matcher::result_t res;
         std::vector<ScoreComplexResult> localComplexResults;
-#pragma omp for schedule(dynamic, 10) nowait
         std::map<unsigned int, unsigned int> tComplexLength;
+#pragma omp for schedule(dynamic, 10) nowait
         for (size_t tComplexIdx = 0; tComplexIdx < tComplexIdVec.size(); tComplexIdx++) {
             unsigned int tComplexId = tComplexIdVec[tComplexIdx];
             std::vector<unsigned int> &tChainKeys = tComplexIdToChainKeyMap[tComplexId];
@@ -103,9 +103,10 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                 unsigned int curSeqLen = Util::fast_atoi<unsigned int>(entry[2]);
                 tSeqLen += curSeqLen;
             }
-            tComplexLength[tComplexId] = tSeqLen;
+            tComplexLength.emplace(tComplexId, tSeqLen);
         }
-        tComplexIdToChainKeyMap.clear()
+        tComplexIdToChainKeyMap.clear();
+
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
             progress.updateProgress();
             std::vector<unsigned int> assIdVec;
