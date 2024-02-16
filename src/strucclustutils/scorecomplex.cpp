@@ -477,15 +477,20 @@ public:
     }
 
     void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
+        hasBacktrace = false;
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
-        if (qResLen == 0) return;
+        if (qResLen == 0)
+            return;
+
         paredSearchResult = SearchResult(qChainKeys, qResLen);
         // for each chain from the query Complex
         for (auto qChainKey: qChainKeys) {
             unsigned int qKey = alnDbr.getId(qChainKey);
             if (qKey == NOT_AVAILABLE_CHAIN_KEY) continue;
             char *data = alnDbr.getData(qKey, thread_idx);
-            if (*data == '\0') continue;
+            if (*data == '\0')
+                continue;
+
             qAlnResult = Matcher::parseAlignmentRecord(data);
             size_t qDbId = qCaDbr->sequenceReader->getId(qChainKey);
             char *qCaData = qCaDbr->sequenceReader->getData(qDbId, thread_idx);
@@ -494,6 +499,7 @@ public:
             float *queryCaData = qCoords.read(qCaData, qAlnResult.qLen, qCaLength);
             qChain = Chain(qComplexId, qChainKey);
             tmAligner->initQuery(queryCaData, &queryCaData[qLen], &queryCaData[qLen * 2], NULL, qLen);
+
             // for each alignment from the query chain
             while (*data != '\0') {
                 char dbKeyBuffer[255 + 1];
@@ -501,10 +507,10 @@ public:
                 const auto dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
                 const unsigned int dbComplexId = dbChainKeyToComplexIdLookup.at(dbChainKey);
                 dbAlnResult = Matcher::parseAlignmentRecord(data);
-                if (dbAlnResult.backtrace.empty()) {
-                    Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
-                    EXIT(EXIT_FAILURE);
-                }
+                data = Util::skipLine(data);
+                if (dbAlnResult.backtrace.empty())
+                    continue;
+                hasBacktrace = true;
                 size_t tCaId = tCaDbr->sequenceReader->getId(dbChainKey);
                 char *tCaData = tCaDbr->sequenceReader->getData(tCaId, thread_idx);
                 size_t tCaLength = tCaDbr->sequenceReader->getEntryLen(tCaId);
@@ -515,9 +521,13 @@ public:
                 currAln =  ChainToChainAln(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
                 currAlns.emplace_back(currAln);
                 currAln.free();
-                data = Util::skipLine(data);
             } // while end
         } // for end
+        // When alignments have no backtrace
+        if (!hasBacktrace) {
+            Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
+            EXIT(EXIT_FAILURE);
+        }
 
         if (currAlns.empty())
             return;
@@ -527,6 +537,7 @@ public:
         std::vector<unsigned int> currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
         unsigned int currDbResLen = getDbResidueLength(currDbChainKeys);
         paredSearchResult.resetDbComplex(currDbChainKeys, currDbResLen);
+
         for (auto &aln: currAlns) {
             if (aln.dbChain.complexId == currDbComplexId) {
                 paredSearchResult.alnVec.emplace_back(aln);
@@ -609,6 +620,8 @@ private:
     Assignment assignment;
     SearchResult paredSearchResult;
     std::set<cluster_t> finalClusters;
+    bool hasBacktrace;
+//    const char *entry[255];
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
