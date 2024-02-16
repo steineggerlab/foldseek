@@ -37,6 +37,7 @@ bool checkFilterCriteria(Matcher::result_t &ressum, double seqIdThr, int alnLenT
 */
 bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr) {
     const bool covOK = Util::hasCoverage(covThr, covMode, qcov, dbcov);
+    std::cout<<covThr<<std::endl;
     if (
           covOK
         ) {
@@ -45,21 +46,38 @@ bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr) {
         return false;
     }
 }
+unsigned int getQueryResidueLength( IndexReader &qDbr, std::vector<unsigned int> &qChainKeys) {
+        unsigned int qResidueLen = 0;
+        for (auto qChainKey: qChainKeys) {
+            size_t id = qDbr.sequenceReader->getId(qChainKey);
+            // Not accessible
+            if (id == NOT_AVAILABLE_CHAIN_KEY)
+                return 0;
+            qResidueLen += qDbr.sequenceReader->getSeqLen(id);
+        }
+        return qResidueLen;
+}
+
 int filtercomplex(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
+    if  (par.covThr == false){
+        par.covThr = 0.8;
+    }
     const bool sameDB = par.db1.compare(par.db2) == 0 ? true : false;
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     int dbaccessMode = (DBReader<unsigned int>::USE_INDEX);
     std::map<unsigned int, unsigned int> qKeyToSet;
     std::map<unsigned int, unsigned int> tKeyToSet;
+
     IndexReader qDbr(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
     IndexReader tDbr(par.db2, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     size_t localThreads = 1;
+
 #ifdef OPENMP
-    localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
+    //localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
 #endif
     const bool shouldCompress = par.dbOut == true && par.compressed == true;
     const int dbType = par.dbOut == true ? Parameters::DBTYPE_GENERIC_DB : Parameters::DBTYPE_OMIT_FILE;
@@ -78,55 +96,50 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     qChainKeyToComplexIdMap.clear();
     Debug::Progress progress(qComplexIdVec.size());
     std::vector<ScoreComplexResult> complexResults;
+    std::map<unsigned int, unsigned int> tComplexLength;
+    std::map<unsigned int, unsigned int> qComplexLength;
+
 #pragma omp parallel num_threads(localThreads)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        Matcher::result_t res;
-        std::vector<ScoreComplexResult> localComplexResults;
-        std::map<unsigned int, unsigned int> tComplexLength;
+    Matcher::result_t res;
+    std::vector<ScoreComplexResult> localComplexResults;
 #pragma omp for schedule(dynamic, 10) nowait
         for (size_t tComplexIdx = 0; tComplexIdx < tComplexIdVec.size(); tComplexIdx++) {
             unsigned int tComplexId = tComplexIdVec[tComplexIdx];
             std::vector<unsigned int> &tChainKeys = tComplexIdToChainKeyMap[tComplexId];
-            unsigned int tSeqLen = 0;
-            for (size_t tChainIdx = 0; tChainIdx < tChainKeys.size(); tChainIdx++ ) {
-                unsigned int tChainKey = tChainKeys[tChainIdx];
-                unsigned int tChainDbKey = alnDbr.getId(tChainKey);
-                if (tChainDbKey == NOT_AVAILABLE_CHAIN_KEY) {
-                    continue;
-                }
-                const char *entry[255];
-                size_t columns = Util::getWordsOfLine(tDbr.sequenceReader->getDataByDBKey(tChainKey, thread_idx), entry, 255);
-                unsigned int curSeqLen = Util::fast_atoi<unsigned int>(entry[2]);
-                tSeqLen += curSeqLen;
+            if (tChainKeys.empty()) {
+                continue;
             }
-            tComplexLength.emplace(tComplexId, tSeqLen);
+            unsigned int reslen = getQueryResidueLength(tDbr, tChainKeys);
+            tComplexLength[tComplexId] =reslen;
         }
-        tComplexIdToChainKeyMap.clear();
-
-        for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
-            progress.updateProgress();
-            std::vector<unsigned int> assIdVec;
-            unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
+        for (size_t qComplexIdx = 0; qComplexIdx < qComplexIdVec.size(); qComplexIdx++) {
+            unsigned int qComplexId = qComplexIdVec[qComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
+            if (qChainKeys.empty()) {
+                continue;
+            }
+            unsigned int reslen = getQueryResidueLength(qDbr, qChainKeys);
+            qComplexLength[qComplexId] = reslen;
+        }
+        for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
+            //progress.updateProgress();
             std::map<unsigned int, unsigned int> covSum;
-            unsigned int qSeqLen = 0;
+            unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::map<unsigned int, unsigned int> assIdTodbKey;
+            std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainDbKey = alnDbr.getId(qChainKey);
                 if (qChainDbKey == NOT_AVAILABLE_CHAIN_KEY) {
                     continue;
                 }
-                const char *entry[255];
-                size_t columns = Util::getWordsOfLine(qDbr.sequenceReader->getDataByDBKey(qChainKey, thread_idx), entry, 255);
-                unsigned int curSeqLen = Util::fast_atoi<unsigned int>(entry[2]);
-                qSeqLen += curSeqLen;
                 char *data = alnDbr.getData(qChainDbKey, thread_idx);
-                while (*data != '\0') {
+                while (*data) {
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
                     if (!retComplex.isValid){
                         Debug(Debug::ERROR) << "No scorecomplex result provided";
@@ -134,35 +147,36 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                     }
                     data = Util::skipLine(data);
                     unsigned int assId = retComplex.assId;
-//                    unsigned int compAlnIdx = std::find(assIdVec.begin(), assIdVec.end(), assId) - assIdVec.begin();
                     if (covSum.find(assId) == covSum.end()) {
                         covSum[assId] = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                         assIdTodbKey.emplace(assId, res.dbKey);
                         }
                     else{
-                    covSum[assId] += (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
+                        covSum[assId] += (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                     }
-                } // while end
-            }
-            // assID : alnLen
-            std::string result;
-            for (const auto& pair : covSum){
-                float qcov = static_cast<float>(pair.second) / static_cast<float>(qSeqLen);
-                float dbcov = static_cast<float>(pair.second) / static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]]);
-                if (checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr)){
-                    result += std::to_string(qComplexId)+ "\t"  + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]])+ "\n" ;
                 }
             }
-            // CHECK CRIETERIA HERE
-            // WRITE RESULT here
-            // WRITE TARGET COMPLEX IDS FOR COMPLEX THAT FULLFIL THE CRITERIA
+            std::string result;
+            for (const auto& pair : covSum){
+                float qcov = static_cast<float>(pair.second) / static_cast<float>(qComplexLength[qComplexId]);
+                float dbcov = static_cast<float>(pair.second) / static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]]);
+                if (checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr)){
+                    //result += std::to_string(qComplexId)+ "\t"  + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(qcov)+ "\t" + std::to_string(dbcov)+ "\n" ;
+                    result += std::to_string(qComplexId)+ "\t"  + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\n" ;
+                }
+            }
             resultWriter.writeData(result.c_str(), result.length(), qComplexId, 0, isDb, isDb);
-        } // for end
-    } // MP end
+        }
+    }
     resultWriter.close(true);
     if (isDb == false) {
         FileUtil::remove(par.db4Index.c_str());
     }
     alnDbr.close();
+    /*
+    if (alnDbr != NULL) {
+        delete alnDbr;
+    }
+    */
     return EXIT_SUCCESS;
 }
