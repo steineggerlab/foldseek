@@ -298,7 +298,7 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 class NearestNeighborsCluster {
 public:
     NearestNeighborsCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
-        minClusterSize =  std::max(MULTIPLE_CHAINED_COMPOLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
+        minClusterSize =  std::max(MULTIPLE_CHAINED_COMPLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         prevMaxClusterSize = 0;
     }
@@ -405,7 +405,7 @@ private:
         if (checkChainRedundancy()) {
             neighbors.clear();
 
-            if (searchResult.alnVec.size() < MULTIPLE_CHAINED_COMPOLEX)
+            if (searchResult.alnVec.size() < MULTIPLE_CHAINED_COMPLEX)
                 return finishClustering();
 
             return getNearestNeighbors();
@@ -743,7 +743,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (qChainKeys.size() < MULTIPLE_CHAINED_COMPOLEX)
+            if (qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
                 continue;
 
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);

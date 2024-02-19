@@ -13,7 +13,7 @@ const bool CLUSTERED = true;
 const float BIT_SCORE_MARGIN = 0.7;
 const float DEF_BIT_SCORE = -1.0;
 const int UNINITIALIZED = 0;
-const unsigned int MULTIPLE_CHAINED_COMPOLEX = 2;
+const unsigned int MULTIPLE_CHAINED_COMPLEX = 2;
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;
