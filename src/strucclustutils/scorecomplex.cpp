@@ -298,7 +298,7 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 class NearestNeighborsCluster {
 public:
     NearestNeighborsCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
-        minClusterSize =  std::max(NOT_SINGLE_CHAIN, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
+        minClusterSize =  std::max(MULTIPLE_CHAINED_COMPOLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         prevMaxClusterSize = 0;
     }
@@ -405,7 +405,7 @@ private:
         if (checkChainRedundancy()) {
             neighbors.clear();
 
-            if (searchResult.alnVec.size() < NOT_SINGLE_CHAIN)
+            if (searchResult.alnVec.size() < MULTIPLE_CHAINED_COMPOLEX)
                 return finishClustering();
 
             return getNearestNeighbors();
@@ -621,7 +621,6 @@ private:
     SearchResult paredSearchResult;
     std::set<cluster_t> finalClusters;
     bool hasBacktrace;
-//    const char *entry[255];
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
@@ -671,22 +670,22 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     std::string t3DiDbrName =  StructureUtil::getIndexWithSuffix(par.db2, "_ss");
     bool is3DiIdx = Parameters::isEqualDbtype(FileUtil::parseDbType(t3DiDbrName.c_str()), Parameters::DBTYPE_INDEX_DB);
     IndexReader t3DiDbr(
-        is3DiIdx ? t3DiDbrName : par.db2,
-        par.threads,
-        needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-        touch ? IndexReader::PRELOAD_INDEX : 0,
-        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-        needSrc ? "_seq_ss" : "_ss"
+            is3DiIdx ? t3DiDbrName : par.db2,
+            par.threads,
+            needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            needSrc ? "_seq_ss" : "_ss"
     );
     IndexReader tCaDbr(
-        par.db2,
-        par.threads,
-        needSrc
+            par.db2,
+            par.threads,
+            needSrc
             ? IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB2)
             : IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
-        touch ? IndexReader::PRELOAD_INDEX : 0,
-        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-        needSrc ? "_seq_ca" : "_ca"
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            needSrc ? "_seq_ca" : "_ca"
     );
     IndexReader* q3DiDbr = NULL;
     IndexReader* qCaDbr = NULL;
@@ -697,18 +696,18 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         qCaDbr = &tCaDbr;
     } else {
         q3DiDbr = new IndexReader(
-            StructureUtil::getIndexWithSuffix(par.db1, "_ss"),
-            par.threads, IndexReader::SEQUENCES,
-            touch ? IndexReader::PRELOAD_INDEX : 0,
-            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA
+                StructureUtil::getIndexWithSuffix(par.db1, "_ss"),
+                par.threads, IndexReader::SEQUENCES,
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA
         );
         qCaDbr = new IndexReader(
-            par.db1,
-            par.threads,
-            IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
-            touch ? IndexReader::PRELOAD_INDEX : 0,
-            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-            "_ca"
+                par.db1,
+                par.threads,
+                IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
+                touch ? IndexReader::PRELOAD_INDEX : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                "_ca"
         );
     }
 
@@ -744,8 +743,9 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (qChainKeys.size() < NOT_SINGLE_CHAIN)
+            if (qChainKeys.size() < MULTIPLE_CHAINED_COMPOLEX)
                 continue;
+
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
             for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
