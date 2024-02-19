@@ -304,10 +304,8 @@ public:
     }
 
     bool getAlnClusters() {
-        // rbh filter
         filterAlnsByRBH();
         fillDistMap();
-        // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= idealClusterSize)
             return checkClusteringNecessity();
 
@@ -329,6 +327,7 @@ private:
     std::map<unsigned int, float> dbBestBitScore;
 
     bool getNearestNeighbors() {
+        finalClusters.clear();
         for (size_t i=0; i < searchResult.alnVec.size(); i++) {
             neighbors.clear();
             neighborsWithDist.clear();
@@ -407,7 +406,7 @@ private:
             neighbors.clear();
 
             if (searchResult.alnVec.size() < NOT_SINGLE_CHAIN)
-                finishClustering();
+                return finishClustering();
 
             return getNearestNeighbors();
         }
@@ -510,6 +509,7 @@ public:
                 data = Util::skipLine(data);
                 if (dbAlnResult.backtrace.empty())
                     continue;
+
                 hasBacktrace = true;
                 size_t tCaId = tCaDbr->sequenceReader->getId(dbChainKey);
                 char *tCaData = tCaDbr->sequenceReader->getData(tCaId, thread_idx);
@@ -558,7 +558,7 @@ public:
         currAlns.clear();
         paredSearchResult.filterAlnVec(minAssignedChainsRatio);
         paredSearchResult.standardize();
-        if (!paredSearchResult.alnVec.empty()) // && currDbChainKeys.size() > 1
+        if (!paredSearchResult.alnVec.empty()) // && currDbChainKeys.size() >= NOT_SINGLE_CHAIN
             searchResults.emplace_back(paredSearchResult);
 
         paredSearchResult.alnVec.clear();
