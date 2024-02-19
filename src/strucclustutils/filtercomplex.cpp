@@ -69,10 +69,11 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     std::map<unsigned int, unsigned int> qKeyToSet;
     std::map<unsigned int, unsigned int> tKeyToSet;
 
-    IndexReader qDbr(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
+    IndexReader* qDbr;
+    qDbr = new IndexReader(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
     IndexReader* tDbr;
     if (sameDB) {
-        tDbr = &qDbr;
+        tDbr = qDbr;
     }
     else{
         tDbr = new IndexReader(par.db2, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
@@ -128,11 +129,10 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
             if (qChainKeys.empty()) {
                 continue;
             }
-            unsigned int reslen = getQueryResidueLength(qDbr, qChainKeys);
+            unsigned int reslen = getTargetResidueLength(qDbr, qChainKeys);
             qComplexLength[qComplexId] = reslen;
         }
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
-            //progress.updateProgress();
             std::map<unsigned int, unsigned int> qcovSum;
             std::map<unsigned int, unsigned int> tcovSum;
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
@@ -174,12 +174,6 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
             for (const auto& pair : qcovSum){
                 float qcov = static_cast<float>(pair.second) / static_cast<float>(qComplexLength[qComplexId]);
                 float dbcov = static_cast<float>(tcovSum[pair.first]) / static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]]);                
-                 
-                 /*
-                if (checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr)){
-                    result += std::to_string(qComplexId)+ "\t"  + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(qcov)+ "\t" + std::to_string(dbcov)+ "\t" + std::to_string(pair.first)+ "\n" ;
-                    
-                }*/
                 if (!checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr)){
                     keysToDelete.push_back(pair.first);
                 }
@@ -219,10 +213,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
 
             for (const auto& pair : qcovSum){
                 if (std::find(selectedAssIDs.begin(), selectedAssIDs.end(), pair.first) != selectedAssIDs.end()){
-                    float qcov = static_cast<float>(pair.second) / static_cast<float>(qComplexLength[qComplexId]);
-                    float dbcov = static_cast<float>(tcovSum[pair.first]) / static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]]);                
-                    result += std::to_string(qComplexId)+ "\t"  + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(qcov)+ "\t" + std::to_string(dbcov)+ "\t" + std::to_string(pair.first)+ "\n" ;
-                    //result += std::to_string(qComplexId)+ "\t"  + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\n" ;
+                    result += std::to_string(qComplexId)+ "\t"  + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]])+ "\n" ;
                 }
             }
             resultWriter.writeData(result.c_str(), result.length(), qComplexId, 0, isDb, isDb);
@@ -233,6 +224,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
         FileUtil::remove(par.db4Index.c_str());
     }
     alnDbr.close();
+    delete qDbr;
     if (sameDB == false) {
         delete tDbr;
     }
