@@ -352,12 +352,14 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 Vec3 n_atom  = {NAN, NAN, NAN};
                 Vec3 c_atom  = {NAN, NAN, NAN};
                 float ca_atom_bfactor;
+                bool hasCA = false;
                 for (gemmi::Atom &atom : res.atoms) {
                     if (atom.name == "CA") {
                         ca_atom.x = atom.pos.x;
                         ca_atom.y = atom.pos.y;
                         ca_atom.z = atom.pos.z;
                         ca_atom_bfactor = atom.b_iso;
+                        hasCA = true;
                     } else if (atom.name == "CB") {
                         cb_atom.x = atom.pos.x;
                         cb_atom.y = atom.pos.y;
@@ -371,6 +373,9 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                         c_atom.y = atom.pos.y;
                         c_atom.z = atom.pos.z;
                     }
+                }
+                if(hasCA == false){
+                    continue;
                 }
                 ca_bfactor.push_back(ca_atom_bfactor);
                 ca.push_back(ca_atom);
