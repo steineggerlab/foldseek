@@ -27,6 +27,7 @@ bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr) {
         return false;
     }
 }
+
 unsigned int getQueryResidueLength( IndexReader& qDbr, std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
         for (auto qChainKey: qChainKeys) {
@@ -38,6 +39,7 @@ unsigned int getQueryResidueLength( IndexReader& qDbr, std::vector<unsigned int>
         }
         return qResidueLen;
 }
+
 unsigned int getTargetResidueLength( IndexReader *qDbr, std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
         for (auto qChainKey: qChainKeys) {
@@ -49,6 +51,7 @@ unsigned int getTargetResidueLength( IndexReader *qDbr, std::vector<unsigned int
         }
         return qResidueLen;
 }
+
 std::vector<unsigned int> selecHighestCoverage( std::map<unsigned int , std::map<unsigned int, unsigned int>> &covMap){
         std::vector<unsigned int> assIdvec;
         for (auto pair : covMap){
