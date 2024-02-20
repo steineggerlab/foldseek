@@ -5,13 +5,14 @@
 #include "TMaligner.h"
 #include "tmalign/Coordinates.h"
 #include <tmalign/TMalign.h>
+#include <tmalign/basic_fun.h>
 #include "StructureSmithWaterman.h"
 #include "StructureSmithWaterman.h"
 
-TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly)
+TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly, bool computeExactScore)
    : tmAlignFast(tmAlignFast),
      xtm(maxSeqLen), ytm(maxSeqLen), xt(maxSeqLen),
-     r1(maxSeqLen), r2(maxSeqLen){
+     r1(maxSeqLen), r2(maxSeqLen), computeExactScore(computeExactScore){
     affineNW = NULL;
     if(tmScoreOnly == false){
         affineNW = new AffineNeedlemanWunsch(maxSeqLen, 20);
@@ -44,9 +45,10 @@ TMaligner::~TMaligner(){
     delete [] invmap;
 }
 
-TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z, unsigned int targetLen,
-                                                   int qStartPos, int dbStartPos, const std::string &backtrace,
-                                                   int normalizationLen) {
+
+TMaligner::TMscoreResult TMaligner::computeAppoximateTMscore(float *x, float *y, float *z, unsigned int targetLen,
+                                                             int qStartPos, int dbStartPos, const std::string &backtrace,
+                                                             int normalizationLen) {
     int qPos = qStartPos;
     int tPos = dbStartPos;
     std::string cigarString = backtrace;
@@ -99,6 +101,115 @@ TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z,
     TM = std::max(TM, TMalnScore);
     return TMaligner::TMscoreResult(u, t, TM, rmsd0);
 }
+
+
+TMaligner::TMscoreResult TMaligner::computeExactTMscore(float *x, float *y, float *z, unsigned int targetLen,
+                                                        int qStartPos, int dbStartPos, const std::string &backtrace,
+                                                        int normalizationLen) {
+    int qPos = qStartPos;
+    int tPos = dbStartPos;
+    std::string cigarString = backtrace;
+    std::fill(invmap, invmap+queryLen, -1);
+    for (size_t btPos = 0; btPos < cigarString.size(); btPos++) {
+        if (cigarString[btPos] == 'M') {
+            invmap[qPos] = tPos;
+            qPos++;
+            tPos++;
+        }
+        else if (cigarString[btPos] == 'I') {
+            qPos++;
+        }
+        else {
+            tPos++;
+        }
+    }
+
+    memcpy(target_x, x, sizeof(float) * targetLen);
+    memcpy(target_y, y, sizeof(float) * targetLen);
+    memcpy(target_z, z, sizeof(float) * targetLen);
+    Coordinates targetCaCords;
+    targetCaCords.x = target_x;
+    targetCaCords.y = target_y;
+    targetCaCords.z = target_z;
+    Coordinates queryCaCords;
+    queryCaCords.x = query_x;
+    queryCaCords.y = query_y;
+    queryCaCords.z = query_z;
+    float t[3], u[3][3];
+    float D0_MIN;
+
+    float rmsd0 = 0.0;
+    float Lnorm;         //normalization length
+    float score_d8,d0,d0_search,dcu0;//for TMscore search
+    parameter_set4search(normalizationLen,  normalizationLen, D0_MIN, Lnorm,
+                         score_d8, d0, d0_search, dcu0);
+    float local_d0_search = d0_search;
+
+    int simplify_step=1;
+    if (tmAlignFast) {
+        simplify_step=40;
+    }
+    detailed_search_standard(r1, r2, xtm, ytm, xt, targetCaCords, queryCaCords, queryLen,
+                             invmap, t, u, simplify_step, local_d0_search, true, Lnorm, score_d8, d0, mem);
+    BasicFunction::do_rotation(targetCaCords, xt, targetLen, t, u);
+    int k = 0;
+    for(unsigned int j=0; j<queryLen; j++)
+    {
+        int i=invmap[j];
+        if(i>=0)//aligned
+        {
+            float d = sqrt(BasicFunction::dist(xt.x[i], xt.y[i], xt.z[i], queryCaCords.x[j], queryCaCords.y[j],
+                                               queryCaCords.z[j]));
+
+            if (i >= 0 || d <= score_d8) {
+                r1.x[k] = targetCaCords.x[i];
+                r1.y[k] = targetCaCords.y[i];
+                r1.z[k] = targetCaCords.z[i];
+
+                r2.x[k] = queryCaCords.x[j];
+                r2.y[k] = queryCaCords.y[j];
+                r2.z[k] = queryCaCords.z[j];
+
+                xtm.x[k] = targetCaCords.x[i];
+                xtm.y[k] = targetCaCords.y[i];
+                xtm.z[k] = targetCaCords.z[i];
+
+                ytm.x[k] = queryCaCords.x[j];
+                ytm.y[k] = queryCaCords.y[j];
+                ytm.z[k] = queryCaCords.z[j];
+
+                k++;
+            }
+        }
+    }
+    int n_ali8=k;
+
+    KabschFast(r1, r2, n_ali8, &rmsd0, t, u, mem);// rmsd0 is used for final output, only recalculate rmsd0, not t & u
+    rmsd0 = sqrt(rmsd0 / n_ali8);
+
+    simplify_step=1;
+    float Lnorm_0=normalizationLen;
+    //normalized by length of structure A
+    parameter_set4final(Lnorm_0, D0_MIN, Lnorm,
+                        d0, d0_search);
+    local_d0_search = d0_search;
+
+    double TM = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
+                                &rmsd0, local_d0_search, Lnorm, score_d8, d0, mem);
+
+    return TMaligner::TMscoreResult(u, t, TM, rmsd0);
+}
+
+TMaligner::TMscoreResult TMaligner::computeTMscore(float *x, float *y, float *z, unsigned int targetLen,
+                                                             int qStartPos, int dbStartPos, const std::string &backtrace,
+                                                             int normalizationLen) {
+    if(computeExactScore){
+        return computeExactTMscore(x, y, z, targetLen, qStartPos, dbStartPos, backtrace, normalizationLen);
+    } else {
+        return computeAppoximateTMscore(x, y, z, targetLen, qStartPos, dbStartPos, backtrace, normalizationLen);
+    }
+}
+
 
 void TMaligner::initQuery(float *x, float *y, float *z, char * querySeq, unsigned int queryLen){
     memset(querySecStruc, 0, sizeof(char) * queryLen);

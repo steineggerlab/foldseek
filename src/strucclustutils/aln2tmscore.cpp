@@ -15,7 +15,7 @@
 #endif
 
 int aln2tmscore(int argc, const char **argv, const Command& command) {
-    Parameters& par = Parameters::getInstance();
+    LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     // never allow deletions
@@ -64,7 +64,7 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
         std::string resultsStr;
         resultsStr.reserve(10 * 1024);
 
-        TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false, true);
+        TMaligner tmaln(std::max(qdbr.getMaxSeqLen() + 1,tdbr->getMaxSeqLen() + 1), false, true, par.exactTMscore);
         Coordinate16 qcoords;
         Coordinate16 tcoords;
 

@@ -19,6 +19,7 @@ LocalParameters::LocalParameters() :
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_WRITE_MAPPING(PARAM_WRITE_MAPPING_ID, "--write-mapping", "Write mapping file", "write _mapping file containing mapping from internal id to taxonomic identifier", typeid(int), (void *) &writeMapping, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
+        PARAM_EXACT_TMSCORE(PARAM_EXACT_TMSCORE_ID,"--exact-tmscore", "Exact TMscore","turn on fast exact TMscore (slow), default is approximate" ,typeid(int), (void *) &exactTMscore, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
         PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "minimum percentage of assigned chains out of all query chains > thr [0,100] %", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$"),
@@ -86,6 +87,8 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_THREADS);
     structurecreatedb.push_back(&PARAM_V);
 
+    convertalignments.push_back(&PARAM_EXACT_TMSCORE);
+
     createindex.push_back(&PARAM_INDEX_EXCLUDE);
 
     // tmalign
@@ -103,6 +106,7 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
 
+    structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
     structurerescorediagonal.push_back(&PARAM_LDDT_THRESHOLD);
     structurerescorediagonal.push_back(&PARAM_ALIGNMENT_TYPE);
@@ -112,6 +116,7 @@ LocalParameters::LocalParameters() :
     structurealign.push_back(&PARAM_LDDT_THRESHOLD);
     structurealign.push_back(&PARAM_SORT_BY_STRUCTURE_BITS);
     structurealign.push_back(&PARAM_ALIGNMENT_TYPE);
+    structurealign.push_back(&PARAM_EXACT_TMSCORE);
     structurealign = combineList(structurealign, align);
 //    tmalign.push_back(&PARAM_GAP_OPEN);
 //    tmalign.push_back(&PARAM_GAP_EXTEND);
@@ -205,6 +210,7 @@ LocalParameters::LocalParameters() :
     chainNameMode = 0;
     writeMapping = 0;
     tmAlignFast = 1;
+    exactTMscore = 0;
     gapOpen = 10;
     gapExtend = 1;
     nsample = 5000;
