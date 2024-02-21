@@ -6,11 +6,12 @@
 #include "Util.h"
 #include "Debug.h"
 
-#include "complexcluster.sh.h"
+#include "easycomplexcluster.sh.h"
 
-namespace structure{
-#include "easycluster.sh.h"
-}
+// namespace structure{
+// #include "easycluster.sh.h"
+// #include "LocalCommandDeclarations.h"
+// }
 
 int easycomplexcluster(int argc, const char **argv, const Command &command) {
     // LocalParameters &par = LocalParameters::getLocalInstance();
@@ -118,4 +119,5 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
     // // Should never get here
     // assert(false);
     // return EXIT_FAILURE;
+    return 0;
 }
