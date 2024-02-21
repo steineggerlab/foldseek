@@ -32,19 +32,19 @@ abspath() {
 buildCmplDb() {
     touch "${2}"
     awk -F"\t" 'BEGIN {OFFSET=0}
-        FNR==NR{chain_len[$1]=#3;next}
+        FNR==NR{chain_len[$1]=$3;next}
         {
-            if !)_3 in off_arr) {
+            if (!($3 in off_arr)) {
                 off_arr[$3]=OFFSET
             }
-            cmpl_len[$3]=chain_len[$1];OFFSET+=chain_len[$1]
+            cmpl_len[$3]+=chain_len[$1];OFFSET+=chain_len[$1]
         }
         END {
             for (cmpl in off_arr) {
                 print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
             }
         }' "${1}.index" "${1}.lookup" > "${2}.index"
-    ln -s "$(abspath "${1}")" "${2}.1"
+    ln -s "$(abspath "${1}")" "${2}"
     cp "${1}.dbtype" "${2}.dbtype"
 }
 
@@ -117,14 +117,53 @@ if notExists "${TMP_PATH}/clu.dbtype"; then
         || fail "Clustering died"
 fi
 
+# DOING : make tsv file
+if notExists "${TMP_PATH}/cluster.tsv"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "$2" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
+        || fail "Convert Alignments died"
+fi
+
+# FIXME : make rep_seq.fasta, and how ?
+if notExists "${TMP_PATH}/rep_seq.fasta"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" result2repseq "${INPUT}" "$2" "${TMP_PATH}/clu_rep" ${RESULT2REPSEQ_PAR} \
+            || fail "Result2repseq  died"
+
+    # shellcheck disable=SC2086
+    "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/clu_rep" "${TMP_PATH}/rep_seq.fasta" --use-fasta-header ${VERBOSITY_PAR} \
+            || fail "result2flat died"
+fi
+
+# FIXME : make all_seq.fasta, and how ?
+if notExists "${TMP_PATH}/all_seqs.fasta"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" createseqfiledb "${INPUT}" "$2" "${TMP_PATH}/clu_seqs" ${THREADS_PAR} \
+            || fail "Result2repseq  died"
+
+    # shellcheck disable=SC2086
+    "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/clu_seqs" "${TMP_PATH}/all_seqs.fasta" ${VERBOSITY_PAR} \
+            || fail "result2flat died"
+fi
+
+mv "${TMP_PATH}/all_seqs.fasta"  "${RESULTS}_all_seqs.fasta"
+mv "${TMP_PATH}/rep_seq.fasta"  "${RESULTS}_rep_seq.fasta"
+mv "${TMP_PATH}/cluster.tsv"  "${RESULTS}_cluster.tsv"
+
 # DOING : remove tmp
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/clu_seqs" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/clu_rep" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "$2" ${VERBOSITY_PAR}
     if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
     fi
     rm -rf "${TMP_PATH}/search_tmp"
-    rm -f "${TMP_PATH}/complexcluster.sh"
+    rm -f "${TMP_PATH}/easycomplexcluster.sh"
 fi
