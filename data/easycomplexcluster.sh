@@ -12,6 +12,42 @@ exists() {
 	[ -f "$1" ]
 }
 
+abspath() {
+    if [ -d "$1" ]; then
+        (cd "$1"; pwd)
+    elif [ -f "$1" ]; then
+        if [ -z "${1##*/*}" ]; then
+            echo "$(cd "${1%/*}"; pwd)/${1##*/}"
+        else
+            echo "$(pwd)/$1"
+        fi
+    elif [ -d "$(dirname "$1")" ]; then
+        echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    fi
+}
+
+# Shift initial DB to complexDB using soft-linking
+# $1: input db
+# $2: output db
+buildCmplDb() {
+    touch "${2}"
+    awk -F"\t" 'BEGIN {OFFSET=0}
+        FNR==NR{chain_len[$1]=#3;next}
+        {
+            if !)_3 in off_arr) {
+                off_arr[$3]=OFFSET
+            }
+            cmpl_len[$3]=chain_len[$1];OFFSET+=chain_len[$1]
+        }
+        END {
+            for (cmpl in off_arr) {
+                print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
+            }
+        }' "${1}.index" "${1}.lookup" > "${2}.index"
+    ln -s "$(abspath "${1}")" "${2}.1"
+    cp "${1}.dbtype" "${2}.dbtype"
+}
+
 # check number of input variables
 [ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmpDir>" && exit 1;
 # check if files exist
@@ -68,23 +104,11 @@ if notExists "${TMP_PATH}/complex_filt"; then
         || fail "FilterComplex died"
 fi
 
-# FIXME : twickDB w/ awk -> db also need to be changed?
+# FIXME : softlink source to complexDB
+if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
+    buildCmplDb "${SOURCE}" "${TMP_PATH}/cmpl_db"
+fi
 INPUT="${TMP_PATH}/cmpl_db"
-awk -F"\t" '
-    BEGIN {OFFSET=0}
-    NR==FNR {chain_len[$1]=$3;next}
-    {
-        if !($3 in off_arr) {
-            off_arr[$3]=OFFSET
-        }
-        cmpl_len[$3]=chain_len[$1];OFFSET+=chain_len[$1]
-    }
-    END {
-        for (cmpl in off_arr) {
-            print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
-        }
-}' "${SOURCE}.index" "${SOURCE}.lookup" > "${TMP_PATH}/cmpl_db.index"
-
 
 # FIXME : clust
 if notExists "${TMP_PATH}/clu.dbtype"; then
