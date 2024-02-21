@@ -90,6 +90,8 @@ public:
     std::vector<MMseqsParameter *> compressca;
     std::vector<MMseqsParameter *> scorecomplex;
     std::vector<MMseqsParameter *> filtercomplex;
+    std::vector<MMseqsParameter *> complexclusterworkflow;
+    std::vector<MMseqsParameter *> easycomplexclusterworkflow;
     std::vector<MMseqsParameter *> complexsearchworkflow;
     std::vector<MMseqsParameter *> easyscomplexsearchworkflow;
     std::vector<MMseqsParameter *> createcomplexreport;

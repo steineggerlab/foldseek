@@ -195,6 +195,13 @@ LocalParameters::LocalParameters() :
     easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, createcomplexreport);
     easyscomplexsearchworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
 
+    //complexclusterworkflow
+    complexclusterworkflow  = combineList(complexsearchworkflow, filtercomplex);
+    complexclusterworkflow  = combineList(complexclusterworkflow, clust);
+
+    //easycomplexclusterworkflow
+    easycomplexclusterworkflow = combineList(structurecreatedb, complexclusterworkflow);
+    
     // expandcomplex
     expandcomplex.push_back(&PARAM_THREADS);
     expandcomplex.push_back(&PARAM_V);
