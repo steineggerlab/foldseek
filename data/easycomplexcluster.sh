@@ -12,42 +12,6 @@ exists() {
 	[ -f "$1" ]
 }
 
-abspath() {
-    if [ -d "$1" ]; then
-        (cd "$1"; pwd)
-    elif [ -f "$1" ]; then
-        if [ -z "${1##*/*}" ]; then
-            echo "$(cd "${1%/*}"; pwd)/${1##*/}"
-        else
-            echo "$(pwd)/$1"
-        fi
-    elif [ -d "$(dirname "$1")" ]; then
-        echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
-    fi
-}
-
-# Shift initial DB to complexDB using soft-linking
-# $1: input db
-# $2: output db
-buildCmplDb() {
-    touch "${2}"
-    awk -F"\t" 'BEGIN {OFFSET=0}
-        FNR==NR{chain_len[$1]=$3;next}
-        {
-            if (!($3 in off_arr)) {
-                off_arr[$3]=OFFSET
-            }
-            cmpl_len[$3]+=chain_len[$1];OFFSET+=chain_len[$1]
-        }
-        END {
-            for (cmpl in off_arr) {
-                print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
-            }
-        }' "${1}.index" "${1}.lookup" > "${2}.index"
-    ln -s "$(abspath "${1}")" "${2}"
-    cp "${1}.dbtype" "${2}.dbtype"
-}
-
 # check number of input variables
 [ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmpDir>" && exit 1;
 # check if files exist
@@ -68,52 +32,26 @@ if notExists "${INPUT}.dbtype"; then
     fi
 fi
 
-# DOING : search
-if notExists "${TMP_PATH}/result.dbtype"; then
+# DOING : complexsearch
+if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" search "${INPUT}" "${INPUT}" "${TMP_PATH}/result" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
-        || fail "Search died"
+    "$MMSEQS" complexsearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
+        || fail "ComplexSearch died"
 fi
-COMPDB="${TMP_PATH}/result"
+COMPDB="${TMP_PATH}/complexsearch_tmp"
 
-# FIX : expandcomplex ?
-if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
-    if notExists "${TMP_PATH}/result_expand_pref.dbtype"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" expandcomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/result" "${TMP_PATH}/result_expand_pref" ${THREADS_PAR} \
-            || fail "Expandcomplex died"
-    fi
-    if notExists "${TMP_PATH}/result_expand_aligned.dbtype"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" $COMPLEX_ALIGNMENT_ALGO "${INPUT}" "${INPUT}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned" ${COMPLEX_ALIGN_PAR} \
-            || fail $COMPLEX_ALIGNMENT_ALGO "died"
-    fi
-    COMPDB="${TMP_PATH}/result_expand_aligned"
-fi
-# DOING : scorecomplex
-if notExists "${TMP_PATH}/result_complex.dbtype"; then
-    # shellcheck disable=SC2086
-    $MMSEQS scorecomplex "${INPUT}" "${INPUT}" "${COMPTDB}" "${TMP_PATH}/result_complex" ${SCORECOMPLEX_PAR} \
-        || fail "ScoreComplex died"
-fi
-
-# DOING : filtercomplex
-if notExists "${TMP_PATH}/complex_filt"; then
-    # shellcheck disable=SC2086
-    $MMSEQS filtercomplex "${INPUT}" "${INPUT}" "${COMPDB}" "${TMP_PATH}/result_cmplfilt" ${FILTERCOMPLEX_PAR} \
+# DOING : call complexcluster or filtercomplex+awk
+# TODO : maybe save filtercomplex result file to sub-dir of TMP_PATH
+if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
+    $MMSEQS "${FILTER_MODULE} "${INPUT}" "${INPUT}" "${COMPDB}" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
         || fail "FilterComplex died"
 fi
-
-# FIXME : softlink source to complexDB
-if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
-    buildCmplDb "${SOURCE}" "${TMP_PATH}/cmpl_db"
-fi
-INPUT="${TMP_PATH}/cmpl_db"
+INPUT="${TMP_PATH}/cmpl"
 
 # FIXME : clust
 if notExists "${TMP_PATH}/clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" clust "${INPUT}" "${TMP_PATH}/result_cmplfilt" "$2" ${CLUSTER_PAR} \
+    "$MMSEQS" clust "${INPUT}" "${TMP_PATH}/complex_filt" "{TMP_PATH}/$2" ${CLUSTER_PAR} \
         || fail "Clustering died"
 fi
 
@@ -125,6 +63,7 @@ if notExists "${TMP_PATH}/cluster.tsv"; then
 fi
 
 # FIXME : make rep_seq.fasta, and how ?
+# TODO: figure out how to represent complex sequences as a single fasta entry?
 if notExists "${TMP_PATH}/rep_seq.fasta"; then
     # shellcheck disable=SC2086
     "$MMSEQS" result2repseq "${INPUT}" "$2" "${TMP_PATH}/clu_rep" ${RESULT2REPSEQ_PAR} \
@@ -150,20 +89,18 @@ mv "${TMP_PATH}/all_seqs.fasta"  "${RESULTS}_all_seqs.fasta"
 mv "${TMP_PATH}/rep_seq.fasta"  "${RESULTS}_rep_seq.fasta"
 mv "${TMP_PATH}/cluster.tsv"  "${RESULTS}_cluster.tsv"
 
-# DOING : remove tmp
+# TODO : remove tmp -> tide up and organize
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
+    "$MMSEQS" rmdb "${TMP_PATH}/input" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/input_h" ${VERBOSITY}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/clu_rep" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "$2" ${VERBOSITY_PAR}
-    if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
-    fi
-    rm -rf "${TMP_PATH}/search_tmp"
+    rm -rf "${TMP_PATH}/complexsearch_tmp"
     rm -f "${TMP_PATH}/easycomplexcluster.sh"
 fi
