@@ -275,7 +275,7 @@ std::vector<Command> foldseekCommands = {
                                            {"clustDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb }
                                    }
         },
-        {"complexcluster", complexcluster, &localPar.complexclusterworkflow, COMMAND_EASY,
+        {"complexcluster", complexcluster, &localPar.complexclusterworkflow, COMMAND_MAIN, //TODO: maybe COMMAND_MAIN?
                 "Complex level cluster",
                 "foldseek complexcluster  queryDB result tmp\n"
                 "# Cluster output\n"
