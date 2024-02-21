@@ -8,7 +8,7 @@ set(workflow_source_files
         workflow/EasyStructureCluster.cpp
         workflow/EasyComplexSearch.cpp
         workflow/ComplexSearch.cpp
-        workflow/EasyComplexCluster.cpp
         workflow/ComplexCluster.cpp
+        workflow/EasyComplexCluster.cpp
         PARENT_SCOPE
         )

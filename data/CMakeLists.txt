@@ -15,8 +15,8 @@ set(COMPILED_RESOURCES
         vendor.js.zst
         complexsearch.sh
         easycomplexsearch.sh
-        easycomplexcluster.sh
         complexcluster.sh
+        easycomplexcluster.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

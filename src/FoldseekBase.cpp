@@ -275,6 +275,48 @@ std::vector<Command> foldseekCommands = {
                                            {"clustDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb }
                                    }
         },
+        {"complexcluster", complexcluster, &localPar.complexclusterworkflow, COMMAND_EASY,
+                "Complex level cluster",
+                "foldseek complexcluster  queryDB result tmp\n"
+                "# Cluster output\n"
+                "# Important parameter: --cov-mode and -c \n"
+                "#                  --cov-mode \n"
+                "#                  0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "#        -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n"
+                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:queryDB> <o:clusterDB> <tmpDir>",
+                CITATION_FOLDSEEK, {
+                                        {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                                        {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
+                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
+                }
+        },     
+        {"easy-complexcluster", easycomplexcluster, &localPar.easycomplexclusterworkflow, COMMAND_EASY,
+                "Complex level cluster",
+                "foldseek easy-complexcluster  example/1tim.pdb.gz result tmp\n"
+                "# Cluster output\n"
+                "FIX ME"
+                "#  - result_rep_seq.fasta: Representatives\n"
+                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
+                "#  - result_cluster.tsv:   Adjacency list\n\n"
+                "# Important parameter: --cov-mode and -c \n"
+                "#                  --cov-mode \n"
+                "#                  0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "#        -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n"
+                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:clusterDB> <tmpDir>",
+                CITATION_FOLDSEEK, {
+                                        {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
+                                        {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
+                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
+                }
+        },     
         {"complexsearch", complexsearch, &localPar.complexsearchworkflow, COMMAND_MAIN,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
