@@ -275,22 +275,6 @@ bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const Cha
     return false;
 }
 
-bool compareChainToChainAlnByClusterLabel(const ChainToChainAln &first, const ChainToChainAln &second) {
-    if (first.label < second.label)
-        return true;
-    if (first.label > second.label)
-        return false;
-    if (first.qChain.chainKey < second.qChain.chainKey)
-        return true;
-    if (first.qChain.chainKey > second.qChain.chainKey)
-        return false;
-    if (first.dbChain.chainKey < second.dbChain.chainKey)
-        return true;
-    if (first.dbChain.chainKey > second.dbChain.chainKey)
-        return false;
-    return false;
-}
-
 bool compareAssignment(const Assignment &first, const Assignment &second) {
     if (first.qTmScore > second.qTmScore)
         return true;
@@ -313,18 +297,17 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 
 class DBSCANCluster {
 public:
-    DBSCANCluster(SearchResult &searchResult, double minCov) : searchResult(searchResult) {
+    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
         minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
-        finalClusters.clear();
         prevMaxClusterSize = 0;
         maxDist = 0;
         eps = DEFAULT_EPS;
         learningRate = LEARNING_RATE;
     }
 
-    unsigned int getAlnClusters() {
+    bool getAlnClusters() {
         // rbh filter
         filterAlnsByRBH();
         fillDistMap();
@@ -352,11 +335,11 @@ private:
     std::set<unsigned int> dbFoundChainKeys;
     distMap_t distMap;
     std::vector<cluster_t> currClusters;
-    std::set<cluster_t> finalClusters;
+    std::set<cluster_t> &finalClusters;
     std::map<unsigned int, float> qBestBitScore;
     std::map<unsigned int, float> dbBestBitScore;
 
-    unsigned int runDBSCAN() {
+    bool runDBSCAN() {
         initializeAlnLabels();
         if (eps >= maxDist)
             return finishDBSCAN();
@@ -388,6 +371,8 @@ private:
                         neighbors.emplace_back(neighbor);
                 }
             }
+            if (neighbors.size() > 3)
+                std::cout << std::endl;
 
             if (neighbors.size() > idealClusterSize || checkChainRedundancy())
                 getNearestNeighbors(centerAlnIdx);
@@ -453,9 +438,9 @@ private:
 
     void initializeAlnLabels() {
         for (auto &aln : searchResult.alnVec) {
-            aln.label = UNCLUSTERED;
+            aln.label = INITIALIZED_LABEL;
         }
-        cLabel = UNCLUSTERED;
+        cLabel = INITIALIZED_LABEL;
         maxClusterSize = 0;
         currClusters.clear();
     }
@@ -476,14 +461,14 @@ private:
 
     unsigned int checkClusteringNecessity() {
         if (searchResult.alnVec.empty())
-            return UNCLUSTERED;
+            return false;
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
         if (checkChainRedundancy()) {
             neighbors.clear();
             if (searchResult.alnVec.size() < MULTIPLE_CHAINED_COMPLEX)
-                finishDBSCAN();
+                return finishDBSCAN();
 
             return runDBSCAN();
         }
@@ -492,18 +477,15 @@ private:
         return finishDBSCAN();
     }
 
-    unsigned int finishDBSCAN() {
+    bool finishDBSCAN() {
         initializeAlnLabels();
-        if (prevMaxClusterSize < minClusterSize || finalClusters.empty()) return UNCLUSTERED;
-        cLabel = CLUSTERED;
-        for (auto &cluster: finalClusters) {
-            for (auto alnIdx: cluster) {
-                searchResult.alnVec[alnIdx].label = cLabel;
-            }
-            cLabel++;
-        }
-        SORT_SERIAL(searchResult.alnVec.begin(), searchResult.alnVec.end(), compareChainToChainAlnByClusterLabel);
-        return CLUSTERED;
+        neighbors.clear();
+        neighborsOfCurrNeighbor.clear();
+        neighborsWithDist.clear();
+        qFoundChainKeys.clear();
+        dbFoundChainKeys.clear();
+        distMap.clear();
+        return !finalClusters.empty() && prevMaxClusterSize >= minClusterSize;
     }
 
     void filterAlnsByRBH() {
@@ -511,7 +493,8 @@ private:
         float bitScore;
         unsigned int qKey;
         unsigned int dbKey;
-
+        qBestBitScore.clear();
+        dbBestBitScore.clear();
         for (auto qChainKey: searchResult.qChainKeys) {
             qBestBitScore.insert({qChainKey, DEF_BIT_SCORE});
         }
@@ -538,6 +521,8 @@ private:
             }
             searchResult.alnVec.erase(searchResult.alnVec.begin() + alnIdx);
         }
+        qBestBitScore.clear();
+        dbBestBitScore.clear();
 //        return;
     }
 
@@ -618,7 +603,6 @@ public:
                 currAln =  ChainToChainAln(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
                 currAlns.emplace_back(currAln);
                 currAln.free();
-//                data = Util::skipLine(data);
             } // while end
         } // for end
         // When alignments have no backtrace
@@ -664,28 +648,23 @@ public:
             maxResLen = std::max(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size()) * maxChainLen;
             tmAligner = new TMaligner(maxResLen, false, true, false);
         }
-        unsigned int currLabel;
-        DBSCANCluster dbscanCluster = DBSCANCluster(searchResult,  minAssignedChainsRatio);
-        currLabel = dbscanCluster.getAlnClusters();
-        if (currLabel == UNCLUSTERED) return;
-        assignment = Assignment(searchResult.qResidueLen, searchResult.dbResidueLen);
-        for (auto &currAln: searchResult.alnVec) {
-            if (currAln.label == UNCLUSTERED)
-                continue;
-
-            if (currAln.label != currLabel) {
-                assignment.getTmScore(*tmAligner);
-                assignment.updateResultToWriteLines();
-                assignments.emplace_back(assignment);
-                assignment.reset();
-                currLabel = currAln.label;
-            }
-            assignment.appendChainToChainAln(currAln);
+        finalClusters.clear();
+        DBSCANCluster dbscanCluster = DBSCANCluster(searchResult, finalClusters, minAssignedChainsRatio);
+        if (!dbscanCluster.getAlnClusters()) {
+            finalClusters.clear();
+            return;
         }
-        assignment.getTmScore(*tmAligner);
-        assignment.updateResultToWriteLines();
-        assignments.emplace_back(assignment);
-        assignment.reset();
+        assignment = Assignment(searchResult.qResidueLen, searchResult.dbResidueLen);
+        for (auto &cluster: finalClusters) {
+            for (auto alnIdx: cluster) {
+                assignment.appendChainToChainAln(searchResult.alnVec[alnIdx]);
+            }
+            assignment.getTmScore(*tmAligner);
+            assignment.updateResultToWriteLines();
+            assignments.emplace_back(assignment);
+            assignment.reset();
+        }
+        finalClusters.clear();
     }
 
     void free() {
@@ -714,6 +693,7 @@ private:
     std::vector<ChainToChainAln> currAlns;
     Assignment assignment;
     SearchResult paredSearchResult;
+    std::set<cluster_t> finalClusters;
     bool hasBacktrace;
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
