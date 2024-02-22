@@ -104,6 +104,7 @@ public:
     PARAMETER(PARAM_CHAIN_NAME_MODE)
     PARAMETER(PARAM_WRITE_MAPPING)
     PARAMETER(PARAM_TMALIGN_FAST)
+    PARAMETER(PARAM_EXACT_TMSCORE)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
@@ -125,6 +126,7 @@ public:
     int chainNameMode;
     bool writeMapping;
     int tmAlignFast;
+    int exactTMscore;
     int nsample;
     int coordStoreMode;
     float minAssignedChainsThreshold;

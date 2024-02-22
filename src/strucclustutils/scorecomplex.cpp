@@ -575,7 +575,7 @@ public:
         q3diDbr = qDbr3Di;
         t3diDbr = tDbr3Di;
         maxResLen = maxChainLen * 2;
-        tmAligner = new TMaligner(maxResLen, false, true);
+        tmAligner = new TMaligner(maxResLen, false, true, false);
     }
 
     void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
@@ -662,7 +662,7 @@ public:
         if (maxResLen < maxChainLen * std::min(searchResult.qChainKeys.size(),  searchResult.dbChainKeys.size())) {
             delete tmAligner;
             maxResLen = std::max(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size()) * maxChainLen;
-            tmAligner = new TMaligner(maxResLen, false, true);
+            tmAligner = new TMaligner(maxResLen, false, true, false);
         }
         unsigned int currLabel;
         DBSCANCluster dbscanCluster = DBSCANCluster(searchResult,  minAssignedChainsRatio);
