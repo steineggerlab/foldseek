@@ -28,6 +28,7 @@ struct Chain {
 struct ChainToChainAln {
     ChainToChainAln() {}
     ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), bitScore((float)alnResult.score) {
+//    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), bitScore((float)tmResult.tmscore) {
         alnLength = alnResult.alnLength;
         matches = 0;
         unsigned int qPos = alnResult.qStartPos;
@@ -371,9 +372,6 @@ private:
                         neighbors.emplace_back(neighbor);
                 }
             }
-            if (neighbors.size() > 3)
-                std::cout << std::endl;
-
             if (neighbors.size() > idealClusterSize || checkChainRedundancy())
                 getNearestNeighbors(centerAlnIdx);
 
