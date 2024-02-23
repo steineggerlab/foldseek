@@ -27,8 +27,8 @@ struct Chain {
 
 struct ChainToChainAln {
     ChainToChainAln() {}
-    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), bitScore((float)alnResult.score) {
-//    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), bitScore((float)tmResult.tmscore) {
+//    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), bitScore((float)alnResult.score) {
+    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), bitScore((float)tmResult.tmscore) {
         alnLength = alnResult.alnLength;
         matches = 0;
         unsigned int qPos = alnResult.qStartPos;
@@ -483,6 +483,7 @@ private:
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
         distMap.clear();
+        //     Nothing Found             Too Small Clusters
         return !finalClusters.empty() && prevMaxClusterSize >= minClusterSize;
     }
 
@@ -528,12 +529,10 @@ private:
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
         neighborsWithDist.clear();
-
+        neighborsWithDist.emplace_back(centerIdx, 0.0);
         for (auto neighborIdx: neighbors) {
-            if (neighborIdx == centerIdx) {
-                neighborsWithDist.emplace_back(neighborIdx, 0.0);
+            if (neighborIdx == centerIdx)
                 continue;
-            }
             neighborsWithDist.emplace_back(neighborIdx, neighborIdx < centerIdx ? distMap[{neighborIdx, centerIdx}] : distMap[{centerIdx, neighborIdx}]);
         }
         SORT_SERIAL(neighborsWithDist.begin(), neighborsWithDist.end(), compareNeighborWithDist);
@@ -572,7 +571,6 @@ public:
             if (qKey == NOT_AVAILABLE_CHAIN_KEY) continue;
             char *data = alnDbr.getData(qKey, thread_idx);
             if (*data == '\0') continue;
-
             qAlnResult = Matcher::parseAlignmentRecord(data);
             size_t qDbId = qCaDbr->sequenceReader->getId(qChainKey);
             char *qCaData = qCaDbr->sequenceReader->getData(qDbId, thread_idx);
@@ -597,7 +595,7 @@ public:
                 unsigned int & dbLen = dbAlnResult.dbLen;
                 float *targetCaData = tCoords.read(tCaData, dbLen, tCaLength);
                 dbChain = Chain(dbComplexId, dbChainKey);
-                tmResult = tmAligner->computeTMscore(targetCaData,&targetCaData[dbLen],&targetCaData[dbLen * 2],dbLen,dbAlnResult.qStartPos,dbAlnResult.dbStartPos,Matcher::uncompressAlignment(dbAlnResult.backtrace),dbAlnResult.alnLength);
+                tmResult = tmAligner->computeTMscore(targetCaData,&targetCaData[dbLen],&targetCaData[dbLen * 2],dbLen,dbAlnResult.qStartPos,dbAlnResult.dbStartPos,Matcher::uncompressAlignment(dbAlnResult.backtrace),dbAlnResult.qLen);
                 currAln =  ChainToChainAln(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
                 currAlns.emplace_back(currAln);
                 currAln.free();
@@ -608,7 +606,8 @@ public:
             Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
             EXIT(EXIT_FAILURE);
         }
-        if (currAlns.empty()) return;
+        if (currAlns.empty())
+            return;
         SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAlnByDbComplexId);
         unsigned int currDbComplexId = currAlns[0].dbChain.complexId;
         std::vector<unsigned int> currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
