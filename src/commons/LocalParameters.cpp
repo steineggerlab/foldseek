@@ -28,7 +28,8 @@ LocalParameters::LocalParameters() :
         PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_COMPLEX_REPORT_MODE(PARAM_COMPLEX_REPORT_MODE_ID, "--complex-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &complexReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
-        PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$")
+        PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
+        PARAM_FILTER_COVERAGE_THRESHOLD(PARAM_FILTER_COVERAGE_THRESHOLD_ID, "--filter-coverage", "Filtercomplex Coverage Threshold", "filters alignments with complex coverage > thr [0.0,1.0]",typeid(float), (void *) &filterCovThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -177,7 +178,7 @@ LocalParameters::LocalParameters() :
     //filtercomplex
     filtercomplex.push_back(&PARAM_V);
     filtercomplex.push_back(&PARAM_THREADS);
-    filtercomplex.push_back(&PARAM_C);
+    filtercomplex.push_back(&PARAM_FILTER_COVERAGE_THRESHOLD);
     filtercomplex.push_back(&PARAM_COV_MODE);
 
     // createcomplexreport
@@ -225,6 +226,7 @@ LocalParameters::LocalParameters() :
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     clusterSearch = 0;
     inputFormat = 0; // auto detect
+    filterCovThr = 0.8;
     fileInclude = ".*";
     fileExclude = "^$";
     dbSuffixList = "_h,_ss,_ca";
