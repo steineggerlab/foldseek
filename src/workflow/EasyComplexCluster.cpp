@@ -8,116 +8,89 @@
 
 #include "easycomplexcluster.sh.h"
 
-// namespace structure{
-// #include "easycluster.sh.h"
-// #include "LocalCommandDeclarations.h"
-// }
+void setEasyComplexClusterDefaults(Parameters *p) {
+    //TODO
+    // p->PARAM_C = 0.8;
+    p->PARAM_COV_MODE = 1;
+    p->sensitivity = 4;
+    p->PARAM_CLUSTER_MODE = Parameters::GREEDY;
+    p->evalThr = 0.001;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+    p->gapOpen = 10;
+    p->gapExtend = 1;
+}
 
+void setEasyComplexClusterMustPassAlong(Parameters *p) {
+    // p->PARAM_C.wasSet = true;
+    p->PARAM_E.wasSet = true;
+    p->PARAM_ALIGNMENT_MODE.wasSet = true;
+    p->PARAM_S.wasSet = true;
+    par->addBacktrace = true;
+    par->PARAM_ADD_BACKTRACE.wasSet = true;
+
+}
 int easycomplexcluster(int argc, const char **argv, const Command &command) {
-    // LocalParameters &par = LocalParameters::getLocalInstance();
-    // par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_ZDROP.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_OVERLAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // for (size_t i = 0; i < par.createdb.size(); i++){
-    //     par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // }
+    LocalParameters &par = LocalParameters::getLocalInstance();
+    par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_ZDROP.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_OVERLAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    // par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    for (size_t i = 0; i < par.createdb.size(); i++){
+        par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    }
+    par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    // par.parseParameters(argc, argv, command, false, Parameters::PARSE_VARIADIC, 0);
-    // if(par.PARAM_FORMAT_OUTPUT.wasSet == false){
-    //     par.outfmt = "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid";
-    // }
-    // par.addBacktrace = true;
-    // par.PARAM_ADD_BACKTRACE.wasSet = true;
-    // par.printParameters(command.cmd, argc, argv, *command.params);
+    setEasyComplexSearchDefaults(&par);
+    par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    setEasyComplexClusterMustPassAlong(&par);
 
-    // bool needBacktrace = false;
-    // bool needTaxonomy = false;
-    // bool needTaxonomyMapping = false;
-    // bool needLookup = false;
-    // {
-    //     bool needSequenceDB = false;
-    //     bool needFullHeaders = false;
-    //     bool needSource = false;
-    //     bool needQCA = false;
-    //     bool needTCA = false;
-    //     bool needTMalign = false;
-    //     bool needLDDT = false;
-    //     LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-    //                                      needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT);
-    // }
+    if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM ||
+        par.formatAlignmentMode == LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED  ||
+        par.greedyBestHits) {
+        needBacktrace = true;
+    }
+    if (needBacktrace) {
+        Debug(Debug::INFO) << "Alignment backtraces will be computed, since they were requested by output format.\n";
+        par.addBacktrace = true;
+        par.PARAM_ADD_BACKTRACE.wasSet = true;
+    }
 
-    // if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM ||
-    //     par.formatAlignmentMode == LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED  ||
-    //     par.greedyBestHits) {
-    //     needBacktrace = true;
-    // }
-    // if (needBacktrace) {
-    //     Debug(Debug::INFO) << "Alignment backtraces will be computed, since they were requested by output format.\n";
-    //     par.addBacktrace = true;
-    //     par.PARAM_ADD_BACKTRACE.wasSet = true;
-    // }
-    // if (needLookup) {
-    //     par.writeLookup = true;
-    // }
+    std::string tmpDir = par.filenames.back();
+    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
+    if (par.reuseLatest) {
+        hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
+    }
+    tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
+    par.filenames.pop_back();
 
-    // std::string tmpDir = par.filenames.back();
-    // std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
-    // if (par.reuseLatest) {
-    //     hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
-    // }
-    // tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
-    // par.filenames.pop_back();
-    // CommandCaller cmd;
-    // if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
-    //     cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "tmalign");
-    //     cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.tmalign).c_str());
-    // }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
-    //     cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "structurealign");
-    //     cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.structurealign).c_str());
-    // }
+    cmd.addVariable("TMP_PATH", tmpDir.c_str());
+    cmd.addVariable("RESULT", par.filenames.back().c_str());
+    par.filenames.pop_back();
+    cmd.addVariable("INPUT", par.filenames.back().c_str());
+    par.filenames.pop_back();
 
-    // switch(par.prefMode){
-    //     case LocalParameters::PREF_MODE_KMER:
-    //         cmd.addVariable("PREFMODE", "KMER");
-    //         break;
-    //     case LocalParameters::PREF_MODE_UNGAPPED:
-    //         cmd.addVariable("PREFMODE", "UNGAPPED");
-    //         break;
-    //     case LocalParameters::PREF_MODE_EXHAUSTIVE:
-    //         cmd.addVariable("PREFMODE", "EXHAUSTIVE");
-    //         break;
-    // }
-    // if(par.exhaustiveSearch){
-    //     cmd.addVariable("PREFMODE", "EXHAUSTIVE");
-    // }
-    // cmd.addVariable("NO_REPORT", par.complexReportMode == 0 ? "TRUE" : NULL);
-    // cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    // cmd.addVariable("OUTPUT", par.filenames.back().c_str());
-    // par.filenames.pop_back();
-    // cmd.addVariable("TARGET", par.filenames.back().c_str());
-    // par.filenames.pop_back();
-    // cmd.addVariable("QUERY", par.filenames.back().c_str());
-    // cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
-    // par.filenames.pop_back();
-    // cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    // cmd.addVariable("COMPLEXSEARCH_PAR", par.createParameterString(par.complexsearchworkflow, true).c_str());
-    // cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
-    // cmd.addVariable("REPORT_PAR", par.createParameterString(par.createcomplexreport).c_str());
-    // cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
-    // cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
-    // cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-    // std::string program = tmpDir + "/easycomplexsearch.sh";
-    // FileUtil::writeFile(program, easycomplexsearch_sh, easycomplexsearch_sh_len);
-    // cmd.execProgram(program.c_str(), par.filenames);
-    // // Should never get here
-    // assert(false);
-    // return EXIT_FAILURE;
+    cmd.addVariable("CLUSTER_MODULE", "complexcluster");
+    cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
+    cmd.addVariable("COMPLEXSEARCH_PAR", par.createParameterString(par.complexsearchworkflow).c_str());
+    cmd.addVariable("COMPLEXCLUSTER_PAR", par.createParameterString(par.complexclusterworkflow).c_str());
+    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
+    cmd.addVariable("RESULT2REPSEQ_PAR", par.createParameterString(par.result2repseq).c_str());
+    cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
+
+    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+
+    std::string program = tmpDir + "/easycomplexcluster.sh";
+    FileUtil::writeFile(program, easycomplexcluster_sh, easycomplexcluster_sh_len);
+    cmd.execProgram(program.c_str(), par.filenames);
+
+
+    // Should never get here
+    assert(false);
+    return EXIT_FAILURE;
     return 0;
 }
