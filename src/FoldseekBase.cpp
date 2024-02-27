@@ -263,8 +263,8 @@ std::vector<Command> foldseekCommands = {
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb}
                                    }
         },
-        {"filtercomplex", filtercomplex, &localPar.filtercomplex, COMMAND_HIDDEN,
-                "Filters complexes",
+        {"filtercomplex", filtercomplex, &localPar.filtercomplexworkflow, COMMAND_HIDDEN,
+                "Filters complexes and generates a new complexDB", //FIX: explain about output complexDB+clustDB?
                 "foldseek filtercomplex queryDB targetDB alignmentDB complexDB -c 0.8 --cov-mode 1\n",
                 "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:clustDB>",
@@ -275,25 +275,25 @@ std::vector<Command> foldseekCommands = {
                                            {"clustDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb }
                                    }
         },
-        {"complexcluster", complexcluster, &localPar.complexclusterworkflow, COMMAND_MAIN, //TODO: maybe COMMAND_MAIN?
-                "Complex level cluster",
-                "foldseek complexcluster  queryDB result tmp\n"
-                "# Cluster output\n"
-                "# Important parameter: --cov-mode and -c \n"
-                "#                  --cov-mode \n"
-                "#                  0    1    2\n"
-                "# Q: MAVGTACRPA  60%  IGN  60%\n"
-                "# T: -AVGTAC---  60% 100%  IGN\n"
-                "#        -c 0.7    -    +    -\n"
-                "#        -c 0.6    +    +    +\n\n"
-                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
-                "<i:queryDB> <o:clusterDB> <tmpDir>",
-                CITATION_FOLDSEEK, {
-                                        {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
-                                        {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
-                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
-                }
-        },     
+        // {"complexcluster", complexcluster, &localPar.complexclusterworkflow, COMMAND_MAIN, //TODO: maybe COMMAND_MAIN?
+        //         "Complex level cluster",
+        //         "foldseek complexcluster  queryDB result tmp\n"
+        //         "# Cluster output\n"
+        //         "# Important parameter: --cov-mode and -c \n"
+        //         "#                  --cov-mode \n"
+        //         "#                  0    1    2\n"
+        //         "# Q: MAVGTACRPA  60%  IGN  60%\n"
+        //         "# T: -AVGTAC---  60% 100%  IGN\n"
+        //         "#        -c 0.7    -    +    -\n"
+        //         "#        -c 0.6    +    +    +\n\n"
+        //         "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
+        //         "<i:queryDB> <o:clusterDB> <tmpDir>",
+        //         CITATION_FOLDSEEK, {
+        //                                 {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+        //                                 {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
+        //                                 {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
+        //         }
+        // },     
         {"easy-complexcluster", easycomplexcluster, &localPar.easycomplexclusterworkflow, COMMAND_EASY,
                 "Complex level cluster",
                 "foldseek easy-complexcluster  example/1tim.pdb.gz result tmp\n"
