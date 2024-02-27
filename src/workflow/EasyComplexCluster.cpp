@@ -10,12 +10,12 @@
 
 void setEasyComplexClusterDefaults(Parameters *p) {
     //TODO, parameters for search, filtercomplex, cluster, createresults
-    p->PARAM_C = 0.8;
-    p->PARAM_COV_MODE = 1;
-    p->PARAM_S = 4;
-    p->PARAM_CLUSTER_MODE = Parameters::GREEDY;
-    p->PARAM_E = 0.001;
-    p->PARAM_ALIGNMENT_MODE = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+    p->covThr = 0.8;
+    p->covMode = 1;
+    p->sensitivity = 4;
+    p->clusteringMode = Parameters::GREEDY;
+    p->evalThr = 0.001;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->gapOpen = 10;
     p->gapExtend = 1;
 }
@@ -25,7 +25,7 @@ void setEasyComplexClusterMustPassAlong(Parameters *p) {
     p->PARAM_E.wasSet = true;
     p->PARAM_S.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
-    p->PARAM_ADD_BACKTRACE = true;
+    p->addBacktrace = true;
     p->PARAM_ADD_BACKTRACE.wasSet = true;
 
 }
@@ -54,6 +54,7 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
     tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
     par.filenames.pop_back();
 
+    CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("RESULT", par.filenames.back().c_str());
     par.filenames.pop_back();
