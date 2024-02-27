@@ -43,7 +43,7 @@ COMPDB="${TMP_PATH}/complexsearch_tmp"
 # DOING : call complexcluster or filtercomplex+awk
 # TODO : maybe save filtercomplex result file to sub-dir of TMP_PATH
 if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
-    $MMSEQS "${FILTER_MODULE} "${INPUT}" "${INPUT}" "${COMPDB}" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
+    $MMSEQS "${FILTER_MODULE}" "${INPUT}" "${INPUT}" "${COMPDB}" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
         || fail "FilterComplex died"
 fi
 INPUT="${TMP_PATH}/cmpl"
@@ -51,7 +51,7 @@ INPUT="${TMP_PATH}/cmpl"
 # FIXME : clust
 if notExists "${TMP_PATH}/clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" clust "${INPUT}" "${TMP_PATH}/complex_filt" "{TMP_PATH}/$2" ${CLUSTER_PAR} \
+    "$MMSEQS" clust "${INPUT}" "${TMP_PATH}/complex_filt" "$2" ${CLUSTER_PAR} \
         || fail "Clustering died"
 fi
 
@@ -85,20 +85,22 @@ if notExists "${TMP_PATH}/all_seqs.fasta"; then
             || fail "result2flat died"
 fi
 
-mv "${TMP_PATH}/all_seqs.fasta"  "${RESULTS}_all_seqs.fasta"
-mv "${TMP_PATH}/rep_seq.fasta"  "${RESULTS}_rep_seq.fasta"
-mv "${TMP_PATH}/cluster.tsv"  "${RESULTS}_cluster.tsv"
+mv "${TMP_PATH}/all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
+mv "${TMP_PATH}/rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
+mv "${TMP_PATH}/cluster.tsv"  "${RESULT}_cluster.tsv"
 
 # TODO : remove tmp -> tide up and organize
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input" ${VERBOSITY}
+    "$MMSEQS" rmdb "${TMP_PATH}/input" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input_h" ${VERBOSITY}
+    "$MMSEQS" rmdb "${TMP_PATH}/input_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/clu_rep" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/complex_filt" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "$2" ${VERBOSITY_PAR}
     rm -rf "${TMP_PATH}/complexsearch_tmp"
