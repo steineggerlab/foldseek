@@ -58,7 +58,7 @@ struct ChainToChainAln {
             }
         }
         char buffer[4096];
-        label = 0;
+        label = INITIALIZED_LABEL;
         superposition[0] = tmResult.u[0][0];
         superposition[1] = tmResult.u[0][1];
         superposition[2] = tmResult.u[0][2];
@@ -80,13 +80,13 @@ struct ChainToChainAln {
     unsigned int matches;
     unsigned int alnLength;
     resultToWrite_t resultToWrite;
-    double superposition[12];
+    double superposition[SIZE_OF_SUPERPOSITION_VECTOR];
     unsigned int label;
     float tmScore;
 
     float getDistance(const ChainToChainAln &o) {
         float dist = 0;
-        for (size_t i=0; i<12; i++) {
+        for (size_t i=0; i<SIZE_OF_SUPERPOSITION_VECTOR; i++) {
             dist += std::pow(superposition[i] - o.superposition[i], 2);
         }
         dist = std::sqrt(dist);
@@ -120,62 +120,41 @@ struct SearchResult {
         dbResidueLen = residueLen;
     }
 
-    void filterAlnVec(double minAlignedQueryChainRatio) {
+    void standardize() {
         if (dbResidueLen == 0)
             alnVec.clear();
 
-        if (alnVec.empty() || minAlignedQueryChainRatio==0)
-            return;
-
-        ChainToChainAln &firstAln = alnVec[0];
-        unsigned int minAlignedQueryChainNum = qChainKeys.size() * minAlignedQueryChainRatio;
-        unsigned int qChainCount = 1;
-        unsigned int qPrevChainKey = firstAln.qChain.chainKey;
-
-        for (auto &aln : alnVec) {
-            if (aln.qChain.chainKey == qPrevChainKey)
-                continue;
-
-            qPrevChainKey = aln.qChain.chainKey;
-            if (++qChainCount >= minAlignedQueryChainNum)
-                return;
-        }
-        alnVec.clear();
-    }
-
-    void standardize() {
         if (alnVec.empty())
             return;
 
         double length = alnVec.size();
-        double mean[12] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        double var[12] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        double sd[12] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        double cv[12] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        double mean[SIZE_OF_SUPERPOSITION_VECTOR] = {};
+        double var[SIZE_OF_SUPERPOSITION_VECTOR] = {};
+        double sd[SIZE_OF_SUPERPOSITION_VECTOR] = {};
+        double cv[SIZE_OF_SUPERPOSITION_VECTOR] = {};
 
         for (auto &aln: alnVec) {
-            for (size_t i = 0; i < 12; i++ ) {
+            for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++ ) {
                 mean[i] += aln.superposition[i] / length;
             }
         }
 
         for (auto &aln: alnVec) {
-            for (size_t i = 0; i < 12; i++ ) {
+            for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++ ) {
                 var[i] += std::pow(aln.superposition[i] - mean[i], 2) / length;
             }
         }
 
-        for (size_t i=0; i<12; i++) {
+        for (size_t i=0; i<SIZE_OF_SUPERPOSITION_VECTOR; i++) {
             sd[i] = std::sqrt(var[i]);
             cv[i] = (abs(mean[i]) > TOO_SMALL_MEAN) ? sd[i]/std::abs(mean[i]) : sd[i];
         }
 
         for (auto &aln: alnVec) {
-            for (size_t i = 0; i < 12; i++ ) {
+            for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++ ) {
                 aln.superposition[i] = cv[i] < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean[i]) / sd[i];
             }
         }
-//        return;
     }
 };
 
@@ -397,7 +376,7 @@ private:
             finalClusters.clear();
             prevMaxClusterSize = maxClusterSize;
         }
-
+        SORT_SERIAL(currClusters.begin(), currClusters.end());
         finalClusters.insert(currClusters.begin(), currClusters.end());
         eps += learningRate;
         return runDBSCAN();
@@ -430,7 +409,6 @@ private:
 
             neighborVec.emplace_back(neighborIdx);
         }
-//        return;
     }
 
     void initializeAlnLabels() {
@@ -479,6 +457,8 @@ private:
         neighbors.clear();
         neighborsOfCurrNeighbor.clear();
         neighborsWithDist.clear();
+        qBestTmScore.clear();
+        dbBestTmScore.clear();
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
         distMap.clear();
@@ -493,6 +473,8 @@ private:
         unsigned int dbKey;
         qBestTmScore.clear();
         dbBestTmScore.clear();
+        qFoundChainKeys.clear();
+        dbFoundChainKeys.clear();
         for (auto qChainKey: searchResult.qChainKeys) {
             qBestTmScore.insert({qChainKey, DEF_TM_SCORE});
         }
@@ -510,15 +492,17 @@ private:
             qKey = searchResult.alnVec[alnIdx].qChain.chainKey;
             dbKey = searchResult.alnVec[alnIdx].dbChain.chainKey;
             tmScore = searchResult.alnVec[alnIdx].tmScore;
-            if (tmScore >= std::max(qBestTmScore[qKey], dbBestTmScore[dbKey]) * TM_SCORE_MARGIN) {
-                alnIdx ++;
+            if (tmScore < std::max(qBestTmScore[qKey], dbBestTmScore[dbKey]) * TM_SCORE_MARGIN) {
+                searchResult.alnVec.erase(searchResult.alnVec.begin() + alnIdx);
                 continue;
             }
-            searchResult.alnVec.erase(searchResult.alnVec.begin() + alnIdx);
+            qFoundChainKeys.insert(qKey);
+            dbFoundChainKeys.insert(dbKey);
+            alnIdx ++;
         }
-        qBestTmScore.clear();
-        dbBestTmScore.clear();
-//        return;
+
+        if (qFoundChainKeys.size() < minClusterSize || dbFoundChainKeys.size() < minClusterSize)
+            searchResult.alnVec.clear();
     }
 
     void getNearestNeighbors(unsigned int centerIdx) {
@@ -529,20 +513,17 @@ private:
         for (auto neighborIdx: neighbors) {
             if (neighborIdx == centerIdx)
                 continue;
-            neighborsWithDist.emplace_back(neighborIdx, neighborIdx < centerIdx ? distMap[{neighborIdx, centerIdx}] : distMap[{centerIdx, neighborIdx}]);
+            neighborsWithDist.emplace_back(neighborIdx, distMap[{std::min(centerIdx, neighborIdx), std::max(centerIdx, neighborIdx)}]);
         }
         SORT_SERIAL(neighborsWithDist.begin(), neighborsWithDist.end(), compareNeighborWithDist);
         neighbors.clear();
         for (auto neighborWithDist : neighborsWithDist) {
             if (!qFoundChainKeys.insert(searchResult.alnVec[neighborWithDist.neighbor].qChain.chainKey).second)
                 break;
-
             if (!dbFoundChainKeys.insert(searchResult.alnVec[neighborWithDist.neighbor].dbChain.chainKey).second)
                 break;
-
             neighbors.emplace_back(neighborWithDist.neighbor);
         }
-//        return;
     }
 };
 
@@ -614,7 +595,6 @@ public:
                 paredSearchResult.alnVec.emplace_back(aln);
                 continue;
             }
-            paredSearchResult.filterAlnVec(minAssignedChainsRatio);
             paredSearchResult.standardize();
             if (!paredSearchResult.alnVec.empty())
                 searchResults.emplace_back(paredSearchResult);
@@ -627,7 +607,6 @@ public:
             paredSearchResult.alnVec.emplace_back(aln);
         }
         currAlns.clear();
-        paredSearchResult.filterAlnVec(minAssignedChainsRatio);
         paredSearchResult.standardize();
         if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
             searchResults.emplace_back(paredSearchResult);
