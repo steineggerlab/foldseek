@@ -1,12 +1,12 @@
 #include <cassert>
 
-#include "LocalParameters.h"
 #include "FileUtil.h"
 #include "CommandCaller.h"
 #include "Util.h"
 #include "Debug.h"
+#include "LocalParameters.h"
 
-#include "easycomplexcluster.sh.h"
+#include "complexcluster.sh.h"
 
 void setEasyComplexClusterDefaults(Parameters *p) {
     //TODO, parameters for search, filtercomplex, cluster, createresults
@@ -29,12 +29,14 @@ void setEasyComplexClusterMustPassAlong(Parameters *p) {
     p->PARAM_ADD_BACKTRACE.wasSet = true;
 
 }
-int easycomplexcluster(int argc, const char **argv, const Command &command) {
+int complexcluster(int argc, const char **argv, const Command &command)
+{
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_ACCEPT.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_SEQS.addCategory(MMseqsParameter::COMMAND_EXPERT);
+
     for (size_t i = 0; i < par.createdb.size(); i++){
         par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
@@ -60,11 +62,9 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
 
-    cmd.addVariable("CLUSTER_MODULE", "complexcluster");
-    cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("COMPLEXCLUSTER_PAR", par.createParameterString(par.complexclusterworkflow).c_str());
-    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
-    cmd.addVariable("RESULT2REPSEQ_PAR", par.createParameterString(par.result2repseq).c_str());
+    cmd.addVariable("COMPLEXSEARCH_PAR", par.createParameterString(par.complexsearchworkflow).c_str()); 
+    cmd.addVariable("FILTERCOMPLEX_PAR", par.createParameterString(par.filtercomplexworkflow).c_str());    
+    cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
