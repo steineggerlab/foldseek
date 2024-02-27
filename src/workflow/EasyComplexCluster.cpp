@@ -16,8 +16,8 @@ void setEasyComplexClusterDefaults(Parameters *p) {
     p->PARAM_CLUSTER_MODE = Parameters::GREEDY;
     p->PARAM_E = 0.001;
     p->PARAM_ALIGNMENT_MODE = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
-    p->PARAM_GAP_OPEN = 10;
-    p->PARAM_GAP_EXTEND = 1;
+    p->gapOpen = 10;
+    p->gapExtend = 1;
 }
 
 void setEasyComplexClusterMustPassAlong(Parameters *p) {
@@ -60,7 +60,6 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
 
-    cmd.addVariable("CLUSTER_MODULE", "complexcluster");
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("COMPLEXCLUSTER_PAR", par.createParameterString(par.complexclusterworkflow).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

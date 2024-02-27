@@ -19,6 +19,7 @@ exists() {
 [   -f "$2.dbtype" ] && echo "$2.dbtype already exists!" && exit 1;
 [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "$3";
 
+INPUT="$1"
 # DOING : complexsearch
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
@@ -38,12 +39,12 @@ if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
     buildCmplDb "${INPUT}" "${TMP_PATH}/cmpl_db"
 fi
 
-INPUT2="${TMP_PATH}/cmpl_db"
+INPUTT="${TMP_PATH}/cmpl_db"
 
 # DOING : clust
 if notExists "${RESULT}.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" clust "${INPUT2}" "${RESULT}_filt" "${RESULT}" ${CLUSTER_PAR} \
+    "$MMSEQS" clust "${INPUTT}" "${RESULT}_filt" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
 fi
  

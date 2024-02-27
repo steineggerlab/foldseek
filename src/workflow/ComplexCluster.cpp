@@ -16,8 +16,8 @@ void setEasyComplexClusterDefaults(Parameters *p) {
     p->PARAM_CLUSTER_MODE = Parameters::GREEDY;
     p->PARAM_E = 0.001;
     p->PARAM_ALIGNMENT_MODE = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
-    p->PARAM_GAP_OPEN = 10;
-    p->PARAM_GAP_EXTEND = 1;
+    p->gapOpen = 10;
+    p->gapExtend = 1;
 }
 
 void setEasyComplexClusterMustPassAlong(Parameters *p) {
