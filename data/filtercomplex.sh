@@ -55,20 +55,16 @@ buildCmplDb() {
 [ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
 [ ! -f "$2.dbtype" ] && echo "$2.dbtype not found!" && exit 1;
 [ ! -f "$3.dbtype" ] && echo "$3.dbtype not found!" && exit 1;
-[   -f "$4.dbtype" ] && echo "$4.dbtype exists already!" && exit 1; #FIXME
+[   -f "$4.dbtype" ] && echo "$4.dbtype exists already!" && exit 1;
 
-# TODO : replace TMP_PATH
-
-# DOING : filtercomplex
 if notExists "$4"; then
     # shellcheck disable=SC2086
     $MMSEQS filtercomplex "$1" "$2" "$3" "$4" ${FILTERCOMPLEX_PAR} \
         || fail "FilterComplex died"
 fi
 
-# FIXME : softlink source to complexDB
-if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
-    buildCmplDb "${SOURCE}" "${TMP_PATH}/cmpl_db"
+if notExists "${CMPLDB_PATH}/cmpl_db.dbtype"; then
+    buildCmplDb "${SOURCE}" "${CMPLDB_PATH}/cmpl_db"
 fi
 
-# TODO : remove tmp
+# DONE : remove tmp -> No TMP file generated
