@@ -49,10 +49,10 @@ buildCmplDb() {
 }
 
 # check number of input variables
-# [ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmpDir>" && exit 1;
-# check if files exist
-# [ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
-# [   -f "$2.dbtype" ] && echo "$2.dbtype already exists!" && exit 1;
+[ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmpDir>" && exit 1;
+check if files exist
+[ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
+[   -f "$2.dbtype" ] && echo "$2.dbtype already exists!" && exit 1;
 [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "$3";
 
 INPUT=$1

@@ -8,7 +8,6 @@
 
 #include "easycomplexcluster.sh.h"
 
-// REVIEW: Redundant code with src/workflow/ComplexCluster.cpp
 void setEasyComplexClusterDefaults(Parameters *p) {
     p->removeTmpFiles = true;
 }
@@ -19,7 +18,9 @@ void setEasyComplexClusterMustPassAlong(Parameters *p) {
 
 int easycomplexcluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-
+    for (size_t i = 0; i < par.createdb.size(); i++){
+        par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    }
     par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);

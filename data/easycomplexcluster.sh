@@ -37,7 +37,7 @@ if notExists "${TMP_PATH}/cluster.tsv"; then
         || fail "Convert Alignments died"
 fi
 
-TODO: figure out how to represent complex sequences as a single fasta entry?
+#TODO: figure out how to represent complex sequences as a single fasta entry?
 if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
     # shellcheck disable=SC2086
     "$MMSEQS" result2repseq "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/complex_clu_rep" ${RESULT2REPSEQ_PAR} \
