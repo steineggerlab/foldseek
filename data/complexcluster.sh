@@ -12,6 +12,42 @@ exists() {
 	[ -f "$1" ]
 }
 
+abspath() {
+    if [ -d "$1" ]; then
+        (cd "$1"; pwd)
+    elif [ -f "$1" ]; then
+        if [ -z "${1##*/*}" ]; then
+            echo "$(cd "${1%/*}"; pwd)/${1##*/}"
+        else
+            echo "$(pwd)/$1"
+        fi
+    elif [ -d "$(dirname "$1")" ]; then
+        echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    fi
+}
+
+# Shift initial DB to complexDB using soft-linking
+# $1: input db
+# $2: output db
+buildCmplDb() {
+    touch "${2}"
+    awk -F"\t" 'BEGIN {OFFSET=0}
+        FNR==NR{chain_len[$1]=$3;next}
+        {
+            if (!($3 in off_arr)) {
+                off_arr[$3]=OFFSET
+            }
+            cmpl_len[$3]+=chain_len[$1];OFFSET+=chain_len[$1]
+        }
+        END {
+            for (cmpl in off_arr) {
+                print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
+            }
+        }' "${1}.index" "${1}.lookup" > "${2}.index"
+    ln -s "$(abspath "${1}")" "${2}.0"
+    cp "${1}.dbtype" "${2}.dbtype"
+}
+
 # check number of input variables
 [ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmpDir>" && exit 1;
 # check if files exist
@@ -19,42 +55,34 @@ exists() {
 [   -f "$2.dbtype" ] && echo "$2.dbtype already exists!" && exit 1;
 [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "$3";
 
-INPUT="$1"
-# DOING : complexsearch
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" complexsearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complexsearch_aln" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
+    "$MMSEQS" complexsearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
         || fail "ComplexSearch died"
 fi
 
-# DOING : filtercomplex
-if notExists "${RESULT}_filt.dbtype"; then
+if notExists "complex_db.dbtype"; then
     # shellcheck disable=SC2086
-    $MMSEQS filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complexsearch_aln" "${RESULT}_filt" ${FILTERCOMPLEX_PAR} \
+    $MMSEQS filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
         || fail "FilterComplex died"
+    
+    # build complex db as output
+    buildCmplDb "${INPUT}" "${TMP_PATH}/complex_db"
 fi
+SOURCE=$INPUT
+INPUT="${TMP_PATH}/complex_db"
 
-# DOING : softlink source to complexDB
-if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
-    buildCmplDb "${INPUT}" "${TMP_PATH}/cmpl_db"
-fi
-
-INPUTT="${TMP_PATH}/cmpl_db"
-
-# DOING : clust
 if notExists "${RESULT}.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" clust "${INPUTT}" "${RESULT}_filt" "${RESULT}" ${CLUSTER_PAR} \
+    "$MMSEQS" clust "${INPUT}" "${TMP_PATH}/complex_filt" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
 fi
- 
 
-# DOING: Remove tmp
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${RESULT}_filt" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/complex_filt" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complexsearch_aln" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY_PAR}
     rm -rf "${TMP_PATH}/complexsearch_tmp"
-    rm -f "${TMP_PATH}/easycomplexcluster.sh"
+    rm -f "${TMP_PATH}/complexcluster.sh"
 fi
