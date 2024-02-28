@@ -48,7 +48,7 @@ buildCmplDb() {
     cp "${1}.dbtype" "${2}.dbtype"
 }
 
-[ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "${TMP_PATH}";
+# [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "${TMP_PATH}";
 
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
@@ -58,7 +58,7 @@ fi
 
 if notExists "complex_db.dbtype"; then
     # shellcheck disable=SC2086
-    $MMSEQS filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
+    "$MMSEQS" filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
         || fail "FilterComplex died"
     
     # build complex db as output

@@ -45,7 +45,6 @@ int complexcluster(int argc, const char **argv, const Command &command) {
     // par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     // par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
-\
     setComplexClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setComplexClusterMustPassAlong(&par);

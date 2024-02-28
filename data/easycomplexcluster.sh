@@ -12,11 +12,6 @@ exists() {
 	[ -f "$1" ]
 }
 
-# check number of input variables
-# [ "$#" -ne 3 ] && echo "Please provide <query> <out> <tmpDir>" && exit 1;
-# REVIEW: TMP_DIR was already made by easycomplexcluster.cpp # check if files exist
-# [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "$3";
-
 if notExists "${TMP_PATH}/input.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/input" ${CREATEDB_PAR} \
@@ -24,7 +19,8 @@ if notExists "${TMP_PATH}/input.dbtype"; then
 fi
 
 if notExists "${TMP_PATH}/complex_clust.dbtype"; then
-    $MMSEQS complexcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clust" "${TMP_PATH}" "${COMPLEXCLUSTER_PAR}" \
+    # shellcheck disable=SC2086
+    "$MMSEQS" complexcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clust" "${TMP_PATH}" ${COMPLEXCLUSTER_PAR} \
         || fail "Complexcluster died"
 fi
 

@@ -9,7 +9,7 @@
 #include "easycomplexcluster.sh.h"
 
 void setEasyComplexClusterDefaults(Parameters *p) {
-    p->removeTmpFiles = true;
+    // p->removeTmpFiles = true;
 }
 
 void setEasyComplexClusterMustPassAlong(Parameters *p) {
@@ -25,15 +25,16 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    setEasyComplexClusterDefaults(&par);
+    // setEasyComplexClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    setEasyComplexClusterMustPassAlong(&par);
+    // setEasyComplexClusterMustPassAlong(&par);
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
     if (par.reuseLatest) {
         hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }
+
     tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
     par.filenames.pop_back();
 
@@ -46,7 +47,7 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("COMPLEXCLUSTER_PAR", par.createParameterString(par.complexclusterworkflow, true).c_str());
+    cmd.addVariable("COMPLEXCLUSTER_PAR", par.createParameterString(par.complexclusterworkflow,true).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("RESULT2REPSEQ_PAR", par.createParameterString(par.result2repseq).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
@@ -54,6 +55,7 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
 
     std::string program = tmpDir + "/easycomplexcluster.sh";
     FileUtil::writeFile(program, easycomplexcluster_sh, easycomplexcluster_sh_len);
+
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
