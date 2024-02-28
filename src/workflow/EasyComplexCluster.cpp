@@ -19,20 +19,7 @@ void setEasyComplexClusterMustPassAlong(Parameters *p) {
 
 int easycomplexcluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    // TODO : figure out if commented params needed
-    // par.PARAM_MAX_SEQS.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_ALT_ALIGNMENT.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_ZDROP.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_MAX_ACCEPT.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_S.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    // par.PARAM_INCLUDE_ONLY_EXTENDABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    for (size_t i = 0; i < par.createdb.size(); i++){
-        par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
-    }
+
     par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);

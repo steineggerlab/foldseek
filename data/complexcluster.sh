@@ -58,7 +58,7 @@ buildCmplDb() {
 INPUT=$1
 RESULT=$2
 TMP_PATH=$3
-SOURCE=$INPUT
+# SOURCE=$INPUT
 
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
