@@ -8,33 +8,28 @@
 
 #include "easycomplexcluster.sh.h"
 
+// REVIEW: Redundant code with src/workflow/ComplexCluster.cpp
 void setEasyComplexClusterDefaults(Parameters *p) {
-    //TODO, parameters for search, filtercomplex, cluster, createresults
-    p->covThr = 0.8;
-    p->covMode = 1;
-    p->sensitivity = 4;
-    p->clusteringMode = Parameters::GREEDY;
-    p->evalThr = 0.001;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
-    p->gapOpen = 10;
-    p->gapExtend = 1;
+    p->removeTmpFiles = true;
 }
 
 void setEasyComplexClusterMustPassAlong(Parameters *p) {
-    p->PARAM_C.wasSet = true;
-    p->PARAM_E.wasSet = true;
-    p->PARAM_S.wasSet = true;
-    p->PARAM_ALIGNMENT_MODE.wasSet = true;
-    p->addBacktrace = true;
-    p->PARAM_ADD_BACKTRACE.wasSet = true;
-
+    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
+
 int easycomplexcluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_MAX_ACCEPT.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_MAX_SEQS.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // TODO : figure out if commented params needed
+    // par.PARAM_MAX_SEQS.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_ALT_ALIGNMENT.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_ZDROP.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_MAX_ACCEPT.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_S.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // par.PARAM_INCLUDE_ONLY_EXTENDABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     for (size_t i = 0; i < par.createdb.size(); i++){
         par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
@@ -61,18 +56,17 @@ int easycomplexcluster(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
 
+    cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("COMPLEXCLUSTER_PAR", par.createParameterString(par.complexclusterworkflow).c_str());
+    cmd.addVariable("COMPLEXCLUSTER_PAR", par.createParameterString(par.complexclusterworkflow, true).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("RESULT2REPSEQ_PAR", par.createParameterString(par.result2repseq).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
 
     std::string program = tmpDir + "/easycomplexcluster.sh";
     FileUtil::writeFile(program, easycomplexcluster_sh, easycomplexcluster_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
-
 
     // Should never get here
     assert(false);
