@@ -362,7 +362,7 @@ private:
                 maxClusterSize = neighbors.size();
                 currClusters.clear();
             }
-
+            SORT_SERIAL(neighbors.begin(), neighbors.end());
             currClusters.emplace_back(neighbors);
         }
 
@@ -376,7 +376,6 @@ private:
             finalClusters.clear();
             prevMaxClusterSize = maxClusterSize;
         }
-        SORT_SERIAL(currClusters.begin(), currClusters.end());
         finalClusters.insert(currClusters.begin(), currClusters.end());
         eps += learningRate;
         return runDBSCAN();
