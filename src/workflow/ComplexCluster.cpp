@@ -45,6 +45,7 @@ int complexcluster(int argc, const char **argv, const Command &command) {
     // par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     // par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
+\
     setComplexClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setComplexClusterMustPassAlong(&par);
@@ -58,6 +59,12 @@ int complexcluster(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     CommandCaller cmd;
+    std::cout<<tmpDir.c_str()<<std::endl;
+    cmd.addVariable("TMP_PATH", tmpDir.c_str());
+    cmd.addVariable("RESULT", par.filenames.back().c_str());
+    par.filenames.pop_back();
+    cmd.addVariable("INPUT", par.filenames.back().c_str());
+    par.filenames.pop_back();
 
     cmd.addVariable("COMPLEXSEARCH_PAR", par.createParameterString(par.complexsearchworkflow, true).c_str()); 
     cmd.addVariable("FILTERCOMPLEX_PAR", par.createParameterString(par.filtercomplex).c_str());    

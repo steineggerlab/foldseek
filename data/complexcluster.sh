@@ -48,17 +48,7 @@ buildCmplDb() {
     cp "${1}.dbtype" "${2}.dbtype"
 }
 
-# check number of input variables
-[ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmpDir>" && exit 1;
-check if files exist
-[ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
-[   -f "$2.dbtype" ] && echo "$2.dbtype already exists!" && exit 1;
-[ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "$3";
-
-INPUT=$1
-RESULT=$2
-TMP_PATH=$3
-# SOURCE=$INPUT
+[ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "${TMP_PATH}";
 
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
@@ -75,11 +65,11 @@ if notExists "complex_db.dbtype"; then
     buildCmplDb "${INPUT}" "${TMP_PATH}/complex_db"
 fi
 
-INPUT2="${TMP_PATH}/complex_db"
+COMP="${TMP_PATH}/complex_db"
 
 if notExists "${RESULT}.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" clust "${INPUT2}" "${TMP_PATH}/complex_filt" "${RESULT}" ${CLUSTER_PAR} \
+    "$MMSEQS" clust "${COMP}" "${TMP_PATH}/complex_filt" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
 fi
 
