@@ -198,6 +198,10 @@ LocalParameters::LocalParameters() :
     // complexclusterworkflow
     complexclusterworkflow  = combineList(complexsearchworkflow, filtercomplex);
     complexclusterworkflow  = combineList(complexclusterworkflow, clust);
+<<<<<<< HEAD
+=======
+    complexclusterworkflow.push_back(&PARAM_C);
+>>>>>>> dd34d67058b6873e8cb651339c25d0447762ad7a
 
     //easycomplexclusterworkflow
     easycomplexclusterworkflow = combineList(structurecreatedb, complexclusterworkflow);

@@ -27,7 +27,7 @@ INPUT="${TMP_PATH}/input"
 
 # DOING : complexcluster 
 if notExists "${TMP_PATH}/cmpl_db.dbtype"; then
-    $MMSEQS complexcluster "${INPUT}" "${RESULT}" "${TMP_PATH}" ${COMPLEXCLUSTER_PAR} \
+    $MMSEQS complexcluster "${INPUT}" "${RESULT}" "${TMP_PATH}" "${COMPLEXCLUSTER_PAR}" \
         || fail "Complexcluster died"
 fi
 INPUTT="${TMP_PATH}/cmpl"

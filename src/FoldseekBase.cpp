@@ -263,7 +263,7 @@ std::vector<Command> foldseekCommands = {
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb}
                                    }
         },
-        {"filtercomplex", filtercomplex, &localPar.filtercomplexworkflow, COMMAND_HIDDEN,
+        {"filtercomplex", filtercomplex, &localPar.filtercomplex, COMMAND_HIDDEN,
                 "Filters complexes and generates a new complexDB", //FIX: explain about output complexDB+clustDB?
                 "foldseek filtercomplex queryDB targetDB alignmentDB complexDB -c 0.8 --cov-mode 1\n",
                 "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
