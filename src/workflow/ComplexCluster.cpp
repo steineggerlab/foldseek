@@ -12,11 +12,12 @@ void setComplexClusterDefaults(Parameters *p) {
     p->covThr = 0.8;
     p->covMode = 1;
     p->clusteringMode = Parameters::GREEDY;
+    p->removeTmpFiles = true;
 }
 
 void setComplexClusterMustPassAlong(Parameters *p) {
     p->PARAM_C.wasSet = true;
-
+    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
 int complexcluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
