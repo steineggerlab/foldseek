@@ -128,31 +128,23 @@ struct SearchResult {
             return;
 
         double length = alnVec.size();
-        double mean[SIZE_OF_SUPERPOSITION_VECTOR] = {};
-        double var[SIZE_OF_SUPERPOSITION_VECTOR] = {};
-        double sd[SIZE_OF_SUPERPOSITION_VECTOR] = {};
-        double cv[SIZE_OF_SUPERPOSITION_VECTOR] = {};
-
-        for (auto &aln: alnVec) {
-            for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++ ) {
-                mean[i] += aln.superposition[i] / length;
+        double mean;
+        double var;
+        double sd;
+        double cv;
+        for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++) {
+            mean = 0.0;
+            var = 0.0;
+            for (auto &aln: alnVec) {
+                mean += aln.superposition[i] / length;
             }
-        }
-
-        for (auto &aln: alnVec) {
-            for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++ ) {
-                var[i] += std::pow(aln.superposition[i] - mean[i], 2) / length;
+            for (auto &aln: alnVec) {
+                var += std::pow(aln.superposition[i] - mean, 2) / length;
             }
-        }
-
-        for (size_t i=0; i<SIZE_OF_SUPERPOSITION_VECTOR; i++) {
-            sd[i] = std::sqrt(var[i]);
-            cv[i] = (abs(mean[i]) > TOO_SMALL_MEAN) ? sd[i]/std::abs(mean[i]) : sd[i];
-        }
-
-        for (auto &aln: alnVec) {
-            for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++ ) {
-                aln.superposition[i] = cv[i] < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean[i]) / sd[i];
+            sd = std::sqrt(var);
+            cv = (abs(mean) > TOO_SMALL_MEAN) ? sd / std::abs(mean) : sd;
+            for (auto &aln: alnVec) {
+                aln.superposition[i] = cv < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean) / sd;
             }
         }
     }
@@ -333,7 +325,7 @@ private:
                 continue;
 
             centerAln.label = ++cLabel;
-            unsigned int neighborIdx = 0;
+            size_t neighborIdx = 0;
             while (neighborIdx < neighbors.size()) {
                 unsigned int neighborAlnIdx = neighbors[neighborIdx++];
                 if (centerAlnIdx == neighborAlnIdx)
@@ -395,7 +387,7 @@ private:
         }
     }
 
-    void getNeighbors(unsigned int centerIdx, std::vector<unsigned int> &neighborVec) {
+    void getNeighbors(size_t centerIdx, std::vector<unsigned int> &neighborVec) {
         neighborVec.clear();
         neighborVec.emplace_back(centerIdx);
         for (size_t neighborIdx = 0; neighborIdx < searchResult.alnVec.size(); neighborIdx++) {
@@ -403,7 +395,7 @@ private:
             if (neighborIdx == centerIdx)
                 continue;
 
-            if ((centerIdx < neighborIdx ? distMap[{centerIdx, neighborIdx}] : distMap[{neighborIdx, centerIdx}]) >= eps)
+            if (distMap[{std::min(centerIdx, neighborIdx), std::max(centerIdx, neighborIdx)}] >= eps)
                 continue;
 
             neighborVec.emplace_back(neighborIdx);
@@ -461,12 +453,12 @@ private:
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
         distMap.clear();
-        //     Nothing Found             Too Small Clusters
-        return !finalClusters.empty() && prevMaxClusterSize >= minClusterSize;
+        bool isAlnFound = !finalClusters.empty();
+        bool isBigEnoughAln = prevMaxClusterSize >= minClusterSize;
+        return isAlnFound && isBigEnoughAln;
     }
 
     void filterAlnsByRBH() {
-        unsigned int alnIdx = 0;
         float tmScore;
         unsigned int qKey;
         unsigned int dbKey;
@@ -487,6 +479,7 @@ private:
             qBestTmScore[qKey] = qBestTmScore[qKey] < UNINITIALIZED ? tmScore : std::max(tmScore, qBestTmScore[qKey]);
             dbBestTmScore[dbKey] = dbBestTmScore[dbKey] < UNINITIALIZED ? tmScore : std::max(tmScore, dbBestTmScore[dbKey]);
         }
+        size_t alnIdx = 0;
         while (alnIdx < searchResult.alnVec.size()) {
             qKey = searchResult.alnVec[alnIdx].qChain.chainKey;
             dbKey = searchResult.alnVec[alnIdx].dbChain.chainKey;
@@ -500,7 +493,7 @@ private:
             alnIdx ++;
         }
 
-        if (qFoundChainKeys.size() < minClusterSize || dbFoundChainKeys.size() < minClusterSize)
+        if (std::min(qFoundChainKeys.size(), dbFoundChainKeys.size()) < minClusterSize)
             searchResult.alnVec.clear();
     }
 
@@ -669,26 +662,28 @@ private:
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
+        size_t qDbId;
         for (auto qChainKey: qChainKeys) {
-            size_t id = q3diDbr->sequenceReader->getId(qChainKey);
+            qDbId = q3diDbr->sequenceReader->getId(qChainKey);
             // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY)
+            if (qDbId == NOT_AVAILABLE_CHAIN_KEY)
                 return 0;
 
-            qResidueLen += q3diDbr->sequenceReader->getSeqLen(id);
+            qResidueLen += q3diDbr->sequenceReader->getSeqLen(qDbId);
         }
         return qResidueLen;
     }
 
     unsigned int getDbResidueLength(std::vector<unsigned int> &dbChainKeys) {
         unsigned int dbResidueLen = 0;
+        size_t tDbId;
         for (auto dbChainKey: dbChainKeys) {
-            size_t id = t3diDbr->sequenceReader->getId(dbChainKey);
+            tDbId = t3diDbr->sequenceReader->getId(dbChainKey);
             // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY)
+            if (tDbId == NOT_AVAILABLE_CHAIN_KEY)
                 return 0;
 
-            dbResidueLen += t3diDbr->sequenceReader->getSeqLen(id);
+            dbResidueLen += t3diDbr->sequenceReader->getSeqLen(tDbId);
         }
         return dbResidueLen;
     }
@@ -797,7 +792,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
-            for (unsigned int qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
+            for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
                 resultToWriteLines.emplace_back("");
             }
             // for each assignment
