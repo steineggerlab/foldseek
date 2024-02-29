@@ -56,11 +56,12 @@ if notExists "${TMP_PATH}/complex_result.dbtype"; then
         || fail "ComplexSearch died"
 fi
 
-if notExists "complex_db.dbtype"; then
+if notExists "complex_filt.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
         || fail "FilterComplex died"
-    
+fi
+if notExists "${TMP_PATH}/complex_db.dbtype"; then    
     # build complex db as output
     buildCmplDb "${INPUT}" "${TMP_PATH}/complex_db"
 fi
