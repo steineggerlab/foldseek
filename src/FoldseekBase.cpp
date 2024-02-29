@@ -277,7 +277,14 @@ std::vector<Command> foldseekCommands = {
         },
         {"complexcluster", complexcluster, &localPar.complexclusterworkflow, COMMAND_MAIN, 
                 "Complex level cluster",
-                "foldseek complexcluster queryDB result tmp\n",
+                "#Clustering of PDB DB\n"
+                "foldseek complexcluster queryDB result tmp\n"
+                "#                  --cov-mode \n"
+                "# Sequence         0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "# Cutoff -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n",
                 "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:sequenceDB> <o:clusterDB> <tmpDir>",
                 CITATION_FOLDSEEK, {
@@ -288,7 +295,19 @@ std::vector<Command> foldseekCommands = {
         },     
         {"easy-complexcluster", easycomplexcluster, &localPar.easycomplexclusterworkflow, COMMAND_EASY,
                 "Complex level cluster",
-                "foldseek easy-complexcluster examples/ result tmp\n",
+                "#Clustering of PDB files\n"
+                "foldseek easy-complexcluster examples/ result tmp\n"
+                "# Cluster output\n"
+                "#  - result_rep_seq.fasta: Representatives\n"
+                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
+                "#  - result_cluster.tsv:   Adjacency list\n\n"
+                "# Important parameter: --cov-mode and -c \n"
+                "#                  --cov-mode \n"
+                "#                  0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "#        -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n",
                 "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:clusterPrefix> <tmpDir>",
                 CITATION_FOLDSEEK, {
