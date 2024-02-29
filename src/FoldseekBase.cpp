@@ -278,7 +278,7 @@ std::vector<Command> foldseekCommands = {
         {"complexcluster", complexcluster, &localPar.complexclusterworkflow, COMMAND_MAIN, 
                 "Complex level cluster",
                 "#Clustering of PDB DB\n"
-                "foldseek complexcluster queryDB result tmp\n"
+                "foldseek complexcluster queryDB clusterDB tmp\n"
                 "#                  --cov-mode \n"
                 "# Sequence         0    1    2\n"
                 "# Q: MAVGTACRPA  60%  IGN  60%\n"
