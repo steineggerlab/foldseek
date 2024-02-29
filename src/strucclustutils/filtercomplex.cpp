@@ -63,11 +63,6 @@ std::vector<unsigned int> selecHighestCoverage( std::map<unsigned int , std::map
 int filtercomplex(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
-    /*
-    if  (par.covThr == false){
-        par.covThr = 0.8;
-    }
-    */
     const bool sameDB = par.db1.compare(par.db2) == 0 ? true : false;
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     int dbaccessMode = (DBReader<unsigned int>::USE_INDEX);
