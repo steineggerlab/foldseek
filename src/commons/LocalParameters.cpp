@@ -193,6 +193,7 @@ LocalParameters::LocalParameters() :
     easyscomplexsearchworkflow = combineList(structurecreatedb, complexsearchworkflow);
     easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, convertalignments);
     easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, createcomplexreport);
+    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, createsubdb);
     easyscomplexsearchworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
 
     // complexclusterworkflow

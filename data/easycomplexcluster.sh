@@ -39,43 +39,45 @@ if notExists "${TMP_PATH}/complex_clu.dbtype"; then
         || fail "Complexcluster died"
 fi
 
+SOURCE="${TMP_PATH}/input"
 INPUT="${TMP_PATH}/latest/complex_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clust" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
         || fail "Convert Alignments died"
 fi
 
-#TODO: move it to complexcluster.sh?
-
-mapCmpl2Chain() {
-    awk 'BEGIN {FS="\t"}
-        NR==FNR {
-            if (!($0 ~ /^[0-9]+$/)) {
-                split($1,name,"\0")
-                reps[name[2]]=$1;next
-            } else if (FNR==1) {
-                reps[$1]=$1
-            }
-            next
+#NOTE: move it to complexcluster.sh?
+mapCmplName2ChainKeys() {
+    repComp=$(awk -F"\t" '{print $1}' "${1}" | sort -u | awk '{printf "%s ", $0}' )
+    awk -F"\t" -v repComp="${repComp}" '
+        BEGIN {
+            split(repComp,repCompArr," "); 
+            for (i in repCompArr) {repCompArr[repCompArr[i]]=""}
         }
-        { if ($3 in reps) {
-            print "\0"$1
+        NR==FNR && ($2 in repCompArr){ 
+            repIdxArr[$1]="";next
         }
-    }' "${1}" "${2}".lookup > "${3}"
+        NR!=FNR && ($3 in repIdxArr) {
+            print $1
+        }
+    ' "${2}.source" "${2}.lookup" > "${3}"
 }
 
-if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
-    mapCmpl2Chain "${TMP_PATH}/complex_clust" "${INPUT}" "${TMP_PATH}/complex_clust_chains"
+if notExists "${TMP_PATH}/complex_rep_seqs.dbtype"; then
+    mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${SOURCE}" "${TMP_PATH}/rep_seqs.list" 
     # shellcheck disable=SC2086
-    "$MMSEQS" result2repseq "${INPUT}" "${TMP_PATH}/complex_clust_chains" "${TMP_PATH}/complex_clust_rep" ${RESULT2REPSEQ_PAR} \
-            || fail "Result2repseq  died"
+    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list" "${SOURCE}" "${TMP_PATH}/complex_rep_seqs" ${CREATESUBDB_PAR} \
+        || fail "createsubdb died"
+fi
 
+if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" result2flat "${INPUT}" "${INPUT}"  "${TMP_PATH}/complex_clust_rep" "${TMP_PATH}/complex_rep_seq.fasta" --use-fasta-header ${VERBOSITY_PAR} \
+    "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}"  "${TMP_PATH}/complex_rep_seqs" "${TMP_PATH}/complex_rep_seq.fasta" ${VERBOSITY_PAR} \
             || fail "result2flat died"
 fi
 
+#TODO: generate fasta file for all sequences
 # if notExists "${TMP_PATH}/complex_all_seqs.fasta"; then
 #     # shellcheck disable=SC2086
 #     "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/complex_clust" "${TMP_PATH}/complex_clust_seqs" ${THREADS_PAR} \
@@ -86,7 +88,7 @@ fi
 #             || fail "result2flat died"
 # fi
 
-mv "${TMP_PATH}/complex_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
+# mv "${TMP_PATH}/complex_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
 mv "${TMP_PATH}/complex_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
 mv "${TMP_PATH}/cluster.tsv"  "${RESULT}_cluster.tsv"
 
@@ -97,16 +99,17 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/input_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_db" ${VERBOSITY_PAR}
+    # # shellcheck disable=SC2086
+    # "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_seqs" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_rep" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/complex_rep_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_clu" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
+    rm "${TMP_PATH}/rep_seqs.list"
     rm -rf "${TMP_PATH}/latest"
     rm -f "${TMP_PATH}/easycomplexcluster.sh"
 fi
