@@ -42,30 +42,49 @@ fi
 INPUT="${TMP_PATH}/latest/complex_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clust" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
         || fail "Convert Alignments died"
 fi
 
-#TODO: figure out how to represent complex sequences as a single fasta entry?
+#TODO: move it to complexcluster.sh?
+
+mapCmpl2Chain() {
+    awk 'BEGIN {FS="\t"}
+        NR==FNR {
+            if (!($0 ~ /^[0-9]+$/)) {
+                split($1,name,"\0")
+                reps[name[2]]=$1;next
+            } else if (FNR==1) {
+                reps[$1]=$1
+            }
+            next
+        }
+        { if ($3 in reps) {
+            print "\0"$1
+        }
+    }' "${1}" "${2}".lookup > "${3}"
+}
+
 if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
+    mapCmpl2Chain "${TMP_PATH}/complex_clust" "${INPUT}" "${TMP_PATH}/complex_clust_chains"
     # shellcheck disable=SC2086
-    "$MMSEQS" result2repseq "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/complex_clu_rep" ${RESULT2REPSEQ_PAR} \
+    "$MMSEQS" result2repseq "${INPUT}" "${TMP_PATH}/complex_clust_chains" "${TMP_PATH}/complex_clust_rep" ${RESULT2REPSEQ_PAR} \
             || fail "Result2repseq  died"
 
     # shellcheck disable=SC2086
-    "$MMSEQS" result2flat "${INPUT}" "${INPUT}"  "${TMP_PATH}/complex_clu_rep" "${TMP_PATH}/complex_rep_seq.fasta" --use-fasta-header ${VERBOSITY_PAR} \
+    "$MMSEQS" result2flat "${INPUT}" "${INPUT}"  "${TMP_PATH}/complex_clust_rep" "${TMP_PATH}/complex_rep_seq.fasta" --use-fasta-header ${VERBOSITY_PAR} \
             || fail "result2flat died"
 fi
 
-if notExists "${TMP_PATH}/complex_all_seqs.fasta"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/complex_clu_seqs" ${THREADS_PAR} \
-            || fail "Result2repseq  died"
+# if notExists "${TMP_PATH}/complex_all_seqs.fasta"; then
+#     # shellcheck disable=SC2086
+#     "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/complex_clust" "${TMP_PATH}/complex_clust_seqs" ${THREADS_PAR} \
+#             || fail "Result2repseq  died"
 
-    # shellcheck disable=SC2086
-    "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clu_seqs" "${TMP_PATH}/complex_all_seqs.fasta" ${VERBOSITY_PAR} \
-            || fail "result2flat died"
-fi
+#     # shellcheck disable=SC2086
+#     "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clust_seqs" "${TMP_PATH}/complex_all_seqs.fasta" ${VERBOSITY_PAR} \
+#             || fail "result2flat died"
+# fi
 
 mv "${TMP_PATH}/complex_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
 mv "${TMP_PATH}/complex_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
