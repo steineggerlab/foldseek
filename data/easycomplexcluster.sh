@@ -12,21 +12,34 @@ exists() {
 	[ -f "$1" ]
 }
 
+abspath() {
+    if [ -d "$1" ]; then
+        (cd "$1"; pwd)
+    elif [ -f "$1" ]; then
+        if [ -z "${1##*/*}" ]; then
+            echo "$(cd "${1%/*}"; pwd)/${1##*/}"
+        else
+            echo "$(pwd)/$1"
+        fi
+    elif [ -d "$(dirname "$1")" ]; then
+        echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    fi
+}
+
+
 if notExists "${TMP_PATH}/input.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/input" ${CREATEDB_PAR} \
         || fail "input createdb died"
 fi
 
-if notExists "${TMP_PATH}/complex_clust.dbtype"; then
+if notExists "${TMP_PATH}/complex_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" complexcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clust" "${TMP_PATH}" ${COMPLEXCLUSTER_PAR} \
+    "$MMSEQS" complexcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "$(dirname "${RESULT}")" ${COMPLEXCLUSTER_PAR} \
         || fail "Complexcluster died"
 fi
 
-# TODO: copmlex_db need header/lookup?
-# SOURCE=$INPUT
-INPUT="${TMP_PATH}/complex_db"
+INPUT="$(dirname "${RESULT}")/latest/complex_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \

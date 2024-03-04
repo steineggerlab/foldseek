@@ -59,7 +59,8 @@ int complexcluster(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-
+    cmd.addVariable("VERBCOMPRESS", par.createParameterString(par.verbandcompression).c_str());
+    
     std::string program = tmpDir + "/complexcluster.sh";
     FileUtil::writeFile(program, complexcluster_sh, complexcluster_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);

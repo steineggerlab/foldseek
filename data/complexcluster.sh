@@ -47,58 +47,6 @@ buildCmplDb() {
     ln -s "$(abspath "${1}")" "${2}.0"
     cp "${1}.dbtype" "${2}.dbtype"
 }
-# Shift initial header DB into complex header DB
-buildheadCmplDb() {
-    awk -F"\t" '
-    FNR==NR{
-        split($2, parts, ".pdb")
-        HEADS = "\0"parts[1]
-        if (!($3 in cmplid)){
-            cmplid[$3] = HEADS
-            
-        };
-        next 
-    }
-    {
-        split($1, part, ".pdb")
-        COMP = part[1]
-        if (!(COMP in head_arr)) {
-            HEAD = substr(part[2], 4)
-            head_arr[COMP] = HEAD
-        }
-    }
-    END {
-        for (cmpl in cmplid) {
-            print cmplid[cmpl]".pdb", head_arr[cmplid[cmpl]]
-        }
-    }' "${1}.lookup" "${1}_h" > "${2}"
-    cp "${1}.dbtype" "${2}.dbtype"
-}
-
-buildheadIndexCmplDb() {
-    awk -F"\t" 'BEGIN {OFFSET=0}
-        FNR==NR{
-            if (!($3 in cmplchain)){
-                cmplchain[$3]=$1
-                };
-            for (cmpl in cmplchain) {
-                chaincmpl[cmplchain[cmpl]]=cmpl
-                };
-            next
-            }
-        {
-            if (($1 in chaincmpl)) {
-                off_arr[chaincmpl[$1]]=OFFSET
-                OFFSET+=$3
-                cmpl_len[chaincmpl[$1]]=$3
-                }
-        }
-        END {
-            for (cmpl in off_arr) {
-                print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
-            }
-        }' "${1}.lookup" "${1}_h.index" > "${2}.index"
-}
 
 # [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "${TMP_PATH}";
 
@@ -119,16 +67,12 @@ if notExists "${TMP_PATH}/complex_db.dbtype"; then
     # build complex db as output
     buildCmplDb "${INPUT}" "${TMP_PATH}/complex_db"
 fi
-# Shift _h, _h.dbtype
-if notExists "${TMP_PATH}/complex_db_h.dbtype"; then    
-    # build complex header db as output
-    buildheadCmplDb "${INPUT}" "${TMP_PATH}/complex_db_h"
-fi
 
-# Shift _h.index
-if notExists "${TMP_PATH}/complex_db_h.index"; then   
-    # build complex header.index as output 
-    buildheadIndexCmplDb "${INPUT}" "${TMP_PATH}/complex_db_h"
+# Shift _h, _h.dbtype
+if notExists "${TMP_PATH}/complex_db_h.dbtype"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/complex_db_h" ${VERBOSITY_PAR} \
+        || fail "tsv2db died"
 fi
 
 COMP="${TMP_PATH}/complex_db"
