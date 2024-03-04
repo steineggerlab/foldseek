@@ -78,8 +78,6 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
-    structurecreatedb.push_back(&PARAM_TAR_INCLUDE);
-    structurecreatedb.push_back(&PARAM_TAR_EXCLUDE);
     structurecreatedb.push_back(&PARAM_INPUT_FORMAT);
     // protein chain only
     structurecreatedb.push_back(&PARAM_FILE_INCLUDE);
