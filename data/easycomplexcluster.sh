@@ -35,11 +35,11 @@ fi
 
 if notExists "${TMP_PATH}/complex_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" complexcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "$(dirname "${RESULT}")" ${COMPLEXCLUSTER_PAR} \
+    "$MMSEQS" complexcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${COMPLEXCLUSTER_PAR} \
         || fail "Complexcluster died"
 fi
 
-INPUT="$(dirname "${RESULT}")/latest/complex_db"
+INPUT="${TMP_PATH}/latest/complex_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
@@ -84,5 +84,7 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_rep" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_clu" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
     rm -f "${TMP_PATH}/easycomplexcluster.sh"
 fi
