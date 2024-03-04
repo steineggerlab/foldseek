@@ -52,7 +52,7 @@ buildheadCmplDb() {
     awk -F"\t" '
     FNR==NR{
         split($2, parts, ".pdb")
-        HEADS = parts[1]
+        HEADS = "\0"parts[1]
         if (!($3 in cmplid)){
             cmplid[$3] = HEADS
             
@@ -61,7 +61,7 @@ buildheadCmplDb() {
     }
     {
         split($1, part, ".pdb")
-        COMP = substr(part[1], 2)
+        COMP = part[1]
         if (!(COMP in head_arr)) {
             HEAD = substr(part[2], 4)
             head_arr[COMP] = HEAD
