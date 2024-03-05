@@ -125,6 +125,10 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/input_ca" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/input_ss" ${VERBOSITY_PAR}
     rm "${TMP_PATH}/rep_seqs.list"
     rm -rf "${TMP_PATH}/latest"
     rm -f "${TMP_PATH}/easycomplexcluster.sh"
