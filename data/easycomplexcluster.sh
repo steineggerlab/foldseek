@@ -93,18 +93,21 @@ mv "${TMP_PATH}/complex_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
 mv "${TMP_PATH}/cluster.tsv"  "${RESULT}_cluster.tsv"
 
 if [ -n "${REMOVE_TMP}" ]; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input_h" ${VERBOSITY_PAR}
+    rm "${INPUT}.0"
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_db" ${VERBOSITY_PAR}
-    # # shellcheck disable=SC2086
+    # shellcheck disable=SC2086
     # "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_rep_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/complex_rep_seqs_h" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_clu" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/input" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/input_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
