@@ -299,7 +299,6 @@ std::vector<Command> foldseekCommands = {
                 "foldseek easy-complexcluster examples/ result tmp\n"
                 "# Cluster output\n"
                 "#  - result_rep_seq.fasta: Representatives\n"
-                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
                 "#  - result_cluster.tsv:   Adjacency list\n\n"
                 "# Important parameter: --cov-mode and -c \n"
                 "#                  --cov-mode \n"
