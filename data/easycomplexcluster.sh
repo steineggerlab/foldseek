@@ -26,6 +26,35 @@ abspath() {
     fi
 }
 
+mapCmplName2ChainKeys() {
+    repComp=$(awk -F"\t" '{print $1}' "${1}" | sort -u | awk '{printf "%s ", $0}' )
+    awk -F"\t" -v repComp="${repComp}" '
+        BEGIN {
+            split(repComp,repCompArr," "); 
+            for (i in repCompArr) {repCompArr[repCompArr[i]]=""}
+        }
+        NR==FNR && ($2 in repCompArr){ 
+            repIdxArr[$1]="";next
+        }
+        NR!=FNR && ($3 in repIdxArr) {
+            print $1
+        }
+    ' "${2}.source" "${2}.lookup" > "${3}"
+}
+
+postprocessFasta() {
+    awk ' BEGIN {FS=">"}
+    $0 ~/^>/ {
+        match($2, /(.*).pdb*/)
+        complex = substr($2, RSTART, RLENGTH-4)
+        if (!(complex in repComplex)) {
+            print "#"complex".pdb"
+            repComplex[complex] = ""
+        }
+    }
+    {print $0}
+    ' "${1}" > "${1}.tmp" && mv "${1}.tmp" "${1}"
+}
 
 if notExists "${TMP_PATH}/input.dbtype"; then
     # shellcheck disable=SC2086
@@ -47,23 +76,6 @@ if notExists "${TMP_PATH}/cluster.tsv"; then
         || fail "Convert Alignments died"
 fi
 
-#NOTE: move it to complexcluster.sh?
-mapCmplName2ChainKeys() {
-    repComp=$(awk -F"\t" '{print $1}' "${1}" | sort -u | awk '{printf "%s ", $0}' )
-    awk -F"\t" -v repComp="${repComp}" '
-        BEGIN {
-            split(repComp,repCompArr," "); 
-            for (i in repCompArr) {repCompArr[repCompArr[i]]=""}
-        }
-        NR==FNR && ($2 in repCompArr){ 
-            repIdxArr[$1]="";next
-        }
-        NR!=FNR && ($3 in repIdxArr) {
-            print $1
-        }
-    ' "${2}.source" "${2}.lookup" > "${3}"
-}
-
 if notExists "${TMP_PATH}/complex_rep_seqs.dbtype"; then
     mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${SOURCE}" "${TMP_PATH}/rep_seqs.list" 
     # shellcheck disable=SC2086
@@ -75,6 +87,7 @@ if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
     # shellcheck disable=SC2086
     "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}"  "${TMP_PATH}/complex_rep_seqs" "${TMP_PATH}/complex_rep_seq.fasta" ${VERBOSITY_PAR} \
             || fail "result2flat died"
+    postprocessFasta "${TMP_PATH}/complex_rep_seq.fasta"
 fi
 
 #TODO: generate fasta file for all sequences
