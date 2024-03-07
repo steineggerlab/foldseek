@@ -573,7 +573,7 @@ public:
         // When alignments have no backtrace
         if (!hasBacktrace) {
             Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
-            EXIT(EXIT_FAILURE);
+//            EXIT(EXIT_FAILURE);
         }
         if (currAlns.empty())
             return;
