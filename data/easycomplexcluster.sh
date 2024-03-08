@@ -27,19 +27,21 @@ abspath() {
 }
 
 mapCmplName2ChainKeys() {
-    repComp=$(awk -F"\t" '{print $1}' "${1}" | sort -u | awk '{printf "%s ", $0}' )
-    awk -F"\t" -v repComp="${repComp}" '
-        BEGIN {
-            split(repComp,repCompArr," "); 
-            for (i in repCompArr) {repCompArr[repCompArr[i]]=""}
+    awk -F"\t" '
+        # BEGIN {
+        #     split(repComp,repCompArr," "); 
+        #     for (i in repCompArr) {repCompArr[repCompArr[i]]=""}
+        # }
+        NR==FNR {
+            repName_memName[$1]=$2;next
         }
-        NR==FNR && ($2 in repCompArr){ 
-            repIdxArr[$1]="";next
+        {
+            split($2,cmpNameArr,".pdb"); cmpl=cmpNameArr[1]".pdb"
+            if (cmpl in repName_memName) {
+                print $1
+            }
         }
-        NR!=FNR && ($3 in repIdxArr) {
-            print $1
-        }
-    ' "${2}.source" "${2}.lookup" > "${3}"
+    ' "${1}" "${2}.lookup" > "${3}"
 }
 
 postprocessFasta() {
