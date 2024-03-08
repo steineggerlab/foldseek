@@ -570,13 +570,13 @@ public:
                 currAln.free();
             } // while end
         } // for end
+        if (currAlns.empty())
+            return;
         // When alignments have no backtrace
         if (!hasBacktrace) {
             Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
-//            EXIT(EXIT_FAILURE);
+            EXIT(EXIT_FAILURE);
         }
-        if (currAlns.empty())
-            return;
         SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAlnByDbComplexId);
         unsigned int currDbComplexId = currAlns[0].dbChain.complexId;
         std::vector<unsigned int> currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
