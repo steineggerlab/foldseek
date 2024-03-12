@@ -108,7 +108,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     }
 
     Debug(Debug::INFO) << "Start writing file to " << par.db2 << "\n";
-    FILE* handle;
+    FILE* handle = NULL;
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         handle = fopen(par.db2.c_str(), "w");
         if (handle == NULL) {
