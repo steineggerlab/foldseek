@@ -294,7 +294,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(q3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr.sequenceReader->getMaxSeqLen() + 1), false, true);
+                    std::max(q3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr.sequenceReader->getMaxSeqLen() + 1), false, true, par.exactTMscore);
         }
         LDDTCalculator *lddtcalculator = NULL;
         if(needLDDT) {

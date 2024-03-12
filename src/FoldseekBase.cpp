@@ -16,11 +16,19 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 std::vector<Command> foldseekCommands = {
         {"createdb",             structcreatedb,                &localPar.structurecreatedb,    COMMAND_MAIN,
-                "Convert PDB/mmCIF/tar[.gz]/DB files to a db",
-                "Convert PDB/mmCIF/tar[.gz]/DB files to a db",
+                "Convert PDB/mmCIF/tar[.gz]/DB files or directory/TSV to a structure DB",
+                "# Process multiple files\n"
+                "foldseek createdb examples/1tim.pdb.gz examples/8tim.pdb.gz DB\n"
+                "# Process a directory containing PDB|mmCIF[.gz]|tar[.gz]|DB recursively, only one directory can be given\n"
+                "foldseek createdb examples/ DB\n"
+                "# Process a TSV file with a list of PDB|mmCIF[.gz]|tar[.gz]|DB, only one TSV can be given\n"
+                "foldseek createdb examples.tsv DB\n"
+                "# Process a directory or tar file and filter based on file name\n"
+                "# Note: --file-include and --file-exclude only apply to directory or tar input\n"
+                "foldseek createdb examples/ --file-include \"pdb.gz$\"\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:PDB|mmCIF[.gz]|tar|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
+                "<i:directory|.tsv>|<i:PDB|mmCIF[.gz]|tar[.gz]|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
+                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar[.gz]|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
 #ifdef HAVE_GCS
                                             &DbValidator::flatfileStdinGenericUri
 #else
@@ -239,11 +247,11 @@ std::vector<Command> foldseekCommands = {
                 "<i:DB> <o:caDB>",
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::sequenceDb },
                                            {"caDb", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::cadb }}},
-        {"convert2pdb",          convert2pdb,             &localPar.onlyverbosity,        COMMAND_FORMAT_CONVERSION,
-                "Convert a foldseek structure db to a multi model PDB file",
+        {"convert2pdb",          convert2pdb,             &localPar.convert2pdb,          COMMAND_FORMAT_CONVERSION,
+                "Convert a foldseek structure db to a single multi model PDB file or a directory of PDB files",
                 NULL,
                 "Milot Mirdita <milot@mirdita.de>",
-                "<i:Db> <o:pdbFile>",
+                "<i:Db> <o:pdbFile|pdbDir>",
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"pdbFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
         {"scorecomplex", scorecomplex, &localPar.scorecomplex, COMMAND_ALIGNMENT,

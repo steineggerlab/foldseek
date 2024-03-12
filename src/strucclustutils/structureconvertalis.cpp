@@ -487,7 +487,7 @@ R"html(<!DOCTYPE html>
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false, true);
+                    std::max(tDbr->sequenceReader->getMaxSeqLen() + 1, qDbr.sequenceReader->getMaxSeqLen() + 1), false, true, par.exactTMscore);
         }
         LDDTCalculator *lddtcalculator = NULL;
         if(needLDDT) {

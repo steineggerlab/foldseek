@@ -12,7 +12,7 @@
 
 class TMaligner{
 public:
-    TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly);
+    TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly, bool exact);
     ~TMaligner();
 
     struct TMscoreResult{
@@ -39,6 +39,7 @@ public:
                                  unsigned int targetLen, int qStartPos,
                                  int targetStartPos, const std::string & backtrace,
                                  int normalizationLen);
+
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
                             char * targetSeq, unsigned int targetLen, float &TM);
 
@@ -59,7 +60,17 @@ private:
     std::string seqM, seqxA, seqyA;// for output alignment
     bool tmAlignFast;
     Coordinates xtm, ytm, xt, r1, r2;
+    bool computeExactScore;
     int * invmap;
+
+    TMscoreResult computeExactTMscore(float *x, float *y, float *z,
+                                      unsigned int targetLen, int qStartPos,
+                                      int targetStartPos, const std::string & backtrace,
+                                      int normalizationLen);
+    TMscoreResult computeAppoximateTMscore(float *x, float *y, float *z,
+                                      unsigned int targetLen, int qStartPos,
+                                      int targetStartPos, const std::string & backtrace,
+                                      int normalizationLen);
 };
 
 #endif //FOLDSEEK_TMALIGNER_H

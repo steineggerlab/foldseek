@@ -84,7 +84,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        TMaligner tmaln(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,tdbr->sequenceReader->getMaxSeqLen() + 1), par.tmAlignFast, false);
+        TMaligner tmaln(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,tdbr->sequenceReader->getMaxSeqLen() + 1), par.tmAlignFast, false, false);
         std::vector<Matcher::result_t> swResults;
         swResults.reserve(300);
         std::string backtrace;

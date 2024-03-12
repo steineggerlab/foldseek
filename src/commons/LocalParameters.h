@@ -74,6 +74,11 @@ public:
     static const int INDEX_EXCLUDE_KMER_INDEX = 1 << 0;
     static const int INDEX_EXCLUDE_CA = 1 << 1;
 
+    // convert2pdb
+    static const int PDB_OUTPUT_MODE_MULTIMODEL = 0;
+    static const int PDB_OUTPUT_MODE_SINGLECHAIN = 1;
+    static const int PDB_OUTPUT_MODE_COMPLEX = 2;
+
     // TODO
     static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
     std::vector<MMseqsParameter *> strucclust;
@@ -96,6 +101,7 @@ public:
     std::vector<MMseqsParameter *> easyscomplexsearchworkflow;
     std::vector<MMseqsParameter *> createcomplexreport;
     std::vector<MMseqsParameter *> expandcomplex;
+    std::vector<MMseqsParameter *> convert2pdb;
 
     PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
@@ -107,6 +113,7 @@ public:
     PARAMETER(PARAM_CHAIN_NAME_MODE)
     PARAMETER(PARAM_WRITE_MAPPING)
     PARAMETER(PARAM_TMALIGN_FAST)
+    PARAMETER(PARAM_EXACT_TMSCORE)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
@@ -117,6 +124,7 @@ public:
     PARAMETER(PARAM_COMPLEX_REPORT_MODE)
     PARAMETER(PARAM_EXPAND_COMPLEX_EVALUE)
     PARAMETER(PARAM_INPUT_FORMAT)
+    PARAMETER(PARAM_PDB_OUTPUT_MODE)
 
     int prefMode;
     float tmScoreThr;
@@ -128,6 +136,7 @@ public:
     int chainNameMode;
     bool writeMapping;
     int tmAlignFast;
+    int exactTMscore;
     int nsample;
     int coordStoreMode;
     float minAssignedChainsThreshold;
@@ -138,6 +147,7 @@ public:
     int complexReportMode;
     double eValueThrExpandComplex;
     int inputFormat;
+    int pdbOutputMode;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
