@@ -69,6 +69,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     std::map<unsigned int, unsigned int> qKeyToSet;
     std::map<unsigned int, unsigned int> tKeyToSet;
     char buffer[32];
+    char buffer5[32];
 
     IndexReader* qDbr;
     qDbr = new IndexReader(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
@@ -91,6 +92,10 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), 1, shouldCompress, db4Type);
     resultWriter.open();
+
+    const int db5Type = Parameters::DBTYPE_GENERIC_DB;
+    DBWriter resultWrite5(par.db5.c_str(), par.db5Index.c_str(), 1, shouldCompress, db5Type);
+    resultWrite5.open();
 
     std::string qLookupFile = par.db1 + ".lookup";
     std::string tLookupFile = par.db2 + ".lookup";
@@ -173,6 +178,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                 }
             }
             std::string result;
+            std::string result5;
             std::vector<unsigned int> keysToDelete;
             for (const auto& pair : qcovSum){
                 float qcov = static_cast<float>(pair.second) / static_cast<float>(qComplexLength[qComplexId]);
@@ -210,18 +216,39 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                 case Parameters::COV_MODE_QUERY:
                     selectedAssIDs = selecHighestCoverage(qcompIdToassIdToalnSum);
                     break;
+                case Parameters::COV_MODE_LENGTH_QUERY :
+                    break;
+                case Parameters::COV_MODE_LENGTH_TARGET :
+                    break;
+                case Parameters::COV_MODE_LENGTH_SHORTER :
+                    break;
+                
+                // TODO : other coverage modes
             }
             for (const auto& pair : qcovSum){
                 if (std::find(selectedAssIDs.begin(), selectedAssIDs.end(), pair.first) != selectedAssIDs.end()){
                     char *outpos = Itoa::u32toa_sse2(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]], buffer);
                     result.append(buffer, (outpos - buffer - 1));
                     result.push_back('\n');
+                    if (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL) {
+                        result5.append(std::to_string(qComplexId) + "\t" + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) + "\n");
+                    }
+                    else if (par.covMode == Parameters::COV_MODE_TARGET){
+                        result5.append(std::to_string(qComplexId) + "\t" + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) + "\n");
+                    
+                    }
+                    else if (par.covMode == Parameters::COV_MODE_QUERY) {
+                        result5.append(std::to_string(qComplexId) + "\t" + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) + "\n");
+                    }
+
                 }
             }
             resultWriter.writeData(result.c_str(), result.length(), qComplexId);
+            resultWrite5.writeData(result5.c_str(), result5.length(), 0);
         }
     }
     resultWriter.close(true);
+    resultWrite5.close(true);
     alnDbr.close();
     delete qDbr;
     if (sameDB == false) {

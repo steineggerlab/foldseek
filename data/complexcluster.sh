@@ -58,7 +58,7 @@ fi
 
 if notExists "complex_filt.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" ${FILTERCOMPLEX_PAR} \
+    "$MMSEQS" filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" "${TMP_PATH}/filtcov.tsv" ${FILTERCOMPLEX_PAR} \
         || fail "FilterComplex died"
 fi
 
