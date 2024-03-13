@@ -279,11 +279,11 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                             result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) +"\t"+ std::to_string(qtmScores[pair.first])+"\t"+ std::to_string(ttmScores[pair.first])+ "\n");
                 }
                 else if (par.covMode == Parameters::COV_MODE_TARGET){
-                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) +"\t"+ std::to_string(ttmScores[pair.first])+ "\n");
+                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) +"\t"+ std::to_string(qtmScores[pair.first])+"\t"+ std::to_string(ttmScores[pair.first])+ "\n");
                 
                 }
                 else if (par.covMode == Parameters::COV_MODE_QUERY) {
-                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) +"\t"+ std::to_string(qtmScores[pair.first])+"\n");
+                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) +"\t"+ std::to_string(qtmScores[pair.first])+"\t"+ std::to_string(ttmScores[pair.first])+"\n");
                 }
             }
 
