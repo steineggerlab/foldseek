@@ -60,6 +60,49 @@ std::vector<unsigned int> selecHighestCoverage( std::map<unsigned int , std::map
         return assIdvec;
 }
 
+
+static void getlookupInfo(
+        const std::string &file,
+        std::map<unsigned int, std::string> &complexIdtoName,
+        std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
+        std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
+        std::vector<unsigned int> &complexIdVec
+) {
+    if (file.length() == 0) {
+        return;
+    }
+    MemoryMapped lookupDB(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
+    char *data = (char *) lookupDB.getData();
+    char *end = data + lookupDB.mappedSize();
+    const char *entry[255];
+    int prevComplexId =  -1;
+    while (data < end && *data != '\0') {
+        const size_t columns = Util::getWordsOfLine(data, entry, 255);
+        if (columns < 3) {
+            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
+            continue;
+        }
+        auto chainKey = Util::fast_atoi<int>(entry[0]);
+        std::string chainName(entry[1], (entry[2] - entry[1]) - 1);
+        auto complexId = Util::fast_atoi<int>(entry[2]);
+        chainKeyToComplexIdLookup.emplace(chainKey, complexId);
+        
+        size_t lastUnderscoreIndex = chainName.find_last_of('_');
+        std::string complexName = chainName.substr(0, lastUnderscoreIndex);
+
+        if (complexId != prevComplexId) {
+            complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
+            complexIdVec.emplace_back(complexId);
+            complexIdtoName.emplace(complexId, complexName);
+            prevComplexId = complexId;
+        }
+        complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
+        data = Util::skipLine(data);
+    }
+    lookupDB.close();
+}
+
+
 int filtercomplex(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
@@ -69,7 +112,6 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     std::map<unsigned int, unsigned int> qKeyToSet;
     std::map<unsigned int, unsigned int> tKeyToSet;
     char buffer[32];
-    char buffer5[32];
 
     IndexReader* qDbr;
     qDbr = new IndexReader(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
@@ -103,9 +145,10 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     Matcher::result_t res;
     std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap, tChainKeyToComplexIdMap;
     std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeyMap, tComplexIdToChainKeyMap;
+    std::map<unsigned int, std::string> qcomplexIdToName, tcomplexIdToName;
     std::vector<unsigned int> qComplexIdVec, tComplexIdVec;
-    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeyMap, qComplexIdVec);
-    getKeyToIdMapIdToKeysMapIdVec(tLookupFile, tChainKeyToComplexIdMap, tComplexIdToChainKeyMap, tComplexIdVec);
+    getlookupInfo(qLookupFile, qcomplexIdToName,qChainKeyToComplexIdMap, qComplexIdToChainKeyMap, qComplexIdVec);
+    getlookupInfo(tLookupFile, tcomplexIdToName, tChainKeyToComplexIdMap, tComplexIdToChainKeyMap, tComplexIdVec);
     qChainKeyToComplexIdMap.clear();
     Debug::Progress progress(qComplexIdVec.size());
     std::vector<ScoreComplexResult> complexResults;
@@ -141,8 +184,8 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
         }
         
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
-            std::map<unsigned int, unsigned int> qcovSum;
-            std::map<unsigned int, unsigned int> tcovSum;
+            std::map<unsigned int, unsigned int> qcovSum, tcovSum;
+            std::map<unsigned int, double> qtmScores, ttmScores;
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::map<unsigned int, unsigned int> assIdTodbKey;
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
@@ -164,6 +207,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                     if (qcovSum.find(assId) == qcovSum.end()) {
                         qcovSum[assId] = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                         assIdTodbKey.emplace(assId, res.dbKey);
+                        qtmScores.emplace(assId, retComplex.qTmScore);
                         }
                     else{
                         qcovSum[assId] += (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
@@ -171,6 +215,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                     if (tcovSum.find(assId) == tcovSum.end()) {
                         tcovSum[assId] = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
                         assIdTodbKey.emplace(assId, res.dbKey);
+                        ttmScores.emplace(assId, retComplex.tTmScore);
                         }
                     else{
                         tcovSum[assId] += (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
@@ -222,27 +267,26 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                     break;
                 case Parameters::COV_MODE_LENGTH_SHORTER :
                     break;
-                
-                // TODO : other coverage modes
             }
             for (const auto& pair : qcovSum){
                 if (std::find(selectedAssIDs.begin(), selectedAssIDs.end(), pair.first) != selectedAssIDs.end()){
                     char *outpos = Itoa::u32toa_sse2(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]], buffer);
                     result.append(buffer, (outpos - buffer - 1));
                     result.push_back('\n');
-                    if (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL) {
-                        result5.append(std::to_string(qComplexId) + "\t" + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) + "\n");
-                    }
-                    else if (par.covMode == Parameters::COV_MODE_TARGET){
-                        result5.append(std::to_string(qComplexId) + "\t" + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) + "\n");
                     
-                    }
-                    else if (par.covMode == Parameters::COV_MODE_QUERY) {
-                        result5.append(std::to_string(qComplexId) + "\t" + std::to_string(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) + "\n");
-                    }
-
+                }
+                if (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL) {
+                            result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) +"\t"+ std::to_string(qtmScores[pair.first])+"\t"+ std::to_string(ttmScores[pair.first])+ "\n");
+                }
+                else if (par.covMode == Parameters::COV_MODE_TARGET){
+                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) +"\t"+ std::to_string(ttmScores[pair.first])+ "\n");
+                
+                }
+                else if (par.covMode == Parameters::COV_MODE_QUERY) {
+                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) +"\t"+ std::to_string(qtmScores[pair.first])+"\n");
                 }
             }
+
             resultWriter.writeData(result.c_str(), result.length(), qComplexId);
             resultWrite5.writeData(result5.c_str(), result5.length(), 0);
         }
