@@ -30,7 +30,9 @@ LocalParameters::LocalParameters() :
         PARAM_COMPLEX_REPORT_MODE(PARAM_COMPLEX_REPORT_MODE_ID, "--complex-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &complexReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
-        PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC)
+        PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
+        PARAM_FILT_TM_THRESHOLD(PARAM_FILT_TM_THRESHOLD_ID,"--filter-tm-threshold", "TMscore threshold for filtercomplex", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
+        
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -183,6 +185,7 @@ LocalParameters::LocalParameters() :
     filtercomplex.push_back(&PARAM_THREADS);
     filtercomplex.push_back(&PARAM_C);
     filtercomplex.push_back(&PARAM_COV_MODE);
+    filtercomplex.push_back(&PARAM_FILT_TM_THRESHOLD);
 
     // createcomplexreport
     createcomplexreport.push_back(&PARAM_DB_OUTPUT);
@@ -244,6 +247,7 @@ LocalParameters::LocalParameters() :
     complexReportMode = 1;
     eValueThrExpandComplex = 10000.0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
+    filtTmThr = 0.5;
 
     //rewrite param vals.
     PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";

@@ -17,52 +17,52 @@
 #include <omp.h>
 #endif
 
-// static bool hasTM(float TMThr, int covMode, double qTM, double tTM){
-//     switch (covMode) {
-//         case Parameters::COV_MODE_BIDIRECTIONAL:
-//             if (qTM >= TMThr && tTM >= TMThr) {
-//                 return true;
-//             }
-//             else{
-//                 return false;
-//             }
-//             break;
-//         case Parameters::COV_MODE_TARGET:
-//             if (tTM >= TMThr) {
-//                 return true;
-//             }
-//             else{
-//                 return false;
-//             }
-//             break;
-//         case Parameters::COV_MODE_QUERY:
-//             if (qTM >= TMThr) {
-//                 return true;
-//             }
-//             else{
-//                 return false;
-//             }
-//             break;
-//         case Parameters::COV_MODE_LENGTH_QUERY :
-//             return true;
-//             break;
-//         case Parameters::COV_MODE_LENGTH_TARGET :
-//             return true;
-//             break;
-//         case Parameters::COV_MODE_LENGTH_SHORTER :
-//             return true;
-//             break;
-//     }
-// }
+static bool hasTM(float TMThr, int covMode, double qTM, double tTM){
+    switch (covMode) {
+        case Parameters::COV_MODE_BIDIRECTIONAL:
+            if (qTM >= TMThr && tTM >= TMThr) {
+                return true;
+            }
+            else{
+                return false;
+            }
+            break;
+        case Parameters::COV_MODE_TARGET:
+            if (tTM >= TMThr) {
+                return true;
+            }
+            else{
+                return false;
+            }
+            break;
+        case Parameters::COV_MODE_QUERY:
+            if (qTM >= TMThr) {
+                return true;
+            }
+            else{
+                return false;
+            }
+            break;
+        case Parameters::COV_MODE_LENGTH_QUERY :
+            return true;
+            break;
+        case Parameters::COV_MODE_LENGTH_TARGET :
+            return true;
+            break;
+        case Parameters::COV_MODE_LENGTH_SHORTER :
+            return true;
+            break;
+    }
+}
 
-// bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr, double qTM, double tTM, float TMThr) {
-bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr) {
+bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr, double qTM, double tTM, float TMThr) {
+// bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr) {
     const bool covOK = Util::hasCoverage(covThr, covMode, qcov, dbcov);
-    // const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
+    const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
     if (
-        covOK
-        //   covOK &&
-        //   TMOK
+        // covOK
+          covOK &&
+          TMOK
         ) {
         return true;
     } else {
@@ -270,8 +270,8 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
             for (const auto& pair : qcovSum){
                 float qcov = static_cast<float>(pair.second) / static_cast<float>(qComplexLength[qComplexId]);
                 float dbcov = static_cast<float>(tcovSum[pair.first]) / static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]]);                
-                // if (!checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr, qtmScores[pair.first], ttmScores[pair.first], par.filterTMThr)){
-                if (!checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr)){
+                if (!checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr, qtmScores[pair.first], ttmScores[pair.first], par.filtTmThr)){
+                // if (!checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr)){
                     keysToDelete.push_back(pair.first);
                 }         
             }
