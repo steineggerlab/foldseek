@@ -118,7 +118,7 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "Alphafold/Proteome")
-        if notExists "${TMP_PATH}/alphafolddb.tar.gz"; then
+        if notExists "${TMP_PATH}/afdb_proteome.tar.gz"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_proteome.tar.gz" "${TMP_PATH}/afdb_proteome.tar.gz"
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_proteome.version" "${TMP_PATH}/version"
         fi
@@ -127,7 +127,7 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "Alphafold/Swiss-Prot")
-        if notExists "${TMP_PATH}/alphafold_swissprot.tar.gz"; then
+        if notExists "${TMP_PATH}/afdb_swissprot.tar.gz"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_swissprot.tar.gz" "${TMP_PATH}/afdb_swissprot.tar.gz"
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_swissprot.version" "${TMP_PATH}/version"
         fi
