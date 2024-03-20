@@ -50,13 +50,13 @@ int tmalign(int argc, const char **argv, const Command& command) {
     IndexReader *tdbr = NULL;
     IndexReader *tcadbr = NULL;
     bool sameDB = false;
+    uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
+    bool alignmentIsExtended = extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC;
     if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
         tdbr = &qdbr;
         tcadbr = &qcadbr;
     } else {
-        uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
-        bool alignmentIsExtended = extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC;
         tdbr = new IndexReader(par.db2, par.threads,
                         alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
                         (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
@@ -74,7 +74,11 @@ int tmalign(int argc, const char **argv, const Command& command) {
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
-    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed,  Parameters::DBTYPE_ALIGNMENT_RES);
+    int dbtype =  Parameters::DBTYPE_ALIGNMENT_RES;
+    if(alignmentIsExtended){
+	dbtype = DBReader<unsigned int>::setExtendedDbtype(dbtype, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
+    }
+    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbtype);
     dbw.open();
 
     Debug::Progress progress(resultReader.getSize());
