@@ -17,72 +17,72 @@
 #include <omp.h>
 #endif
 
+
+
+unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
+    switch (covMode) {
+        case Parameters::COV_MODE_BIDIRECTIONAL:
+            return (qcov+tcov)/2;
+        case Parameters::COV_MODE_TARGET:
+            return qcov;
+        case Parameters::COV_MODE_QUERY:
+            return tcov;
+        case Parameters::COV_MODE_LENGTH_QUERY :
+        case Parameters::COV_MODE_LENGTH_TARGET :
+        case Parameters::COV_MODE_LENGTH_SHORTER :
+            return 0;
+        default:
+            return 0;
+    }
+}
+
 static bool hasTM(float TMThr, int covMode, double qTM, double tTM){
     switch (covMode) {
         case Parameters::COV_MODE_BIDIRECTIONAL:
-            if (qTM >= TMThr && tTM >= TMThr) {
-                return true;
-            }
-            else{
-                return false;
-            }
-            break;
+            return ((qTM>= TMThr) && (tTM >= TMThr));
         case Parameters::COV_MODE_TARGET:
-            if (tTM >= TMThr) {
-                return true;
-            }
-            else{
-                return false;
-            }
-            break;
+            return (tTM >= TMThr);
         case Parameters::COV_MODE_QUERY:
-            if (qTM >= TMThr) {
-                return true;
-            }
-            else{
-                return false;
-            }
-            break;
+            return (qTM >= TMThr);
         case Parameters::COV_MODE_LENGTH_QUERY :
-            return true;
-            break;
         case Parameters::COV_MODE_LENGTH_TARGET :
-            return true;
-            break;
         case Parameters::COV_MODE_LENGTH_SHORTER :
             return true;
-            break;
+        default:
+            return true;
     }
 }
 
-bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr, double qTM, double tTM, float TMThr) {
-// bool checkFilterCriteria(float qcov, float dbcov, int covMode, float covThr) {
-    const bool covOK = Util::hasCoverage(covThr, covMode, qcov, dbcov);
-    const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
-    if (
-        // covOK
-          covOK &&
-          TMOK
-        ) {
-        return true;
-    } else {
-        return false;
+struct ComplexFilterCriteria {
+    ComplexFilterCriteria() {}
+    ComplexFilterCriteria(unsigned int dbKey, unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qTM, double tTM, std::vector<double> qChainTmScores, std::vector<double> tChainTmScores) :
+                        dbKey(dbKey), qTotalAlnLen(qTotalAlnLen), tTotalAlnLen(tTotalAlnLen), qTM(qTM), tTM(tTM), qChainTmScores(qChainTmScores), tChainTmScores(tChainTmScores) {}
+
+    bool satisfyFilterCriteria(int covMode, float covThr, float TMThr) {
+        const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
+        const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
+        return (covOK && TMOK);
     }
-}
 
-unsigned int getQueryResidueLength( IndexReader& qDbr, std::vector<unsigned int> &qChainKeys) {
-        unsigned int qResidueLen = 0;
-        for (auto qChainKey: qChainKeys) {
-            size_t id = qDbr.sequenceReader->getId(qChainKey);
-            // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY)
-                return 0;
-            qResidueLen += qDbr.sequenceReader->getSeqLen(id);
-        }
-        return qResidueLen;
-}
+    unsigned int dbKey;
+    unsigned int qTotalAlnLen;
+    unsigned int tTotalAlnLen;
+    float qCov;
+    float tCov;
+    double qTM;
+    double tTM;
+    std::vector<double> qChainTmScores; //TODO
+    std::vector<double> tChainTmScores; //TODO
+    // std::vector<unsigned int> alignedQChainKeys; //TODO
+    // std::vector<unsigned int> alignedTChainKeys; //TODO
+};
 
-unsigned int getTargetResidueLength( IndexReader *qDbr, std::vector<unsigned int> &qChainKeys) {
+//TODO
+// std::vector<unsigned double> computeChainTmScore() {
+//     std::vector<unsigned double> tmScores;
+//     return tmScores;
+// }
+unsigned int getComplexResidueLength( IndexReader *qDbr, std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
         for (auto qChainKey: qChainKeys) {
             size_t id = qDbr->sequenceReader->getId(qChainKey);
@@ -93,15 +93,6 @@ unsigned int getTargetResidueLength( IndexReader *qDbr, std::vector<unsigned int
         }
         return qResidueLen;
 }
-
-std::vector<unsigned int> selecHighestCoverage( std::map<unsigned int , std::map<unsigned int, unsigned int>> &covMap){
-        std::vector<unsigned int> assIdvec;
-        for (auto pair : covMap){
-            assIdvec.push_back(pair.second.rbegin()->second);
-        }
-        return assIdvec;
-}
-
 
 static void getlookupInfo(
         const std::string &file,
@@ -143,7 +134,6 @@ static void getlookupInfo(
     }
     lookupDB.close();
 }
-
 
 int filtercomplex(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -193,7 +183,6 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     getlookupInfo(tLookupFile, tcomplexIdToName, tChainKeyToComplexIdMap, tComplexIdToChainKeyMap, tComplexIdVec);
     qChainKeyToComplexIdMap.clear();
     Debug::Progress progress(qComplexIdVec.size());
-    std::vector<ScoreComplexResult> complexResults;
     std::map<unsigned int, unsigned int> tComplexLength;
     std::map<unsigned int, unsigned int> qComplexLength;
 
@@ -204,15 +193,15 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
     Matcher::result_t res;
-    std::vector<ScoreComplexResult> localComplexResults;
 #pragma omp for schedule(dynamic, 10) nowait
+
         for (size_t tComplexIdx = 0; tComplexIdx < tComplexIdVec.size(); tComplexIdx++) {
             unsigned int tComplexId = tComplexIdVec[tComplexIdx];
             std::vector<unsigned int> &tChainKeys = tComplexIdToChainKeyMap[tComplexId];
             if (tChainKeys.empty()) {
                 continue;
             }
-            unsigned int reslen = getTargetResidueLength(tDbr, tChainKeys);
+            unsigned int reslen = getComplexResidueLength(tDbr, tChainKeys);
             tComplexLength[tComplexId] =reslen;
         }
         for (size_t qComplexIdx = 0; qComplexIdx < qComplexIdVec.size(); qComplexIdx++) {
@@ -221,16 +210,15 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
             if (qChainKeys.empty()) {
                 continue;
             }
-            unsigned int reslen = getTargetResidueLength(qDbr, qChainKeys);
+            unsigned int reslen = getComplexResidueLength(qDbr, qChainKeys);
             qComplexLength[qComplexId] = reslen;
         }
         
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
-            std::map<unsigned int, unsigned int> qcovSum, tcovSum;
-            std::map<unsigned int, double> qtmScores, ttmScores;
+            std::map<unsigned int, ComplexFilterCriteria> localComplexCriteria;
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
-            std::map<unsigned int, unsigned int> assIdTodbKey;
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
+
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainDbKey = alnDbr.getId(qChainKey);
@@ -244,92 +232,69 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                         Debug(Debug::ERROR) << "No scorecomplex result provided";
                         EXIT(EXIT_FAILURE);
                     }
+
                     data = Util::skipLine(data);
                     unsigned int assId = retComplex.assId;
-                    if (qcovSum.find(assId) == qcovSum.end()) {
-                        qcovSum[assId] = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
-                        assIdTodbKey.emplace(assId, res.dbKey);
-                        qtmScores.emplace(assId, retComplex.qTmScore);
-                        }
-                    else{
-                        qcovSum[assId] += (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
-                    }
-                    if (tcovSum.find(assId) == tcovSum.end()) {
-                        tcovSum[assId] = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
-                        assIdTodbKey.emplace(assId, res.dbKey);
-                        ttmScores.emplace(assId, retComplex.tTmScore);
-                        }
-                    else{
-                        tcovSum[assId] += (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
+                
+                    if (localComplexCriteria.find(assId) == localComplexCriteria.end()) {
+                        localComplexCriteria[assId] = ComplexFilterCriteria();
+                        localComplexCriteria[assId].dbKey = res.dbKey;
+                        localComplexCriteria[assId].qTotalAlnLen = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
+                        localComplexCriteria[assId].tTotalAlnLen = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
+                        localComplexCriteria[assId].qTM = retComplex.qTmScore;
+                        localComplexCriteria[assId].tTM = retComplex.tTmScore;
+                        // localComplexCriteria[assId].qChainTmScores = computeChainTmScore(); //TODO
+                        // localComplexCriteria[assId].tChainTmScores = computeChainTmScore(); //TODO
+                    } else {
+                        localComplexCriteria[assId].qTotalAlnLen += (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
+                        localComplexCriteria[assId].tTotalAlnLen += (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
                     }
                 }
             }
             std::string result;
             std::string result5;
-            std::vector<unsigned int> keysToDelete;
-            for (const auto& pair : qcovSum){
-                float qcov = static_cast<float>(pair.second) / static_cast<float>(qComplexLength[qComplexId]);
-                float dbcov = static_cast<float>(tcovSum[pair.first]) / static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]]);                
-                if (!checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr, qtmScores[pair.first], ttmScores[pair.first], par.filtTmThr)){
-                // if (!checkFilterCriteria(qcov, dbcov, par.covMode, par.covThr)){
-                    keysToDelete.push_back(pair.first);
-                }         
-            }
-            for (const auto& key : keysToDelete) {
-                qcovSum.erase(key);
-                tcovSum.erase(key);
-            }
+            std::vector<unsigned int> assIdsToDelete;
 
-            std::map<unsigned int , std::map<unsigned int, unsigned int>> qcompIdToassIdToalnSum, tcompIdToassIdToalnSum, avgcompIdToassIdToalnSum;
-            for (const auto& pair : qcovSum){
-                if (qcompIdToassIdToalnSum.find(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]) == qcompIdToassIdToalnSum.end()){
-                    qcompIdToassIdToalnSum[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] = {{pair.second, pair.first}};
-                    tcompIdToassIdToalnSum[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] ={{ tcovSum[pair.first], pair.first}};
-                    avgcompIdToassIdToalnSum[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] = {{(pair.second+tcovSum[pair.first])/2, pair.first}};
+            for (auto& assId_res : localComplexCriteria){
+                unsigned int tComplexId = tChainKeyToComplexIdMap[assId_res.second.dbKey];
+                assId_res.second.qCov = static_cast<float>(assId_res.second.qTotalAlnLen) / static_cast<float>(qComplexLength[qComplexId]);
+                assId_res.second.tCov = static_cast<float>(assId_res.second.tTotalAlnLen) / static_cast<float>(tComplexLength[tComplexId]);
+                if (!assId_res.second.satisfyFilterCriteria(par.covMode, par.covThr, par.filtTmThr)){
+                    assIdsToDelete.push_back(assId_res.first);
+                }
+            }
+            for (const auto& key : assIdsToDelete) {
+                localComplexCriteria.erase(key);
+            }
+            
+            std::map<unsigned int, std::vector<unsigned int>> cmplIdToBestAssId; // cmplId : [assId, alnSum]
+            for (const auto& assId_res : localComplexCriteria){
+                unsigned int tComplexId = tChainKeyToComplexIdMap[assId_res.second.dbKey];
+                unsigned int alnlen = adjustAlnLen(assId_res.second.qTotalAlnLen, assId_res.second.tTotalAlnLen, par.covMode);
+                if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()){
+                    cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
                 }
                 else{
-                    qcompIdToassIdToalnSum[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]][pair.second] = pair.first;
-                    tcompIdToassIdToalnSum[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]][tcovSum[pair.first]] = pair.first;    
-                    avgcompIdToassIdToalnSum[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]][(pair.second + tcovSum[pair.first])/2] = pair.first ;
-                }
-            }
-            std::vector<unsigned int> selectedAssIDs;
-            switch (par.covMode) {
-                case Parameters::COV_MODE_BIDIRECTIONAL:
-                    selectedAssIDs = selecHighestCoverage(avgcompIdToassIdToalnSum);
-                    break;
-                case Parameters::COV_MODE_TARGET:
-                    selectedAssIDs = selecHighestCoverage(tcompIdToassIdToalnSum);
-                    break;
-                case Parameters::COV_MODE_QUERY:
-                    selectedAssIDs = selecHighestCoverage(qcompIdToassIdToalnSum);
-                    break;
-                case Parameters::COV_MODE_LENGTH_QUERY :
-                    break;
-                case Parameters::COV_MODE_LENGTH_TARGET :
-                    break;
-                case Parameters::COV_MODE_LENGTH_SHORTER :
-                    break;
-            }
-            for (const auto& pair : qcovSum){
-                if (std::find(selectedAssIDs.begin(), selectedAssIDs.end(), pair.first) != selectedAssIDs.end()){
-                    char *outpos = Itoa::u32toa_sse2(tChainKeyToComplexIdMap[assIdTodbKey[pair.first]], buffer);
-                    result.append(buffer, (outpos - buffer - 1));
-                    result.push_back('\n');
-                    
-                }
-                if (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL) {
-                            result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) +"\t"+ std::to_string(qtmScores[pair.first])+"\t"+ std::to_string(ttmScores[pair.first])+ "\n");
-                }
-                else if (par.covMode == Parameters::COV_MODE_TARGET){
-                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(tcovSum[pair.first]/ static_cast<float>(tComplexLength[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]])) +"\t"+ std::to_string(qtmScores[pair.first])+"\t"+ std::to_string(ttmScores[pair.first])+ "\n");
-                
-                }
-                else if (par.covMode == Parameters::COV_MODE_QUERY) {
-                    result5.append(std::to_string(pair.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tChainKeyToComplexIdMap[assIdTodbKey[pair.first]]] + "\t" + std::to_string(pair.second/static_cast<float>(qComplexLength[qComplexId])) +"\t"+ std::to_string(qtmScores[pair.first])+"\t"+ std::to_string(ttmScores[pair.first])+"\n");
+                    if (alnlen > cmplIdToBestAssId[tComplexId][1]){
+                        cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                    }
                 }
             }
 
+            std::vector<unsigned int> selectedAssIDs;
+            for (const auto& pair : cmplIdToBestAssId){
+                selectedAssIDs.push_back(pair.second[0]);
+            }
+
+            for (const auto& assId_res : localComplexCriteria){
+                unsigned int tComplexId = tChainKeyToComplexIdMap[assId_res.second.dbKey];
+                if (std::find(selectedAssIDs.begin(), selectedAssIDs.end(), assId_res.first) != selectedAssIDs.end()){
+                    char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
+                    result.append(buffer, (outpos - buffer - 1));
+                    result.push_back('\n');
+                    result5.append(std::to_string(assId_res.first) + "\t" +qcomplexIdToName[qComplexId] + "\t" + tcomplexIdToName[tComplexId] + "\t" + std::to_string(assId_res.second.qCov) + "\t" + std::to_string(assId_res.second.tCov) + "\t"+ std::to_string(assId_res.second.qTM)+"\t"+ std::to_string(assId_res.second.tTM)+ "\n");
+                }
+            }
             resultWriter.writeData(result.c_str(), result.length(), qComplexId);
             resultWrite5.writeData(result5.c_str(), result5.length(), 0);
         }

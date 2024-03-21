@@ -8,8 +8,10 @@
 
 #include "complexcluster.sh.h"
 
-void setComplexClusterDefaults(Parameters *p) {
+void setComplexClusterDefaults(LocalParameters *p) {
     p->covThr = 0.8;
+    p->filtTmThr = 0.5; // FIX
+    p->filtChainTmThr=0.0; // FIX
     p->covMode = 1;
     p->clusteringMode = Parameters::GREEDY;
     p->removeTmpFiles = true;
@@ -32,7 +34,6 @@ int complexcluster(int argc, const char **argv, const Command &command) {
     par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
-
 
     setComplexClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);

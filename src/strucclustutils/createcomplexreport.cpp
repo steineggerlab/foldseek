@@ -162,6 +162,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
                         compAlns[compAlnIdx].qChainNames.emplace_back(queryChainName);
                         compAlns[compAlnIdx].tChainNames.emplace_back(targetChainName);
                     }
+
                 } // while end
             }
             for (size_t compAlnIdx = 0; compAlnIdx < compAlns.size(); compAlnIdx++) {

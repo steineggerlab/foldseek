@@ -126,6 +126,7 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_FILT_TM_THRESHOLD)
+    PARAMETER(PARAM_FILT_CHAIN_TM_THRESHOLD)
 
     int prefMode;
     float tmScoreThr;
@@ -150,6 +151,7 @@ public:
     int inputFormat;
     int pdbOutputMode;
     float filtTmThr;
+    float filtChainTmThr;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
