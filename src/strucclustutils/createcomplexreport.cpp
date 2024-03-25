@@ -31,6 +31,7 @@ void getScoreComplexResults(
         double tTMScore,
         const std::string &u,
         const std::string &t,
+        unsigned int qComplexId,
         unsigned int assId
 ) {
     char buffer[1024];
@@ -56,7 +57,7 @@ void getScoreComplexResults(
     }
     int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), assId);
     resultToWrite.append(buffer, count);
-    scoreComplexResults.emplace_back(assId, resultToWrite);
+    scoreComplexResults.emplace_back(qComplexId, assId, resultToWrite);
 }
 
 struct ComplexAlignment {
@@ -96,7 +97,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
 
     size_t localThreads = 1;
 #ifdef OPENMP
-    localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
+    localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);f
 #endif
 
     const bool shouldCompress = par.dbOut == true && par.compressed == true;
@@ -129,6 +130,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
             progress.updateProgress();
             std::vector<unsigned int> assIdVec;
             std::vector<ComplexAlignment> compAlns;
+            //
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap[qComplexId];
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
@@ -166,7 +168,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
             }
             for (size_t compAlnIdx = 0; compAlnIdx < compAlns.size(); compAlnIdx++) {
                 const ComplexAlignment &aln = compAlns[compAlnIdx];
-                getScoreComplexResults(localComplexResults, aln.qChainNames, aln.tChainNames, aln.qTMScore, aln.tTMScore, aln.u, aln.t, aln.assId);
+                getScoreComplexResults(localComplexResults, aln.qChainNames, aln.tChainNames, aln.qTMScore, aln.tTMScore, aln.u, aln.t, qComplexId, aln.assId);
             }
         } // for end
 #pragma omp critical
@@ -174,7 +176,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
             complexResults.insert(complexResults.end(), localComplexResults.begin(), localComplexResults.end());
         }
     } // MP end
-    SORT_PARALLEL(complexResults.begin(), complexResults.end(), compareComplexResult);
+    SORT_PARALLEL(complexResults.begin(), complexResults.end(), compareComplexResultByQuery);
     for (size_t complexResIdx = 0; complexResIdx < complexResults.size(); complexResIdx++) {
         const ScoreComplexResult& res = complexResults[complexResIdx];
         const resultToWrite_t& data = res.resultToWrite;

@@ -2,6 +2,7 @@
 #define FOLDSEEK_CREATECOMPLEXREPORT_H
 #include "Matcher.h"
 #include "MemoryMapped.h"
+#include "TMaligner.h"
 
 const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
 const double MAX_ASSIGNED_CHAIN_RATIO = 1.0;
@@ -26,14 +27,128 @@ typedef std::string resultToWrite_t;
 typedef std::string chainName_t;
 typedef std::pair<unsigned int, resultToWrite_t> resultToWriteWithKey_t;
 
+struct Chain {
+    Chain() {}
+    Chain(unsigned int complexId, unsigned int chainKey) : complexId(complexId), chainKey(chainKey) {}
+    unsigned int complexId;
+    unsigned int chainKey;
+    std::vector<float> caVecX;
+    std::vector<float> caVecY;
+    std::vector<float> caVecZ;
+};
+
+struct ChainToChainAln {
+    ChainToChainAln() {}
+    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), tmScore((float)tmResult.tmscore) {
+        alnLength = alnResult.alnLength;
+        matches = 0;
+        unsigned int qPos = alnResult.qStartPos;
+        unsigned int dbPos = alnResult.dbStartPos;
+        unsigned int qXPos = 0;
+        unsigned int qYPos = alnResult.qLen;
+        unsigned int qZPos = alnResult.qLen * 2;
+        unsigned int dbXPos = 0;
+        unsigned int dbYPos = alnResult.dbLen;
+        unsigned int dbZPos = alnResult.dbLen * 2;
+        for (char cigar : alnResult.backtrace) {
+            switch (cigar) {
+                case 'M':
+                    matches++;
+                    qChain.caVecX.emplace_back(qCaData[qXPos + qPos]);
+                    qChain.caVecY.emplace_back(qCaData[qYPos + qPos]);
+                    qChain.caVecZ.emplace_back(qCaData[qZPos + qPos++]);
+                    dbChain.caVecX.emplace_back(dbCaData[dbXPos + dbPos]);
+                    dbChain.caVecY.emplace_back(dbCaData[dbYPos + dbPos]);
+                    dbChain.caVecZ.emplace_back(dbCaData[dbZPos + dbPos++]);
+                    break;
+                case 'I':
+                    qPos++;
+                    break;
+                case 'D':
+                    dbPos++;
+                    break;
+            }
+        }
+        char buffer[4096];
+        label = INITIALIZED_LABEL;
+        superposition[0] = tmResult.u[0][0];
+        superposition[1] = tmResult.u[0][1];
+        superposition[2] = tmResult.u[0][2];
+        superposition[3] = tmResult.u[1][0];
+        superposition[4] = tmResult.u[1][1];
+        superposition[5] = tmResult.u[1][2];
+        superposition[6] = tmResult.u[2][0];
+        superposition[7] = tmResult.u[2][1];
+        superposition[8] = tmResult.u[2][2];
+        superposition[9] = tmResult.t[0];
+        superposition[10] = tmResult.t[1];
+        superposition[11] = tmResult.t[2];
+        size_t len = Matcher::resultToBuffer(buffer, alnResult, true, true, false);
+        resultToWrite.append(buffer, len-1);
+    }
+
+    Chain qChain;
+    Chain dbChain;
+    unsigned int matches;
+    unsigned int alnLength;
+    resultToWrite_t resultToWrite;
+    double superposition[SIZE_OF_SUPERPOSITION_VECTOR];
+    unsigned int label;
+    float tmScore;
+
+    float getDistance(const ChainToChainAln &o) {
+        float dist = 0;
+        for (size_t i=0; i<SIZE_OF_SUPERPOSITION_VECTOR; i++) {
+            dist += std::pow(superposition[i] - o.superposition[i], 2);
+        }
+        dist = std::sqrt(dist);
+        return dist;
+    }
+
+    void free() {
+        qChain.caVecX.clear();
+        qChain.caVecY.clear();
+        qChain.caVecZ.clear();
+        dbChain.caVecX.clear();
+        dbChain.caVecY.clear();
+        dbChain.caVecZ.clear();
+        resultToWrite.clear();
+    }
+};
+
 struct ScoreComplexResult {
     ScoreComplexResult() {}
-    ScoreComplexResult(unsigned int assId, resultToWrite_t &resultToWrite) : assId(assId), resultToWrite(resultToWrite) {}
+    ScoreComplexResult(unsigned int queryComplexId, unsigned int assId, resultToWrite_t &resultToWrite) : queryComplexId(queryComplexId), assId(assId), resultToWrite(resultToWrite) {}
+    unsigned int queryComplexId;
     unsigned int assId;
     resultToWrite_t resultToWrite;
 };
 
-static bool compareComplexResult(const ScoreComplexResult &first, const ScoreComplexResult &second) {
+bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
+    if (first.dbChain.complexId < second.dbChain.complexId)
+        return true;
+    if (first.dbChain.complexId > second.dbChain.complexId)
+        return false;
+    return false;
+}
+
+//static bool compareComplexResult(const ScoreComplexResult &first, const ScoreComplexResult &second) {
+//    if (first.assId < second.assId) {
+//        return true;
+//    }
+//    if (first.assId > second.assId) {
+//        return false;
+//    }
+//    return false;
+//}
+
+static bool compareComplexResultByQuery(const ScoreComplexResult &first, const ScoreComplexResult &second) {
+    if (first.queryComplexId < second.queryComplexId) {
+        return true;
+    }
+    if (first.queryComplexId > second.queryComplexId) {
+        return false;
+    }
     if (first.assId < second.assId) {
         return true;
     }
