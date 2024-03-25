@@ -149,6 +149,14 @@ struct NeighborsWithDist {
     float dist;
 };
 
+bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
+    if (first.dbChain.complexId < second.dbChain.complexId)
+        return true;
+    if (first.dbChain.complexId > second.dbChain.complexId)
+        return false;
+    return false;
+}
+
 bool compareAssignment(const Assignment &first, const Assignment &second) {
     if (first.qTmScore > second.qTmScore)
         return true;
@@ -271,7 +279,10 @@ private:
             finalClusters.clear();
             prevMaxClusterSize = maxClusterSize;
         }
-        finalClusters.insert(currClusters.begin(), currClusters.end());
+
+        if (maxClusterSize>=MULTIPLE_CHAINED_COMPLEX)
+            finalClusters.insert(currClusters.begin(), currClusters.end());
+
         eps += learningRate;
         return runDBSCAN();
     }

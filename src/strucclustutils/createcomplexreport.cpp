@@ -97,7 +97,7 @@ int createcomplexreport(int argc, const char **argv, const Command &command) {
 
     size_t localThreads = 1;
 #ifdef OPENMP
-    localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);f
+    localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
 #endif
 
     const bool shouldCompress = par.dbOut == true && par.compressed == true;

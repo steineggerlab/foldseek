@@ -124,14 +124,6 @@ struct ScoreComplexResult {
     resultToWrite_t resultToWrite;
 };
 
-bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
-    if (first.dbChain.complexId < second.dbChain.complexId)
-        return true;
-    if (first.dbChain.complexId > second.dbChain.complexId)
-        return false;
-    return false;
-}
-
 //static bool compareComplexResult(const ScoreComplexResult &first, const ScoreComplexResult &second) {
 //    if (first.assId < second.assId) {
 //        return true;
