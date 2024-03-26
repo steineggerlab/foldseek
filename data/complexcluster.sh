@@ -84,9 +84,9 @@ fi
 
 # Shift _h, _h.dbtype
 if notExists "${TMP_PATH}/complex_db_h.dbtype"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/complex_db_header_tmp" ${VERBOSITY_PAR} \
-        || fail "tsv2db died"
+    # # shellcheck disable=SC2086
+    # "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/complex_db_header_tmp" ${VERBOSITY_PAR} \
+    #     || fail "tsv2db died"
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h_tmp" ${VERBOSITY_PAR} \
         || fail "createtsv died"
@@ -110,10 +110,11 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY_PAR}
      # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_db_h_tmp" ${VERBOSITY_PAR}
+    # "$MMSEQS" rmdb "${TMP_PATH}/complex_db_header_tmp" ${VERBOSITY_PAR}
     rm "${TMP_PATH}/chain_db_h_tmp"
     rm "${TMP_PATH}/chain_db_h_tmp_name"
     rm "${TMP_PATH}/chain_db_h_tmp_header"
+    rm "${TMP_PATH}/complex_db_header.tsv_tmp"
     rm "${TMP_PATH}/complex_db_header.tsv_redundant"
     rm -rf "${TMP_PATH}/complexsearch_tmp"
     rm -f "${TMP_PATH}/complexcluster.sh"
