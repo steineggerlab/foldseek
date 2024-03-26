@@ -59,7 +59,10 @@ buildCmplhName(){
 
     paste -d'\t' "${1}_name" "${2}_tmp"  > "${2}_redundant" 
 
-    awk '!seen[$1]++' "${2}_redundant" > "${2}" 
+    awk '!seen[$1]++' "${2}_redundant" > "${2}_nameheader"
+
+    awk -F'\t' '{print NR-1 "\t" $2}' "${2}_nameheader" > "${2}"
+
 }
 
 # [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "${TMP_PATH}";
@@ -116,6 +119,7 @@ if [ -n "${REMOVE_TMP}" ]; then
     rm "${TMP_PATH}/chain_db_h_tmp_header"
     rm "${TMP_PATH}/complex_db_header.tsv_tmp"
     rm "${TMP_PATH}/complex_db_header.tsv_redundant"
+    rm "${TMP_PATH}/complex_db_header.tsv_tmp_nameheader"
     rm -rf "${TMP_PATH}/complexsearch_tmp"
     rm -f "${TMP_PATH}/complexcluster.sh"
 fi
