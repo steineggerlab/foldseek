@@ -48,22 +48,33 @@ buildCmplDb() {
     cp "${1}.dbtype" "${2}.dbtype"
 }
 
-buildCmplhName(){
-    awk -F'\t| ' '{match($1, /(pdb|cif)/); 
-    file_name=substr($1, 1, RSTART+RLENGTH-1);
-    print file_name }' "${1}" > "${1}_name"
+buldCmplhDb(){
+    awk -F"\t" '{
+            split($2,words," ")
+            split(words[1],parts,"_")
+            output_string=""
+            for (j = 1; j < length(parts); j++) {
+                output_string = output_string parts[j]
+                if (j < length(parts)-1){
+                    output_string=output_string"_" 
+                }
+            }
+            for (t = 2; t < length(words); t++) {
+                output_string=output_string" "words[t]
+            }
+            print output_string
+        }' "${1}" > "${2}_redundant"
 
-    awk '{sub(/^[^ ]* /, ""); print}' "${1}" > "${1}_header"
-
-    paste -d' ' "${1}_name" "${1}_header" > "${2}_tmp" 
-
-    paste -d'\t' "${1}_name" "${2}_tmp"  > "${2}_redundant" 
-
-    awk '!seen[$1]++' "${2}_redundant" > "${2}_nameheader"
-
-    awk -F'\t' '{print NR-1 "\t" $2}' "${2}_nameheader" > "${2}"
-
+    awk 'BEGIN {index_value=0}
+    {
+        if (!seen[$1]) {
+            print index_value++"\t"$0
+            seen[$1] = 1
+        }
+    }' "${2}_redundant" > "${2}"
+    
 }
+
 
 # [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "${TMP_PATH}";
 
@@ -93,9 +104,9 @@ if notExists "${TMP_PATH}/complex_db_h.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h_tmp" ${VERBOSITY_PAR} \
         || fail "createtsv died"
-    buildCmplhName "${TMP_PATH}/chain_db_h_tmp" "${TMP_PATH}/complex_db_header.tsv"
+    buldCmplhDb "${TMP_PATH}/chain_db_h_tmp" "${TMP_PATH}/complex_header.tsv"
     # shellcheck disable=SC2086
-    "$MMSEQS" tsv2db "${TMP_PATH}/complex_db_header.tsv" "${TMP_PATH}/complex_db_h" ${VERBOSITY_PAR} \
+    "$MMSEQS" tsv2db "${TMP_PATH}/complex_header.tsv" "${TMP_PATH}/complex_db_h" ${VERBOSITY_PAR} \
         || fail "tsv2db died"
 fi
 
@@ -112,14 +123,8 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/complex_filt" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY_PAR}
-     # shellcheck disable=SC2086
-    # "$MMSEQS" rmdb "${TMP_PATH}/complex_db_header_tmp" ${VERBOSITY_PAR}
-    rm "${TMP_PATH}/chain_db_h_tmp"
-    rm "${TMP_PATH}/chain_db_h_tmp_name"
-    rm "${TMP_PATH}/chain_db_h_tmp_header"
-    rm "${TMP_PATH}/complex_db_header.tsv_tmp"
-    rm "${TMP_PATH}/complex_db_header.tsv_redundant"
-    rm "${TMP_PATH}/complex_db_header.tsv_tmp_nameheader"
+    rm "${TMP_PATH}/complex_header.tsv"
+    rm "${TMP_PATH}/complex_header.tsv_redundant"
     rm -rf "${TMP_PATH}/complexsearch_tmp"
     rm -f "${TMP_PATH}/complexcluster.sh"
 fi
