@@ -125,8 +125,8 @@ public:
     PARAMETER(PARAM_EXPAND_COMPLEX_EVALUE)
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
-    PARAMETER(PARAM_FILT_TM_THRESHOLD)
-    PARAMETER(PARAM_FILT_CHAIN_TM_THRESHOLD)
+    PARAMETER(PARAM_COMPLEX_TM_THRESHOLD)
+    PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
 
     int prefMode;
     float tmScoreThr;
@@ -150,7 +150,7 @@ public:
     double eValueThrExpandComplex;
     int inputFormat;
     int pdbOutputMode;
-    float filtTmThr;
+    float filtComplexTmThr;
     float filtChainTmThr;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,

@@ -10,7 +10,7 @@
 
 void setComplexClusterDefaults(LocalParameters *p) {
     p->covThr = 0.8;
-    p->filtTmThr = 0.5; // FIX
+    p->filtComplexTmThr = 0.5; // FIX
     p->filtChainTmThr=0.0; // FIX
     p->covMode = 1;
     p->clusteringMode = Parameters::GREEDY;
