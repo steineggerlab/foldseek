@@ -15,95 +15,6 @@
 #include <omp.h>
 #endif
 
-struct Chain {
-    Chain() {}
-    Chain(unsigned int complexId, unsigned int chainKey) : complexId(complexId), chainKey(chainKey) {}
-    unsigned int complexId;
-    unsigned int chainKey;
-    std::vector<float> caVecX;
-    std::vector<float> caVecY;
-    std::vector<float> caVecZ;
-};
-
-struct ChainToChainAln {
-    ChainToChainAln() {}
-    ChainToChainAln(Chain &queryChain, Chain &targetChain, float *qCaData, float *dbCaData, Matcher::result_t &alnResult, TMaligner::TMscoreResult &tmResult) : qChain(queryChain), dbChain(targetChain), tmScore((float)tmResult.tmscore) {
-        alnLength = alnResult.alnLength;
-        matches = 0;
-        unsigned int qPos = alnResult.qStartPos;
-        unsigned int dbPos = alnResult.dbStartPos;
-        unsigned int qXPos = 0;
-        unsigned int qYPos = alnResult.qLen;
-        unsigned int qZPos = alnResult.qLen * 2;
-        unsigned int dbXPos = 0;
-        unsigned int dbYPos = alnResult.dbLen;
-        unsigned int dbZPos = alnResult.dbLen * 2;
-        for (char cigar : alnResult.backtrace) {
-            switch (cigar) {
-                case 'M':
-                    matches++;
-                    qChain.caVecX.emplace_back(qCaData[qXPos + qPos]);
-                    qChain.caVecY.emplace_back(qCaData[qYPos + qPos]);
-                    qChain.caVecZ.emplace_back(qCaData[qZPos + qPos++]);
-                    dbChain.caVecX.emplace_back(dbCaData[dbXPos + dbPos]);
-                    dbChain.caVecY.emplace_back(dbCaData[dbYPos + dbPos]);
-                    dbChain.caVecZ.emplace_back(dbCaData[dbZPos + dbPos++]);
-                    break;
-                case 'I':
-                    qPos++;
-                    break;
-                case 'D':
-                    dbPos++;
-                    break;
-            }
-        }
-        char buffer[4096];
-        label = INITIALIZED_LABEL;
-        superposition[0] = tmResult.u[0][0];
-        superposition[1] = tmResult.u[0][1];
-        superposition[2] = tmResult.u[0][2];
-        superposition[3] = tmResult.u[1][0];
-        superposition[4] = tmResult.u[1][1];
-        superposition[5] = tmResult.u[1][2];
-        superposition[6] = tmResult.u[2][0];
-        superposition[7] = tmResult.u[2][1];
-        superposition[8] = tmResult.u[2][2];
-        superposition[9] = tmResult.t[0];
-        superposition[10] = tmResult.t[1];
-        superposition[11] = tmResult.t[2];
-        size_t len = Matcher::resultToBuffer(buffer, alnResult, true, true, false);
-        resultToWrite.append(buffer, len-1);
-    }
-
-    Chain qChain;
-    Chain dbChain;
-    unsigned int matches;
-    unsigned int alnLength;
-    resultToWrite_t resultToWrite;
-    double superposition[SIZE_OF_SUPERPOSITION_VECTOR];
-    unsigned int label;
-    float tmScore;
-
-    float getDistance(const ChainToChainAln &o) {
-        float dist = 0;
-        for (size_t i=0; i<SIZE_OF_SUPERPOSITION_VECTOR; i++) {
-            dist += std::pow(superposition[i] - o.superposition[i], 2);
-        }
-        dist = std::sqrt(dist);
-        return dist;
-    }
-
-    void free() {
-        qChain.caVecX.clear();
-        qChain.caVecY.clear();
-        qChain.caVecZ.clear();
-        dbChain.caVecX.clear();
-        dbChain.caVecY.clear();
-        dbChain.caVecZ.clear();
-        resultToWrite.clear();
-    }
-};
-
 // carrying chainToChainAlignments from the same query and target complex
 struct SearchResult {
     SearchResult() {}
@@ -368,7 +279,10 @@ private:
             finalClusters.clear();
             prevMaxClusterSize = maxClusterSize;
         }
-        finalClusters.insert(currClusters.begin(), currClusters.end());
+
+        if (maxClusterSize>=MULTIPLE_CHAINED_COMPLEX)
+            finalClusters.insert(currClusters.begin(), currClusters.end());
+
         eps += learningRate;
         return runDBSCAN();
     }
