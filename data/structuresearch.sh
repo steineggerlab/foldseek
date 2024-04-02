@@ -65,7 +65,7 @@ if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then
     if [ -n "${EXPAND}" ]; then
         if notExists "${TMP_PATH}/strualn_expanded.dbtype"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" mergeresultsbyset  "${INTERMEDIATE}" "${TARGET_ALIGNMENT}_clu" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
+            "$MMSEQS" mergeresultsbyset "${INTERMEDIATE}" "${TARGET_ALIGNMENT}_clu" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
                 || fail "Expand died"
         fi
         INTERMEDIATE="${TMP_PATH}/strualn_expanded"

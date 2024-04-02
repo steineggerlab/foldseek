@@ -216,7 +216,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
                     EXIT(EXIT_FAILURE);
                 }
             }
-            cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.threadsandcompression).c_str());
+            cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
             cmd.addVariable("EXPAND", "1");
         }
         std::string program = tmpDir + "/structuresearch.sh";
