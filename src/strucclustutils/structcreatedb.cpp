@@ -74,6 +74,17 @@ static inline bool compareByFirst(const std::pair<T, U>& a, const std::pair<T, U
     return a.first < b.first;
 }
 
+std::string removeMODEL(const std::string& input) {
+    size_t modelIndex = input.find("MODEL");
+    if (modelIndex == std::string::npos)
+        return input;
+    std::string prefix = input.substr(0, modelIndex);
+    size_t secondUnderscoreIndex = input.find('_', modelIndex + 6);
+    if (secondUnderscoreIndex == std::string::npos)
+        return prefix;
+    std::string suffix = input.substr(secondUnderscoreIndex+1);
+    return prefix + suffix;
+}
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
@@ -146,7 +157,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
-        header.append(readStructure.names[ch]);
+        header.append(Util::remove_extension(readStructure.names[ch]));
         if(readStructure.modelCount > 1){
             header.append("_MODEL_");
             header.append(std::to_string(readStructure.modelIndices[ch]));
@@ -164,14 +175,14 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            std::map<std::string, size_t>::iterator it = filenameToFileId.find(filename);
+            std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filename));
             size_t fileid;
             if (it != filenameToFileId.end()) {
                 fileid = it->second;
             } else {
                 fileid = fileidCnt;
-                filenameToFileId[filename] = fileid;
-                fileIdToName[fileid] = filename;
+                filenameToFileId[Util::remove_extension(filename)] = fileid;
+                fileIdToName[fileid] = Util::remove_extension(filename);
                 fileidCnt++;
             }
             entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
@@ -853,8 +864,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
-            entry.entryName = Util::parseFastaHeader(header);
-            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entry.entryName];
+            std::string entryNamewithMODEL = Util::parseFastaHeader(header);
+            entry.entryName = removeMODEL(entryNamewithMODEL);
+            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNamewithMODEL];
             size_t fileId = fileIdModelEntry.first;
             if(modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()){
                 modelFileIdLookup[fileIdModelEntry] = globalFileNumber;
