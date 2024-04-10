@@ -55,27 +55,29 @@ static bool hasTM(float TMThr, int covMode, double qTM, double tTM){
 }
 
 bool hasChainTm(float chainTMThr, int covMode, std::vector<double> &qChainTmScores, std::vector<double> &tChainTmScores) {
-    for (size_t i = 0; i < qChainTmScores.size(); i++) {
-        switch (covMode) {
-            case Parameters::COV_MODE_BIDIRECTIONAL:
-                if (qChainTmScores[i] < chainTMThr || tChainTmScores[i] < chainTMThr) {
-                    return false;
-                }
-                break;
-            case Parameters::COV_MODE_TARGET:
-                if (tChainTmScores[i] < chainTMThr) {
-                    return false;
-                }
-                break;
-            case Parameters::COV_MODE_QUERY:
-                if (qChainTmScores[i] < chainTMThr) {
-                    return false;
-                }
-                break;
-            case Parameters::COV_MODE_LENGTH_QUERY :
-            case Parameters::COV_MODE_LENGTH_TARGET :
-            case Parameters::COV_MODE_LENGTH_SHORTER :
-                break;
+    if (chainTMThr > 0 ){
+        for (size_t i = 0; i < qChainTmScores.size(); i++) {
+            switch (covMode) {
+                case Parameters::COV_MODE_BIDIRECTIONAL:
+                    if (qChainTmScores[i] < chainTMThr || tChainTmScores[i] < chainTMThr) {
+                        return false;
+                    }
+                    break;
+                case Parameters::COV_MODE_TARGET:
+                    if (tChainTmScores[i] < chainTMThr) {
+                        return false;
+                    }
+                    break;
+                case Parameters::COV_MODE_QUERY:
+                    if (qChainTmScores[i] < chainTMThr) {
+                        return false;
+                    }
+                    break;
+                case Parameters::COV_MODE_LENGTH_QUERY :
+                case Parameters::COV_MODE_LENGTH_TARGET :
+                case Parameters::COV_MODE_LENGTH_SHORTER :
+                    break;
+            }
         }
     }
     return true;
@@ -438,26 +440,35 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
 
 
                     if (hasTM(par.filtComplexTmThr, par.covMode, retComplex.qTmScore, retComplex.tTmScore)){
-                        float u[3][3];
-                        float t[3];
-                        Coordinates qm(0), tm(0);
-                        fillUArr(retComplex.uString, u);
-                        fillTArr(retComplex.tString, t);
-
-                        unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
-                        double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
-                        double qChainTm = chainTm / qChainLen;
-                        double tChainTm = chainTm / tChainLen;
                         unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                         unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
+                        if (par.filtChainTmThr > 0 ){
+                            float u[3][3];
+                            float t[3];
+                            Coordinates qm(0), tm(0);
+                            fillUArr(retComplex.uString, u);
+                            fillTArr(retComplex.tString, t);
+                            unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
+                            double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
+                            double qChainTm = chainTm / qChainLen;
+                            double tChainTm = chainTm / tChainLen;
 
-                        if (localComplexMap.find(assId) == localComplexMap.end()) {
-                            ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
-                            localComplexMap[assId] = cmplfiltcrit;
-                        } else {
-                            localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
+                            if (localComplexMap.find(assId) == localComplexMap.end()) {
+                                ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
+                                localComplexMap[assId] = cmplfiltcrit;
+                            } else {
+                                localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
+                            }
                         }
+                        else{
+                            if (localComplexMap.find(assId) == localComplexMap.end()) {
+                                ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, 1, 1);
+                                localComplexMap[assId] = cmplfiltcrit;
+                            } else {
+                                localComplexMap.at(assId).update(qtotalaln, ttotalaln, 1, 1);
+                            }
                         }
+                    }
                     
                 }
             }
