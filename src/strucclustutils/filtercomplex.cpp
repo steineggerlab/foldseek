@@ -93,11 +93,10 @@ struct ComplexFilterCriteria {
         alignedTChainTmScores.clear();
     }
 
-    bool satisfy(int covMode, float covThr, float TMThr, float chainTMThr) {
+    bool satisfy(int covMode, float covThr, float chainTMThr) {
         const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
-        const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
         const bool chainTMOK = hasChainTm(chainTMThr, covMode, alignedQChainTmScores, alignedTChainTmScores);
-        return (covOK && TMOK && chainTMOK);
+        return (covOK && chainTMOK);
     }
 
     void update(unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qChainTm, double tChainTm) {
@@ -326,8 +325,9 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     size_t localThreads = 1;
 
+
 #ifdef OPENMP
-    //localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
+//localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
 #endif
     const bool shouldCompress = (par.compressed == true);
     const int db4Type = Parameters::DBTYPE_CLUSTER_RES;
@@ -389,19 +389,26 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
 
             Coordinate16 qcoords;
             Coordinate16 tcoords;
-
+            std::string result;
+            std::vector<unsigned int> discardAssIdvec;
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainDbKey = alnDbr.getId(qChainKey);
 
+                if (qChainDbKey == NOT_AVAILABLE_CHAIN_KEY){
+                    Debug(Debug::ERROR) << "Monomer chain key: "<<qChainKey<<"\n";
+                    Debug(Debug::ERROR) << "Monomer will be treated as singleton"<<"\n";
+                    char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
+                    result.append(buffer, (outpos - buffer - 1));
+                    result.push_back('\n');
+                    result5.append(qcomplexIdToName.at(qComplexId) + "\t" + tcomplexIdToName.at(qComplexId) + "\t1.000000\t1.000000\t1.000000\t1.000000\n");
+                    break;
+                }
                 int qChainLen = qDbr->sequenceReader->getSeqLen(qChainDbKey);
                 char *qcadata = qStructDbr.getData(qChainDbKey, thread_idx);
                 size_t qCaLength = qStructDbr.getEntryLen(qChainDbKey);
                 float* qdata = qcoords.read(qcadata, qChainLen, qCaLength);
                 
-                if (qChainDbKey == NOT_AVAILABLE_CHAIN_KEY) {
-                    continue;
-                }
                 char *data = alnDbr.getData(qChainDbKey, thread_idx);
 
                 while (*data) {
@@ -414,41 +421,52 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
 
                     data = Util::skipLine(data);
                     unsigned int assId = retComplex.assId;
-                    unsigned int tChainDbKey = res.dbKey;
+                    unsigned int tChainDbKey = res.dbKey; 
+                    unsigned int tChainKey = tDbr->sequenceReader->getDbKey(tChainDbKey);
+                    tChainDbKey = alnDbr.getId(tChainKey);
 
-                    float u[3][3];
-                    float t[3];
-                    Coordinates qm(0), tm(0);
-                    fillUArr(retComplex.uString, u);
-                    fillTArr(retComplex.tString, t);
+                    if (tChainDbKey == NOT_AVAILABLE_CHAIN_KEY){
+                        // Debug(Debug::ERROR) << "tChainKey"<<tChainKey<<"\n";
+                        break;
+                    }
 
                     int tChainLen = tDbr->sequenceReader->getSeqLen(tChainDbKey);
                     char *tcadata = tStructDbr->getData(tChainDbKey, thread_idx);
                     size_t tCaLength = tStructDbr->getEntryLen(tChainDbKey);
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
-                    unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
-                    double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
-                    double qChainTm = chainTm / qChainLen;
-                    double tChainTm = chainTm / tChainLen;
-                    unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
-                    unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
 
-                    if (localComplexMap.find(assId) == localComplexMap.end()) {
-                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
-                        localComplexMap[assId] = cmplfiltcrit;
-                    } else {
-                        localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
-                    }
+
+                    if (hasTM(par.filtComplexTmThr, par.covMode, retComplex.qTmScore, retComplex.tTmScore)){
+                        unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
+                        unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
+
+                        float u[3][3];
+                        float t[3];
+                        Coordinates qm(0), tm(0);
+                        fillUArr(retComplex.uString, u);
+                        fillTArr(retComplex.tString, t);
+                        unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
+                        double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
+                        double qChainTm = chainTm / qChainLen;
+                        double tChainTm = chainTm / tChainLen;
+
+                        if (localComplexMap.find(assId) == localComplexMap.end()) {
+                            ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
+                            localComplexMap[assId] = cmplfiltcrit;
+                        } else {
+                            localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
+                        }
+                        }
+                    
                 }
             }
-            std::string result;
             std::vector<unsigned int> assIdsToDelete;
 
             for (auto& assId_res : localComplexMap){
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
                 assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
-                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr)){
+                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtChainTmThr)){
                     assIdsToDelete.push_back(assId_res.first);
                 }
             }
