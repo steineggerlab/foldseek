@@ -438,18 +438,18 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
 
 
                     if (hasTM(par.filtComplexTmThr, par.covMode, retComplex.qTmScore, retComplex.tTmScore)){
-                        unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
-                        unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
-
                         float u[3][3];
                         float t[3];
                         Coordinates qm(0), tm(0);
                         fillUArr(retComplex.uString, u);
                         fillTArr(retComplex.tString, t);
+
                         unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
                         double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
                         double qChainTm = chainTm / qChainLen;
                         double tChainTm = chainTm / tChainLen;
+                        unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
+                        unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
 
                         if (localComplexMap.find(assId) == localComplexMap.end()) {
                             ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
