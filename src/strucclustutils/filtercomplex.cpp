@@ -384,6 +384,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
             qComplexLength[qComplexId] = reslen;
         }
         
+        Debug(Debug::ERROR) << "Monomer will be treated as singleton\nMonomer chain key: \n";
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
             std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
@@ -398,8 +399,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                 unsigned int qChainDbKey = alnDbr.getId(qChainKey);
 
                 if (qChainDbKey == NOT_AVAILABLE_CHAIN_KEY){
-                    Debug(Debug::ERROR) << "Monomer chain key: "<<qChainKey<<"\n";
-                    Debug(Debug::ERROR) << "Monomer will be treated as singleton"<<"\n";
+                    Debug(Debug::ERROR)<<qChainKey<<", ";
                     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
                     result.append(buffer, (outpos - buffer - 1));
                     result.push_back('\n');
