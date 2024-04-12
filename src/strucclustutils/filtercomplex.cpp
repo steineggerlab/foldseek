@@ -522,7 +522,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     }
     resultWrite5.writeData(result5.c_str(), result5.length(), 0);
     resultWriter.close(true);
-    resultWrite5.close(true);
+    resultWrite5.close(par.dbOut == false);
     alnDbr.close();
     delete qDbr;
     if (sameDB == false) {
