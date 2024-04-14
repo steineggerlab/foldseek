@@ -181,7 +181,7 @@ class DBSCANCluster {
 public:
     DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
-        minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
+        clusterSizeThr = std::max(MULTIPLE_CHAINED_COMPLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         prevMaxClusterSize = 0;
         maxDist = 0;
@@ -209,7 +209,7 @@ private:
     unsigned int prevMaxClusterSize;
     unsigned int maxClusterSize;
     unsigned int idealClusterSize;
-    unsigned int minClusterSize;
+    unsigned int clusterSizeThr;
     std::vector<unsigned int> neighbors;
     std::vector<unsigned int> neighborsOfCurrNeighbor;
     std::vector<NeighborsWithDist> neighborsWithDist;
@@ -280,7 +280,7 @@ private:
             prevMaxClusterSize = maxClusterSize;
         }
 
-        if (maxClusterSize>=MULTIPLE_CHAINED_COMPLEX)
+        if (maxClusterSize >= clusterSizeThr)
             finalClusters.insert(currClusters.begin(), currClusters.end());
 
         eps += learningRate;
@@ -339,17 +339,14 @@ private:
         return false;
     }
 
-    unsigned int checkClusteringNecessity() {
-        if (searchResult.alnVec.empty())
+    bool checkClusteringNecessity() {
+        if (searchResult.alnVec.size() < clusterSizeThr)
             return false;
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
         if (checkChainRedundancy()) {
             neighbors.clear();
-            if (searchResult.alnVec.size() < MULTIPLE_CHAINED_COMPLEX)
-                return finishDBSCAN();
-
             return runDBSCAN();
         }
         prevMaxClusterSize = neighbors.size();
@@ -367,9 +364,15 @@ private:
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
         distMap.clear();
-        bool isAlnFound = !finalClusters.empty();
-        bool isBigEnoughAln = prevMaxClusterSize >= minClusterSize;
-        return isAlnFound && isBigEnoughAln;
+//        auto it = finalClusters.begin();
+//        while (it != finalClusters.end()) {
+//            if (it->size() < clusterSizeThr) {
+//                it = finalClusters.erase(it);
+//                continue;
+//            }
+//            it++;
+//        }
+        return !finalClusters.empty();
     }
 
     void filterAlnsByRBH() {
@@ -407,7 +410,7 @@ private:
             alnIdx ++;
         }
 
-        if (std::min(qFoundChainKeys.size(), dbFoundChainKeys.size()) < minClusterSize)
+        if (std::min(qFoundChainKeys.size(), dbFoundChainKeys.size()) < clusterSizeThr)
             searchResult.alnVec.clear();
     }
 
