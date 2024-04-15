@@ -865,9 +865,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
-            std::string entryNamewithModel = Util::parseFastaHeader(header);
-            entry.entryName = removeModel(entryNamewithModel);
-            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNamewithModel];
+            std::string entryNameWithModel = Util::parseFastaHeader(header);
+            entry.entryName = removeModel(entryNameWithModel);
+            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameWithModel];
             size_t fileId = fileIdModelEntry.first;
             if(modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()){
                 modelFileIdLookup[fileIdModelEntry] = globalFileNumber;
