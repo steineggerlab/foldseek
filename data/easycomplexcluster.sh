@@ -28,16 +28,20 @@ abspath() {
 
 mapCmplName2ChainKeys() {
     awk -F"\t" '
-        # BEGIN {
-        #     split(repComp,repCompArr," "); 
-        #     for (i in repCompArr) {repCompArr[repCompArr[i]]=""}
-        # }
         NR==FNR {
-            repName_memName[$1]=$2;next
+            split($2,repArr,"_MODEL")
+            repName_memName[repArr[1]]=1;next
         }
         {
-            split($2,cmpNameArr,".pdb"); cmpl=cmpNameArr[1]".pdb"
-            if (cmpl in repName_memName) {
+            split($2,parts,"_")
+            output_string=""
+            for (j = 1; j < length(parts); j++) {
+                output_string = output_string parts[j]
+                if (j < length(parts)-1){
+                    output_string=output_string"_" 
+                }
+            }
+            if (output_string in repName_memName) {
                 print $1
             }
         }
@@ -89,7 +93,7 @@ if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
     # shellcheck disable=SC2086
     "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}"  "${TMP_PATH}/complex_rep_seqs" "${TMP_PATH}/complex_rep_seq.fasta" ${VERBOSITY_PAR} \
             || fail "result2flat died"
-    postprocessFasta "${TMP_PATH}/complex_rep_seq.fasta"
+    # postprocessFasta "${TMP_PATH}/complex_rep_seq.fasta"
 fi
 
 #TODO: generate fasta file for all sequences
