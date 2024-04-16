@@ -49,7 +49,8 @@ buildCmplDb() {
 }
 
 buldCmplhDb(){
-    awk -F"\t" '{
+    awk -F"\t" 'BEGIN {INDEXVAL=0}
+        {
             split($2,words," ")
             split(words[1],parts,"_")
             output_string=""
@@ -59,20 +60,17 @@ buldCmplhDb(){
                     output_string=output_string"_" 
                 }
             }
-            for (t = 2; t < length(words); t++) {
-                output_string=output_string" "words[t]
+            headerstring=""
+            for (k = 2; k < length(words)+1; k++) {
+                headerstring = headerstring words[k]" "
             }
-            print output_string
-        }' "${1}" > "${2}_redundant"
-
-    awk 'BEGIN {index_value=0}
-    {
-        if (!seen[$1]) {
-            print index_value++"\t"$0
-            seen[$1] = 1
-        }
-    }' "${2}_redundant" > "${2}"
-    
+            if (!(output_string not in gogo)){
+                print INDEXVAL"\t"output_string" "headerstring
+                INDEXVAL++
+            }
+            gogo[output_string]=1
+            
+        }' "${1}" > "${2}"
 }
 
 
@@ -102,9 +100,9 @@ if notExists "${TMP_PATH}/complex_db_h.dbtype"; then
     # "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/complex_db_header_tmp" ${VERBOSITY_PAR} \
     #     || fail "tsv2db died"
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h_tmp" ${VERBOSITY_PAR} \
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h.tsv" ${VERBOSITY_PAR} \
         || fail "createtsv died"
-    buldCmplhDb "${TMP_PATH}/chain_db_h_tmp" "${TMP_PATH}/complex_header.tsv"
+    buldCmplhDb "${TMP_PATH}/chain_db_h.tsv" "${TMP_PATH}/complex_header.tsv"
     # shellcheck disable=SC2086
     "$MMSEQS" tsv2db "${TMP_PATH}/complex_header.tsv" "${TMP_PATH}/complex_db_h" ${VERBOSITY_PAR} \
         || fail "tsv2db died"
