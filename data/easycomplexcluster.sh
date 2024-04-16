@@ -51,8 +51,15 @@ mapCmplName2ChainKeys() {
 postprocessFasta() {
     awk ' BEGIN {FS=">"}
     $0 ~/^>/ {
-        match($2, /(.*).pdb*/)
-        complex = substr($2, RSTART, RLENGTH-4)
+        # match($2, /(.*).pdb*/)
+        split($2,parts,"_")
+            complex=""
+            for (j = 1; j < length(parts); j++) {
+                complex = complex parts[j]
+                if (j < length(parts)-1){
+                    complex=complex"_" 
+                }
+            }
         if (!(complex in repComplex)) {
             print "#"complex".pdb"
             repComplex[complex] = ""
