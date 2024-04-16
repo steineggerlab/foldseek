@@ -5,6 +5,7 @@
 #ifndef STRUCCLUST_COORDINATES_H
 #define STRUCCLUST_COORDINATES_H
 #include "simd.h"
+#include <cstring>
 
 struct Coordinates{
     Coordinates(int size) : size(size) {
