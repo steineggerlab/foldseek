@@ -27,25 +27,36 @@ abspath() {
 }
 
 mapCmplName2ChainKeys() {
-    awk -F"\t" '
-        NR==FNR {
-            split($2,repArr,"_MODEL")
-            repName_memName[repArr[1]]=1;next
+    awk -F"\t" 'FNR==1 {++fIndex}
+        fIndex==1 {
+            repName[$1]=1
+            if (match($1, /MODEL/)){
+                tmpName[$1]=1
+            }else{
+                tmpName[$1"_MODEL_1"]=1 
+            }
+            next
         }
-        {
-            split($2,parts,"_")
-            output_string=""
-            for (j = 1; j < length(parts); j++) {
-                output_string = output_string parts[j]
-                if (j < length(parts)-1){
-                    output_string=output_string"_" 
+        fIndex==2{
+            if (match($2, /MODEL/)){
+                if ($2 in tmpName){
+                repId[$1]=1
+                }else{
+                    ho[1]=1
+                }
+            }else{
+                if ($2 in repName){
+                repId[$1]=1
                 }
             }
-            if (output_string in repName_memName) {
+            next
+        }
+        {
+            if ($3 in repId){
                 print $1
             }
         }
-    ' "${1}" "${2}.lookup" > "${3}"
+    ' "${1}" "${2}.source" "${2}.lookup" > "${3}"
 }
 
 postprocessFasta() {
@@ -53,15 +64,15 @@ postprocessFasta() {
     $0 ~/^>/ {
         # match($2, /(.*).pdb*/)
         split($2,parts,"_")
-            complex=""
-            for (j = 1; j < length(parts); j++) {
-                complex = complex parts[j]
-                if (j < length(parts)-1){
-                    complex=complex"_" 
-                }
+        complex=""
+        for (j = 1; j < length(parts); j++) {
+            complex = complex parts[j]
+            if (j < length(parts)-1){
+                complex=complex"_" 
             }
+        }
         if (!(complex in repComplex)) {
-            print "#"complex".pdb"
+            print "#"complex
             repComplex[complex] = ""
         }
     }
@@ -100,7 +111,7 @@ if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
     # shellcheck disable=SC2086
     "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}"  "${TMP_PATH}/complex_rep_seqs" "${TMP_PATH}/complex_rep_seq.fasta" ${VERBOSITY_PAR} \
             || fail "result2flat died"
-    # postprocessFasta "${TMP_PATH}/complex_rep_seq.fasta"
+    postprocessFasta "${TMP_PATH}/complex_rep_seq.fasta"
 fi
 
 #TODO: generate fasta file for all sequences
