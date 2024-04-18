@@ -120,7 +120,7 @@ struct ComplexFilterCriteria {
     float tCov;
     double qTM;
     double tTM;
-
+    //TODO : Instead of saving all the chain tm scores, only keeping the worst one?
     std::vector<double> alignedQChainTmScores;
     std::vector<double> alignedTChainTmScores;
 };
@@ -438,7 +438,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
 
-
+                    // TODO: do not check the TM score here, be consistent with the other filters
                     if (hasTM(par.filtComplexTmThr, par.covMode, retComplex.qTmScore, retComplex.tTmScore)){
                         unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                         unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
