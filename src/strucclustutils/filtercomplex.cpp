@@ -95,10 +95,11 @@ struct ComplexFilterCriteria {
         alignedTChainTmScores.clear();
     }
 
-    bool satisfy(int covMode, float covThr, float chainTMThr) {
+    bool satisfy(int covMode, float covThr, float TMThr, float chainTMThr) {
         const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
+        const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
         const bool chainTMOK = hasChainTm(chainTMThr, covMode, alignedQChainTmScores, alignedTChainTmScores);
-        return (covOK && chainTMOK);
+        return (covOK && TMOK && chainTMOK);
     }
 
     void update(unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qChainTm, double tChainTm) {
@@ -120,7 +121,7 @@ struct ComplexFilterCriteria {
     float tCov;
     double qTM;
     double tTM;
-    //TODO : Instead of saving all the chain tm scores, only keeping the worst one?
+
     std::vector<double> alignedQChainTmScores;
     std::vector<double> alignedTChainTmScores;
 };
@@ -221,15 +222,9 @@ double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u
     float d0;
     // float score_d8 = 1.5*pow(normlen,0.3)+3.5;
     
-    //  set4search
     // if (normlen<=19) {
     //     d0=0.168;
-    // }
-    // else {
-    //     d0=1.24*pow((normlen-15),1.0/3)-1.8;
-    // }
-    // d0 += 0.8;
-
+// }
     // set4final
     if (normlen<=21) {
         d0=0.5;
@@ -237,6 +232,7 @@ double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u
     else {
         d0=1.24*pow((normlen-15),1.0/3)-1.8;
     }
+    // d0 += 0.8;
 
     Coordinates tmt(mlen);
     BasicFunction::do_rotation(tm, tmt, mlen, t, u);
@@ -338,7 +334,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
 
 
 #ifdef OPENMP
-//localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
+// localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
 #endif
     const bool shouldCompress = (par.compressed == true);
     const int db4Type = Parameters::DBTYPE_CLUSTER_RES;
@@ -393,8 +389,9 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
             qComplexLength[qComplexId] = reslen;
         }
         
-        Debug(Debug::ERROR) << "Monomer will be treated as singleton\nMonomer chain key: \n";
+        Debug(Debug::WARNING) << "Monomer will be treated as singleton\nMonomer chain key: \n";
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
+            std::map<unsigned int, std::string> tmpDBKEYut;
             std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
@@ -447,7 +444,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
 
-                    // TODO: do not check the TM score here, be consistent with the other filters
+
                     if (hasTM(par.filtComplexTmThr, par.covMode, retComplex.qTmScore, retComplex.tTmScore)){
                         unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                         unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
@@ -457,6 +454,7 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                             Coordinates qm(0), tm(0);
                             fillUArr(retComplex.uString, u);
                             fillTArr(retComplex.tString, t);
+                            tmpDBKEYut[assId]=retComplex.uString+","+retComplex.tString;
                             unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
                             double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
                             double qChainTm = chainTm / qChainLen;
@@ -486,8 +484,25 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
             for (auto& assId_res : localComplexMap){
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
                 assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
-                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtChainTmThr)){
+                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr)){
                     assIdsToDelete.push_back(assId_res.first);
+                }
+                else {
+                    if (qComplexId != tComplexId){
+                        Debug(Debug::WARNING) << "q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
+                        Debug(Debug::WARNING) << "qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
+                        Debug(Debug::WARNING) << "U and T:  ";
+                        for (auto i : tmpDBKEYut[assId_res.first]){
+                            Debug(Debug::WARNING)<<i;
+                        }
+                        Debug(Debug::WARNING)<<"\n";
+                        for (auto i : assId_res.second.alignedQChainTmScores){
+                            Debug(Debug::WARNING) << "Qchain:  "<<i<<"\n";
+                        }
+                        for (auto i : assId_res.second.alignedTChainTmScores){
+                            Debug(Debug::WARNING) << "Tchain:  "<<i<<"\n";
+                        }
+                    }
                 }
             }
 
