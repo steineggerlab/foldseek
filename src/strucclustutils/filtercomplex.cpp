@@ -221,13 +221,22 @@ double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u
     float d0;
     // float score_d8 = 1.5*pow(normlen,0.3)+3.5;
     
-    if (normlen<=19) {
-        d0=0.168;
+    //  set4search
+    // if (normlen<=19) {
+    //     d0=0.168;
+    // }
+    // else {
+    //     d0=1.24*pow((normlen-15),1.0/3)-1.8;
+    // }
+    // d0 += 0.8;
+
+    // set4final
+    if (normlen<=21) {
+        d0=0.5;
     }
     else {
         d0=1.24*pow((normlen-15),1.0/3)-1.8;
     }
-    d0 += 0.8;
 
     Coordinates tmt(mlen);
     BasicFunction::do_rotation(tm, tmt, mlen, t, u);
