@@ -6,7 +6,6 @@
 #include "DBReader.h"
 #include "IndexReader.h"
 #include "FileUtil.h"
-#include "TranslateNucl.h"
 #include "MemoryMapped.h"
 #include "Coordinate16.h"
 #include "tmalign/basic_fun.h"
@@ -37,7 +36,7 @@ unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
     }
 }
 
-static bool hasChainnum(bool sameChainNum, int qChainNum, int tChainNum){
+bool hasChainnum(bool sameChainNum, int qChainNum, int tChainNum){
     switch (sameChainNum){
         case 1:
             if (qChainNum != tChainNum){
@@ -47,7 +46,8 @@ static bool hasChainnum(bool sameChainNum, int qChainNum, int tChainNum){
             return true;
     }
 }
-static bool hasTM(float TMThr, int covMode, double qTM, double tTM){
+
+bool hasTM(float TMThr, int covMode, double qTM, double tTM){
     switch (covMode) {
         case Parameters::COV_MODE_BIDIRECTIONAL:
             return ((qTM>= TMThr) && (tTM >= TMThr));
@@ -319,15 +319,14 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     const bool sameDB = par.db1.compare(par.db2) == 0 ? true : false;
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     int dbaccessMode = (DBReader<unsigned int>::USE_INDEX);
-    char buffer[32];
 
-    IndexReader* qDbr;
+    IndexReader* qDbr = NULL;
     qDbr = new IndexReader(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
     DBReader<unsigned int> qStructDbr((par.db1 + "_ca").c_str(), (par.db1 + "_ca.index").c_str(), 
                                 par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     qStructDbr.open(DBReader<unsigned int>::NOSORT);
 
-    IndexReader* tDbr;
+    IndexReader* tDbr = NULL;
     DBReader<unsigned int> *tStructDbr = NULL;
     if (sameDB) {
         tDbr = qDbr;
@@ -356,12 +355,10 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     const int db5Type = Parameters::DBTYPE_GENERIC_DB;
     DBWriter resultWrite5(par.db5.c_str(), par.db5Index.c_str(), 1, shouldCompress, db5Type);
     resultWrite5.open();
-    resultToWrite_t result5;
 
     std::string qLookupFile = par.db1 + ".lookup";
     std::string tLookupFile = par.db2 + ".lookup";
-    TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
-    Matcher::result_t res;
+    
     chainKeyToComplexId_t qChainKeyToComplexIdMap, tChainKeyToComplexIdMap;
     complexIdToChainKeys_t qComplexIdToChainKeyMap, tComplexIdToChainKeyMap;
     std::map<unsigned int, std::string> qcomplexIdToName, tcomplexIdToName;
@@ -371,6 +368,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     qChainKeyToComplexIdMap.clear();
     Debug::Progress progress(qComplexIdVec.size());
     std::map<unsigned int, unsigned int> qComplexLength, tComplexLength;
+    std::map<unsigned int, std::string> qComplexIdResult;
 
     for (size_t tComplexIdx = 0; tComplexIdx < tComplexIdVec.size(); tComplexIdx++) {
         unsigned int tComplexId = tComplexIdVec[tComplexIdx];
@@ -393,24 +391,33 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
 
     
     
-#pragma omp parallel num_threads(localThreads)
-    {   std::string result;
+#pragma omp parallel num_threads(localThreads) 
+    {   
+        resultToWrite_t result5;
+        char buffer[32];
+        unsigned int thread_idx = 0;
+#ifdef OPENMP
+        thread_idx = static_cast<unsigned int>(omp_get_thread_num());
+#endif
+        std::string result;
         std::map<unsigned int, std::string> tmpDBKEYut;
         std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
         std::vector<unsigned int> assIdsToDelete;
         std::map<unsigned int, std::vector<unsigned int>> cmplIdToBestAssId; // cmplId : [assId, alnSum]
         std::vector<unsigned int> selectedAssIDs;
-        unsigned int thread_idx = 0;
-#ifdef OPENMP
-        thread_idx = static_cast<unsigned int>(omp_get_thread_num());
-#endif
-#pragma omp for schedule(dynamic, 10)
+        Coordinate16 qcoords;
+        Coordinate16 tcoords;
+        
+        Matcher::result_t res;
+#pragma omp for schedule(dynamic, 1)
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
+            
+            
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
+            
 
-            Coordinate16 qcoords;
-            Coordinate16 tcoords;
+            
 
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
@@ -561,18 +568,28 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 result.push_back('\n');
                 result5.append(qcomplexIdToName.at(qComplexId) + "\t" + tcomplexIdToName.at(tComplexId) + "\t" + std::to_string(localComplexMap.at(assId).qCov) + "\t" + std::to_string(localComplexMap.at(assId).tCov) + "\t"+ std::to_string(localComplexMap.at(assId).qTM)+"\t"+ std::to_string(localComplexMap.at(assId).tTM)+ "\n");
             }
-            resultWriter.writeData(result.c_str(), result.length(), qComplexId);
+            #pragma omp critical
+            {
+                qComplexIdResult[qComplexId]= result;
+                // resultWriter.writeData(result.c_str(), result.length(), qComplexId);
+            }
+            
             result.clear();
             localComplexMap.clear();
             tmpDBKEYut.clear();
             assIdsToDelete.clear();
             cmplIdToBestAssId.clear();
             selectedAssIDs.clear();
+            
            
         } // for end
+        resultWrite5.writeData(result5.c_str(), result5.length(), 0);
+        result5.clear();
     } // MP end
-
-    resultWrite5.writeData(result5.c_str(), result5.length(), 0);
+    for (auto &pair : qComplexIdResult){
+        resultWriter.writeData(pair.second.c_str(), pair.second.length(), pair.first);
+    }
+    
     resultWriter.close(true);
     resultWrite5.close(par.dbOut == false);
     alnDbr.close();
@@ -581,7 +598,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         delete tDbr;
     }
 
-    result5.clear();
+    
     qChainKeyToComplexIdMap.clear();
     tChainKeyToComplexIdMap.clear();
     qComplexIdToChainKeyMap.clear();
