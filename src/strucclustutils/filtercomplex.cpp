@@ -121,7 +121,7 @@ struct ComplexFilterCriteria {
     float tCov;
     double qTM;
     double tTM;
-//TODO : Instead of saving all the chain tm scores, only keeping the worst one?
+
     std::vector<double> alignedQChainTmScores;
     std::vector<double> alignedTChainTmScores;
 };
@@ -230,17 +230,16 @@ double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u
         d0=0.5;
     }
     else {
-        d0=(1.24*pow((normlen*1.0-15), 1.0/3)-1.8);
+        d0=1.24*pow((normlen-15),1.0/3)-1.8;
     }
     // d0 += 0.8;
 
     Coordinates tmt(mlen);
     BasicFunction::do_rotation(tm, tmt, mlen, t, u);
-        
+
     float d02 = d0*d0;
     // float score_d82 = score_d8*score_d8;
     for (unsigned int k=0; k<mlen; k++) {
-        BasicFunction::BasicFunction::transform(t, u, tm.x[k], tm.y[k], tm.z[k], qm.x[k], qm.y[k], qm.z[k]);
         double di = BasicFunction::dist(qm.x[k], qm.y[k], qm.z[k], tmt.x[k], tmt.y[k], tmt.z[k]);
         // if (di < score_d82) {
         //     tmscore += 1/(1+di/d02);
@@ -487,36 +486,21 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                 assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
                 if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr)){
                     assIdsToDelete.push_back(assId_res.first);
-                    if (qComplexId != tComplexId){
-                        Debug(Debug::WARNING) << "BAD:     q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
-                        Debug(Debug::WARNING) << "BAD:     qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
-                        Debug(Debug::WARNING) << "BAD:     U and T:  ";
-                        for (auto i : tmpDBKEYut[assId_res.first]){
-                            Debug(Debug::WARNING)<<i;
-                        }
-                        Debug(Debug::WARNING)<<"\n";
-                        for (auto i : assId_res.second.alignedQChainTmScores){
-                            Debug(Debug::WARNING) << "BAD:     Qchain:  "<<i<<"\n";
-                        }
-                        for (auto i : assId_res.second.alignedTChainTmScores){
-                            Debug(Debug::WARNING) << "BAD:     Tchain:  "<<i<<"\n";
-                        }
-                    }
                 }
                 else {
                     if (qComplexId != tComplexId){
-                        Debug(Debug::WARNING) << "GOOD:     q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
-                        Debug(Debug::WARNING) << "GOOD:     qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
-                        Debug(Debug::WARNING) << "GOOD:     U and T:  ";
+                        Debug(Debug::WARNING) << "q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
+                        Debug(Debug::WARNING) << "qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
+                        Debug(Debug::WARNING) << "U and T:  ";
                         for (auto i : tmpDBKEYut[assId_res.first]){
                             Debug(Debug::WARNING)<<i;
                         }
                         Debug(Debug::WARNING)<<"\n";
                         for (auto i : assId_res.second.alignedQChainTmScores){
-                            Debug(Debug::WARNING) << "GOOD:     Qchain:  "<<i<<"\n";
+                            Debug(Debug::WARNING) << "Qchain:  "<<i<<"\n";
                         }
                         for (auto i : assId_res.second.alignedTChainTmScores){
-                            Debug(Debug::WARNING) << "GOOD:     Tchain:  "<<i<<"\n";
+                            Debug(Debug::WARNING) << "Tchain:  "<<i<<"\n";
                         }
                     }
                 }
