@@ -37,6 +37,16 @@ unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
     }
 }
 
+static bool hasChainnum(bool sameChainNum, int qChainNum, int tChainNum){
+    switch (sameChainNum){
+        case 1:
+            if (qChainNum != tChainNum){
+                return false;
+            }else{return true;}
+        case 0:
+            return true;
+    }
+}
 static bool hasTM(float TMThr, int covMode, double qTM, double tTM){
     switch (covMode) {
         case Parameters::COV_MODE_BIDIRECTIONAL:
@@ -95,11 +105,12 @@ struct ComplexFilterCriteria {
         alignedTChainTmScores.clear();
     }
 
-    bool satisfy(int covMode, float covThr, float TMThr, float chainTMThr) {
+    bool satisfy(int covMode, float covThr, float TMThr, float chainTMThr, bool sameChainNum, int qChainNum, int tChainNum ) {
         const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
         const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
         const bool chainTMOK = hasChainTm(chainTMThr, covMode, alignedQChainTmScores, alignedTChainTmScores);
-        return (covOK && TMOK && chainTMOK);
+        const bool numOK = hasChainnum(sameChainNum, qChainNum, tChainNum);
+        return (covOK && TMOK && chainTMOK && numOK);
     }
 
     void update(unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qChainTm, double tChainTm) {
@@ -199,8 +210,8 @@ unsigned int fillMatchedCoord(float * qdata, float * tdata,
             ti++;
         }
     }
-    qm.realloc(mi);
-    tm.realloc(mi);
+    qm.reallocate(mi);
+    tm.reallocate(mi);
     std::copy(qx.begin(), qx.end(), qm.x);
     std::copy(qy.begin(), qy.end(), qm.y);
     std::copy(qz.begin(), qz.end(), qm.z);
@@ -332,9 +343,9 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     size_t localThreads = 1;
 
-
+    // Debug(Debug::WARNING) << "Monomer will be treated as singleton\nMonomer chain key: \n";
 #ifdef OPENMP
-// localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
+localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
 #endif
     const bool shouldCompress = (par.compressed == true);
     const int db4Type = Parameters::DBTYPE_CLUSTER_RES;
@@ -361,45 +372,46 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
     Debug::Progress progress(qComplexIdVec.size());
     std::map<unsigned int, unsigned int> qComplexLength, tComplexLength;
 
+    for (size_t tComplexIdx = 0; tComplexIdx < tComplexIdVec.size(); tComplexIdx++) {
+        unsigned int tComplexId = tComplexIdVec[tComplexIdx];
+        std::vector<unsigned int> &tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
+        if (tChainKeys.empty()) {
+            continue;
+        }
+        unsigned int reslen = getComplexResidueLength(tDbr, tChainKeys);
+        tComplexLength[tComplexId] =reslen;
+    }
+    for (size_t qComplexIdx = 0; qComplexIdx < qComplexIdVec.size(); qComplexIdx++) {
+        unsigned int qComplexId = qComplexIdVec[qComplexIdx];
+        std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
+        if (qChainKeys.empty()) {
+            continue;
+        }
+        unsigned int reslen = getComplexResidueLength(qDbr, qChainKeys);
+        qComplexLength[qComplexId] = reslen;
+    }
+
+    
+    
 #pragma omp parallel num_threads(localThreads)
-    {
+    {   std::string result;
+        std::map<unsigned int, std::string> tmpDBKEYut;
+        std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
+        std::vector<unsigned int> assIdsToDelete;
+        std::map<unsigned int, std::vector<unsigned int>> cmplIdToBestAssId; // cmplId : [assId, alnSum]
+        std::vector<unsigned int> selectedAssIDs;
         unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-    Matcher::result_t res;
-#pragma omp for schedule(dynamic, 10) nowait
-
-        for (size_t tComplexIdx = 0; tComplexIdx < tComplexIdVec.size(); tComplexIdx++) {
-            unsigned int tComplexId = tComplexIdVec[tComplexIdx];
-            std::vector<unsigned int> &tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
-            if (tChainKeys.empty()) {
-                continue;
-            }
-            unsigned int reslen = getComplexResidueLength(tDbr, tChainKeys);
-            tComplexLength[tComplexId] =reslen;
-        }
-        for (size_t qComplexIdx = 0; qComplexIdx < qComplexIdVec.size(); qComplexIdx++) {
-            unsigned int qComplexId = qComplexIdVec[qComplexIdx];
-            std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
-            if (qChainKeys.empty()) {
-                continue;
-            }
-            unsigned int reslen = getComplexResidueLength(qDbr, qChainKeys);
-            qComplexLength[qComplexId] = reslen;
-        }
-        
-        Debug(Debug::WARNING) << "Monomer will be treated as singleton\nMonomer chain key: \n";
+#pragma omp for schedule(dynamic, 10)
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
-            std::map<unsigned int, std::string> tmpDBKEYut;
-            std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
 
             Coordinate16 qcoords;
             Coordinate16 tcoords;
-            std::string result;
-            std::vector<unsigned int> discardAssIdvec;
+
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainDbKey = alnDbr.getId(qChainKey);
@@ -477,40 +489,53 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                         }
                     }
                     
-                }
+                } // while end
             }
-            std::vector<unsigned int> assIdsToDelete;
-
             for (auto& assId_res : localComplexMap){
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
                 assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
-                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr)){
+                std::vector<unsigned int> tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
+                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, par.sameChainNumber,qChainKeys.size(), tChainKeys.size())){
                     assIdsToDelete.push_back(assId_res.first);
+                    // if (qComplexId != tComplexId){
+                    //     Debug(Debug::WARNING) << "BAD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
+                    //     Debug(Debug::WARNING) << "BAD:    qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
+                    //     Debug(Debug::WARNING) << "BAD:    U and T:  ";
+                    //     for (auto i : tmpDBKEYut[assId_res.first]){
+                    //         Debug(Debug::WARNING)<<i;
+                    //     }
+                    //     Debug(Debug::WARNING)<<"\n";
+                    //     for (auto i : assId_res.second.alignedQChainTmScores){
+                    //         Debug(Debug::WARNING) << "BAD:    Qchain:  "<<i<<"\n";
+                    //     }
+                    //     for (auto i : assId_res.second.alignedTChainTmScores){
+                    //         Debug(Debug::WARNING) << "BAD:    Tchain:  "<<i<<"\n";
+                    //     }
+                    // }
                 }
-                else {
-                    if (qComplexId != tComplexId){
-                        Debug(Debug::WARNING) << "q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
-                        Debug(Debug::WARNING) << "qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
-                        Debug(Debug::WARNING) << "U and T:  ";
-                        for (auto i : tmpDBKEYut[assId_res.first]){
-                            Debug(Debug::WARNING)<<i;
-                        }
-                        Debug(Debug::WARNING)<<"\n";
-                        for (auto i : assId_res.second.alignedQChainTmScores){
-                            Debug(Debug::WARNING) << "Qchain:  "<<i<<"\n";
-                        }
-                        for (auto i : assId_res.second.alignedTChainTmScores){
-                            Debug(Debug::WARNING) << "Tchain:  "<<i<<"\n";
-                        }
-                    }
-                }
+                // else {
+                //     if (qComplexId != tComplexId){
+                //         Debug(Debug::WARNING) << "GOOD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
+                //         Debug(Debug::WARNING) << "GOOD:    qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
+                //         Debug(Debug::WARNING) << "GOOD:    U and T:  ";
+                //         for (auto i : tmpDBKEYut[assId_res.first]){
+                //             Debug(Debug::WARNING)<<i;
+                //         }
+                //         Debug(Debug::WARNING)<<"\n";
+                //         for (auto i : assId_res.second.alignedQChainTmScores){
+                //             Debug(Debug::WARNING) << "GOOD:    Qchain:  "<<i<<"\n";
+                //         }
+                //         for (auto i : assId_res.second.alignedTChainTmScores){
+                //             Debug(Debug::WARNING) << "GOOD:    Tchain:  "<<i<<"\n";
+                //         }
+                //     }
+                // }
             }
 
             for (const auto& key : assIdsToDelete) {
                 localComplexMap.erase(key);
             }
             
-            std::map<unsigned int, std::vector<unsigned int>> cmplIdToBestAssId; // cmplId : [assId, alnSum]
             for (const auto& assId_res : localComplexMap){
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
                 unsigned int alnlen = adjustAlnLen(assId_res.second.qTotalAlnLen, assId_res.second.tTotalAlnLen, par.covMode);
@@ -524,7 +549,6 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                 }
             }
 
-            std::vector<unsigned int> selectedAssIDs;
             for (const auto& pair : cmplIdToBestAssId){
                 selectedAssIDs.push_back(pair.second[0]);
             }
@@ -538,12 +562,16 @@ int filtercomplex(int argc, const char **argv, const Command &command) {
                 result5.append(qcomplexIdToName.at(qComplexId) + "\t" + tcomplexIdToName.at(tComplexId) + "\t" + std::to_string(localComplexMap.at(assId).qCov) + "\t" + std::to_string(localComplexMap.at(assId).tCov) + "\t"+ std::to_string(localComplexMap.at(assId).qTM)+"\t"+ std::to_string(localComplexMap.at(assId).tTM)+ "\n");
             }
             resultWriter.writeData(result.c_str(), result.length(), qComplexId);
-
+            result.clear();
             localComplexMap.clear();
-            selectedAssIDs.clear();
+            tmpDBKEYut.clear();
+            assIdsToDelete.clear();
             cmplIdToBestAssId.clear();
-        }
-    }
+            selectedAssIDs.clear();
+           
+        } // for end
+    } // MP end
+
     resultWrite5.writeData(result5.c_str(), result5.length(), 0);
     resultWriter.close(true);
     resultWrite5.close(par.dbOut == false);
