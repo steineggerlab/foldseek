@@ -31,18 +31,20 @@ struct SearchResult {
         dbResidueLen = residueLen;
     }
 
-    void standardize() {
-        if (dbResidueLen == 0)
-            alnVec.clear();
-
-        if (alnVec.empty())
-            return;
-
-        double length = alnVec.size();
+    bool standardize() {
+        double length;
         double mean;
         double var;
         double sd;
         double cv;
+
+        if (dbResidueLen == 0)
+            return false;
+
+        if (alnVec.empty())
+            return false;
+
+        length = alnVec.size();
         for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++) {
             mean = 0.0;
             var = 0.0;
@@ -58,6 +60,7 @@ struct SearchResult {
                 aln.superposition[i] = cv < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean) / sd;
             }
         }
+        return true;
     }
 };
 
@@ -253,6 +256,7 @@ private:
                         neighbors.emplace_back(neighbor);
                 }
             }
+
             if (neighbors.size() > idealClusterSize || checkChainRedundancy())
                 getNearestNeighbors(centerAlnIdx);
 
@@ -340,15 +344,19 @@ private:
     }
 
     bool checkClusteringNecessity() {
+        // Too few alns => do nothing and finish it
         if (searchResult.alnVec.size() < clusterSizeThr)
-            return false;
-        for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
+            finishDBSCAN();
+
+        for (size_t alnIdx=0; alnIdx < searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
+        // Redundant chains => DBSCAN clustering
         if (checkChainRedundancy()) {
             neighbors.clear();
             return runDBSCAN();
         }
+        // Already good => finish it without clustering
         prevMaxClusterSize = neighbors.size();
         finalClusters.insert(neighbors);
         return finishDBSCAN();
@@ -504,8 +512,7 @@ public:
                 paredSearchResult.alnVec.emplace_back(aln);
                 continue;
             }
-            paredSearchResult.standardize();
-            if (!paredSearchResult.alnVec.empty())
+            if (currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX && paredSearchResult.standardize())
                 searchResults.emplace_back(paredSearchResult);
 
             paredSearchResult.alnVec.clear();
@@ -516,8 +523,7 @@ public:
             paredSearchResult.alnVec.emplace_back(aln);
         }
         currAlns.clear();
-        paredSearchResult.standardize();
-        if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
+        if (currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX && paredSearchResult.standardize())
             searchResults.emplace_back(paredSearchResult);
 
         paredSearchResult.alnVec.clear();
@@ -669,7 +675,6 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     }
 
     double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
-
     std::vector<unsigned int> qComplexIndices;
     std::vector<unsigned int> dbComplexIndices;
     chainKeyToComplexId_t qChainKeyToComplexIdMap;

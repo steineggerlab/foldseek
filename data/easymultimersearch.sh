@@ -28,8 +28,8 @@ fi
 
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" complexsearch "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
-    || fail "ComplexSearch died"
+    "$MMSEQS" multimersearch "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
+    || fail "multimerSearch died"
 fi
 
 # shellcheck disable=SC2086
@@ -38,8 +38,8 @@ fi
 
 if [ -z "${NO_REPORT}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createcomplexreport "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${OUTPUT}_report" ${REPORT_PAR} \
-        || fail "createcomplexreport died"
+    "$MMSEQS" createmultimerreport "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${OUTPUT}_report" ${REPORT_PAR} \
+        || fail "createmultimerreport died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
@@ -72,5 +72,5 @@ if [ -n "${REMOVE_TMP}" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY}
     fi
     rm -rf "${TMP_PATH}/complexsearch_tmp"
-    rm -f "${TMP_PATH}/easycomplexsearch.sh"
+    rm -f "${TMP_PATH}/easymultimersearch.sh"
 fi

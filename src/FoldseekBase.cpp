@@ -264,14 +264,14 @@ std::vector<Command> foldseekCommands = {
                 "foldseek convertalis queryDB targetDB complexDB result.m8\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDb> <i:targetDb> <i:alignmentDB> <o:complexDB>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb}
                                    }
         },
-        {"complexsearch", complexsearch, &localPar.complexsearchworkflow, COMMAND_MAIN,
+        {"multimersearch", multimersearch, &localPar.complexsearchworkflow, COMMAND_MAIN,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
                 "foldseek complexsearch queryDB targetDB result tmp\n"
@@ -283,14 +283,14 @@ std::vector<Command> foldseekCommands = {
                 "foldseek complexsearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
-        {"easy-complexsearch", easycomplexsearch, &localPar.easyscomplexsearchworkflow, COMMAND_EASY,
+        {"easy-multimersearch", easymultimersearch, &localPar.easyscomplexsearchworkflow, COMMAND_EASY,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
                 "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
@@ -302,14 +302,14 @@ std::vector<Command> foldseekCommands = {
                 "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder},
                                            {"outputFileName", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
-        {"createcomplexreport", createcomplexreport, &localPar.createcomplexreport, COMMAND_FORMAT_CONVERSION,
+        {"createmultimerreport", createmultimerreport, &localPar.createcomplexreport, COMMAND_FORMAT_CONVERSION,
                 "Convert complexDB to tsv format",
                 "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u, t, assId\n"
                 "#  (1,2) identifiers for query and target complex,\n"
@@ -320,7 +320,7 @@ std::vector<Command> foldseekCommands = {
                 "foldseek createcomplexreport queryDB targetDB complexDB result.tsv\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDb> <i:targetDb> <i:complexDB> <o:complexFile>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"complexDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
@@ -332,7 +332,7 @@ std::vector<Command> foldseekCommands = {
         NULL,
         "Woosub Kim <woosubgo@snu.ac.kr>",
         "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:prefilterDB>",
-         CITATION_FOLDSEEK, {
+        CITATION_FOLDSEEK_MULTIMER, {
                  {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                  {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                  {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },

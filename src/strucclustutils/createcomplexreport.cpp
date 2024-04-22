@@ -75,7 +75,7 @@ struct ComplexAlignment {
     unsigned int assId;
 };
 
-int createcomplexreport(int argc, const char **argv, const Command &command) {
+int createmultimerreport(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
     const bool sameDB = par.db1.compare(par.db2) == 0 ? true : false;

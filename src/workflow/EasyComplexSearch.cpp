@@ -5,10 +5,9 @@
 #include "CommandCaller.h"
 #include "Util.h"
 #include "Debug.h"
+#include "easymultimersearch.sh.h"
 
-#include "easycomplexsearch.sh.h"
-
-int easycomplexsearch(int argc, const char **argv, const Command &command) {
+int easymultimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -124,8 +123,8 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-    std::string program = tmpDir + "/easycomplexsearch.sh";
-    FileUtil::writeFile(program, easycomplexsearch_sh, easycomplexsearch_sh_len);
+    std::string program = tmpDir + "/easymultimersearch.sh";
+    FileUtil::writeFile(program, easymultimersearch_sh, easymultimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
     // Should never get here
     assert(false);
