@@ -210,8 +210,8 @@ unsigned int fillMatchedCoord(float * qdata, float * tdata,
             ti++;
         }
     }
-    qm.reallocate(mi);
-    tm.reallocate(mi);
+    qm.realloc(mi);
+    tm.realloc(mi);
     std::copy(qx.begin(), qx.end(), qm.x);
     std::copy(qy.begin(), qy.end(), qm.y);
     std::copy(qz.begin(), qz.end(), qm.z);
@@ -235,7 +235,7 @@ double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u
     
     // if (normlen<=19) {
     //     d0=0.168;
-// }
+    // }
     // set4final
     if (normlen<=21) {
         d0=0.5;
@@ -409,7 +409,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         Coordinate16 tcoords;
         
         Matcher::result_t res;
-#pragma omp for schedule(dynamic, 1)
+#pragma omp for schedule(dynamic, 1)    
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
             
             
@@ -457,43 +457,30 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                         break;
                     }
 
+                    float u[3][3];
+                    float t[3];
+                    Coordinates qm(0), tm(0);
+                    fillUArr(retComplex.uString, u);
+                    fillTArr(retComplex.tString, t);
+
                     int tChainLen = tDbr->sequenceReader->getSeqLen(tChainDbKey);
                     char *tcadata = tStructDbr->getData(tChainDbKey, thread_idx);
                     size_t tCaLength = tStructDbr->getEntryLen(tChainDbKey);
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
+                    unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
+                    Debug(Debug::ERROR) << "match_len"<<match_len<<"\n";
+                    double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
+                    double qChainTm = chainTm / qChainLen;
+                    double tChainTm = chainTm / tChainLen;
+                    unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
+                    unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
 
-
-                    if (hasTM(par.filtComplexTmThr, par.covMode, retComplex.qTmScore, retComplex.tTmScore)){
-                        unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
-                        unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
-                        if (par.filtChainTmThr > 0 ){
-                            float u[3][3];
-                            float t[3];
-                            Coordinates qm(0), tm(0);
-                            fillUArr(retComplex.uString, u);
-                            fillTArr(retComplex.tString, t);
-                            tmpDBKEYut[assId]=retComplex.uString+","+retComplex.tString;
-                            unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
-                            double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
-                            double qChainTm = chainTm / qChainLen;
-                            double tChainTm = chainTm / tChainLen;
-
-                            if (localComplexMap.find(assId) == localComplexMap.end()) {
-                                ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
-                                localComplexMap[assId] = cmplfiltcrit;
-                            } else {
-                                localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
-                            }
-                        }
-                        else{
-                            if (localComplexMap.find(assId) == localComplexMap.end()) {
-                                ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, 1, 1);
-                                localComplexMap[assId] = cmplfiltcrit;
-                            } else {
-                                localComplexMap.at(assId).update(qtotalaln, ttotalaln, 1, 1);
-                            }
-                        }
+                    if (localComplexMap.find(assId) == localComplexMap.end()) {
+                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
+                        localComplexMap[assId] = cmplfiltcrit;
+                    } else {
+                        localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
                     }
                     
                 } // while end
@@ -571,7 +558,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             #pragma omp critical
             {
                 qComplexIdResult[qComplexId]= result;
-                // resultWriter.writeData(result.c_str(), result.length(), qComplexId);
             }
             
             result.clear();
