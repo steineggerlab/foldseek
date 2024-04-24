@@ -33,7 +33,7 @@ LocalParameters::LocalParameters() :
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_COMPLEX_TM_THRESHOLD(PARAM_COMPLEX_TM_THRESHOLD_ID,"--complex-tm-threshold", "TMscore threshold for filtercomplex", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtComplexTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "per chain TMscore threshold for filtercomplex", "accept alignments satisfying tmscores of all chains > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_SAME_CHAIN_NUM(PARAM_SAME_CHAIN_NUM_ID, "--same-chain-number", "Only Cluster complex with same chain number", "Cluster only same chain numbers(1) or not(0)", typeid(bool), (void *) &sameChainNumber, "")
+        PARAM_SAME_CHAIN_NUM(PARAM_SAME_CHAIN_NUM_ID, "--only-same-nmer", "Only Cluster complex with same number of chains", "Cluster only Nmer with same N(1) or not(0)", typeid(bool), (void *) &sameChainNumber, "")
         
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";

@@ -241,7 +241,7 @@ double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u
         d0=0.5;
     }
     else {
-        d0=1.24*pow((normlen-15),1.0/3)-1.8;
+        d0=(1.24*pow((normlen*1.0-15), 1.0/3)-1.8);
     }
     // d0 += 0.8;
 
@@ -415,14 +415,10 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
-            
-
-            
 
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainDbKey = alnDbr.getId(qChainKey);
-
                 if (qChainDbKey == NOT_AVAILABLE_CHAIN_KEY){
                     Debug(Debug::ERROR)<<qChainKey<<", ";
                     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
@@ -431,14 +427,14 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     result5.append(qcomplexIdToName.at(qComplexId) + "\t" + tcomplexIdToName.at(qComplexId) + "\t1.000000\t1.000000\t1.000000\t1.000000\n");
                     break;
                 }
+                char *data = alnDbr.getData(qChainDbKey, thread_idx);
                 int qChainLen = qDbr->sequenceReader->getSeqLen(qChainDbKey);
                 char *qcadata = qStructDbr.getData(qChainDbKey, thread_idx);
                 size_t qCaLength = qStructDbr.getEntryLen(qChainDbKey);
                 float* qdata = qcoords.read(qcadata, qChainLen, qCaLength);
                 
-                char *data = alnDbr.getData(qChainDbKey, thread_idx);
 
-                while (*data) {
+                while (*data != '\0' ) {
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
 
                     if (!retComplex.isValid){
@@ -451,7 +447,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     unsigned int tChainDbKey = res.dbKey; 
                     unsigned int tChainKey = tDbr->sequenceReader->getDbKey(tChainDbKey);
                     tChainDbKey = alnDbr.getId(tChainKey);
-
                     if (tChainDbKey == NOT_AVAILABLE_CHAIN_KEY){
                         // Debug(Debug::ERROR) << "tChainKey"<<tChainKey<<"\n";
                         break;
@@ -462,6 +457,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     Coordinates qm(0), tm(0);
                     fillUArr(retComplex.uString, u);
                     fillTArr(retComplex.tString, t);
+                    tmpDBKEYut[assId]=retComplex.uString+","+retComplex.tString;
 
                     int tChainLen = tDbr->sequenceReader->getSeqLen(tChainDbKey);
                     char *tcadata = tStructDbr->getData(tChainDbKey, thread_idx);
@@ -469,9 +465,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
                     unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
-                    Debug(Debug::ERROR) << "match_len"<<match_len<<"\n";
                     double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
-                    double qChainTm = chainTm / qChainLen;
+                    double qChainTm = chainTm  / qChainLen;
                     double tChainTm = chainTm / tChainLen;
                     unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                     unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
@@ -507,23 +502,26 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     //     }
                     // }
                 }
-                // else {
-                //     if (qComplexId != tComplexId){
-                //         Debug(Debug::WARNING) << "GOOD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
-                //         Debug(Debug::WARNING) << "GOOD:    qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
-                //         Debug(Debug::WARNING) << "GOOD:    U and T:  ";
-                //         for (auto i : tmpDBKEYut[assId_res.first]){
-                //             Debug(Debug::WARNING)<<i;
-                //         }
-                //         Debug(Debug::WARNING)<<"\n";
-                //         for (auto i : assId_res.second.alignedQChainTmScores){
-                //             Debug(Debug::WARNING) << "GOOD:    Qchain:  "<<i<<"\n";
-                //         }
-                //         for (auto i : assId_res.second.alignedTChainTmScores){
-                //             Debug(Debug::WARNING) << "GOOD:    Tchain:  "<<i<<"\n";
-                //         }
-                //     }
-                // }
+                else {
+                    if (qComplexId != tComplexId){
+                        // Debug(Debug::ERROR) << "GOOD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\nGOOD:    qtm:  "\
+                        // <<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\nGOOD:    U and T:  ";
+                        // for (auto i : tmpDBKEYut[assId_res.first]){
+                            // Debug(Debug::ERROR)<<i;
+                        // }
+                        
+                        for (auto i : assId_res.second.alignedQChainTmScores){
+                            if (i > 1){
+                                Debug(Debug::ERROR) << "\nGOOD:    Qchain:  "<<i<<"\n";
+                            }
+                        }
+                        for (auto i : assId_res.second.alignedTChainTmScores){
+                            if (i > 1){
+                                Debug(Debug::ERROR) << "GOOD:    Tchain:  "<<i<<"\n";
+                            }
+                        }
+                    }
+                }
             }
 
             for (const auto& key : assIdsToDelete) {
@@ -583,8 +581,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     if (sameDB == false) {
         delete tDbr;
     }
-
-    
     qChainKeyToComplexIdMap.clear();
     tChainKeyToComplexIdMap.clear();
     qComplexIdToChainKeyMap.clear();
