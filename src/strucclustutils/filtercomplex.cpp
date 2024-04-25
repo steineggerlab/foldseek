@@ -431,9 +431,11 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
 
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
-                unsigned int qChainDbKey = alnDbr.getId(qChainKey);
-                if (qChainDbKey == NOT_AVAILABLE_CHAIN_KEY){
-                    Debug(Debug::ERROR)<<qChainKey<<", ";
+                unsigned int qChainAlnId = alnDbr.getId(qChainKey);
+                unsigned int qChainDbId = qDbr->sequenceReader->getId(qChainKey);
+                // Debug(Debug::ERROR)<<qChainDbKey<<"\t"<<qChainDbKey2<<"\n";
+                if (qChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
+                    // Debug(Debug::ERROR)<<qChainKey<<", ";
                     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
                     result.append(buffer, (outpos - buffer - 1));
                     result.push_back('\n');
@@ -441,12 +443,11 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     break;
                 }
                 
-                char *data = alnDbr.getData(qChainDbKey, thread_idx);
+                char *data = alnDbr.getData(qChainAlnId, thread_idx);
                 while (*data != '\0' ) {
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
-                    // int qChainLen = qDbr->sequenceReader->getSeqLen(qChainDbKey);
-                    char *qcadata = qStructDbr.getData(qChainDbKey, thread_idx);
-                    size_t qCaLength = qStructDbr.getEntryLen(qChainDbKey);
+                    char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
+                    size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
                     float* qdata = qcoords.read(qcadata, res.qLen, qCaLength);
                 
                     if (!retComplex.isValid){
@@ -456,24 +457,20 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
 
                     data = Util::skipLine(data);
                     unsigned int assId = retComplex.assId;
-                    unsigned int tChainDbKey = res.dbKey; 
-                    unsigned int tChainKey = tDbr->sequenceReader->getDbKey(tChainDbKey);
-                    tChainDbKey = alnDbr.getId(tChainKey);
-                    if (tChainDbKey == NOT_AVAILABLE_CHAIN_KEY){
-                        // Debug(Debug::ERROR) << "tChainKey"<<tChainKey<<"\n";
+                    unsigned int tChainKey= res.dbKey;
+                    unsigned int tChainAlnId = alnDbr.getId(tChainKey);
+                    unsigned int tChainDbId = tDbr->sequenceReader->getId(tChainKey);
+                    if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
                         break;
                     }
-
                     float u[3][3];
                     float t[3];
                     Coordinates qm(0), tm(0);
                     fillUArr(retComplex.uString, u);
                     fillTArr(retComplex.tString, t);
                     tmpDBKEYut[assId]=retComplex.uString+","+retComplex.tString;
-
-                    // int tChainLen = tDbr->sequenceReader->getSeqLen(tChainDbKey);
-                    char *tcadata = tStructDbr->getData(tChainDbKey, thread_idx);
-                    size_t tCaLength = tStructDbr->getEntryLen(tChainDbKey);
+                    char *tcadata = tStructDbr->getData(tChainDbId, thread_idx);
+                    size_t tCaLength = tStructDbr->getEntryLen(tChainDbId);
                     float* tdata = tcoords.read(tcadata, res.dbLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
                     unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
@@ -485,7 +482,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
 
                     if (localComplexMap.find(assId) == localComplexMap.end()) {
-                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(res.dbKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
+                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tChainKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
                         localComplexMap[assId] = cmplfiltcrit;
                     } else {
                         localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
@@ -497,7 +494,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
                 assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
                 std::vector<unsigned int> tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
-                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, par.sameChainNumber,qChainKeys.size(), tChainKeys.size())){
+                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, par.sameChainNumber, qChainKeys.size(), tChainKeys.size())){
                     assIdsToDelete.push_back(assId_res.first);
                     // if (qComplexId != tComplexId){
                     //     Debug(Debug::WARNING) << "BAD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
