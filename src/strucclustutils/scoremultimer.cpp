@@ -8,7 +8,7 @@
 #include "StructureUtil.h"
 #include "TMaligner.h"
 #include "Coordinate16.h"
-#include "createcomplexreport.h"
+#include "MultimerUtil.h"
 #include "set"
 
 #ifdef OPENMP
@@ -31,20 +31,18 @@ struct SearchResult {
         dbResidueLen = residueLen;
     }
 
-    bool standardize() {
-        double length;
+    void standardize() {
+        if (dbResidueLen == 0)
+            alnVec.clear();
+
+        if (alnVec.empty())
+            return;
+
+        double length = alnVec.size();
         double mean;
         double var;
         double sd;
         double cv;
-
-        if (dbResidueLen == 0)
-            return false;
-
-        if (alnVec.empty())
-            return false;
-
-        length = alnVec.size();
         for (size_t i = 0; i < SIZE_OF_SUPERPOSITION_VECTOR; i++) {
             mean = 0.0;
             var = 0.0;
@@ -60,7 +58,6 @@ struct SearchResult {
                 aln.superposition[i] = cv < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean) / sd;
             }
         }
-        return true;
     }
 };
 
@@ -256,7 +253,6 @@ private:
                         neighbors.emplace_back(neighbor);
                 }
             }
-
             if (neighbors.size() > idealClusterSize || checkChainRedundancy())
                 getNearestNeighbors(centerAlnIdx);
 
@@ -346,9 +342,8 @@ private:
     bool checkClusteringNecessity() {
         // Too few alns => do nothing and finish it
         if (searchResult.alnVec.size() < clusterSizeThr)
-            finishDBSCAN();
-
-        for (size_t alnIdx=0; alnIdx < searchResult.alnVec.size(); alnIdx++) {
+            return finishDBSCAN();
+        for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
         // Redundant chains => DBSCAN clustering
@@ -512,7 +507,8 @@ public:
                 paredSearchResult.alnVec.emplace_back(aln);
                 continue;
             }
-            if (currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX && paredSearchResult.standardize())
+            paredSearchResult.standardize();
+            if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
                 searchResults.emplace_back(paredSearchResult);
 
             paredSearchResult.alnVec.clear();
@@ -523,7 +519,8 @@ public:
             paredSearchResult.alnVec.emplace_back(aln);
         }
         currAlns.clear();
-        if (currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX && paredSearchResult.standardize())
+        paredSearchResult.standardize();
+        if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
             searchResults.emplace_back(paredSearchResult);
 
         paredSearchResult.alnVec.clear();
@@ -612,7 +609,7 @@ private:
     }
 };
 
-int scorecomplex(int argc, const char **argv, const Command &command) {
+int scoremultimer(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
@@ -675,6 +672,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     }
 
     double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
+
     std::vector<unsigned int> qComplexIndices;
     std::vector<unsigned int> dbComplexIndices;
     chainKeyToComplexId_t qChainKeyToComplexIdMap;

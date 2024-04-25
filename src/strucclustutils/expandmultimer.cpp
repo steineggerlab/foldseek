@@ -5,7 +5,7 @@
 #include "Util.h"
 #include "LocalParameters.h"
 #include "MemoryMapped.h"
-#include "createcomplexreport.h"
+#include "MultimerUtil.h"
 #include <set>
 #ifdef OPENMP
 #include <omp.h>
@@ -25,7 +25,7 @@ bool compareChainKeyPair_t(const ChainKeyPair_t &first, const ChainKeyPair_t &se
     return false;
 }
 
-int expandcomplex(int argc, const char **argv, const Command &command) {
+int expandmultimer(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 

@@ -7,7 +7,7 @@
 #include "Util.h"
 #include "FileUtil.h"
 #include "Coordinate16.h"
-#include "createcomplexreport.h"
+#include "MultimerUtil.h"
 
 #ifdef OPENMP
 #include <omp.h>

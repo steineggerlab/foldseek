@@ -26,31 +26,25 @@ if notExists "${TARGET}.dbtype"; then
     TARGET="${TMP_PATH}/target"
 fi
 
-if notExists "${TMP_PATH}/complex_result.dbtype"; then
+if notExists "${TMP_PATH}/multimer_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimersearch "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
-    || fail "multimerSearch died"
+    "$MMSEQS" multimersearch "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${TMP_PATH}/multimersearch_tmp" ${MULTIMERSEARCH_PAR} \
+    || fail "multimersearch died"
 fi
 
 # shellcheck disable=SC2086
-"$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${OUTPUT}" ${CONVERT_PAR} \
+"$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${CONVERT_PAR} \
     || fail "Convert Alignments died"
 
 if [ -z "${NO_REPORT}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createmultimerreport "${QUERY}" "${TARGET}" "${TMP_PATH}/complex_result" "${OUTPUT}_report" ${REPORT_PAR} \
+    "$MMSEQS" createmultimerreport "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}_report" ${REPORT_PAR} \
         || fail "createmultimerreport died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
-    if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
-    fi
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY}
     if [ -z "${LEAVE_INPUT}" ]; then
         if [ -f "${TMP_PATH}/target" ]; then
             # shellcheck disable=SC2086
@@ -71,6 +65,6 @@ if [ -n "${REMOVE_TMP}" ]; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY}
     fi
-    rm -rf "${TMP_PATH}/complexsearch_tmp"
+    rm -rf "${TMP_PATH}/multimersearch_tmp"
     rm -f "${TMP_PATH}/easymultimersearch.sh"
 fi

@@ -55,7 +55,7 @@ public:
     static const int OUTFMT_PROBTP = 48;
     static const int OUTFMT_QTMSCORE = 49;
     static const int OUTFMT_TTMSCORE = 50;
-    // for scorecomplex
+    // for Foldseek-MM
     static const int OUTFMT_QUERY_COMPLEX = 51;
     static const int OUTFMT_TARGET_COMPLEX = 52;
     static const int OUTFMT_Q_COMPLEX_TMSCORE = 53;
@@ -94,11 +94,11 @@ public:
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
-    std::vector<MMseqsParameter *> scorecomplex;
-    std::vector<MMseqsParameter *> complexsearchworkflow;
-    std::vector<MMseqsParameter *> easyscomplexsearchworkflow;
-    std::vector<MMseqsParameter *> createcomplexreport;
-    std::vector<MMseqsParameter *> expandcomplex;
+    std::vector<MMseqsParameter *> scoremultimer;
+    std::vector<MMseqsParameter *> multimersearchworkflow;
+    std::vector<MMseqsParameter *> easymultimersearchworkflow;
+    std::vector<MMseqsParameter *> createmultimerreport;
+    std::vector<MMseqsParameter *> expandmultimer;
     std::vector<MMseqsParameter *> convert2pdb;
 
     PARAMETER(PARAM_PREF_MODE)
@@ -119,8 +119,8 @@ public:
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
     PARAMETER(PARAM_INDEX_EXCLUDE)
-    PARAMETER(PARAM_COMPLEX_REPORT_MODE)
-    PARAMETER(PARAM_EXPAND_COMPLEX_EVALUE)
+    PARAMETER(PARAM_MULTIMER_REPORT_MODE)
+    PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE)
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
 
@@ -142,8 +142,8 @@ public:
     std::string fileInclude;
     std::string fileExclude;
     int indexExclude;
-    int complexReportMode;
-    double eValueThrExpandComplex;
+    int multimerReportMode;
+    double eValueThrExpandMultimer;
     int inputFormat;
     int pdbOutputMode;
 

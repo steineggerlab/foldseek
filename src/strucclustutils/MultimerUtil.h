@@ -1,5 +1,5 @@
-#ifndef FOLDSEEK_CREATECOMPLEXREPORT_H
-#define FOLDSEEK_CREATECOMPLEXREPORT_H
+#ifndef FOLDSEEK_MULTIMERUTIL_H
+#define FOLDSEEK_MULTIMERUTIL_H
 #include "Matcher.h"
 #include "MemoryMapped.h"
 #include "TMaligner.h"
@@ -229,4 +229,4 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     return {assId, qTmScore, tTmScore, uString, tString, true};
 }
 
-#endif //FOLDSEEK_CREATECOMPLEXREPORT_H
+#endif //FOLDSEEK_MULTIMERUTIL_H

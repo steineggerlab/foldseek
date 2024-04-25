@@ -107,7 +107,7 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     if(par.exhaustiveSearch){
         cmd.addVariable("PREFMODE", "EXHAUSTIVE");
     }
-    cmd.addVariable("NO_REPORT", par.complexReportMode == 0 ? "TRUE" : NULL);
+    cmd.addVariable("NO_REPORT", par.multimerReportMode == 0 ? "TRUE" : NULL);
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
@@ -117,9 +117,9 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
     par.filenames.pop_back();
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("COMPLEXSEARCH_PAR", par.createParameterString(par.complexsearchworkflow, true).c_str());
+    cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
-    cmd.addVariable("REPORT_PAR", par.createParameterString(par.createcomplexreport).c_str());
+    cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
