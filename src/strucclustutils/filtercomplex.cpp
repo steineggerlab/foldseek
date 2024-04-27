@@ -14,6 +14,7 @@
 #include "CalcProbTP.h"
 #include <map>
 
+
 #ifdef OPENMP
 #include <omp.h>
 #endif
@@ -189,29 +190,33 @@ void fillTArr(const std::string &tString, float (&t)[3]) {
     }
 }
 
-unsigned int fillMatchedCoord(float * qdata, float * tdata, 
+unsigned int cigarToAlignedLength(const std::string &cigar){
+    std::string backtrace = Matcher::uncompressAlignment(cigar);
+    unsigned int alni = 0;
+    for (size_t btPos = 0; btPos < backtrace.size(); btPos++) {
+        if (backtrace[btPos] == 'M') {
+            alni++;
+        }
+    }
+    return alni;
+}
+
+void fillMatchedCoord(float * qdata, float * tdata, 
                 Coordinates &qm, Coordinates &tm,
                 const std::string &cigar, int qStartPos, int tStartPos, int qLen, int tLen) {
-    std::vector<float> qx, qy, qz, tx, ty, tz;
     int qi = qStartPos;
     int ti = tStartPos;
-    unsigned int qXPos = 0;
-    unsigned int qYPos = qLen;
-    unsigned int qZPos = qLen*2;
-    unsigned int tXPos = 0;
-    unsigned int tYPos = tLen;
-    unsigned int tZPos = tLen*2;
     int mi = 0;
 
     std::string backtrace = Matcher::uncompressAlignment(cigar);
     for (size_t btPos = 0; btPos < backtrace.size(); btPos++) {
         if (backtrace[btPos] == 'M') {
-            qx.push_back(qdata[qXPos + qi]);
-            qy.push_back(qdata[qYPos + qi]);
-            qz.push_back(qdata[qZPos + qi]);
-            tx.push_back(tdata[tXPos + ti]);
-            ty.push_back(tdata[tYPos + ti]);
-            tz.push_back(tdata[tZPos + ti]);
+            qm.x[mi] = qdata[qi];
+            qm.y[mi] = qdata[qLen + qi];
+            qm.z[mi] = qdata[2*qLen + qi];
+            tm.x[mi] = tdata[ti];
+            tm.y[mi] = tdata[tLen + ti];
+            tm.z[mi] = tdata[2*tLen + ti];
             qi++;
             ti++;
             mi++;
@@ -223,53 +228,30 @@ unsigned int fillMatchedCoord(float * qdata, float * tdata,
             ti++;
         }
     }
-    qm.realloc(mi);
-    tm.realloc(mi);
-    std::copy(qx.begin(), qx.end(), qm.x);
-    std::copy(qy.begin(), qy.end(), qm.y);
-    std::copy(qz.begin(), qz.end(), qm.z);
-    std::copy(tx.begin(), tx.end(), tm.x);
-    std::copy(ty.begin(), ty.end(), tm.y);
-    std::copy(tz.begin(), tz.end(), tm.z);
-    qx.clear();
-    qy.clear();
-    qz.clear();
-    tx.clear();
-    ty.clear();
-    tz.clear();
-
-    return mi;
 }
 
-double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u[3][3], unsigned int mlen, int normlen) {
+double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u[3][3], unsigned int alnLen, int tLen) {
     double tmscore = 0;
-    float d0;
-    // float score_d8 = 1.5*pow(normlen,0.3)+3.5;
-    
-    // if (normlen<=19) {
-    //     d0=0.168;
+    double tmalnScore = 0;
+    // float d0;
+    // if (normlen<=21) {
+    //     d0=0.5;
     // }
-    // set4final
-    if (normlen<=21) {
-        d0=0.5;
-    }
-    else {
-        d0=(1.24*pow((normlen*1.0-15), 1.0/3)-1.8);
-    }
-    // d0 += 0.8;
-
-    Coordinates tmt(mlen);
-    BasicFunction::do_rotation(tm, tmt, mlen, t, u);
-
+    // else {
+    //     d0=(1.24*pow((normlen*1.0-15), 1.0/3)-1.8);
+    // }
+    
+    float d0 = 1.24*(cbrt(tLen-15)) -1.8;
     float d02 = d0*d0;
-    // float score_d82 = score_d8*score_d8;
-    for (unsigned int k=0; k<mlen; k++) {
+    Coordinates tmt(alnLen);
+    BasicFunction::do_rotation(tm, tmt, alnLen, t, u);
+
+    for (unsigned int k=0; k<alnLen; k++) {
         double di = BasicFunction::dist(qm.x[k], qm.y[k], qm.z[k], tmt.x[k], tmt.y[k], tmt.z[k]);
-        // if (di < score_d82) {
-        //     tmscore += 1/(1+di/d02);
-        // }
         tmscore += 1/(1+di/d02);
     }
+
+    tmscore = std::max(tmscore, tmalnScore);
     return tmscore;
 }
 
@@ -424,8 +406,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         Matcher::result_t res;
 #pragma omp for schedule(dynamic, 1)    
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
-            
-            
+            progress.updateProgress();
             unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
 
@@ -433,9 +414,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainAlnId = alnDbr.getId(qChainKey);
                 unsigned int qChainDbId = qDbr->sequenceReader->getId(qChainKey);
-                // Debug(Debug::ERROR)<<qChainDbKey<<"\t"<<qChainDbKey2<<"\n";
+                //handling monomer as singleton
                 if (qChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
-                    // Debug(Debug::ERROR)<<qChainKey<<", ";
                     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
                     result.append(buffer, (outpos - buffer - 1));
                     result.push_back('\n');
@@ -460,12 +440,12 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     unsigned int tChainKey= res.dbKey;
                     unsigned int tChainAlnId = alnDbr.getId(tChainKey);
                     unsigned int tChainDbId = tDbr->sequenceReader->getId(tChainKey);
+                    //if target is monomer, break to be singleton
                     if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
                         break;
                     }
                     float u[3][3];
                     float t[3];
-                    Coordinates qm(0), tm(0);
                     fillUArr(retComplex.uString, u);
                     fillTArr(retComplex.tString, t);
                     tmpDBKEYut[assId]=retComplex.uString+","+retComplex.tString;
@@ -473,9 +453,10 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     size_t tCaLength = tStructDbr->getEntryLen(tChainDbId);
                     float* tdata = tcoords.read(tcadata, res.dbLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
-                    unsigned int match_len = fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
-                    // Debug(Debug::ERROR) << match_len<<"\t"<<res.qLen<<"\t"<<res.dbLen<<"\n";
-                    double chainTm = computeChainTmScore(qm, tm, t, u, match_len, normlen);
+                    unsigned int alnLen = cigarToAlignedLength(res.backtrace);
+                    Coordinates qm(alnLen), tm(alnLen);
+                    fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
+                    double chainTm = computeChainTmScore(qm, tm, t, u, alnLen, res.dbLen);
                     double qChainTm = chainTm / res.qLen;
                     double tChainTm = chainTm/ res.dbLen;
                     unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
@@ -487,7 +468,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     } else {
                         localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
                     }
-                    
                 } // while end
             }
             for (auto& assId_res : localComplexMap){
@@ -497,24 +477,29 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, par.sameChainNumber, qChainKeys.size(), tChainKeys.size())){
                     assIdsToDelete.push_back(assId_res.first);
                     // if (qComplexId != tComplexId){
-                    //     Debug(Debug::WARNING) << "BAD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
-                    //     Debug(Debug::WARNING) << "BAD:    qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
-                    //     Debug(Debug::WARNING) << "BAD:    U and T:  ";
-                    //     for (auto i : tmpDBKEYut[assId_res.first]){
-                    //         Debug(Debug::WARNING)<<i;
-                    //     }
-                    //     Debug(Debug::WARNING)<<"\n";
-                    //     for (auto i : assId_res.second.alignedQChainTmScores){
-                    //         Debug(Debug::WARNING) << "BAD:    Qchain:  "<<i<<"\n";
-                    //     }
-                    //     for (auto i : assId_res.second.alignedTChainTmScores){
-                    //         Debug(Debug::WARNING) << "BAD:    Tchain:  "<<i<<"\n";
+                    // #pragma omp critical
+                    // {
+                    //     if(assId_res.second.tTM >= 0.9 && assId_res.second.qTM >= 0.9 && assId_res.second.alignedQChainTmScores.size() == qChainKeys.size() && qChainKeys.size()==tChainKeys.size()){
+                    //         Debug(Debug::WARNING) << "BAD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
+                    //         // Debug(Debug::WARNING) << "BAD:    qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
+                    //         Debug(Debug::WARNING) << "BAD:    U and T:  ";
+                    //         // Debug(Debug::WARNING) << "qchainNum:  "<<qChainKeys.size()<< "tchainNum:  "<<tChainKeys.size() <<"\n";
+                    //         for (auto i : tmpDBKEYut[assId_res.first]){
+                    //             Debug(Debug::WARNING)<<i;
+                    //         }
+                    //         Debug(Debug::WARNING)<<"\n";
+                    //         for (auto i : assId_res.second.alignedQChainTmScores){
+                    //             Debug(Debug::WARNING) << "BAD:    Qchain:  "<<i<<"\n";
+                    //         }
+                    //         for (auto i : assId_res.second.alignedTChainTmScores){
+                    //             Debug(Debug::WARNING) << "BAD:    Tchain:  "<<i<<"\n";
+                    //         }
                     //     }
                     // }
                 }
                 // else {
-                //     if (qComplexId != tComplexId){
-                //         // Debug(Debug::ERROR) << "GOOD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\nGOOD:    qtm:  "\
+                //     if (qComplexId != tComplexId ){
+                //         // Debug(Debug::ERROR) << "GOOD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\nGOOD:    qtm:  "\t" \
                 //         // <<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\nGOOD:    U and T:  ";
                 //         // for (auto i : tmpDBKEYut[assId_res.first]){
                 //             // Debug(Debug::ERROR)<<i;
@@ -567,17 +552,17 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             {
                 qComplexIdResult[qComplexId]= result;
             }
-            
             result.clear();
             localComplexMap.clear();
             tmpDBKEYut.clear();
             assIdsToDelete.clear();
             cmplIdToBestAssId.clear();
             selectedAssIDs.clear();
-            
-           
         } // for end
-        resultWrite5.writeData(result5.c_str(), result5.length(), 0);
+        #pragma omp critical
+        {
+            resultWrite5.writeData(result5.c_str(), result5.length(), 0);
+        }
         result5.clear();
     } // MP end
     for (auto &pair : qComplexIdResult){
@@ -586,10 +571,12 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     
     resultWriter.close(true);
     resultWrite5.close(par.dbOut == false);
+    qStructDbr.close();
     alnDbr.close();
     delete qDbr;
     if (sameDB == false) {
         delete tDbr;
+        delete tStructDbr;
     }
     qChainKeyToComplexIdMap.clear();
     tChainKeyToComplexIdMap.clear();
@@ -601,6 +588,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     tComplexIdVec.clear();
     qComplexLength.clear();
     tComplexLength.clear();
-
+    
     return EXIT_SUCCESS;
 }
