@@ -70,7 +70,7 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
         par.evalThr = par.eValueThrExpandMultimer;
         cmd.addVariable("MULTIMER_ALIGNMENT_ALGO", "tmalign");
-        cmd.addVariable("MULTIMER_ALIGN_PREF_PAR", par.createParameterString(par.structurealign).c_str());
+//        cmd.addVariable("MULTIMER_ALIGN_PREF_PAR", par.createParameterString(par.structurealign).c_str());
         cmd.addVariable("MULTIMER_ALIGN_PAR", par.createParameterString(par.tmalign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         par.evalThr = par.eValueThrExpandMultimer;
@@ -111,6 +111,7 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+//    cmd.addVariable("EXP_MULTIMER_PAR", ("-e " + std::to_string(par.eValueThrExpandMultimer)).c_str());
     std::string program = tmpDir + "/multimersearch.sh";
     FileUtil::writeFile(program, multimersearch_sh, multimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
