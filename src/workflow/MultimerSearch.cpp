@@ -70,6 +70,7 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
         par.evalThr = par.eValueThrExpandMultimer;
         cmd.addVariable("MULTIMER_ALIGNMENT_ALGO", "tmalign");
+        cmd.addVariable("MULTIMER_ALIGN_PREF_PAR", par.createParameterString(par.structurealign).c_str());
         cmd.addVariable("MULTIMER_ALIGN_PAR", par.createParameterString(par.tmalign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         par.evalThr = par.eValueThrExpandMultimer;
