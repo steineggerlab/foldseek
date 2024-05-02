@@ -24,7 +24,7 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
     if notExists "${TMP_PATH}/result_expand_aligned.dbtype"; then
         if [ "$COMPLEX_ALIGNMENT_ALGO" = "tmalign" ]; then
             # shellcheck disable=SC2086
-            "$MMSEQS" structurealign "${QUERYDB}" "${TARGETDB}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned_tmp" -e 100 \
+            "$MMSEQS" structurealign "${QUERYDB}" "${TARGETDB}" "${TMP_PATH}/result_expand_pref" "${TMP_PATH}/result_expand_aligned_tmp" -e 100 ${THREADS_PAR} \
                 || fail $COMPLEX_ALIGNMENT_ALGO "died"
             # shellcheck disable=SC2086
             "$MMSEQS" tmalign "${QUERYDB}" "${TARGETDB}" "${TMP_PATH}/result_expand_aligned_tmp" "${TMP_PATH}/result_expand_aligned" ${COMPLEX_ALIGN_PAR} \
