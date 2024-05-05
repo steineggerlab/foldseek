@@ -6,6 +6,8 @@ project(foldseek C CXX)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/lib/mmseqs/cmake")
 
+set(ENABLE_PROSTT5 1 CACHE BOOL "Enable ProstT5")
+set(ENABLE_CUDA 0 CACHE BOOL "Enable CUDA")
 set(IGNORE_RUST_VERSION 0 CACHE BOOL "Ignore Rust version check")
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -33,6 +35,7 @@ include_directories(lib/pulchra)
 include_directories(lib/kerasify)
 include_directories(lib/gemmi)
 
+set(ENV{CARGO_NET_OFFLINE} true)
 add_subdirectory(lib/corrosion)
 # don't try to link to gcc_s, its not needed anyway
 list(REMOVE_ITEM Rust_CARGO_TARGET_LINK_NATIVE_LIBS "gcc_s")
@@ -78,5 +81,21 @@ if(EMSCRIPTEN)
     corrosion_add_target_local_rustflags(block-aligner-c "-Clink-args=--no-entry -sRELOCATABLE=1")
 endif()
 
+set(CANDLE_FEATURE "")
+if(ENABLE_CUDA)
+    set(CANDLE_FEATURE cuda,cudnn)
+endif()
+
+if(ENABLE_PROSTT5)
+    corrosion_import_crate(
+        MANIFEST_PATH lib/prostt5/c/Cargo.toml
+        CRATE_TYPES staticlib
+        FEATURES "${CANDLE_FEATURE}"
+    )
+    include_directories(lib/prostt5/c)
+    if(EMSCRIPTEN)
+        corrosion_add_target_local_rustflags(cprostt5 "-Clink-args=--no-entry -sRELOCATABLE=1")
+    endif()
+endif()
 
 add_subdirectory(src)

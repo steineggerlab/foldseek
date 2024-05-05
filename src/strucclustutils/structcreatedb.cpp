@@ -15,6 +15,9 @@
 #include "PatternCompiler.h"
 #include "Coordinate16.h"
 #include "itoa.h"
+#ifdef HAVE_PROSTT5
+#include "prostt5.h"
+#endif
 
 #include <iostream>
 #include <dirent.h>
@@ -242,12 +245,94 @@ void sortDatafileByIdOrder(DBWriter & dbw,
         }
     }
 }
-
+extern int createdb(int argc, const char **argv, const Command& command);
 int structcreatedb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_COMMON);
-
+    bool printPar = true;
+#ifdef HAVE_PROSTT5
+    if (par.prostt5Model != "") {
+        printPar = false;
+    }
+#endif
+    par.parseParameters(argc, argv, command, printPar, 0, MMseqsParameter::COMMAND_COMMON);
     std::string outputName = par.filenames.back();
+#ifdef HAVE_PROSTT5
+    if (par.prostt5Model != "") {
+        // reset set parameters
+        for (size_t i = 0; i < command.params->size(); ++i) {
+            command.params->at(i)->wasSet = false;
+        }
+        int status = createdb(argc, argv, command);
+        if (status != EXIT_SUCCESS) {
+            return status;
+        }
+        fflush(stdout);
+
+        DBReader<unsigned int> reader(outputName.c_str(), (outputName+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+
+        std::string ssDb = outputName + "_ss";
+        DBWriter writer(ssDb.c_str(), (ssDb + ".index").c_str(), par.threads, par.compressed, reader.getDbtype());
+        writer.open();
+        Debug::Progress progress(reader.getSize());
+
+        std::string modelWeights;
+        std::string tensorPath1 = par.prostt5Model + "/model.safetensors";
+        std::string tensorPath2 = par.prostt5Model + "/model/model.safetensors";
+        if (FileUtil::fileExists(tensorPath1.c_str())) {
+            modelWeights = par.prostt5Model;
+        } else if (FileUtil::fileExists(tensorPath2.c_str())) {
+            modelWeights = par.prostt5Model + "/model";
+        } else {
+            Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`.";
+            return EXIT_FAILURE;
+        }
+        ProstT5 *model = prostt5_load(modelWeights.c_str(), false, par.gpu, false);
+#pragma omp parallel
+        {
+            int thread_idx = 0;
+#ifdef OPENMP
+            thread_idx = omp_get_thread_num();
+#endif
+            const char newline = '\n';
+#pragma omp for schedule(dynamic, 1)
+            for (size_t i = 0; i < reader.getSize(); ++i) {
+                unsigned int key = reader.getDbKey(i);
+                char* seq = reader.getData(i, thread_idx);
+                size_t length = reader.getSeqLen(i);
+                const char *result = prostt5_predict_slice(model, seq, length);
+                if (result != NULL) {
+                    writer.writeStart(thread_idx);
+                    writer.writeAdd(result, length, thread_idx);
+                    writer.writeAdd(&newline, 1, thread_idx);
+                    writer.writeEnd(key, thread_idx);
+                    free((void*)result);
+                } else {
+                    Debug(Debug::ERROR) << "Prediction failed\n";
+                    EXIT(EXIT_FAILURE);
+                }
+                progress.updateProgress();
+            }
+        }
+        writer.close(true);
+        reader.close();
+        prostt5_free(model);
+
+        DBReader<unsigned int> resultReader(ssDb.c_str(), (ssDb+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        resultReader.open(DBReader<unsigned int>::NOSORT);
+        resultReader.readMmapedDataInMemory();
+        const std::pair<std::string, std::string> tempDb = Util::databaseNames(ssDb + "_tmp");
+        DBWriter resultWriter(tempDb.first.c_str(), tempDb.second.c_str(), par.threads, par.compressed, resultReader.getDbtype());
+        resultWriter.open();
+        resultWriter.sortDatafileByIdOrder(resultReader);
+        resultWriter.close(true);
+        resultReader.close();
+        DBReader<unsigned int>::removeDb(ssDb);
+        DBReader<unsigned int>::moveDb(tempDb.first, ssDb);
+
+        return EXIT_SUCCESS;
+    }
+#endif
     par.filenames.pop_back();
 
     PatternCompiler include(par.fileInclude.c_str());

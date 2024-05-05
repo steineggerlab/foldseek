@@ -25,7 +25,10 @@ std::vector<Command> foldseekCommands = {
                 "foldseek createdb examples.tsv DB\n"
                 "# Process a directory or tar file and filter based on file name\n"
                 "# Note: --file-include and --file-exclude only apply to directory or tar input\n"
-                "foldseek createdb examples/ --file-include \"pdb.gz$\"\n",
+                "foldseek createdb examples/ DB --file-include \"pdb.gz$\"\n"
+                "# Predict 3Di sequences from an amino acid FASTA file using ProstT5\n"
+                "foldseek databases ProstT5 weights tmp\n"
+                "foldseek createdb QUERY.fasta DB --prostt5-model weights\n\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:directory|.tsv>|<i:PDB|mmCIF[.gz]|tar[.gz]|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
                 CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar[.gz]|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
@@ -412,6 +415,14 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "Bordin et al. AlphaFold2 reveals commonalities and novelties in protein structure space for 21 model organisms. Communications Biology, 6, 160 (2023)",
                 "https://www.cath.info",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "ProstT5",
+                "Protein language model to predict 3Di directly from sequence.",
+                "Heinzinger et al. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, 2023.07.23.550085v2 (2024)",
+                "https://huggingface.co/Rostlab/ProstT5",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         }
 };

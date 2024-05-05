@@ -3,7 +3,6 @@
 #include "Debug.h"
 #include "mat3di.out.h"
 
-
 const int LocalParameters::DBTYPE_CA_ALPHA = 101;
 const int LocalParameters::DBTYPE_TMSCORE = 102;
 
@@ -30,7 +29,9 @@ LocalParameters::LocalParameters() :
         PARAM_COMPLEX_REPORT_MODE(PARAM_COMPLEX_REPORT_MODE_ID, "--complex-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &complexReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
-        PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC)
+        PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
+        PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
+        PARAM_GPU(PARAM_GPU_ID, "--gpu", "Use GPU", "Use GPU (CUDA) if possible", typeid(int), (void *) &gpu, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON)
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -74,6 +75,10 @@ LocalParameters::LocalParameters() :
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
 
     // structurecreatedb
+#ifdef HAVE_CUDA
+    structurecreatedb.push_back(&PARAM_GPU);
+#endif
+    structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
@@ -228,6 +233,8 @@ LocalParameters::LocalParameters() :
     indexExclude = 0;
     complexReportMode = 1;
     eValueThrExpandComplex = 10000.0;
+    prostt5Model = "";
+    gpu = 0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
 
     //rewrite param vals.

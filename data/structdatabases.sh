@@ -159,6 +159,14 @@ case "${SELECTION}" in
         push_back "${TMP_PATH}/cath50"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
+    "ProstT5")
+        if notExists "${TMP_PATH}/prostt5-f16.tar.gz"; then
+            downloadFile "https://foldseek.steineggerlab.workers.dev/prostt5-f16-safetensors.tar.gz" "${TMP_PATH}/prostt5-f16.tar.gz"
+        fi
+        mkdir -p -- "${OUTDB}"
+        tar xvfz "${TMP_PATH}/prostt5-f16.tar.gz" -C "${OUTDB}"
+        INPUT_TYPE="MODEL_WEIGHTS"
+    ;;
 esac
 
 if notExists "${OUTDB}.dbtype"; then
@@ -207,7 +215,7 @@ case "${INPUT_TYPE}" in
 esac
 fi
 
-if notExists "${OUTDB}.version"; then
+if [ -f "${TMP_PATH}/version" ] && notExists "${OUTDB}.version"; then
     mv -f "${TMP_PATH}/version" "${OUTDB}.version"
 fi
 
