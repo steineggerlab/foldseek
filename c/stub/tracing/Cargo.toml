@@ -1,0 +1,4 @@
+[package]
+name = "tracing"
+version = "0.1.40"
+edition = "2021"

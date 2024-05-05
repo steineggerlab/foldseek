@@ -1,0 +1,20 @@
+[dependencies]
+
+[features]
+default = ["link"]
+link = []
+mac_os_10_7_support = []
+mac_os_10_8_features = []
+
+[package]
+authors = ["The Servo Project Developers"]
+description = "Bindings to Core Foundation for macOS"
+edition = "2018"
+homepage = "https://github.com/servo/core-foundation-rs"
+license = "MIT OR Apache-2.0"
+name = "core-foundation-sys"
+repository = "https://github.com/servo/core-foundation-rs"
+version = "0.8.6"
+[package.metadata.docs.rs]
+all-features = true
+default-target = "x86_64-apple-darwin"

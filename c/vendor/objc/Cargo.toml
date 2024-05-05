@@ -1,0 +1,22 @@
+[dependencies.malloc_buf]
+version = "0.0"
+
+[dependencies.objc_exception]
+optional = true
+version = "0.1"
+
+[features]
+exception = ["objc_exception"]
+verify_message = []
+
+[package]
+authors = ["Steven Sheldon"]
+description = "Objective-C Runtime bindings and wrapper for Rust."
+documentation = "http://ssheldon.github.io/rust-objc/objc/"
+exclude = [".gitignore", ".travis.yml", "doc.sh", "travis_install.sh", "travis_test.sh", "tests-ios/**"]
+keywords = ["objective-c", "osx", "ios", "cocoa", "uikit"]
+license = "MIT"
+name = "objc"
+readme = "README.md"
+repository = "http://github.com/SSheldon/rust-objc"
+version = "0.2.7"

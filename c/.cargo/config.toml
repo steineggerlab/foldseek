@@ -1,0 +1,12 @@
+[patch.crates-io]
+fancy-regex = { path = "./stub/fancy_regex" }
+tracing = { path = "./stub/tracing" }
+rayon = { path = "./stub/rayon" }
+num_cpus = { path = "./stub/num_cpus" }
+crc32fast = { path = "./stub/crc32fast" }
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

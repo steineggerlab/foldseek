@@ -1,0 +1,83 @@
+[dependencies.serde]
+default-features = false
+optional = true
+version = "1.0"
+
+[dependencies.sval]
+default-features = false
+optional = true
+version = "2.1"
+
+[dependencies.sval_ref]
+default-features = false
+optional = true
+version = "2.1"
+
+[dependencies.value-bag]
+default-features = false
+features = ["inline-i128"]
+optional = true
+version = "1.7"
+[dev-dependencies.proc-macro2]
+default-features = false
+version = "1.0.63"
+
+[dev-dependencies.serde]
+features = ["derive"]
+version = "1.0"
+
+[dev-dependencies.serde_json]
+version = "1.0"
+
+[dev-dependencies.serde_test]
+version = "1.0"
+
+[dev-dependencies.sval]
+version = "2.1"
+
+[dev-dependencies.sval_derive]
+version = "2.1"
+
+[dev-dependencies.value-bag]
+features = ["test"]
+version = "1.7"
+
+[features]
+kv = []
+kv_serde = ["kv_std", "value-bag/serde", "serde"]
+kv_std = ["std", "kv", "value-bag/error"]
+kv_sval = ["kv", "value-bag/sval", "sval", "sval_ref"]
+kv_unstable = ["kv", "value-bag"]
+kv_unstable_serde = ["kv_serde", "kv_unstable_std"]
+kv_unstable_std = ["kv_std", "kv_unstable"]
+kv_unstable_sval = ["kv_sval", "kv_unstable"]
+max_level_debug = []
+max_level_error = []
+max_level_info = []
+max_level_off = []
+max_level_trace = []
+max_level_warn = []
+release_max_level_debug = []
+release_max_level_error = []
+release_max_level_info = []
+release_max_level_off = []
+release_max_level_trace = []
+release_max_level_warn = []
+std = []
+
+[package]
+authors = ["The Rust Project Developers"]
+categories = ["development-tools::debugging"]
+description = "A lightweight logging facade for Rust\n"
+documentation = "https://docs.rs/log"
+edition = "2021"
+exclude = ["rfcs/**/*"]
+keywords = ["logging"]
+license = "MIT OR Apache-2.0"
+name = "log"
+readme = "README.md"
+repository = "https://github.com/rust-lang/log"
+rust-version = "1.60.0"
+version = "0.4.21"
+[package.metadata.docs.rs]
+features = ["std", "serde", "kv_std", "kv_sval", "kv_serde"]

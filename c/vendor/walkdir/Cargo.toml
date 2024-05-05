@@ -1,0 +1,26 @@
+[badges.appveyor]
+repository = "BurntSushi/walkdir"
+
+[badges.travis-ci]
+repository = "BurntSushi/walkdir"
+[dependencies.same-file]
+version = "1.0.1"
+[dev-dependencies.doc-comment]
+version = "0.3"
+
+[package]
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+categories = ["filesystem"]
+description = "Recursively walk a directory."
+documentation = "https://docs.rs/walkdir/"
+edition = "2018"
+exclude = ["/ci/*", "/.travis.yml", "/appveyor.yml"]
+homepage = "https://github.com/BurntSushi/walkdir"
+keywords = ["directory", "recursive", "walk", "iterator"]
+license = "Unlicense/MIT"
+name = "walkdir"
+readme = "README.md"
+repository = "https://github.com/BurntSushi/walkdir"
+version = "2.5.0"
+[target."cfg(windows)".dependencies.winapi-util]
+version = "0.1.1"
