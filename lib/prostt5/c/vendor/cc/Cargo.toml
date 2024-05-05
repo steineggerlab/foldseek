@@ -1,0 +1,29 @@
+[dependencies.jobserver]
+default-features = false
+optional = true
+version = "0.1.20"
+[dev-dependencies.tempfile]
+version = "3"
+
+[features]
+parallel = ["libc", "jobserver"]
+
+[package]
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+categories = ["development-tools::build-utils"]
+description = "A build-time dependency for Cargo build scripts to assist in invoking the native\nC compiler to compile native C code into a static archive to be linked into Rust\ncode.\n"
+documentation = "https://docs.rs/cc"
+edition = "2018"
+exclude = ["/.github", "tests", "src/bin"]
+homepage = "https://github.com/rust-lang/cc-rs"
+keywords = ["build-dependencies"]
+license = "MIT OR Apache-2.0"
+name = "cc"
+readme = "README.md"
+repository = "https://github.com/rust-lang/cc-rs"
+rust-version = "1.53"
+version = "1.0.94"
+[target."cfg(unix)".dependencies.libc]
+default-features = false
+optional = true
+version = "0.2.62"

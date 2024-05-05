@@ -1,0 +1,4 @@
+[package]
+name = "crc32fast"
+version = "1.4.0"
+edition = "2021"
