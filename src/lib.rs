@@ -5,16 +5,16 @@ extern crate intel_mkl_src;
 extern crate accelerate_src;
 
 use anyhow::Result;
+use serde_json;
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use candle_core::utils::{cuda_is_available, metal_is_available};
 use candle_core::{DType, Device, IndexOp, Tensor};
 use candle_nn::{ops::softmax, VarBuilder};
-use candle_transformers::models::t5::{self, T5EncoderModel};
-use serde_json;
-use std::collections::HashMap;
-// use std::fs::File;
-// use std::io::Write;
-use std::path::PathBuf;
-
+use candle_transformers::models::t5::{T5EncoderModel, Config};
+use candle_transformers::quantized_var_builder::VarBuilder as QuantizedVarBuilder;
+pub mod quantized_t5;
 pub mod cnn;
 use crate::cnn::CNN;
 
@@ -143,8 +143,9 @@ fn char_to_number(n: u8) -> u8 {
 pub struct T5ModelBuilder {
     pub profile: bool,
     pub device: Device,
-    pub config: t5::Config,
+    pub config: Config,
     pub weights_filename: Vec<PathBuf>,
+    pub quantized_filename: Vec<PathBuf>,
     pub cnn_filename: Vec<PathBuf>,
     pub tokens_map: HashMap<String, usize>,
 }
@@ -157,6 +158,7 @@ impl T5ModelBuilder {
         let config_filename = base.join("config.json");
 
         let weights_filename = vec![base.join("model.safetensors")];
+        let quantized_filename = vec![base.join("model.gguf")];
         let path = if profile {
             base.join("new_cnn.safetensors")
         } else {
@@ -164,7 +166,7 @@ impl T5ModelBuilder {
         };
         let cnn_filename = vec![path];
         let config = std::fs::read_to_string(config_filename)?;
-        let mut config: t5::Config = serde_json::from_str(&config)?;
+        let mut config: Config = serde_json::from_str(&config)?;
         config.use_cache = cache;
 
         let tokens_filename = base.join("tokens.json");
@@ -176,6 +178,7 @@ impl T5ModelBuilder {
             device,
             config,
             weights_filename,
+            quantized_filename,
             cnn_filename,
             tokens_map,
         })
@@ -188,6 +191,11 @@ impl T5ModelBuilder {
         Ok(T5EncoderModel::load(vb, &self.config)?)
     }
 
+    pub fn build_quantized_encoder(&self) -> Result<quantized_t5::T5EncoderModel> {
+        let vb = QuantizedVarBuilder::from_gguf(&self.quantized_filename[0], &self.device)?;
+        Ok(quantized_t5::T5EncoderModel::load(vb, &self.config)?)
+    }
+
     pub fn build_cnn(&self) -> Result<CNN> {
         let vb = unsafe {
             VarBuilder::from_mmaped_safetensors(&self.cnn_filename, DTYPE, &self.device)?
@@ -198,25 +206,37 @@ impl T5ModelBuilder {
 
 pub struct ProstT5 {
     pub builder: T5ModelBuilder,
-    pub encoder: T5EncoderModel,
+    pub encoder: Option<T5EncoderModel>,
+    pub quantized_encoder: Option<quantized_t5::T5EncoderModel>,
     pub cnn: CNN,
+    pub quantized: bool
 }
 
 impl ProstT5 {
-    pub fn load(base_path: String, profile: bool, cpu: bool, cache: bool) -> Result<ProstT5> {
+    pub fn load(base_path: String, profile: bool, cpu: bool, cache: bool, quantized: bool) -> Result<ProstT5> {
         let builder = T5ModelBuilder::load(
             &base_path,
             profile,
             cpu,
-            cache
+            cache,
         )?;
-        let encoder = builder.build_encoder()?;
         let cnn = builder.build_cnn()?;
-
+        let encoder = if !quantized {
+            Some(builder.build_encoder()?)
+        } else {
+            None
+        };
+        let quantized_encoder = if quantized {
+            Some(builder.build_quantized_encoder()?)
+        } else {
+            None
+        };
         Ok(Self {
             builder,
             encoder,
-            cnn
+            quantized_encoder,
+            cnn,
+            quantized
         })
     }
 
@@ -254,7 +274,11 @@ impl ProstT5 {
             .unsqueeze(0)?
             .to_dtype(DType::U8)?;
 
-        let ys = self.encoder.forward(&input_token_ids)?;
+        let ys = if self.quantized {
+            self.quantized_encoder.as_mut().unwrap().forward(&input_token_ids)?.to_dtype(DTYPE)?
+        } else {
+            self.encoder.as_mut().unwrap().forward(&input_token_ids)?
+        };
 
         let ys = ys.i((.., 1..ys.dims3()?.1 - 1))?;
         let ys = ys.pad_with_zeros(1, 0, 1)?;
