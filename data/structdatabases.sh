@@ -160,11 +160,15 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "ProstT5")
-        if notExists "${TMP_PATH}/prostt5-f16.tar.gz"; then
-            downloadFile "https://foldseek.steineggerlab.workers.dev/prostt5-f16-safetensors.tar.gz" "${TMP_PATH}/prostt5-f16.tar.gz"
+        MODEL=prostt5-f16-safetensors.tar.gz
+        if [ -n "${PROSTT5_QUANTIZED}" ]; then
+            MODEL=prostt5-q4_0-gguf.tar.gz
+        fi
+        if notExists "${TMP_PATH}/${MODEL}"; then
+            downloadFile "https://foldseek.steineggerlab.workers.dev/${MODEL}" "${TMP_PATH}/prostt5-f16.tar.gz"
         fi
         mkdir -p -- "${OUTDB}"
-        tar xvfz "${TMP_PATH}/prostt5-f16.tar.gz" -C "${OUTDB}"
+        tar xvfz "${TMP_PATH}/${MODEL}" -C "${OUTDB}"
         INPUT_TYPE="MODEL_WEIGHTS"
     ;;
 esac
