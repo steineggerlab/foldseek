@@ -270,24 +270,22 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         writer.open();
         Debug::Progress progress(reader.getSize());
 
-        std::vector<std::string> tensorPaths = {
-            par.prostt5Model + "/model.safetensors",
-            par.prostt5Model + "/model/model.safetensors",
-            par.prostt5Model + "/model.gguf",
-            par.prostt5Model + "/model/model.gguf"
-        };
-
+        std::vector<std::string> prefix = { "", "/model" };
+        std::vector<std::string> suffix = { "/model.safetensors", "/model.gguf" };
         bool quantized = false;
         std::string modelWeights;
-        for (size_t i = 0; i < tensorPaths.size(); ++i) {
-            if (FileUtil::fileExists(tensorPaths[i].c_str())) {
-                modelWeights = par.prostt5Model;
-                quantized = tensorPaths[i].find("safetensors") == std::string::npos;
-                break;
+        for (size_t i = 0; i < prefix.size(); ++i) {
+            for (size_t j = 0; j < suffix.size(); ++j) {
+                std::string tensorPath = par.prostt5Model + prefix[i] + suffix[j];
+                if (FileUtil::fileExists(tensorPath.c_str())) {
+                    modelWeights = par.prostt5Model + prefix[i];
+                    quantized = suffix[j].find("safetensors") == std::string::npos;
+                    break;
+                }
             }
         }
         if (modelWeights.empty()) {
-            Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`.";
+            Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
             return EXIT_FAILURE;
         }
         ProstT5 *model = prostt5_load(modelWeights.c_str(), false, par.gpu == 0, false, quantized);
