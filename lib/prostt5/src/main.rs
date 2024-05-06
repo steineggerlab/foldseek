@@ -17,6 +17,7 @@ struct Args {
     prompt: Option<String>,
     generate_profile: bool,
     output: Option<String>,
+    quantized: bool,
 }
 
 fn process_fasta(
@@ -186,6 +187,10 @@ fn main() -> Result<()> {
         .opt_value_from_str("--disable-cache")
         .unwrap_or(Some(false))
         .unwrap_or(false);
+    let quantized = args
+        .opt_value_from_str("--quantized")
+        .unwrap_or(Some(true))
+        .unwrap_or(false);
     let prompt = args.opt_value_from_str("--prompt").unwrap_or(None);
     let generate_profile = args
         .opt_value_from_str("--generate-profile")
@@ -200,6 +205,7 @@ fn main() -> Result<()> {
         prompt,
         generate_profile,
         output,
+        quantized,
     };
 
     #[cfg(feature = "tracing")]
@@ -209,7 +215,13 @@ fn main() -> Result<()> {
         Some(guard)
     };
 
-    let mut prost = ProstT5::load("model/".to_string(), args.generate_profile, args.cpu, !args.disable_cache)?;
+    let mut prost = ProstT5::load(
+        "model/".to_string(),
+        args.generate_profile,
+        args.cpu,
+        !args.disable_cache,
+        args.quantized,
+    )?;
 
     match args.prompt {
         Some(prompt) => {
