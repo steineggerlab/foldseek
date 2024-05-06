@@ -9,9 +9,9 @@ pub extern "C" fn prostt5_free(ptr: *mut ProstT5) {
 }
 
 #[no_mangle]
-pub extern "C" fn prostt5_load(base_path: *const c_char, profile: bool, cpu: bool, cache: bool) -> *mut ProstT5 {
+pub extern "C" fn prostt5_load(base_path: *const c_char, profile: bool, cpu: bool, cache: bool, quantized: bool) -> *mut ProstT5 {
     let path = unsafe { CStr::from_ptr(base_path).to_str().unwrap() };
-    match ProstT5::load(path.to_string(), profile, cpu, cache) {
+    match ProstT5::load(path.to_string(), profile, cpu, cache, quantized) {
         Ok(prostt5) => Box::into_raw(Box::new(prostt5)),
         Err(_) => std::ptr::null_mut()
     }
