@@ -270,18 +270,27 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         writer.open();
         Debug::Progress progress(reader.getSize());
 
+        std::vector<std::string> tensorPaths = {
+            par.prostt5Model + "/model.safetensors",
+            par.prostt5Model + "/model/model.safetensors",
+            par.prostt5Model + "/model.gguf",
+            par.prostt5Model + "/model/model.gguf"
+        };
+
+        bool quantized = false;
         std::string modelWeights;
-        std::string tensorPath1 = par.prostt5Model + "/model.safetensors";
-        std::string tensorPath2 = par.prostt5Model + "/model/model.safetensors";
-        if (FileUtil::fileExists(tensorPath1.c_str())) {
-            modelWeights = par.prostt5Model;
-        } else if (FileUtil::fileExists(tensorPath2.c_str())) {
-            modelWeights = par.prostt5Model + "/model";
-        } else {
+        for (size_t i = 0; i < tensorPaths.size(); ++i) {
+            if (FileUtil::fileExists(tensorPaths[i].c_str())) {
+                modelWeights = par.prostt5Model;
+                quantized = tensorPaths[i].find("safetensors") == std::string::npos;
+                break;
+            }
+        }
+        if (modelWeights.empty()) {
             Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`.";
             return EXIT_FAILURE;
         }
-        ProstT5 *model = prostt5_load(modelWeights.c_str(), false, par.gpu == 0, false);
+        ProstT5 *model = prostt5_load(modelWeights.c_str(), false, par.gpu == 0, false, quantized);
 #ifdef OPENMP
         size_t localThreads = par.gpu != 0 ? 1 : par.threads;
 #endif
