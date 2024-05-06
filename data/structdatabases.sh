@@ -165,7 +165,7 @@ case "${SELECTION}" in
             MODEL=prostt5-q4_0-gguf.tar.gz
         fi
         if notExists "${TMP_PATH}/${MODEL}"; then
-            downloadFile "https://foldseek.steineggerlab.workers.dev/${MODEL}" "${TMP_PATH}/prostt5-f16.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/${MODEL}" "${TMP_PATH}/${MODEL}"
         fi
         mkdir -p -- "${OUTDB}"
         tar xvfz "${TMP_PATH}/${MODEL}" -C "${OUTDB}"
