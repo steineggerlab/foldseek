@@ -248,13 +248,7 @@ void sortDatafileByIdOrder(DBWriter & dbw,
 extern int createdb(int argc, const char **argv, const Command& command);
 int structcreatedb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    bool printPar = true;
-#ifdef HAVE_PROSTT5
-    if (par.prostt5Model != "") {
-        printPar = false;
-    }
-#endif
-    par.parseParameters(argc, argv, command, printPar, 0, MMseqsParameter::COMMAND_COMMON);
+    par.parseParameters(argc, argv, command, false, 0, MMseqsParameter::COMMAND_COMMON);
     std::string outputName = par.filenames.back();
 #ifdef HAVE_PROSTT5
     if (par.prostt5Model != "") {
@@ -334,6 +328,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int>::moveDb(tempDb.first, ssDb);
 
         return EXIT_SUCCESS;
+    } else {
+        par.printParameters(command.cmd, argc, argv, *command.params);
     }
 #endif
     par.filenames.pop_back();
