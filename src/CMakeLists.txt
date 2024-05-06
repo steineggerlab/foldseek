@@ -21,6 +21,8 @@ endif()
 
 if(ENABLE_CUDA)
         target_compile_definitions(foldseek-framework PUBLIC -DHAVE_CUDA=1)
+        find_package(CUDAToolkit REQUIRED)
+        target_link_libraries(foldseek-framework CUDA::cudart CUDA::curand CUDA::cublas CUDA::nvrtc)
 endif()
 
 

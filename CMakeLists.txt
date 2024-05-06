@@ -83,7 +83,10 @@ endif()
 
 set(CANDLE_FEATURE "")
 if(ENABLE_CUDA)
-    set(CANDLE_FEATURE cuda,cudnn)
+    if(NOT DEFINED CUDAToolkit_ROOT)
+        message(FATAL_ERROR "please set -DCUDAToolkit_ROOT=path-to-cuda")
+    endif()
+    set(CANDLE_FEATURE cuda)
 endif()
 
 if(ENABLE_PROSTT5)
@@ -92,6 +95,9 @@ if(ENABLE_PROSTT5)
         CRATE_TYPES staticlib
         FEATURES "${CANDLE_FEATURE}"
     )
+    if(ENABLE_CUDA)
+        corrosion_set_env_vars(cprostt5 CUDA_ROOT=${CUDAToolkit_ROOT})
+    endif()
     include_directories(lib/prostt5/c)
     if(EMSCRIPTEN)
         corrosion_add_target_local_rustflags(cprostt5 "-Clink-args=--no-entry -sRELOCATABLE=1")
