@@ -162,6 +162,8 @@ case "${SELECTION}" in
     "ProstT5")
         MODEL=prostt5-f16-safetensors.tar.gz
         if [ -n "${PROSTT5_QUANTIZED}" ]; then
+            # quantized weights are worse and slower
+            # they were only added to reduce download size in continous integration
             MODEL=prostt5-q4_0-gguf.tar.gz
         fi
         if notExists "${TMP_PATH}/${MODEL}"; then
