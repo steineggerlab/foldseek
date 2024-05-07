@@ -123,6 +123,8 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
+    cmd.addVariable("CREATEDB_QUERY_PAR", par.createParameterString(par.structurecreatedb).c_str());
+    par.prostt5Model = "";
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("SUMMARIZE_PAR", par.createParameterString(par.summarizeresult).c_str());
