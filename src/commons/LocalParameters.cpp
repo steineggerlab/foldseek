@@ -181,9 +181,9 @@ LocalParameters::LocalParameters() :
     compressca.push_back(&PARAM_V);
 
     //scorecmultimer
+    scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
     scoremultimer.push_back(&PARAM_THREADS);
     scoremultimer.push_back(&PARAM_V);
-    scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
 
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
@@ -199,6 +199,7 @@ LocalParameters::LocalParameters() :
     easymultimersearchworkflow = combineList(structurecreatedb, multimersearchworkflow);
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, convertalignments);
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
+    easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
 
     // expandmultimer
     expandmultimer.push_back(&PARAM_THREADS);
