@@ -8,7 +8,7 @@
 #include "FileUtil.h"
 #include "TranslateNucl.h"
 #include "MemoryMapped.h"
-#include "createcomplexreport.h"
+#include "MultimerUtil.h"
 #include "LDDT.h"
 #include "CalcProbTP.h"
 #include <map>
@@ -75,7 +75,7 @@ struct ComplexAlignment {
     unsigned int assId;
 };
 
-int createcomplexreport(int argc, const char **argv, const Command &command) {
+int createmultimerreport(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
     const bool sameDB = par.db1.compare(par.db2) == 0 ? true : false;

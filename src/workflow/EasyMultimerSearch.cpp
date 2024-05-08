@@ -5,10 +5,9 @@
 #include "CommandCaller.h"
 #include "Util.h"
 #include "Debug.h"
+#include "easymultimersearch.sh.h"
 
-#include "easycomplexsearch.sh.h"
-
-int easycomplexsearch(int argc, const char **argv, const Command &command) {
+int easymultimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -108,7 +107,7 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     if(par.exhaustiveSearch){
         cmd.addVariable("PREFMODE", "EXHAUSTIVE");
     }
-    cmd.addVariable("NO_REPORT", par.complexReportMode == 0 ? "TRUE" : NULL);
+    cmd.addVariable("NO_REPORT", par.multimerReportMode == 0 ? "TRUE" : NULL);
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
@@ -118,14 +117,14 @@ int easycomplexsearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
     par.filenames.pop_back();
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("COMPLEXSEARCH_PAR", par.createParameterString(par.complexsearchworkflow, true).c_str());
+    cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
-    cmd.addVariable("REPORT_PAR", par.createParameterString(par.createcomplexreport).c_str());
+    cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-    std::string program = tmpDir + "/easycomplexsearch.sh";
-    FileUtil::writeFile(program, easycomplexsearch_sh, easycomplexsearch_sh_len);
+    std::string program = tmpDir + "/easymultimersearch.sh";
+    FileUtil::writeFile(program, easymultimersearch_sh, easymultimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
     // Should never get here
     assert(false);

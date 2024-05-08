@@ -6,10 +6,10 @@
 #include "Util.h"
 #include "Debug.h"
 
-#include "complexsearch.sh.h"
+#include "multimersearch.sh.h"
 
 
-int complexsearch(int argc, const char **argv, const Command &command) {
+int multimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -54,11 +54,6 @@ int complexsearch(int argc, const char **argv, const Command &command) {
         par.greedyBestHits) {
         needBacktrace = true;
     }
-//    if (needBacktrace) {
-//        Debug(Debug::INFO) << "Alignment backtraces will be computed, since they were requested by output format.\n";
-//        par.addBacktrace = true;
-//        par.PARAM_ADD_BACKTRACE.wasSet = true;
-//    }
     if (needLookup) {
         par.writeLookup = true;
     }
@@ -73,13 +68,14 @@ int complexsearch(int argc, const char **argv, const Command &command) {
     CommandCaller cmd;
     double eval =  par.evalThr;
     if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
-        par.evalThr = par.eValueThrExpandComplex;
-        cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "tmalign");
-        cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.tmalign).c_str());
+        par.evalThr = par.eValueThrExpandMultimer;
+        cmd.addVariable("MULTIMER_ALIGNMENT_ALGO", "tmalign");
+//        cmd.addVariable("MULTIMER_ALIGN_PREF_PAR", par.createParameterString(par.structurealign).c_str());
+        cmd.addVariable("MULTIMER_ALIGN_PAR", par.createParameterString(par.tmalign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
-        par.evalThr = par.eValueThrExpandComplex;
-        cmd.addVariable("COMPLEX_ALIGNMENT_ALGO", "structurealign");
-        cmd.addVariable("COMPLEX_ALIGN_PAR", par.createParameterString(par.structurealign).c_str());
+        par.evalThr = par.eValueThrExpandMultimer;
+        cmd.addVariable("MULTIMER_ALIGNMENT_ALGO", "structurealign");
+        cmd.addVariable("MULTIMER_ALIGN_PAR", par.createParameterString(par.structurealign).c_str());
     }
     par.evalThr = eval;
     switch(par.prefMode){
@@ -96,7 +92,7 @@ int complexsearch(int argc, const char **argv, const Command &command) {
     if(par.exhaustiveSearch){
         cmd.addVariable("PREFMODE", "EXHAUSTIVE");
     }
-    cmd.addVariable("NO_REPORT", par.complexReportMode == 0 ? "TRUE" : NULL);
+    cmd.addVariable("NO_REPORT", par.multimerReportMode == 0 ? "TRUE" : NULL);
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
@@ -111,12 +107,13 @@ int complexsearch(int argc, const char **argv, const Command &command) {
     par.alignmentType = par.exhaustiveSearch ? par.alignmentType : LocalParameters::ALIGNMENT_TYPE_3DI_AA;
 
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
-    cmd.addVariable("SCORECOMPLEX_PAR", par.createParameterString(par.scorecomplex).c_str());
+    cmd.addVariable("SCOREMULTIMER_PAR", par.createParameterString(par.scoremultimer).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-    std::string program = tmpDir + "/complexsearch.sh";
-    FileUtil::writeFile(program, complexsearch_sh, complexsearch_sh_len);
+//    cmd.addVariable("EXP_MULTIMER_PAR", ("-e " + std::to_string(par.eValueThrExpandMultimer)).c_str());
+    std::string program = tmpDir + "/multimersearch.sh";
+    FileUtil::writeFile(program, multimersearch_sh, multimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
     // Should never get here
     assert(false);

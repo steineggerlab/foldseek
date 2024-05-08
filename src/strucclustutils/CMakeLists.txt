@@ -13,10 +13,10 @@ set(strucclustutils_source_files
         strucclustutils/structurerescorediagonal.cpp
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
-        strucclustutils/scorecomplex.cpp
-        strucclustutils/createcomplexreport.cpp
-        strucclustutils/createcomplexreport.h
-        strucclustutils/expandcomplex.cpp
+        strucclustutils/scoremultimer.cpp
+        strucclustutils/createmultimerreport.cpp
+        strucclustutils/MultimerUtil.h
+        strucclustutils/expandmultimer.cpp
         PARENT_SCOPE
         )
 

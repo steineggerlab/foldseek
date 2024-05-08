@@ -8,7 +8,7 @@
 #include "StructureUtil.h"
 #include "TMaligner.h"
 #include "Coordinate16.h"
-#include "createcomplexreport.h"
+#include "MultimerUtil.h"
 #include "set"
 
 #ifdef OPENMP
@@ -340,15 +340,18 @@ private:
     }
 
     bool checkClusteringNecessity() {
+        // Too few alns => do nothing and finish it
         if (searchResult.alnVec.size() < clusterSizeThr)
-            return false;
+            return finishDBSCAN();
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
+        // Redundant chains => DBSCAN clustering
         if (checkChainRedundancy()) {
             neighbors.clear();
             return runDBSCAN();
         }
+        // Already good => finish it without clustering
         prevMaxClusterSize = neighbors.size();
         finalClusters.insert(neighbors);
         return finishDBSCAN();
@@ -505,7 +508,7 @@ public:
                 continue;
             }
             paredSearchResult.standardize();
-            if (!paredSearchResult.alnVec.empty())
+            if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
                 searchResults.emplace_back(paredSearchResult);
 
             paredSearchResult.alnVec.clear();
@@ -606,7 +609,7 @@ private:
     }
 };
 
-int scorecomplex(int argc, const char **argv, const Command &command) {
+int scoremultimer(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
