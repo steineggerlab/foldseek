@@ -16,7 +16,7 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     par.PARAM_OVERLAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     for (size_t i = 0; i < par.createdb.size(); i++){
-        par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+        par.structurecreatedb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
 
     par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
