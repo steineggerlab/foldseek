@@ -27,9 +27,9 @@ LocalParameters::LocalParameters() :
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
         PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_MULTIMER_REPORT_MODE(PARAM_MULTIMER_REPORT_MODE_ID, "--multimer-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &multimerReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
-
-        PARAM_EXPAND_MULTIMER_EVALUE(PARAM_EXPAND_MULTIMER_EVALUE_ID, "--expand-multimer-evalue", "E-value threshold for expandmultimer", "E-value threshold for expandmultimer (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandMultimer, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
-
+        PARAM_MULTIMER_REPORT_MODE_BC_COMPAT(PARAM_MULTIMER_REPORT_MODE_BC_COMPAT_ID, "--complex-report-mode", "", "", typeid(int), (void *) &multimerReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_HIDDEN),
+        PARAM_EXPAND_MULTIMER_EVALUE(PARAM_EXPAND_MULTIMER_EVALUE_ID, "--expand-multimer-evalue", "Multimer E-value", "E-value threshold for multimer chain expansion (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandMultimer, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
+        PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT(PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT_ID, "--expand-complex-evalue", "", "", typeid(double), (void *) &eValueThrExpandMultimer, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
@@ -194,6 +194,9 @@ LocalParameters::LocalParameters() :
     multimersearchworkflow = combineList(structuresearchworkflow, scoremultimer);
     multimersearchworkflow = combineList(multimersearchworkflow, expandmultimer);
     multimersearchworkflow.push_back(&PARAM_EXPAND_MULTIMER_EVALUE);
+    multimersearchworkflow.push_back(&PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT);
+    multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE);
+    multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE_BC_COMPAT);
 
     // easymultimersearchworkflow
     easymultimersearchworkflow = combineList(structurecreatedb, multimersearchworkflow);
