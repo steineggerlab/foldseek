@@ -31,7 +31,7 @@ std::vector<Command> foldseekCommands = {
                 "foldseek createdb QUERY.fasta DB --prostt5-model weights\n\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:directory|.tsv>|<i:PDB|mmCIF[.gz]|tar[.gz]|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar[.gz]|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
+                CITATION_FOLDSEEK | CITATION_PROSTT5, {{"PDB|mmCIF[.gz]|stdin|tar[.gz]|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
 #ifdef HAVE_GCS
                                             &DbValidator::flatfileStdinGenericUri
 #else
