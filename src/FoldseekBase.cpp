@@ -274,6 +274,9 @@ std::vector<Command> foldseekCommands = {
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb}
                                    }
         },
+        {"scorecomplex", scoremultimer, &localPar.scoremultimer, COMMAND_HIDDEN,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
+        },
         {"multimersearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_MAIN,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
@@ -292,6 +295,9 @@ std::vector<Command> foldseekCommands = {
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
+        },
+        {"complexsearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_HIDDEN,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"easy-multimersearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
                 "Complex level search",
@@ -312,6 +318,9 @@ std::vector<Command> foldseekCommands = {
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
+        {"easy-complexsearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
+        },
         {"createmultimerreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
                 "Convert complexDB to tsv format",
                 "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u, t, assId\n"
@@ -330,17 +339,23 @@ std::vector<Command> foldseekCommands = {
                                            {"complexFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
                                    }
         },
+        {"createcomplexreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
+        },
         {"expandmultimer", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
-        "Re-prefilter to ensure complete alignment between complexes",
-        NULL,
-        "Woosub Kim <woosubgo@snu.ac.kr>",
-        "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:prefilterDB>",
-        CITATION_FOLDSEEK_MULTIMER, {
-                 {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                 {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                 {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
-                 {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
-             }
+                "Re-prefilter to ensure complete alignment between complexes",
+                NULL,
+                "Woosub Kim <woosubgo@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:prefilterDB>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                        {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                        {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                        {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                        {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
+                                }
+        },
+        {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
