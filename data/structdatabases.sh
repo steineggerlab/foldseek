@@ -180,10 +180,18 @@ case "${INPUT_TYPE}" in
     "FOLDSEEK_DB")
         eval "set -- $ARR"
         IN="${*}"
-        for SUFFIX in ".source" "_mapping" "_taxonomy"; do
+        for SUFFIX in ".source" "_mapping" "_taxonomy" ".lookup"; do
             if [ -e "${IN}_seq${SUFFIX}" ]; then
-                mv -f -- "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}"
+                if [ -L "${IN}_seq${SUFFIX}" ]; then
+                    # recreate symlinks
+                    BASE=$(basename "${OUTDB}")
+                    DIRN=$(dirname "${OUTDB}")
+                    (cd "${DIRN}"; ln -sf -- "${BASE}${SUFFIX}" "${BASE}_seq${SUFFIX}")
+                else
+                    mv -f -- "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}"
+                fi
             fi
+
             if [ -e "${IN}${SUFFIX}" ]; then
                 mv -f -- "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}"
             fi
@@ -199,6 +207,15 @@ case "${INPUT_TYPE}" in
         done
 
         if [ -e "${IN}_clu.dbtype" ]; then
+            # fix symlinks of clusterdbs
+            for SUFFIX in "" "_ss" "_h" "_ca"; do
+                if [ -L "${OUTDB}_seq${SUFFIX}.0" ] && [ ! -e "${OUTDB}_seq${SUFFIX}.0" ]; then
+                    BASE=$(basename "${OUTDB}")
+                    DIRN=$(dirname "${OUTDB}")
+                    (cd "${DIRN}"; ln -sf -- "${BASE}${SUFFIX}" "${BASE}_seq${SUFFIX}.0")
+                fi
+            done
+
             # shellcheck disable=SC2086
             "${MMSEQS}" mvdb "${IN}_clu" "${OUTDB}_clu" || fail "mv died"
         fi
