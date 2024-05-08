@@ -8,7 +8,6 @@
 
 #include "multimersearch.sh.h"
 
-
 int multimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -17,10 +16,6 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_OVERLAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    for (size_t i = 0; i < par.createdb.size(); i++){
-        par.createdb[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
-    }
-
     par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
