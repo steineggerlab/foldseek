@@ -107,12 +107,19 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
                 size_t dataSize = mem.size();
 
                 // hack to fix broken _citation.title in AF3
-                const char* target = "_citation.title";
-                size_t target_len = strlen(target);
-                char* it = std::search(data, data + dataSize, target, target + target_len);
+                const char target0[] = "Accurate structure prediction of biomolecular interactions with AlphaFold 3\n";
+                size_t target0Len = sizeof(target0) - 1;
+                const char target1[] = "_citation.title";
+                size_t target1Len = sizeof(target1) - 1;
+                char* it = std::search(data, data + dataSize, target0, target0 + target0Len);
                 if (it != data + dataSize) {
-                    it[0] = '#';
-                    it[1] = ' ';
+                    while (it > data && *(it - 1) != '\n') {
+                        it--;
+                    }
+                    if (strncmp(it, target1, target1Len) == 0) {
+                        it[0] = '#';
+                        it[1] = ' ';
+                    }
                 }
 
                 gemmi::cif::Document doc = gemmi::cif::read_memory(mem.data(), mem.size(), infile.path().c_str());
@@ -179,9 +186,11 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             case Format::Mmcif: {
                 const char* targetBuffer = buffer;
                 // hack to fix broken _citation.title in AF3
-                const char* target = "_citation.title";
-                size_t target_len = strlen(target);
-                const char* it = std::search(targetBuffer, targetBuffer + bufferSize, target, target + target_len);
+                const char target0[] = "Accurate structure prediction of biomolecular interactions with AlphaFold 3\n";
+                size_t target0Len = sizeof(target0) - 1;
+                const char target1[] = "_citation.title";
+                size_t target1Len = sizeof(target1) - 1;
+                const char* it = std::search(targetBuffer, targetBuffer + bufferSize, target0, target0 + target1Len);
                 if (it != targetBuffer + bufferSize) {
                     if (fixupBuffer == NULL) {
                         fixupBufferSize = bufferSize;
@@ -191,8 +200,13 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                         fixupBuffer = (char*)realloc(fixupBuffer, fixupBufferSize);
                     }
                     memcpy(fixupBuffer, targetBuffer, bufferSize);
-                    *(fixupBuffer + (it - targetBuffer)) = '#';
-                    *(fixupBuffer + (it - targetBuffer) + 1) = ' ';
+                    while (it > targetBuffer && *(it - 1) != '\n') {
+                        it--;
+                    }
+                    if (strncmp(it, target1, target1Len) == 0) {
+                        *(fixupBuffer + (it - targetBuffer)) = '#';
+                        *(fixupBuffer + (it - targetBuffer) + 1) = ' ';
+                    }
                     targetBuffer = fixupBuffer;
                 }
                 gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, bufferSize, name.c_str());
