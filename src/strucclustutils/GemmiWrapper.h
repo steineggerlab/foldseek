@@ -22,6 +22,11 @@ public:
     };
 
     GemmiWrapper();
+    ~GemmiWrapper() {
+        if (fixupBuffer) {
+            delete fixupBuffer;
+        }
+    }
 
     bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, Format format = Format::Detect);
 
@@ -42,6 +47,10 @@ public:
     std::vector<std::pair<size_t ,size_t>> chain;
     std::vector<int> taxIds;
     std::string title;
+
+    char* fixupBuffer;
+    size_t fixupBufferSize;
+
 private:
     std::unordered_map<std::string,char> threeAA2oneAA;
     int modelIt;

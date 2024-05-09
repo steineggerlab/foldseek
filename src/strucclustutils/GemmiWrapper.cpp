@@ -10,6 +10,8 @@
 #include "foldcomp.h"
 #include "cif.hpp"
 
+#include <algorithm>
+
 GemmiWrapper::GemmiWrapper(){
     threeAA2oneAA = {{"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
                      {"CYS",'C'},  {"GLN",'Q'},  {"GLU",'E'}, {"GLY",'G'},
@@ -33,6 +35,7 @@ GemmiWrapper::GemmiWrapper(){
                      {"CSD",'C'}, {"SEC",'C'},
                      // unknown
                      {"UNK",'X'}};
+    fixupBuffer = NULL;
 }
 
 std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document& doc) {
@@ -99,7 +102,20 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
         std::unordered_map<std::string, int> entity_to_tax_id;
         switch (format) {
             case Format::Mmcif: {
-                gemmi::cif::Document doc = gemmi::cif::read(infile);
+                gemmi::CharArray mem = read_into_buffer(infile);
+                char* data = mem.data();
+                size_t dataSize = mem.size();
+
+                // hack to fix broken _citation.title in AF3
+                const char* target = "_citation.title";
+                size_t target_len = strlen(target);
+                char* it = std::search(data, data + dataSize, target, target + target_len);
+                if (it != data + dataSize) {
+                    it[0] = '#';
+                    it[1] = ' ';
+                }
+
+                gemmi::cif::Document doc = gemmi::cif::read_memory(mem.data(), mem.size(), infile.path().c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
@@ -161,7 +177,25 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(buffer, bufferSize), name, gemmi::PdbReadOptions());
                 break;
             case Format::Mmcif: {
-                gemmi::cif::Document doc = gemmi::cif::read_memory(buffer, bufferSize, name.c_str());
+                const char* targetBuffer = buffer;
+                // hack to fix broken _citation.title in AF3
+                const char* target = "_citation.title";
+                size_t target_len = strlen(target);
+                const char* it = std::search(targetBuffer, targetBuffer + bufferSize, target, target + target_len);
+                if (it != targetBuffer + bufferSize) {
+                    if (fixupBuffer == NULL) {
+                        fixupBufferSize = bufferSize;
+                        fixupBuffer = (char*)malloc(fixupBufferSize);
+                    } else if (bufferSize > fixupBufferSize) {
+                        fixupBufferSize = bufferSize * 1.5;
+                        fixupBuffer = (char*)realloc(fixupBuffer, fixupBufferSize);
+                    }
+                    memcpy(fixupBuffer, targetBuffer, bufferSize);
+                    *(fixupBuffer + (it - targetBuffer)) = '#';
+                    *(fixupBuffer + (it - targetBuffer) + 1) = ' ';
+                    targetBuffer = fixupBuffer;
+                }
+                gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, bufferSize, name.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
