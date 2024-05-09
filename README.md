@@ -29,7 +29,7 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
   - [Cluster](#cluster)
     - [Output](#output-cluster)
     - [Important Parameters](#important-cluster-parameters)
-  - [Complexsearch](#multimersearch)
+  - [Multimer](#multimersearch)
     - [Output](#multimer-search-output)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
