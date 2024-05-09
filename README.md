@@ -29,8 +29,8 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
   - [Cluster](#cluster)
     - [Output](#output-cluster)
     - [Important Parameters](#important-cluster-parameters)
-  - [Complexsearch](#complexsearch)
-    - [Output](#complex-search-output)
+  - [Complexsearch](#multimersearch)
+    - [Output](#multimer-search-output)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -222,26 +222,26 @@ MCAR...Q
 | --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
 
 
-### Complexsearch
-The `easy-complexsearch` module is designed for querying one or more protein complex (multi-chain) structures (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
+### Multimersearch
+The `easy-multimersearch` module is designed for querying one or more protein complex (multi-chain) structures (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
 
-#### Using Complexsearch
+#### Using Multimersearch
 The examples below use files that can be found in the `example` directory, which is part of the Foldseek repo, if you clone it. 
 If you use the precompiled version of the software, you can download the files directly: [1tim.pdb.gz](https://github.com/steineggerlab/foldseek/raw/master/example/1tim.pdb.gz) and [8tim.pdb.gz](https://github.com/steineggerlab/foldseek/raw/master/example/8tim.pdb.gz).
 
-For a pairwise alignment of complexes using `easy-complexsearch`, run the following command:
+For a pairwise alignment of complexes using `easy-multimersearch`, run the following command:
 ```
-foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFolder
+foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFolder
 ```
-Foldseek `easy-complexsearch` can also be used for searching one or more query complexes against a target database: 
+Foldseek `easy-multimersearch` can also be used for searching one or more query complexes against a target database: 
 ```
 foldseek databases PDB pdb tmp 
-foldseek easy-complexsearch example/1tim.pdb.gz pdb result tmpFolder
+foldseek easy-multimersearch example/1tim.pdb.gz pdb result tmpFolder
 ```
 
-#### Complex Search Output
+#### Multimer Search Output
 ##### Tab-separated-complex
-By default, `easy-complexsearch` reports the output alignment in a tab-separated file.
+By default, `easy-multimersearch` reports the output alignment in a tab-separated file.
 The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid` but they can be customized with the `--format-output` option e.g., `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` alters the output to show specific scores and identifiers.
 
 | Code | Description |
@@ -263,7 +263,7 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 ```
 
 ##### Complex Report
-`easy-complexsearch` also generates a report (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
+`easy-multimersearch` also generates a report (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
 | Column | Description |
 | --- | --- |
 | 1 | Identifier of the query complex |
