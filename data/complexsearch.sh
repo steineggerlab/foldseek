@@ -28,7 +28,6 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
     fi
     RESULT="${TMP_PATH}/result_expand_aligned"
 fi
-
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
     $MMSEQS scorecomplex "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${OUTPUT}" ${SCORECOMPLEX_PAR} \
