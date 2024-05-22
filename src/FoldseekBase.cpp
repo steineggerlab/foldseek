@@ -260,9 +260,9 @@ std::vector<Command> foldseekCommands = {
         {"scoremultimer", scoremultimer, &localPar.scoremultimer, COMMAND_ALIGNMENT,
                 "Get complex level alignments from alignmentDB",
                 "# Get complex level alignments (chain assignments and tm-scores) from alignmentDB.\n"
-                "foldseek scorecomplex queryDB targetDB alignmentDB complexDB\n"
+                "foldseek scoremultimer queryDB targetDB alignmentDB complexDB\n"
                 "# simple tsv output format"
-                "foldseek createcomplexreport queryDB targetDB complexDB result.tsv"
+                "foldseek createmultimerreport queryDB targetDB complexDB result.tsv"
                 "# output files with convertalis"
                 "foldseek convertalis queryDB targetDB complexDB result.m8\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
@@ -280,13 +280,13 @@ std::vector<Command> foldseekCommands = {
         {"multimersearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_MAIN,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
-                "foldseek complexsearch queryDB targetDB result tmp\n"
+                "foldseek multimersearch queryDB targetDB result tmp\n"
                 "# Format output differently\n"
-                "foldseek complexsearch queryDB targetDB result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "foldseek multimersearch queryDB targetDB result tmp --format-output query,target,qstart,tstart,cigar\n"
                 "# Align with TMalign (global)\n"
-                "foldseek complexsearch queryDB targetDB result tmp --alignment-type 1\n"
+                "foldseek multimersearch queryDB targetDB result tmp --alignment-type 1\n"
                 "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
-                "foldseek complexsearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
+                "foldseek multimersearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
                 CITATION_FOLDSEEK_MULTIMER, {
@@ -302,13 +302,13 @@ std::vector<Command> foldseekCommands = {
         {"easy-multimersearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
                 "Complex level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
                 "# Format output differently\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --format-output query,target,qstart,tstart,cigar\n"
                 "# Align with TMalign (global)\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --alignment-type 1\n"
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --alignment-type 1\n"
                 "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
                 CITATION_FOLDSEEK_MULTIMER, {
@@ -329,7 +329,7 @@ std::vector<Command> foldseekCommands = {
                 "#  (5,6) tm score based on query and target residue length,\n"
                 "#  (8,9) u and t,\n"
                 "#  (9) assignment id\n"
-                "foldseek createcomplexreport queryDB targetDB complexDB result.tsv\n",
+                "foldseek createmultimerreport queryDB targetDB complexDB result.tsv\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDb> <i:targetDb> <i:complexDB> <o:complexFile>",
                 CITATION_FOLDSEEK_MULTIMER, {
