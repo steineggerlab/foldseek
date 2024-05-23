@@ -24,6 +24,7 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
     - [Output](#output-search)
     - [Important Parameters](#important-search-parameters)
     - [Alignment Mode](#alignment-mode)
+    - [Structure search from FASTA input](#structure-search-from-fasta-input)
   - [Databases](#databases)
     - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
   - [Cluster](#cluster)
@@ -137,6 +138,24 @@ By default, Foldseek uses its local 3Di+AA structural alignment but it also supp
     foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 
 If alignment type is set to tmalign (`--alignment-type 1`), the results will be sorted by the TMscore normalized by query length. The TMscore is used for reporting two fields: the e-value=(qTMscore+tTMscore)/2 and the score=(qTMscore*100). All output fields (e.g., pident, fident, and alnlen) are calculated based on the TMalign alignment.
+
+#### Structure search from FASTA input
+Search by predicting 3Di directly from amino acid sequences without the need for existing protein structures. 
+This feature uses the [ProstT5](https://www.biorxiv.org/content/10.1101/2023.07.23.550085v2) protein language model and runs by default on CPU and is about 400-4000x compared to predicted structures by [ColabFold](https://github.com/sokrypton/ColabFold).
+
+```
+foldseek databases ProstT5 weights tmp
+foldseek databases PDB pdb tmp
+foldseek easy-search QUERY.fasta pdb result.m8 tmp --prostt5-model weights
+```
+
+Or create your a structural database from a fasta files.
+
+```
+foldseek createdb db.fasta db --prostt5-model weights
+```
+
+Faster inference using GPU/CUDA is also supported. Compile from source with `cmake -DCMAKE_BUILD_TYPE=Release -DCUDAToolkit_ROOT=Path-To-Cuda-Toolkit` and call with `createdb/easy-search --prostt5-model weights --gpu 1`.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
