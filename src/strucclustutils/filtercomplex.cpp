@@ -428,7 +428,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
                     char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
                     size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
-                    float* qdata = qcoords.read(qcadata, res.qLen, qCaLength);
+                    float* qdata = qcoords.read(qcadata, qCaLength, qCaLength);
                 
                     if (!retComplex.isValid){
                         Debug(Debug::ERROR) << "No scorecomplex result provided";
@@ -451,7 +451,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     tmpDBKEYut[assId]=retComplex.uString+","+retComplex.tString;
                     char *tcadata = tStructDbr->getData(tChainDbId, thread_idx);
                     size_t tCaLength = tStructDbr->getEntryLen(tChainDbId);
-                    float* tdata = tcoords.read(tcadata, res.dbLen, tCaLength);
+                    float* tdata = tcoords.read(tcadata, tCaLength, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
                     unsigned int alnLen = cigarToAlignedLength(res.backtrace);
                     Coordinates qm(alnLen), tm(alnLen);
