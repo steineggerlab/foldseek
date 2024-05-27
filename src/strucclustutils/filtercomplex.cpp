@@ -428,7 +428,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
                     char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
                     size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
-                    float* qdata = qcoords.read(qcadata, qCaLength, qCaLength);
+                    float* qdata = qcoords.read(qcadata, res.qLen, qCaLength);
                 
                     if (!retComplex.isValid){
                         Debug(Debug::ERROR) << "No scorecomplex result provided";
@@ -451,7 +451,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     tmpDBKEYut[assId]=retComplex.uString+","+retComplex.tString;
                     char *tcadata = tStructDbr->getData(tChainDbId, thread_idx);
                     size_t tCaLength = tStructDbr->getEntryLen(tChainDbId);
-                    float* tdata = tcoords.read(tcadata, tCaLength, tCaLength);
+                    float* tdata = tcoords.read(tcadata, res.dbLen, tCaLength);
                     unsigned int normlen = std::min(res.qLen, res.dbLen);
                     unsigned int alnLen = cigarToAlignedLength(res.backtrace);
                     Coordinates qm(alnLen), tm(alnLen);
@@ -476,47 +476,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 std::vector<unsigned int> tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
                 if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, par.sameChainNumber, qChainKeys.size(), tChainKeys.size())){
                     assIdsToDelete.push_back(assId_res.first);
-                    // if (qComplexId != tComplexId){
-                    // #pragma omp critical
-                    // {
-                    //     if(assId_res.second.tTM >= 0.9 && assId_res.second.qTM >= 0.9 && assId_res.second.alignedQChainTmScores.size() == qChainKeys.size() && qChainKeys.size()==tChainKeys.size()){
-                    //         Debug(Debug::WARNING) << "BAD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\n";
-                    //         // Debug(Debug::WARNING) << "BAD:    qtm:  "<<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\n";
-                    //         Debug(Debug::WARNING) << "BAD:    U and T:  ";
-                    //         // Debug(Debug::WARNING) << "qchainNum:  "<<qChainKeys.size()<< "tchainNum:  "<<tChainKeys.size() <<"\n";
-                    //         for (auto i : tmpDBKEYut[assId_res.first]){
-                    //             Debug(Debug::WARNING)<<i;
-                    //         }
-                    //         Debug(Debug::WARNING)<<"\n";
-                    //         for (auto i : assId_res.second.alignedQChainTmScores){
-                    //             Debug(Debug::WARNING) << "BAD:    Qchain:  "<<i<<"\n";
-                    //         }
-                    //         for (auto i : assId_res.second.alignedTChainTmScores){
-                    //             Debug(Debug::WARNING) << "BAD:    Tchain:  "<<i<<"\n";
-                    //         }
-                    //     }
-                    // }
                 }
-                // else {
-                //     if (qComplexId != tComplexId ){
-                //         // Debug(Debug::ERROR) << "GOOD:    q:  "<<qcomplexIdToName.at(qComplexId)<<"   t:   "<< tcomplexIdToName.at(tComplexId)<<"\nGOOD:    qtm:  "\t" \
-                //         // <<assId_res.second.qTM<<"   ttm:   "<< assId_res.second.tTM<<"\nGOOD:    U and T:  ";
-                //         // for (auto i : tmpDBKEYut[assId_res.first]){
-                //             // Debug(Debug::ERROR)<<i;
-                //         // }
-                        
-                //         for (auto i : assId_res.second.alignedQChainTmScores){
-                //             if(i>1){
-                //                 Debug(Debug::ERROR) << "\nGOOD:    Qchain:  "<<i<<"\n";
-                //             }
-                //         }
-                //         for (auto i : assId_res.second.alignedTChainTmScores){
-                //             if(i>1){
-                //                 Debug(Debug::ERROR) << "GOOD:    Tchain:  "<<i<<"\n";
-                //             }
-                //         }
-                //     }
-                // }
             }
 
             for (const auto& key : assIdsToDelete) {
