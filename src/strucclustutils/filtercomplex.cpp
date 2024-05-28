@@ -32,85 +32,81 @@ unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
         case Parameters::COV_MODE_LENGTH_TARGET :
         case Parameters::COV_MODE_LENGTH_SHORTER :
             return 0;
-        default:
-            return 0;
     }
 }
 
-bool hasChainnum(bool sameChainNum, int qChainNum, int tChainNum){
-    switch (sameChainNum){
-        case 1:
-            if (qChainNum != tChainNum){
-                return false;
-            }else{return true;}
-        case 0:
-            return true;
-    }
+// bool hasChainnum(bool sameChainNum, int qChainNum, int tChainNum){
+//     switch (sameChainNum){
+//         case 1:
+//             if (qChainNum != tChainNum){
+//                 return false;
+//             }else{return true;}
+//         case 0:
+//             return true;
+//     }
+// }
+
+// bool hasChainTm(float chainTMThr, int covMode, std::vector<double> &qChainTmScores, std::vector<double> &tChainTmScores, unsigned int qChainNum, unsigned int tChainNum) {
+//     if (chainTMThr > 0 ){
+//         switch (covMode) {
+//             case Parameters::COV_MODE_BIDIRECTIONAL:
+//                 if (qChainTmScores.size()<std::min(qChainNum, tChainNum)){
+//                     return false;
+//                 }
+//                 for (size_t i = 0; i < qChainTmScores.size(); i++) {
+//                     if (qChainTmScores[i] < chainTMThr || tChainTmScores[i] < chainTMThr) {
+//                         return false;
+//                     }
+//                 }
+//                 break;
+//             case Parameters::COV_MODE_TARGET:
+//                 if (qChainTmScores.size()<std::min(qChainNum, tChainNum)){
+//                     return false;
+//                 }
+//                 for (size_t i = 0; i < qChainTmScores.size(); i++) {
+//                     if (tChainTmScores[i] < chainTMThr) {
+//                         return false;
+//                     }
+//                 }
+//                 break;
+//             case Parameters::COV_MODE_QUERY:
+//                 if (qChainTmScores.size()<std::min(qChainNum, tChainNum)){
+//                     return false;
+//                 }
+//                 for (size_t i = 0; i < qChainTmScores.size(); i++) {
+//                     if (qChainTmScores[i] < chainTMThr) {
+//                         return false;
+//                     }
+//                 }
+//                 break;
+//             case Parameters::COV_MODE_LENGTH_QUERY :
+//             case Parameters::COV_MODE_LENGTH_TARGET :
+//             case Parameters::COV_MODE_LENGTH_SHORTER :
+//                 break;
+//         }
+//     }
+//     return true;
+// }
+
+static bool isSameCoord(float qavgCoords[3], float tavgCoords[3]){
+    return (qavgCoords[0]*tavgCoords[0] >= 0 && qavgCoords[1]*tavgCoords[1] >= 0 && qavgCoords[2]*tavgCoords[2] >= 0 );
 }
 
-bool hasTM(float TMThr, int covMode, double qTM, double tTM){
-    switch (covMode) {
-        case Parameters::COV_MODE_BIDIRECTIONAL:
-            return ((qTM>= TMThr) && (tTM >= TMThr));
-        case Parameters::COV_MODE_TARGET:
-            return (tTM >= TMThr);
-        case Parameters::COV_MODE_QUERY:
-            return (qTM >= TMThr);
-        case Parameters::COV_MODE_LENGTH_QUERY :
-        case Parameters::COV_MODE_LENGTH_TARGET :
-        case Parameters::COV_MODE_LENGTH_SHORTER :
-            return true;
-        default:
-            return true;
-    }
-}
-
-bool hasChainTm(float chainTMThr, int covMode, std::vector<double> &qChainTmScores, std::vector<double> &tChainTmScores, unsigned int qChainNum, unsigned int tChainNum) {
-    if (chainTMThr > 0 ){
-        switch (covMode) {
-            case Parameters::COV_MODE_BIDIRECTIONAL:
-                if (qChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                    return false;
-                }
-                for (size_t i = 0; i < qChainTmScores.size(); i++) {
-                    if (qChainTmScores[i] < chainTMThr || tChainTmScores[i] < chainTMThr) {
-                        return false;
-                    }
-                }
-                break;
-            case Parameters::COV_MODE_TARGET:
-                if (qChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                    return false;
-                }
-                for (size_t i = 0; i < qChainTmScores.size(); i++) {
-                    if (tChainTmScores[i] < chainTMThr) {
-                        return false;
-                    }
-                }
-                break;
-            case Parameters::COV_MODE_QUERY:
-                if (qChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                    return false;
-                }
-                for (size_t i = 0; i < qChainTmScores.size(); i++) {
-                    if (qChainTmScores[i] < chainTMThr) {
-                        return false;
-                    }
-                }
-                break;
-            case Parameters::COV_MODE_LENGTH_QUERY :
-            case Parameters::COV_MODE_LENGTH_TARGET :
-            case Parameters::COV_MODE_LENGTH_SHORTER :
-                break;
-        }
-    }
-    return true;
-}
-
-struct ComplexFilterCriteria {
+class ComplexFilterCriteria {
+public:
+    unsigned int dbKey;
+    unsigned int qTotalAlnLen;
+    unsigned int tTotalAlnLen;
+    float qCov;
+    float tCov;
+    double qTM;
+    double tTM;
+    bool sameCoord;
+    std::vector<double> alignedQChainTmScores;
+    std::vector<double> alignedTChainTmScores;
     ComplexFilterCriteria() {}
-    ComplexFilterCriteria(unsigned int dbKey, unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qTM, double tTM, double qChainTm, double tChainTm) :
-                        dbKey(dbKey), qTotalAlnLen(qTotalAlnLen), tTotalAlnLen(tTotalAlnLen), qTM(qTM), tTM(tTM) {
+    ComplexFilterCriteria(unsigned int dbKey, unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qTM, double tTM, double qChainTm, double tChainTm, bool sameCoord) :
+                        dbKey(dbKey), qTotalAlnLen(qTotalAlnLen), tTotalAlnLen(tTotalAlnLen), qTM(qTM), tTM(tTM), sameCoord(sameCoord) {
                             alignedQChainTmScores.push_back(qChainTm);
                             alignedTChainTmScores.push_back(tChainTm);
                         }
@@ -119,36 +115,86 @@ struct ComplexFilterCriteria {
         alignedTChainTmScores.clear();
     }
 
-    bool satisfy(int covMode, float covThr, float TMThr, float chainTMThr, bool sameChainNum, int qChainNum, int tChainNum ) {
-        const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
-        const bool TMOK = hasTM(TMThr, covMode, qTM, tTM);
-        const bool chainTMOK = hasChainTm(chainTMThr, covMode, alignedQChainTmScores, alignedTChainTmScores, qChainNum, tChainNum);
-        const bool numOK = hasChainnum(sameChainNum, qChainNum, tChainNum);
-        return (covOK && TMOK && chainTMOK && numOK);
+    bool hasTM(float TMThr, int covMode, int filterMode){
+        switch (filterMode){
+            case LocalParameters::FILTER_MODE_INTERFACE:
+                switch (covMode) {
+                    case Parameters::COV_MODE_BIDIRECTIONAL:
+                        return ((qTM>= TMThr) && (tTM >= TMThr));
+                    case Parameters::COV_MODE_TARGET:
+                        return (tTM >= TMThr);
+                    case Parameters::COV_MODE_QUERY:
+                        return (qTM >= TMThr);
+                    case Parameters::COV_MODE_LENGTH_QUERY :
+                    case Parameters::COV_MODE_LENGTH_TARGET :
+                    case Parameters::COV_MODE_LENGTH_SHORTER :
+                        return true;
+                }
+    }
+    bool hasChainNum(int covMode, int filterMode, int qChainNum, int tChainNum ){
+        switch (filterMode){
+            case LocalParameters::FILTER_MODE_INTERFACE:
+                switch (covMode) {
+                    case Parameters::COV_MODE_BIDIRECTIONAL:
+                        return (alignedQChainTmScores.size()==qChainNum && qChainNum==tChainNum);
+                    case Parameters::COV_MODE_TARGET:
+                        return (alignedTChainTmScores.size()==tChainNum);
+                    case Parameters::COV_MODE_QUERY:
+                        return (alignedQChainTmScores.size()==qChainNum);
+                    case Parameters::COV_MODE_LENGTH_QUERY :
+                    case Parameters::COV_MODE_LENGTH_TARGET :
+                    case Parameters::COV_MODE_LENGTH_SHORTER :
+                        return true;
+                }
+            case LocalParameters::FILTER_MODE_CONFORMATION:
+                switch (covMode) {
+                    case Parameters::COV_MODE_BIDIRECTIONAL:
+                        return (qChainNum==tChainNum);
+                    default:
+                        return true;
+                }
+            case LocalParameters::FILTER_MODE_LOOSE:
+                return true;
+
+        }
+    } 
+
+    bool hasMatchedCoord(int filterMode){
+        switch (filterMode) {
+            case LocalParameters::FILTER_MODE_INTERFACE:
+                return (sameCoord);
+            case LocalParameters::FILTER_MODE_CONFORMATION:
+            case LocalParameters::FILTER_MODE_LOOSE:
+                return true;
+        }
     }
 
-    void update(unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qChainTm, double tChainTm) {
+    bool satisfy(int covMode, int filterMode, float covThr, float TMThr, float chainTMThr, int qChainNum, int tChainNum ) {
+        //TODO
+        // add filtermode in hasTM.
+        // find other criteria for other filtermodes
+        const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
+        const bool TMOK = hasTM(TMThr, covMode, filterMode);
+        const bool chainNumOK = hasChainNum(covMode, filterMode, qChainNum, tChainNum);
+        const bool coordOK = hasMatchedCoord(filterMode);
+        // const bool chainTMOK = hasChainTm(chainTMThr, covMode, alignedQChainTmScores, alignedTChainTmScores, qChainNum, tChainNum);
+        // const bool numOK = hasChainnum(sameChainNum, qChainNum, tChainNum);
+        // return (covOK && TMOK && chainTMOK && numOK);
+        return (covOK && TMOK && chainNumOK && coordOK);
+    }
+
+    void update(unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qChainTm, double tChainTm, bool sameCoord) {
         this->qTotalAlnLen += qTotalAlnLen;
         this->tTotalAlnLen += tTotalAlnLen;
         this->alignedQChainTmScores.push_back(qChainTm);
         this->alignedTChainTmScores.push_back(tChainTm);
+        this->sameCoord *= sameCoord;
     }
 
     void calcCov(unsigned int qLen, unsigned int tLen) {
         qCov = static_cast<float>(qTotalAlnLen) / static_cast<float>(qLen);
         tCov = static_cast<float>(tTotalAlnLen) / static_cast<float>(tLen);
     }
-
-    unsigned int dbKey;
-    unsigned int qTotalAlnLen;
-    unsigned int tTotalAlnLen;
-    float qCov;
-    float tCov;
-    double qTM;
-    double tTM;
-
-    std::vector<double> alignedQChainTmScores;
-    std::vector<double> alignedTChainTmScores;
 };
 
 void fillUArr(const std::string &uString, float (&u)[3][3]) {
@@ -232,27 +278,51 @@ void fillMatchedCoord(float * qdata, float * tdata,
 
 double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u[3][3], unsigned int alnLen, int tLen) {
     double tmscore = 0;
-    double tmalnScore = 0;
-    // float d0;
-    // if (normlen<=21) {
-    //     d0=0.5;
-    // }
-    // else {
-    //     d0=(1.24*pow((normlen*1.0-15), 1.0/3)-1.8);
-    // }
-    
     float d0 = 1.24*(cbrt(tLen-15)) -1.8;
     float d02 = d0*d0;
     Coordinates tmt(alnLen);
     BasicFunction::do_rotation(tm, tmt, alnLen, t, u);
-
     for (unsigned int k=0; k<alnLen; k++) {
         double di = BasicFunction::dist(qm.x[k], qm.y[k], qm.z[k], tmt.x[k], tmt.y[k], tmt.z[k]);
         tmscore += 1/(1+di/d02);
     }
-
-    tmscore = std::max(tmscore, tmalnScore);
     return tmscore;
+}
+void getAverageCoord( float * qdata, float qavgCoords[3], int qlen, float * tdata, float tavgCoords[3], int tlen, float t[3], float u[3][3]){
+    Coordinates tCoords(tlen);
+    
+    for (int i=0; i < tlen ; i++ ){
+        tCoords.x[i] = tdata[i];
+        tCoords.y[i] = tdata[tlen+i];
+        tCoords.z[i] = tdata[2*tlen+i];
+    }
+    Coordinates Coordsrot(tlen);
+    BasicFunction::do_rotation(tCoords, Coordsrot, tlen, t, u);
+    float qxsum=0.0, qysum=0.0, qzsum=0.0;
+    for (int i=0; i< qlen;i++){
+        qxsum += qdata[i];
+        qysum += qdata[qlen+i];
+        qzsum += qdata[2*qlen+i];
+    }
+    qxsum /= qlen;
+    qysum /= qlen;
+    qzsum /= qlen;
+    qavgCoords[0] = qxsum;
+    qavgCoords[1] = qysum;
+    qavgCoords[2] = qzsum;
+
+    float txsum=0.0, tysum=0.0, tzsum=0.0;
+    for (int i=0; i< qlen;i++){
+        txsum += Coordsrot.x[i];
+        tysum += Coordsrot.y[i];
+        tzsum += Coordsrot.z[i];
+    }
+    txsum /= tlen;
+    tysum /= tlen;
+    tzsum /= tlen;
+    tavgCoords[0] = txsum;
+    tavgCoords[1] = tysum;
+    tavgCoords[2] = tzsum;
 }
 
 unsigned int getComplexResidueLength( IndexReader *Dbr, std::vector<unsigned int> &ChainKeys) {
@@ -452,7 +522,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     char *tcadata = tStructDbr->getData(tChainDbId, thread_idx);
                     size_t tCaLength = tStructDbr->getEntryLen(tChainDbId);
                     float* tdata = tcoords.read(tcadata, res.dbLen, tCaLength);
-                    unsigned int normlen = std::min(res.qLen, res.dbLen);
                     unsigned int alnLen = cigarToAlignedLength(res.backtrace);
                     Coordinates qm(alnLen), tm(alnLen);
                     fillMatchedCoord(qdata, tdata, qm, tm, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
@@ -461,12 +530,14 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     double tChainTm = chainTm/ res.dbLen;
                     unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                     unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
-
+                    float qAvgCoord[3], tAvgCoord[3];
+                    getAverageCoord(qdata, qAvgCoord, res.qLen, tdata, tAvgCoord, res.dbLen, t, u) ;
+                    bool coordSame = isSameCoord(qAvgCoord, tAvgCoord );
                     if (localComplexMap.find(assId) == localComplexMap.end()) {
-                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tChainKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm);
+                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tChainKey, qtotalaln, ttotalaln, retComplex.qTmScore, retComplex.tTmScore, qChainTm, tChainTm, coordSame);
                         localComplexMap[assId] = cmplfiltcrit;
                     } else {
-                        localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm);
+                        localComplexMap.at(assId).update(qtotalaln, ttotalaln, qChainTm, tChainTm, coordSame);
                     }
                 } // while end
             }
@@ -474,7 +545,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
                 assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
                 std::vector<unsigned int> tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
-                if (!assId_res.second.satisfy(par.covMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, par.sameChainNumber, qChainKeys.size(), tChainKeys.size())){
+                if (!assId_res.second.satisfy(par.covMode, par.filterMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, qChainKeys.size(), tChainKeys.size())){
                     assIdsToDelete.push_back(assId_res.first);
                 }
             }

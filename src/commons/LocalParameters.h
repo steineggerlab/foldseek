@@ -79,6 +79,11 @@ public:
     static const int PDB_OUTPUT_MODE_SINGLECHAIN = 1;
     static const int PDB_OUTPUT_MODE_COMPLEX = 2;
 
+    // filter mode
+    static const int FILTER_MODE_INTERFACE  = 0;
+    static const int FILTER_MODE_CONFORMATION = 1;
+    static const int FILTER_MODE_LOOSE = 2;
+
     // TODO
     static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
     std::vector<MMseqsParameter *> strucclust;
@@ -127,7 +132,7 @@ public:
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_COMPLEX_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
-    PARAMETER(PARAM_SAME_CHAIN_NUM)
+    PARAMETER(PARAM_FILTER_MODE)
 
     int prefMode;
     float tmScoreThr;
@@ -153,7 +158,7 @@ public:
     int pdbOutputMode;
     float filtComplexTmThr;
     float filtChainTmThr;
-    bool sameChainNumber;
+    int filterMode;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,

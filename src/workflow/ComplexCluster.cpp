@@ -12,6 +12,7 @@ void setComplexClusterDefaults(LocalParameters *p) {
     p->covThr = 0.8;
     p->filtComplexTmThr = 0.5; // FIX
     p->filtChainTmThr=0.0; // FIX
+    p->filterMode=0;
     p->covMode = 1;
     p->clusteringMode = Parameters::GREEDY;
     p->removeTmpFiles = true;
