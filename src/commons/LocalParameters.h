@@ -131,7 +131,6 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_COMPLEX_TM_THRESHOLD)
-    PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_FILTER_MODE)
 
     int prefMode;
@@ -157,7 +156,6 @@ public:
     int inputFormat;
     int pdbOutputMode;
     float filtComplexTmThr;
-    float filtChainTmThr;
     int filterMode;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,

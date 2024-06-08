@@ -64,7 +64,7 @@ buldCmplhDb(){
             for (k = 2; k < length(words)+1; k++) {
                 headerstring = headerstring words[k]" "
             }
-            if (!(output_string not in gogo)){
+            if (!(output_string in gogo)){
                 print INDEXVAL"\t"output_string" "headerstring
                 INDEXVAL++
             }

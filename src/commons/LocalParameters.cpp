@@ -32,7 +32,6 @@ LocalParameters::LocalParameters() :
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_COMPLEX_TM_THRESHOLD(PARAM_COMPLEX_TM_THRESHOLD_ID,"--complex-tm-threshold", "TMscore threshold for filtercomplex", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtComplexTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "per chain TMscore threshold for filtercomplex", "accept alignments satisfying tmscores of all chains > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_FILTER_MODE(PARAM_FILTER_MODE_ID, "--filter-mode", "Filter mode", "0: Interface\n1: Conformation\n2: loose", typeid(int), (void *) &filterMode, "[0-2]{0}$", MMseqsParameter::COMMAND_CLUST)
         
 {
@@ -188,7 +187,6 @@ LocalParameters::LocalParameters() :
     filtercomplex.push_back(&PARAM_C);
     filtercomplex.push_back(&PARAM_COV_MODE);
     filtercomplex.push_back(&PARAM_COMPLEX_TM_THRESHOLD);
-    filtercomplex.push_back(&PARAM_CHAIN_TM_THRESHOLD);
     filtercomplex.push_back(&PARAM_FILTER_MODE);
 
     // createcomplexreport
@@ -252,7 +250,6 @@ LocalParameters::LocalParameters() :
     eValueThrExpandComplex = 10000.0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     filtComplexTmThr = 0.0;
-    filtChainTmThr = 0.0;
     filterMode = 0;
 
     //rewrite param vals.
