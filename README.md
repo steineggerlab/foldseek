@@ -155,7 +155,7 @@ Or create your a structural database from a fasta files.
 foldseek createdb db.fasta db --prostt5-model weights
 ```
 
-Faster inference using GPU/CUDA is also supported. Compile from source with `cmake -DCMAKE_BUILD_TYPE=Release -DCUDAToolkit_ROOT=Path-To-Cuda-Toolkit` and call with `createdb/easy-search --prostt5-model weights --gpu 1`.
+Faster inference using GPU/CUDA is also supported. Compile from source with `cmake -DCMAKE_BUILD_TYPE=Release  -DENABLE_CUDA=1 -DCUDAToolkit_ROOT=Path-To-Cuda-Toolkit` and call with `createdb/easy-search --prostt5-model weights --gpu 1`.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
