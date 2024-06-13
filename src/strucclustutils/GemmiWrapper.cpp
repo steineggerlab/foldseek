@@ -143,7 +143,7 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
                 st = gemmi::read_pdb(infile);
         }
         updateStructure((void*) &st, filename, entity_to_tax_id);
-    } catch (std::runtime_error& e) {
+    } catch (...) {
         return false;
     }
     return true;
@@ -240,7 +240,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 return false;
         }
         updateStructure((void*) &st, name, entity_to_tax_id);
-    } catch (std::runtime_error& e) {
+    } catch (...) {
         return false;
     }
     return true;

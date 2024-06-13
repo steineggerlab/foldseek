@@ -33,7 +33,6 @@ include_directories(lib)
 include_directories(lib/3di)
 include_directories(lib/pulchra)
 include_directories(lib/kerasify)
-include_directories(lib/gemmi)
 
 set(ENV{CARGO_NET_OFFLINE} true)
 add_subdirectory(lib/corrosion)
