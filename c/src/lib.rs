@@ -13,7 +13,10 @@ pub extern "C" fn prostt5_load(base_path: *const c_char, profile: bool, cpu: boo
     let path = unsafe { CStr::from_ptr(base_path).to_str().unwrap() };
     match ProstT5::load(path.to_string(), profile, cpu, cache, quantized) {
         Ok(prostt5) => Box::into_raw(Box::new(prostt5)),
-        Err(_) => std::ptr::null_mut()
+        Err(e) => {
+            eprintln!("Error loading ProstT5: {:?}", e);
+            std::ptr::null_mut()
+        }
     }
 }
 
@@ -28,7 +31,10 @@ pub extern "C" fn prostt5_predict(ptr: *mut ProstT5, sequence: *const c_char) ->
             let c_str = CString::new(res).expect("CString::new failed");
             c_str.into_raw()
         },
-        Err(_) => std::ptr::null()
+        Err(e) => {
+            eprintln!("ProstT5 prediction error: {:?}", e);
+            std::ptr::null_mut()
+        }
     }
 }
 
@@ -43,6 +49,9 @@ pub extern "C" fn prostt5_predict_slice(ptr: *mut ProstT5, sequence: *const c_ch
             let c_str = CString::new(res).expect("CString::new failed");
             c_str.into_raw()
         },
-        Err(_) => std::ptr::null()
+        Err(e) => {
+            eprintln!("ProstT5 prediction error: {:?}", e);
+            std::ptr::null_mut()
+        }
     }
 }
