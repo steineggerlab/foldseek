@@ -301,6 +301,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             return EXIT_FAILURE;
         }
         ProstT5 *model = prostt5_load(modelWeights.c_str(), false, par.gpu == 0, false, quantized);
+        if (model == NULL) {
+            // error message is already printed by prostt5_load
+            return EXIT_FAILURE;
+        }
 #ifdef OPENMP
         size_t localThreads = par.gpu != 0 ? 1 : par.threads;
 #endif
