@@ -77,7 +77,7 @@ corrosion_import_crate(
 )
 include_directories(lib/block-aligner/c)
 if(EMSCRIPTEN)
-    corrosion_add_target_local_rustflags(block-aligner-c "-Clink-args=--no-entry -sRELOCATABLE=1")
+    corrosion_add_target_local_rustflags(block_aligner_c "-Clink-args=--no-entry -sRELOCATABLE=1")
 endif()
 
 set(CANDLE_FEATURE "")
