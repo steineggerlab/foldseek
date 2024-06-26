@@ -161,15 +161,24 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
-        header.append(Util::remove_extension(readStructure.names[ch]));
+        if (Util::endsWith(".gz", readStructure.names[ch])){
+            header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
+        } else{
+            header.append(Util::remove_extension(readStructure.names[ch]));
+        }
         if(readStructure.modelCount > 1){
             header.append("_MODEL_");
             header.append(std::to_string(readStructure.modelIndices[ch]));
         }
+        std::string filebasename =  Util::parseFastaHeader(header.c_str());
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
             header.push_back('_');
-            header.append(readStructure.chainNames[ch]);
+            if (Util::endsWith(".gz", readStructure.names[ch])){
+                header.append(Util::remove_extension(Util::remove_extension(readStructure.chainNames[ch])));
+            } else{
+                header.append(Util::remove_extension(readStructure.chainNames[ch]));
+            }
         }
         if(readStructure.title.size() > 0){
             header.push_back(' ');
@@ -179,17 +188,32 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filename));
-            size_t fileid;
-            if (it != filenameToFileId.end()) {
-                fileid = it->second;
-            } else {
-                fileid = fileidCnt;
-                filenameToFileId[Util::remove_extension(filename)] = fileid;
-                fileIdToName[fileid] = Util::remove_extension(filename);
-                fileidCnt++;
+            if (Util::endsWith(".gz", filebasename)){
+                std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(Util::remove_extension(filebasename)));
+                size_t fileid;
+                if (it != filenameToFileId.end()) {
+                    fileid = it->second;
+                } else {
+                    fileid = fileidCnt;
+                    filenameToFileId[Util::remove_extension(Util::remove_extension(filebasename))] = fileid;
+                    fileIdToName[fileid] = Util::remove_extension(Util::remove_extension(filebasename));
+                    fileidCnt++;
+                }
+                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
+            }else{
+                std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filebasename));
+                size_t fileid;
+                if (it != filenameToFileId.end()) {
+                    fileid = it->second;
+                } else {
+                    fileid = fileidCnt;
+                    filenameToFileId[Util::remove_extension(filebasename)] = fileid;
+                    fileIdToName[fileid] = Util::remove_extension(filebasename);
+                    fileidCnt++;
+                }
+                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
             }
-            entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
+            
         }
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
         name.clear();
@@ -636,7 +660,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     }
 
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
-
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di, pulchra,
                         alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
@@ -673,13 +696,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 #pragma omp for schedule(static)
         for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
-
             if(readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false){
                 incorrectFiles++;
                 continue;
             }
+            // Debug(Debug::WARNING)<<readStructure.chain.size()<<"\n";
             __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
             // clear memory
+            
             writeStructureEntry(
                 mat, readStructure, structureTo3Di,  pulchra,
                 alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
