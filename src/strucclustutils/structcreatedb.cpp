@@ -169,7 +169,6 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             header.append("_MODEL_");
             header.append(std::to_string(readStructure.modelIndices[ch]));
         }
-        std::string filebasename =  Util::parseFastaHeader(header.c_str());
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
             header.push_back('_');
@@ -183,17 +182,32 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            std::map<std::string, size_t>::iterator it = filenameToFileId.find(filebasename);
-            size_t fileid;
-            if (it != filenameToFileId.end()) {
-                fileid = it->second;
-            } else {
-                fileid = fileidCnt;
-                filenameToFileId[filebasename] = fileid;
-                fileIdToName[fileid] = filebasename;
-                fileidCnt++;
-            }
-            entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
+            if (Util::endsWith(".gz", filename)){
+                std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(Util::remove_extension(filename)));
+                size_t fileid;
+                if (it != filenameToFileId.end()) {
+                    fileid = it->second;
+                } else {
+                    fileid = fileidCnt;
+                    filenameToFileId[Util::remove_extension(Util::remove_extension(filename))] = fileid;
+                    fileIdToName[fileid] = Util::remove_extension(Util::remove_extension(filename));
+                    fileidCnt++;
+                }
+                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
+                }else{
+                    std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filename));
+                    size_t fileid;
+                    if (it != filenameToFileId.end()) {
+                        fileid = it->second;
+                    } else {
+                        fileid = fileidCnt;
+                        filenameToFileId[Util::remove_extension(filename)] = fileid;
+                        fileIdToName[fileid] = Util::remove_extension(filename);
+                        fileidCnt++;
+                    }
+                    entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
+                }
+            
             
         }
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
