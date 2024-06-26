@@ -162,10 +162,9 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
         if (Util::endsWith(".gz", readStructure.names[ch])){
-            header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
-        } else{
-            header.append(Util::remove_extension(readStructure.names[ch]));
+            readStructure.names[ch] = Util::remove_extension(readStructure.names[ch]);
         }
+        header.append(Util::remove_extension(readStructure.names[ch]));
         if(readStructure.modelCount > 1){
             header.append("_MODEL_");
             header.append(std::to_string(readStructure.modelIndices[ch]));
@@ -174,11 +173,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
             header.push_back('_');
-            if (Util::endsWith(".gz", readStructure.names[ch])){
-                header.append(Util::remove_extension(Util::remove_extension(readStructure.chainNames[ch])));
-            } else{
-                header.append(Util::remove_extension(readStructure.chainNames[ch]));
-            }
+            header.append(readStructure.chainNames[ch]);
         }
         if(readStructure.title.size() > 0){
             header.push_back(' ');
@@ -188,31 +183,17 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            if (Util::endsWith(".gz", filebasename)){
-                std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(Util::remove_extension(filebasename)));
-                size_t fileid;
-                if (it != filenameToFileId.end()) {
-                    fileid = it->second;
-                } else {
-                    fileid = fileidCnt;
-                    filenameToFileId[Util::remove_extension(Util::remove_extension(filebasename))] = fileid;
-                    fileIdToName[fileid] = Util::remove_extension(Util::remove_extension(filebasename));
-                    fileidCnt++;
-                }
-                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
-            }else{
-                std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filebasename));
-                size_t fileid;
-                if (it != filenameToFileId.end()) {
-                    fileid = it->second;
-                } else {
-                    fileid = fileidCnt;
-                    filenameToFileId[Util::remove_extension(filebasename)] = fileid;
-                    fileIdToName[fileid] = Util::remove_extension(filebasename);
-                    fileidCnt++;
-                }
-                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
+            std::map<std::string, size_t>::iterator it = filenameToFileId.find(filebasename);
+            size_t fileid;
+            if (it != filenameToFileId.end()) {
+                fileid = it->second;
+            } else {
+                fileid = fileidCnt;
+                filenameToFileId[filebasename] = fileid;
+                fileIdToName[fileid] = filebasename;
+                fileidCnt++;
             }
+            entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
             
         }
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
@@ -700,7 +681,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 incorrectFiles++;
                 continue;
             }
-            // Debug(Debug::WARNING)<<readStructure.chain.size()<<"\n";
             __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
             // clear memory
             
