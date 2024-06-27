@@ -161,10 +161,17 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
+        std::string entryWithoutChain;
+        if (Util::endsWith(".gz", readStructure.names[ch])){
+            readStructure.names[ch] = Util::remove_extension(readStructure.names[ch]);
+        }
         header.append(Util::remove_extension(readStructure.names[ch]));
+        entryWithoutChain.append(Util::remove_extension(readStructure.names[ch]));
         if(readStructure.modelCount > 1){
             header.append("_MODEL_");
             header.append(std::to_string(readStructure.modelIndices[ch]));
+            entryWithoutChain.append("_MODEL_");
+            entryWithoutChain.append(std::to_string(readStructure.modelIndices[ch]));
         }
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
@@ -179,14 +186,14 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filename));
+            std::map<std::string, size_t>::iterator it = filenameToFileId.find(entryWithoutChain);
             size_t fileid;
             if (it != filenameToFileId.end()) {
                 fileid = it->second;
             } else {
                 fileid = fileidCnt;
-                filenameToFileId[Util::remove_extension(filename)] = fileid;
-                fileIdToName[fileid] = Util::remove_extension(filename);
+                filenameToFileId[entryWithoutChain] = fileid;
+                fileIdToName[fileid] = entryWithoutChain;
                 fileidCnt++;
             }
             entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
