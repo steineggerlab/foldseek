@@ -92,7 +92,7 @@ std::string removeModel(const std::string& input) {
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
-                    std::vector<int8_t> & camol, std::string & header, std::string & name,
+                    std::vector<int8_t> & camol, std::string & header, 
                     DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
                     float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
                     std::string & filename,  size_t & fileidCnt,
@@ -188,14 +188,15 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             if (Util::endsWith(".gz", filename)){
                 filenameWithExtension = Util::remove_extension(filename);
             }
-            std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filenameWithExtension));
+            std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
+            std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
             size_t fileid;
             if (it != filenameToFileId.end()) {
                 fileid = it->second;
             } else {
                 fileid = fileidCnt;
-                filenameToFileId[Util::remove_extension(filenameWithExtension)] = fileid;
-                fileIdToName[fileid] = Util::remove_extension(filenameWithExtension);
+                filenameToFileId[filenameWithoutExtension] = fileid;
+                fileIdToName[fileid] = filenameWithoutExtension;
                 fileidCnt++;
             }
             entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
@@ -646,7 +647,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di, pulchra,
-                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
@@ -689,7 +690,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             // clear memory
             writeStructureEntry(
                 mat, readStructure, structureTo3Di,  pulchra,
-                alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                 par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                 looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                 mappingWriter
@@ -752,7 +753,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                 __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                                 writeStructureEntry(
                                     mat, readStructure, structureTo3Di,  pulchra,
-                                    alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                                    alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                                     par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                                     obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                                     mappingWriter
@@ -803,7 +804,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di,  pulchra,
-                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
