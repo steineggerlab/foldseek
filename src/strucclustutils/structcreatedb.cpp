@@ -162,15 +162,17 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
         if (Util::endsWith(".gz", readStructure.names[ch])){
-            readStructure.names[ch] = Util::remove_extension(readStructure.names[ch]);
+            header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
         }
-        header.append(Util::remove_extension(readStructure.names[ch]));
+        else{
+            header.append(Util::remove_extension(readStructure.names[ch]));
+        }
         if(readStructure.modelCount > 1){
             header.append("_MODEL_");
             header.append(std::to_string(readStructure.modelIndices[ch]));
         }
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-           (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
+            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
             header.push_back('_');
             header.append(readStructure.chainNames[ch]);
         }
