@@ -179,21 +179,21 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             header.append(readStructure.title);
         }
         header.push_back('\n');
-
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
+            std::string filenameWithExtension = filename;
             if (Util::endsWith(".gz", filename)){
-                filename = Util::remove_extension(filename);
+                filenameWithExtension = Util::remove_extension(filename);
             }
-            std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filename));
+            std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filenameWithExtension));
             size_t fileid;
             if (it != filenameToFileId.end()) {
                 fileid = it->second;
             } else {
                 fileid = fileidCnt;
-                filenameToFileId[Util::remove_extension(filename)] = fileid;
-                fileIdToName[fileid] = Util::remove_extension(filename);
+                filenameToFileId[Util::remove_extension(filenameWithExtension)] = fileid;
+                fileIdToName[fileid] = Util::remove_extension(filenameWithExtension);
                 fileidCnt++;
             }
             entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
