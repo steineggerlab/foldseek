@@ -579,7 +579,7 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
                                       "occupancy",
                                       "B_iso_or_equiv",
                                       "?pdbx_formal_charge",
-                                      "auth_seq_id",
+                                      "?auth_seq_id",
                                       "?auth_comp_id",
                                       "?auth_asym_id",
                                       "?auth_atom_id",
@@ -592,10 +592,13 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
     // we use only one comp (residue) and one atom name
     const int kCompId = atom_table.first_of(kAuthCompId, kLabelCompId);
     const int kAtomId = atom_table.first_of(kAuthAtomId, kLabelAtomId);
+    const int kSeqId  = atom_table.first_of(kAuthSeqId, kLabelSeqId);
     if (!atom_table.has_column(kCompId))
       fail("Neither _atom_site.label_comp_id nor auth_comp_id found");
     if (!atom_table.has_column(kAtomId))
       fail("Neither _atom_site.label_atom_id nor auth_atom_id found");
+    if (!atom_table.has_column(kSeqId))
+      fail("Neither _atom_site.label_seq_id nor auth_seq_id found");
 
     Model *model = nullptr;
     Chain *chain = nullptr;
@@ -615,7 +618,7 @@ inline Structure make_structure_from_block(const cif::Block& block_) {
         resi = nullptr;
       }
       ResidueId rid = make_resid(cif::as_string(row[kCompId]),
-                                 cif::as_string(row[kAuthSeqId]),
+                                 cif::as_string(row[kSeqId]),
                                  row.has(kInsCode) ? &row[kInsCode] : nullptr);
       if (!resi || !resi->matches(rid)) {
         resi = chain->find_or_add_residue(rid);
