@@ -180,7 +180,7 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 
 class DBSCANCluster {
 public:
-    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov, double initEPS, double deltaEPS) : searchResult(searchResult), finalClusters(finalClusters) {
+    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov, float initEPS, float deltaEPS) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
         minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
@@ -438,7 +438,7 @@ private:
 
 class ComplexScorer {
 public:
-    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio, double initEPS, double deltaEPS, double thresholdCV)
+    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio, float initEPS, float deltaEPS, float thresholdCV)
     : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), initEPS(initEPS), deltaEPS(deltaEPS), thresholdCV(thresholdCV) {
         maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen()+1, tDbr3Di->sequenceReader->getMaxSeqLen()+1);
         q3diDbr = qDbr3Di;
@@ -568,9 +568,9 @@ private:
     Coordinate16 tCoords;
     unsigned int thread_idx;
     double minAssignedChainsRatio;
-    double initEPS;
-    double deltaEPS;
-    double thresholdCV;
+    float initEPS;
+    float deltaEPS;
+    float thresholdCV;
     unsigned int maxResLen;
     Chain qChain;
     Chain dbChain;
@@ -673,9 +673,9 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     }
 
     double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
-    double initEPS = par.initEPS;
-    double deltaEPS = par.deltaEPS;
-    double thresholdCV = par.thresholdCV;
+    float initEPS = par.initEPS;
+    float deltaEPS = par.deltaEPS;
+    float thresholdCV = par.thresholdCV;
 
     std::vector<unsigned int> qComplexIndices;
     std::vector<unsigned int> dbComplexIndices;
