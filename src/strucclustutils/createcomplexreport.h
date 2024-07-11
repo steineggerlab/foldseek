@@ -7,12 +7,12 @@
 const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
 const double MAX_ASSIGNED_CHAIN_RATIO = 1.0;
 const double TOO_SMALL_MEAN = 1.0;
-const double TOO_SMALL_CV = 0.1;
+//const double TOO_SMALL_CV = 0.1;
 const double FILTERED_OUT = 0.0;
 const unsigned int INITIALIZED_LABEL = 0;
 const unsigned int MIN_PTS = 2;
-const float DEFAULT_EPS = 0.1;
-const float LEARNING_RATE = 0.1;
+//const float DEFAULT_EPS = 0.1;
+//const float LEARNING_RATE = 0.1;
 const float TM_SCORE_MARGIN = 0.7;
 const float DEF_TM_SCORE = -1.0;
 const int UNINITIALIZED = 0;

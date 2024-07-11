@@ -19,11 +19,12 @@
 struct SearchResult {
     SearchResult() {}
     SearchResult(std::vector<unsigned int> &chainKeys) : qChainKeys(chainKeys), alnVec({}) {}
-    SearchResult(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen) : qChainKeys(chainKeys), qResidueLen(qResidueLen), alnVec({}) {}
+    SearchResult(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen, double thresholdCV) : qChainKeys(chainKeys), qResidueLen(qResidueLen), thresholdCV(thresholdCV) , alnVec({}){}
     std::vector<unsigned int> qChainKeys;
     std::vector<unsigned int> dbChainKeys;
     unsigned int qResidueLen;
     unsigned int dbResidueLen;
+    double thresholdCV;
     std::vector<ChainToChainAln> alnVec;
 
     void resetDbComplex(std::vector<unsigned int> &chainKeys, unsigned int residueLen) {
@@ -55,7 +56,7 @@ struct SearchResult {
             sd = std::sqrt(var);
             cv = (abs(mean) > TOO_SMALL_MEAN) ? sd / std::abs(mean) : sd;
             for (auto &aln: alnVec) {
-                aln.superposition[i] = cv < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean) / sd;
+                aln.superposition[i] = cv < thresholdCV ? FILTERED_OUT : (aln.superposition[i] - mean) / sd;
             }
         }
     }
@@ -179,14 +180,14 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 
 class DBSCANCluster {
 public:
-    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
+    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov, double initEPS, double deltaEPS) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
         minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         prevMaxClusterSize = 0;
         maxDist = 0;
-        eps = DEFAULT_EPS;
-        learningRate = LEARNING_RATE;
+        eps = initEPS;
+        learningRate = deltaEPS;
     }
 
     bool getAlnClusters() {
@@ -220,12 +221,13 @@ private:
     std::set<cluster_t> &finalClusters;
     std::map<unsigned int, float> qBestTmScore;
     std::map<unsigned int, float> dbBestTmScore;
+//    unsigned int dbscanCnt = 0;
 
     bool runDBSCAN() {
         initializeAlnLabels();
         if (eps >= maxDist)
             return finishDBSCAN();
-
+//        dbscanCnt++;
         for (size_t centerAlnIdx=0; centerAlnIdx < searchResult.alnVec.size(); centerAlnIdx++) {
             ChainToChainAln &centerAln = searchResult.alnVec[centerAlnIdx];
             if (centerAln.label != 0)
@@ -358,6 +360,7 @@ private:
     }
 
     bool finishDBSCAN() {
+//        std::cout << dbscanCnt << std::endl;
         initializeAlnLabels();
         neighbors.clear();
         neighborsOfCurrNeighbor.clear();
@@ -435,7 +438,8 @@ private:
 
 class ComplexScorer {
 public:
-    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio) {
+    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio, double initEPS, double deltaEPS, double thresholdCV)
+    : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), initEPS(initEPS), deltaEPS(deltaEPS), thresholdCV(thresholdCV) {
         maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen()+1, tDbr3Di->sequenceReader->getMaxSeqLen()+1);
         q3diDbr = qDbr3Di;
         t3diDbr = tDbr3Di;
@@ -447,7 +451,7 @@ public:
         hasBacktrace = false;
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
         if (qResLen == 0) return;
-        paredSearchResult = SearchResult(qChainKeys, qResLen);
+        paredSearchResult = SearchResult(qChainKeys, qResLen, thresholdCV);
         // for each chain from the query Complex
         for (auto qChainKey: qChainKeys) {
             unsigned int qKey = alnDbr.getId(qChainKey);
@@ -527,7 +531,7 @@ public:
             tmAligner = new TMaligner(maxResLen, false, true, false);
         }
         finalClusters.clear();
-        DBSCANCluster dbscanCluster = DBSCANCluster(searchResult, finalClusters, minAssignedChainsRatio);
+        DBSCANCluster dbscanCluster = DBSCANCluster(searchResult, finalClusters, minAssignedChainsRatio, initEPS, deltaEPS);
         if (!dbscanCluster.getAlnClusters()) {
             finalClusters.clear();
             return;
@@ -564,6 +568,9 @@ private:
     Coordinate16 tCoords;
     unsigned int thread_idx;
     double minAssignedChainsRatio;
+    double initEPS;
+    double deltaEPS;
+    double thresholdCV;
     unsigned int maxResLen;
     Chain qChain;
     Chain dbChain;
@@ -666,6 +673,9 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     }
 
     double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
+    double initEPS = par.initEPS;
+    double deltaEPS = par.deltaEPS;
+    double thresholdCV = par.thresholdCV;
 
     std::vector<unsigned int> qComplexIndices;
     std::vector<unsigned int> dbComplexIndices;
@@ -691,7 +701,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
         std::vector<resultToWrite_t> resultToWriteLines;
-        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio);
+        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio, initEPS, deltaEPS, thresholdCV);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
