@@ -1,0 +1,37 @@
+[dependencies.chrono]
+optional = true
+version = "0.4"
+
+[dependencies.core-foundation-sys]
+default-features = false
+version = "0.8.6"
+
+[dependencies.libc]
+version = "0.2"
+
+[dependencies.uuid]
+optional = true
+version = "0.5"
+
+[features]
+default = ["link"]
+link = ["core-foundation-sys/link"]
+mac_os_10_7_support = ["core-foundation-sys/mac_os_10_7_support"]
+mac_os_10_8_features = ["core-foundation-sys/mac_os_10_8_features"]
+with-chrono = ["chrono"]
+with-uuid = ["uuid"]
+
+[package]
+authors = ["The Servo Project Developers"]
+categories = ["os::macos-apis"]
+description = "Bindings to Core Foundation for macOS"
+edition = "2018"
+homepage = "https://github.com/servo/core-foundation-rs"
+keywords = ["macos", "framework", "objc"]
+license = "MIT OR Apache-2.0"
+name = "core-foundation"
+repository = "https://github.com/servo/core-foundation-rs"
+version = "0.9.4"
+[package.metadata.docs.rs]
+all-features = true
+default-target = "x86_64-apple-darwin"

@@ -1,0 +1,22 @@
+[package]
+name = "cprostt5"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib"]
+path = "./src/lib.rs"
+
+[dependencies]
+prostt5 = { path = "../" }
+
+[features]
+cuda = [
+    "prostt5/cuda",
+]
+cudnn = [
+    "prostt5/cudnn",
+]
+metal = [
+    "prostt5/metal",
+]

@@ -10,6 +10,8 @@
 #include "foldcomp.h"
 #include "cif.hpp"
 
+#include <algorithm>
+
 GemmiWrapper::GemmiWrapper(){
     threeAA2oneAA = {{"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
                      {"CYS",'C'},  {"GLN",'Q'},  {"GLU",'E'}, {"GLY",'G'},
@@ -33,6 +35,7 @@ GemmiWrapper::GemmiWrapper(){
                      {"CSD",'C'}, {"SEC",'C'},
                      // unknown
                      {"UNK",'X'}};
+    fixupBuffer = NULL;
 }
 
 std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document& doc) {
@@ -99,7 +102,27 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
         std::unordered_map<std::string, int> entity_to_tax_id;
         switch (format) {
             case Format::Mmcif: {
-                gemmi::cif::Document doc = gemmi::cif::read(infile);
+                gemmi::CharArray mem = read_into_buffer(infile);
+                char* data = mem.data();
+                size_t dataSize = mem.size();
+
+                // hack to fix broken _citation.title in AF3
+                const char target0[] = "Accurate structure prediction of biomolecular interactions with AlphaFold 3\n";
+                size_t target0Len = sizeof(target0) - 1;
+                const char target1[] = "_citation.title";
+                size_t target1Len = sizeof(target1) - 1;
+                char* it = std::search(data, data + dataSize, target0, target0 + target0Len);
+                if (it != data + dataSize) {
+                    while (it > data && *(it - 1) != '\n') {
+                        it--;
+                    }
+                    if (strncmp(it, target1, target1Len) == 0) {
+                        it[0] = '#';
+                        it[1] = ' ';
+                    }
+                }
+
+                gemmi::cif::Document doc = gemmi::cif::read_memory(mem.data(), mem.size(), infile.path().c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
@@ -120,7 +143,7 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
                 st = gemmi::read_pdb(infile);
         }
         updateStructure((void*) &st, filename, entity_to_tax_id);
-    } catch (std::runtime_error& e) {
+    } catch (...) {
         return false;
     }
     return true;
@@ -161,7 +184,32 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(buffer, bufferSize), name, gemmi::PdbReadOptions());
                 break;
             case Format::Mmcif: {
-                gemmi::cif::Document doc = gemmi::cif::read_memory(buffer, bufferSize, name.c_str());
+                const char* targetBuffer = buffer;
+                // hack to fix broken _citation.title in AF3
+                const char target0[] = "Accurate structure prediction of biomolecular interactions with AlphaFold 3\n";
+                size_t target0Len = sizeof(target0) - 1;
+                const char target1[] = "_citation.title";
+                size_t target1Len = sizeof(target1) - 1;
+                const char* it = std::search(targetBuffer, targetBuffer + bufferSize, target0, target0 + target1Len);
+                if (it != targetBuffer + bufferSize) {
+                    if (fixupBuffer == NULL) {
+                        fixupBufferSize = bufferSize;
+                        fixupBuffer = (char*)malloc(fixupBufferSize);
+                    } else if (bufferSize > fixupBufferSize) {
+                        fixupBufferSize = bufferSize * 1.5;
+                        fixupBuffer = (char*)realloc(fixupBuffer, fixupBufferSize);
+                    }
+                    memcpy(fixupBuffer, targetBuffer, bufferSize);
+                    while (it > targetBuffer && *(it - 1) != '\n') {
+                        it--;
+                    }
+                    if (strncmp(it, target1, target1Len) == 0) {
+                        *(fixupBuffer + (it - targetBuffer)) = '#';
+                        *(fixupBuffer + (it - targetBuffer) + 1) = ' ';
+                    }
+                    targetBuffer = fixupBuffer;
+                }
+                gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, bufferSize, name.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
@@ -192,7 +240,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 return false;
         }
         updateStructure((void*) &st, name, entity_to_tax_id);
-    } catch (std::runtime_error& e) {
+    } catch (...) {
         return false;
     }
     return true;

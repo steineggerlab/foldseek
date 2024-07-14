@@ -13,7 +13,19 @@ add_library(foldseek-framework
         FoldseekBase.cpp
 )
 mmseqs_setup_derived_target(foldseek-framework)
-target_link_libraries(foldseek-framework gemmiwrapper 3di pulchra kerasify tmalign block-aligner-c)
+target_link_libraries(foldseek-framework gemmiwrapper 3di pulchra kerasify tmalign block_aligner_c)
+if(ENABLE_PROSTT5)
+        target_link_libraries(foldseek-framework cprostt5)
+        target_compile_definitions(foldseek-framework PUBLIC -DHAVE_PROSTT5=1)
+endif()
+
+if(ENABLE_CUDA)
+        target_compile_definitions(foldseek-framework PUBLIC -DHAVE_CUDA=1)
+        find_package(CUDAToolkit REQUIRED)
+        target_link_libraries(foldseek-framework CUDA::cudart CUDA::curand CUDA::cublas CUDA::nvrtc)
+endif()
+
+
 add_dependencies(foldseek-framework local-generated)
 
 if(HAVE_GCS)

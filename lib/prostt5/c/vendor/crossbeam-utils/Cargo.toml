@@ -1,0 +1,24 @@
+[dependencies]
+[dev-dependencies.rand]
+version = "0.8"
+
+[features]
+default = ["std"]
+nightly = []
+std = []
+
+[package]
+categories = ["algorithms", "concurrency", "data-structures", "no-std"]
+description = "Utilities for concurrent programming"
+edition = "2021"
+homepage = "https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-utils"
+keywords = ["scoped", "thread", "atomic", "cache"]
+license = "MIT OR Apache-2.0"
+name = "crossbeam-utils"
+readme = "README.md"
+repository = "https://github.com/crossbeam-rs/crossbeam"
+rust-version = "1.60"
+version = "0.8.19"
+[target."cfg(crossbeam_loom)".dependencies.loom]
+optional = true
+version = "0.7.1"

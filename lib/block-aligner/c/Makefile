@@ -7,7 +7,7 @@ all: example align_prefix align_local
 
 block_aligner:
 	cargo build --release --features simd_avx2 --offline
-	cbindgen --config cbindgen.toml --crate block-aligner-c --output block_aligner.h --quiet .
+	cbindgen --config cbindgen.toml --crate block_aligner_c --output block_aligner.h --quiet .
 
 example: block_aligner example.c
 	$(CC) $(CFLAGS) -o example example.c

@@ -14,14 +14,19 @@ set(strucclustutils_source_files
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
         strucclustutils/scoremultimer.cpp
+<<<<<<< HEAD
         strucclustutils/filtermultimer.cpp
         strucclustutils/createmultimereport.cpp
         strucclustutils/createcmultimerreport.h
+=======
+        strucclustutils/createmultimerreport.cpp
+        strucclustutils/MultimerUtil.h
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
         strucclustutils/expandmultimer.cpp
         PARENT_SCOPE
         )
 
-add_library(gemmiwrapper OBJECT
+add_library(gemmiwrapper
     GemmiWrapper.cpp
     GemmiWrapper.h
     )
@@ -35,4 +40,5 @@ set_property(TARGET gemmiwrapper APPEND PROPERTY COMPILE_DEFINITIONS ${DEF_TMP})
 set_property(TARGET gemmiwrapper APPEND PROPERTY INCLUDE_DIRECTORIES ${INCL_TMP})
 restore_exceptions(gemmiwrapper)
 target_link_libraries(gemmiwrapper foldcomp)
+target_include_directories(gemmiwrapper PRIVATE ../../lib/gemmi)
 target_include_directories(gemmiwrapper PRIVATE ../../lib/foldcomp/src)

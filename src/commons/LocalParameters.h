@@ -4,6 +4,8 @@
 #include <Parameters.h>
 
 const int CITATION_FOLDSEEK = CITATION_END;
+const int CITATION_FOLDSEEK_MULTIMER = CITATION_FOLDSEEK << 1;
+const int CITATION_PROSTT5 = CITATION_FOLDSEEK << 2;
 
 struct FoldSeekDbValidator : public DbValidator {
     static std::vector<int> tmscore;
@@ -99,11 +101,16 @@ public:
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
     std::vector<MMseqsParameter *> scoremultimer;
+<<<<<<< HEAD
     std::vector<MMseqsParameter *> filtermultimer;
     std::vector<MMseqsParameter *> multimerclusterworkflow;
     std::vector<MMseqsParameter *> easymultimerlusterworkflow;
     std::vector<MMseqsParameter *> multimersearchworkflow;
     std::vector<MMseqsParameter *> easysmultimersearchworkflow;
+=======
+    std::vector<MMseqsParameter *> multimersearchworkflow;
+    std::vector<MMseqsParameter *> easymultimersearchworkflow;
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
     std::vector<MMseqsParameter *> createmultimerreport;
     std::vector<MMseqsParameter *> expandmultimer;
     std::vector<MMseqsParameter *> convert2pdb;
@@ -127,12 +134,22 @@ public:
     PARAMETER(PARAM_FILE_EXCLUDE)
     PARAMETER(PARAM_INDEX_EXCLUDE)
     PARAMETER(PARAM_MULTIMER_REPORT_MODE)
+<<<<<<< HEAD
     PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE)
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_FILTER_MODE)
+=======
+    PARAMETER(PARAM_MULTIMER_REPORT_MODE_BC_COMPAT)
+    PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE)
+    PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT)
+    PARAMETER(PARAM_INPUT_FORMAT)
+    PARAMETER(PARAM_PDB_OUTPUT_MODE)
+    PARAMETER(PARAM_PROSTT5_MODEL)
+    PARAMETER(PARAM_GPU)
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
 
     int prefMode;
     float tmScoreThr;
@@ -156,9 +173,14 @@ public:
     double eValueThrExpandMultimer;
     int inputFormat;
     int pdbOutputMode;
+<<<<<<< HEAD
     float filtMultimerTmThr;
     float filtChainTmThr;
     int filterMode;
+=======
+    std::string prostt5Model;
+    int gpu;
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,

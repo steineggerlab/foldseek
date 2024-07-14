@@ -21,9 +21,12 @@ extern int structureungappedalign(int argc, const char** argv, const Command &co
 extern int convert2pdb(int argc, const char** argv, const Command &command);
 extern int compressca(int argc, const char** argv, const Command &command);
 extern int scoremultimer(int argc, const char **argv, const Command& command);
+<<<<<<< HEAD
 extern int filtermultimer(int argc, const char **argv, const Command& command);
 extern int easymultimerluster(int argc, const char** argv, const Command &command);
 extern int multimerluster(int argc, const char** argv, const Command &command);
+=======
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
 extern int easymultimersearch(int argc, const char **argv, const Command &command);
 extern int createmultimerreport(int argc, const char **argv, const Command &command);
 extern int expandmultimer(int argc, const char **argv, const Command &command);

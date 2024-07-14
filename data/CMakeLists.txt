@@ -13,10 +13,15 @@ set(COMPILED_RESOURCES
         evalue_nn.kerasify
         main.js
         vendor.js.zst
+<<<<<<< HEAD
         complexsearch.sh
         easycomplexsearch.sh
         complexcluster.sh
         easycomplexcluster.sh
+=======
+        multimersearch.sh
+        easymultimersearch.sh
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

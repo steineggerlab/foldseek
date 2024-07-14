@@ -121,10 +121,10 @@ jobs:
           targetPath: $(Build.SourcesDirectory)/build/src/foldseek
           artifactName: foldseek-linux-$(SIMD)
 
-  - job: build_macos_11
-    displayName: macOS 11
+  - job: build_macos
+    displayName: macOS
     pool:
-      vmImage: 'macos-11'
+      vmImage: 'macos-12'
     steps:
       - checkout: self
         submodules: true
@@ -153,7 +153,7 @@ jobs:
     pool:
       vmImage: 'ubuntu-latest'
     dependsOn:
-      - build_macos_11
+      - build_macos
       - build_ubuntu_2004
       - build_ubuntu_cross_2004
     steps:

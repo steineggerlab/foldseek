@@ -15,6 +15,9 @@
 #include "PatternCompiler.h"
 #include "Coordinate16.h"
 #include "itoa.h"
+#ifdef HAVE_PROSTT5
+#include "prostt5.h"
+#endif
 
 #include <iostream>
 #include <dirent.h>
@@ -89,7 +92,7 @@ std::string removeModel(const std::string& input) {
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
-                    std::vector<int8_t> & camol, std::string & header, std::string & name,
+                    std::vector<int8_t> & camol, std::string & header, 
                     DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
                     float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
                     std::string & filename,  size_t & fileidCnt,
@@ -158,13 +161,22 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
         header.clear();
+<<<<<<< HEAD
         header.append(Util::remove_extension(readStructure.names[ch]));
+=======
+        if (Util::endsWith(".gz", readStructure.names[ch])){
+            header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
+        }
+        else{
+            header.append(Util::remove_extension(readStructure.names[ch]));
+        }
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
         if(readStructure.modelCount > 1){
             header.append("_MODEL_");
             header.append(std::to_string(readStructure.modelIndices[ch]));
         }
         if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-           (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
+            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
             header.push_back('_');
             header.append(readStructure.chainNames[ch]);
         }
@@ -176,20 +188,33 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
+<<<<<<< HEAD
             std::map<std::string, size_t>::iterator it = filenameToFileId.find(Util::remove_extension(filename));
+=======
+            std::string filenameWithExtension = filename;
+            if (Util::endsWith(".gz", filename)){
+                filenameWithExtension = Util::remove_extension(filename);
+            }
+            std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
+            std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
             size_t fileid;
             if (it != filenameToFileId.end()) {
                 fileid = it->second;
             } else {
                 fileid = fileidCnt;
+<<<<<<< HEAD
                 filenameToFileId[Util::remove_extension(filename)] = fileid;
                 fileIdToName[fileid] = Util::remove_extension(filename);
+=======
+                filenameToFileId[filenameWithoutExtension] = fileid;
+                fileIdToName[fileid] = filenameWithoutExtension;
+>>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
                 fileidCnt++;
             }
             entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
         }
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
-        name.clear();
 
         if (mappingWriter != NULL) {
             std::string taxId = SSTR(readStructure.taxIds[ch]);
@@ -254,12 +279,104 @@ void sortDatafileByIdOrder(DBWriter & dbw,
         }
     }
 }
-
+extern int createdb(int argc, const char **argv, const Command& command);
 int structcreatedb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_COMMON);
-
+    par.parseParameters(argc, argv, command, false, 0, MMseqsParameter::COMMAND_COMMON);
     std::string outputName = par.filenames.back();
+#ifdef HAVE_PROSTT5
+    if (par.prostt5Model != "") {
+        // reset set parameters
+        for (size_t i = 0; i < command.params->size(); ++i) {
+            command.params->at(i)->wasSet = false;
+        }
+        int status = createdb(argc, argv, command);
+        if (status != EXIT_SUCCESS) {
+            return status;
+        }
+        fflush(stdout);
+
+        DBReader<unsigned int> reader(outputName.c_str(), (outputName+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+
+        std::string ssDb = outputName + "_ss";
+        DBWriter writer(ssDb.c_str(), (ssDb + ".index").c_str(), par.threads, par.compressed, reader.getDbtype());
+        writer.open();
+        Debug::Progress progress(reader.getSize());
+
+        std::vector<std::string> prefix = { "", "/model" };
+        std::vector<std::string> suffix = { "/model.safetensors", "/model.gguf" };
+        bool quantized = false;
+        std::string modelWeights;
+        for (size_t i = 0; i < prefix.size(); ++i) {
+            for (size_t j = 0; j < suffix.size(); ++j) {
+                std::string tensorPath = par.prostt5Model + prefix[i] + suffix[j];
+                if (FileUtil::fileExists(tensorPath.c_str())) {
+                    modelWeights = par.prostt5Model + prefix[i];
+                    quantized = suffix[j].find("safetensors") == std::string::npos;
+                    break;
+                }
+            }
+        }
+        if (modelWeights.empty()) {
+            Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
+            return EXIT_FAILURE;
+        }
+        ProstT5 *model = prostt5_load(modelWeights.c_str(), false, par.gpu == 0, false, quantized);
+        if (model == NULL) {
+            // error message is already printed by prostt5_load
+            return EXIT_FAILURE;
+        }
+#ifdef OPENMP
+        size_t localThreads = par.gpu != 0 ? 1 : par.threads;
+#endif
+#pragma omp parallel num_threads(localThreads)
+        {
+            int thread_idx = 0;
+#ifdef OPENMP
+            thread_idx = omp_get_thread_num();
+#endif
+            const char newline = '\n';
+#pragma omp for schedule(dynamic, 1)
+            for (size_t i = 0; i < reader.getSize(); ++i) {
+                unsigned int key = reader.getDbKey(i);
+                char* seq = reader.getData(i, thread_idx);
+                size_t length = reader.getSeqLen(i);
+                const char *result = prostt5_predict_slice(model, seq, length);
+                if (result != NULL) {
+                    writer.writeStart(thread_idx);
+                    writer.writeAdd(result, length, thread_idx);
+                    writer.writeAdd(&newline, 1, thread_idx);
+                    writer.writeEnd(key, thread_idx);
+                    free((void*)result);
+                } else {
+                    Debug(Debug::ERROR) << "Prediction failed\n";
+                    EXIT(EXIT_FAILURE);
+                }
+                progress.updateProgress();
+            }
+        }
+        writer.close(true);
+        reader.close();
+        prostt5_free(model);
+
+        DBReader<unsigned int> resultReader(ssDb.c_str(), (ssDb+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        resultReader.open(DBReader<unsigned int>::NOSORT);
+        resultReader.readMmapedDataInMemory();
+        const std::pair<std::string, std::string> tempDb = Util::databaseNames(ssDb + "_tmp");
+        DBWriter resultWriter(tempDb.first.c_str(), tempDb.second.c_str(), par.threads, par.compressed, resultReader.getDbtype());
+        resultWriter.open();
+        resultWriter.sortDatafileByIdOrder(resultReader);
+        resultWriter.close(true);
+        resultReader.close();
+        DBReader<unsigned int>::removeDb(ssDb);
+        DBReader<unsigned int>::moveDb(tempDb.first, ssDb);
+
+        return EXIT_SUCCESS;
+    } else {
+        par.printParameters(command.cmd, argc, argv, *command.params);
+    }
+#endif
     par.filenames.pop_back();
 
     PatternCompiler include(par.fileInclude.c_str());
@@ -541,10 +658,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     }
 
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
-
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di, pulchra,
-                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
@@ -587,7 +703,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             // clear memory
             writeStructureEntry(
                 mat, readStructure, structureTo3Di,  pulchra,
-                alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                 par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                 looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                 mappingWriter
@@ -650,7 +766,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                 __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                                 writeStructureEntry(
                                     mat, readStructure, structureTo3Di,  pulchra,
-                                    alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                                    alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                                     par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                                     obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                                     mappingWriter
@@ -701,7 +817,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di,  pulchra,
-                        alphabet3di, alphabetAA, camol, header, name, aadbw, hdbw, torsiondbw, cadbw,
+                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
