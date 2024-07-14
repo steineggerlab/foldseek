@@ -14,14 +14,9 @@ set(strucclustutils_source_files
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
         strucclustutils/scoremultimer.cpp
-<<<<<<< HEAD
         strucclustutils/filtermultimer.cpp
-        strucclustutils/createmultimereport.cpp
-        strucclustutils/createcmultimerreport.h
-=======
         strucclustutils/createmultimerreport.cpp
         strucclustutils/MultimerUtil.h
->>>>>>> 25812ffa585248b146fb0217b981b507dc92e851
         strucclustutils/expandmultimer.cpp
         PARENT_SCOPE
         )

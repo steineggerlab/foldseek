@@ -8,10 +8,6 @@
 
 #include "multimersearch.sh.h"
 
-<<<<<<< HEAD:src/workflow/ComplexSearch.cpp
-
-=======
->>>>>>> 25812ffa585248b146fb0217b981b507dc92e851:src/workflow/MultimerSearch.cpp
 int multimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -110,12 +106,8 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-<<<<<<< HEAD:src/workflow/ComplexSearch.cpp
-    std::string program = tmpDir + "/multimersearch.sh";    
-=======
 //    cmd.addVariable("EXP_MULTIMER_PAR", ("-e " + std::to_string(par.eValueThrExpandMultimer)).c_str());
     std::string program = tmpDir + "/multimersearch.sh";
->>>>>>> 25812ffa585248b146fb0217b981b507dc92e851:src/workflow/MultimerSearch.cpp
     FileUtil::writeFile(program, multimersearch_sh, multimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
     // Should never get here

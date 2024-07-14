@@ -7,11 +7,6 @@
 #include "Debug.h"
 #include "easymultimersearch.sh.h"
 
-<<<<<<< HEAD:src/workflow/EasyComplexSearch.cpp
-#include "easymultimersearch.sh.h"
-
-=======
->>>>>>> 25812ffa585248b146fb0217b981b507dc92e851:src/workflow/EasyMultimerSearch.cpp
 int easymultimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
