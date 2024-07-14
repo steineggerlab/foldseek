@@ -27,11 +27,12 @@ LocalParameters::LocalParameters() :
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
         PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
-        PARAM_COMPLEX_REPORT_MODE(PARAM_COMPLEX_REPORT_MODE_ID, "--complex-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &complexReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
-        PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
+        PARAM_MULTIMER_REPORT_MODE(PARAM_MULTIMER_REPORT_MODE_ID, "--multimer-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &multimerReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_MULTIMER_REPORT_MODE(PARAM_MULTIMER_REPORT_MODE_ID, "--multimer-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &multimerReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
-        PARAM_COMPLEX_TM_THRESHOLD(PARAM_COMPLEX_TM_THRESHOLD_ID,"--complex-tm-threshold", "TMscore threshold for filtercomplex", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtComplexTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_FILTER_MODE(PARAM_FILTER_MODE_ID, "--filter-mode", "Filter mode", "0: Interface\n1: Conformation\n2: loose", typeid(int), (void *) &filterMode, "[0-2]{0}$", MMseqsParameter::COMMAND_CLUST)
         
 {
@@ -176,42 +177,43 @@ LocalParameters::LocalParameters() :
     compressca.push_back(&PARAM_THREADS);
     compressca.push_back(&PARAM_V);
 
-    //scorecomplex
-    scorecomplex.push_back(&PARAM_THREADS);
-    scorecomplex.push_back(&PARAM_V);
-    scorecomplex.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
+    //scorecmultimer
+    scoremultimer.push_back(&PARAM_THREADS);
+    scoremultimer.push_back(&PARAM_V);
+    scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
 
-    //filtercomplex
-    filtercomplex.push_back(&PARAM_V);
-    filtercomplex.push_back(&PARAM_THREADS);
-    filtercomplex.push_back(&PARAM_C);
-    filtercomplex.push_back(&PARAM_COV_MODE);
-    filtercomplex.push_back(&PARAM_COMPLEX_TM_THRESHOLD);
-    filtercomplex.push_back(&PARAM_FILTER_MODE);
+    //filtermultimer
+    filtermultimer.push_back(&PARAM_V);
+    filtermultimer.push_back(&PARAM_THREADS);
+    filtermultimer.push_back(&PARAM_C);
+    filtermultimer.push_back(&PARAM_COV_MODE);
+    filtermultimer.push_back(&PARAM_COMPLEX_TM_THRESHOLD);
+    filtermultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
+    filtermultimer.push_back(&PARAM_FILTER_MODE);
 
-    // createcomplexreport
-    createcomplexreport.push_back(&PARAM_DB_OUTPUT);
-    createcomplexreport.push_back(&PARAM_THREADS);
-    createcomplexreport.push_back(&PARAM_V);
+    // createmultimerreport
+    createmultimerreport.push_back(&PARAM_DB_OUTPUT);
+    createmultimerreport.push_back(&PARAM_THREADS);
+    createmultimerreport.push_back(&PARAM_V);
 
-    // complexsearchworkflow
-    complexsearchworkflow = combineList(structuresearchworkflow, scorecomplex);
-    complexsearchworkflow.push_back(&PARAM_EXPAND_COMPLEX_EVALUE);
+    // multimersearchworkflow
+    multimersearchworkflow = combineList(structuresearchworkflow, scoremultimer);
+    multimersearchworkflow.push_back(&PARAM_EXPAND_COMPLEX_EVALUE);
 
-    // easycomplexsearchworkflow
-    easyscomplexsearchworkflow = combineList(structurecreatedb, complexsearchworkflow);
-    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, convertalignments);
-    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, createcomplexreport);
-    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, createsubdb);
-    easyscomplexsearchworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
+    // easysmultimersearchworkflow
+    easysmultimersearchworkflow = combineList(structurecreatedb, multimersearchworkflow);
+    easysmultimersearchworkflow = combineList(easysmultimersearchworkflow, convertalignments);
+    easysmultimersearchworkflow = combineList(easysmultimersearchworkflow, createmultimerreport);
+    easysmultimersearchworkflow = combineList(easysmultimersearchworkflow, createsubdb);
+    easysmultimersearchworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
 
-    // complexclusterworkflow
-    complexclusterworkflow = combineList(complexsearchworkflow, filtercomplex);
-    complexclusterworkflow  = combineList(complexclusterworkflow, clust);
+    // multimerclusterworkflow
+    multimerclusterworkflow = combineList(multimersearchworkflow, filtermultimer);
+    multimerclusterworkflow  = combineList(multimerclusterworkflow, clust);
 
-    //easycomplexclusterworkflow
-    easycomplexclusterworkflow = combineList(structurecreatedb, complexclusterworkflow);
-    easycomplexclusterworkflow = combineList(easycomplexclusterworkflow, result2repseq);
+    //easymultimerlusterworkflow
+    easymultimerlusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
+    easymultimerlusterworkflow = combineList(easymultimerlusterworkflow, result2repseq);
     
     // expandcomplex
     expandcomplex.push_back(&PARAM_THREADS);
@@ -246,10 +248,11 @@ LocalParameters::LocalParameters() :
     fileExclude = "^$";
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
-    complexReportMode = 1;
-    eValueThrExpandComplex = 10000.0;
+    multimerReportMode = 1;
+    eValueThrExpandMultimer = 10000.0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
-    filtComplexTmThr = 0.0;
+    filtMultimerTmThr = 0.0;
+    filtChainTmThr = 0.0;
     filterMode = 0;
 
     //rewrite param vals.
@@ -317,11 +320,11 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("lddtfull") == 0) { needQCa = true; needTCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
         else if (outformatSplit[i].compare("prob") == 0) { needQCa = true; needTCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
         // TODO
-        else if (outformatSplit[i].compare("complexqtmscore")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
-        else if (outformatSplit[i].compare("complexttmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
-        else if (outformatSplit[i].compare("complexassignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
-        else if (outformatSplit[i].compare("complexu")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
-        else if (outformatSplit[i].compare("complext")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
+        else if (outformatSplit[i].compare("complexqtmscore")==0 || outformatSplit[i].compare("multimerqtmscore")==0) {code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
+        else if (outformatSplit[i].compare("complexttmscore")==0 || outformatSplit[i].compare("multimerttmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
+        else if (outformatSplit[i].compare("complexassignid")==0 || outformatSplit[i].compare("multimerassignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
+        else if (outformatSplit[i].compare("complexu")==0 || outformatSplit[i].compare("multimeru")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
+        else if (outformatSplit[i].compare("complext")==0 || outformatSplit[i].compare("multimert")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

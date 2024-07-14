@@ -20,12 +20,12 @@ extern int structureeasyrbh(int argc, const char** argv, const Command &command)
 extern int structureungappedalign(int argc, const char** argv, const Command &command);
 extern int convert2pdb(int argc, const char** argv, const Command &command);
 extern int compressca(int argc, const char** argv, const Command &command);
-extern int scorecomplex(int argc, const char **argv, const Command& command);
-extern int filtercomplex(int argc, const char **argv, const Command& command);
-extern int easycomplexcluster(int argc, const char** argv, const Command &command);
-extern int complexcluster(int argc, const char** argv, const Command &command);
-extern int easycomplexsearch(int argc, const char **argv, const Command &command);
-extern int createcomplexreport(int argc, const char **argv, const Command &command);
-extern int expandcomplex(int argc, const char **argv, const Command &command);
-extern int complexsearch(int argc, const char **argv, const Command &command);
+extern int scoremultimer(int argc, const char **argv, const Command& command);
+extern int filtermultimer(int argc, const char **argv, const Command& command);
+extern int easymultimerluster(int argc, const char** argv, const Command &command);
+extern int multimerluster(int argc, const char** argv, const Command &command);
+extern int easymultimersearch(int argc, const char **argv, const Command &command);
+extern int createmultimerreport(int argc, const char **argv, const Command &command);
+extern int expandmultimer(int argc, const char **argv, const Command &command);
+extern int multimersearch(int argc, const char **argv, const Command &command);
 #endif

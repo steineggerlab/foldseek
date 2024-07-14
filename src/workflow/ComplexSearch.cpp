@@ -6,10 +6,10 @@
 #include "Util.h"
 #include "Debug.h"
 
-#include "complexsearch.sh.h"
+#include "multimersearch.sh.h"
 
 
-int complexsearch(int argc, const char **argv, const Command &command) {
+int multimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -115,8 +115,8 @@ int complexsearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-    std::string program = tmpDir + "/complexsearch.sh";
-    FileUtil::writeFile(program, complexsearch_sh, complexsearch_sh_len);
+    std::string program = tmpDir + "/multimersearch.sh";    
+    FileUtil::writeFile(program, multimersearch_sh, multimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
     // Should never get here
     assert(false);

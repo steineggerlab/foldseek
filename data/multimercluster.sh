@@ -78,8 +78,8 @@ buldCmplhDb(){
 
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" complexsearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complexsearch_tmp" ${COMPLEXSEARCH_PAR} \
-        || fail "ComplexSearch died"
+    "$MMSEQS" multimersearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/multimersearch_tmp" ${COMPLEXSEARCH_PAR} \
+        || fail "multimerSearch died"
 fi
 
 if notExists "complex_filt.dbtype"; then
