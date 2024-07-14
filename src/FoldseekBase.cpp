@@ -258,7 +258,7 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"pdbFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
         {"scoremultimer", scoremultimer, &localPar.scoremultimer, COMMAND_ALIGNMENT,
-                "Get Multimer level alignments from alignmentDB",
+                "Get multimer level alignments from alignmentDB",
                 "# Get multimer level alignments (chain assignments and tm-scores) from alignmentDB.\n"
                 "foldseek scoremultimer queryDB targetDB alignmentDB complexDB\n"
                 "# simple tsv output format"
@@ -277,60 +277,6 @@ std::vector<Command> foldseekCommands = {
         {"scorecomplex", scoremultimer, &localPar.scoremultimer, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
-        {"filtermultimer", filtermultimer, &localPar.filtermultimer, COMMAND_HIDDEN,
-                "Filters multimers satisfying given coverage",
-                "foldseek filtermultimer queryDB targetDB alignmentDB complexDB -c 0.8 --cov-mode 1\n",
-                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
-                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:clustDB>",
-                CITATION_FOLDSEEK_MULTIMER, {
-                                           {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                                           {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
-                                           {"clustDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
-
-                                           {"tmptsv", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfile }
-                                   }
-        },
-        {"multimercluster", multimercluster, &localPar.multimerclusterworkflow, COMMAND_MAIN, 
-                "Multimer level cluster",
-                "#Clustering of PDB DB\n"
-                "foldseek multimercluster queryDB clusterDB tmp\n"
-                "#                  --cov-mode \n"
-                "# Sequence         0    1    2\n"
-                "# Q: MAVGTACRPA  60%  IGN  60%\n"
-                "# T: -AVGTAC---  60% 100%  IGN\n"
-                "# Cutoff -c 0.7    -    +    -\n"
-                "#        -c 0.6    +    +    +\n\n",
-                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
-                "<i:sequenceDB> <o:clusterDB> <tmpDir>",
-                CITATION_FOLDSEEK_MULTIMER, {
-                                        {"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
-                                        {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
-                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
-                }
-        },     
-        {"easy-multimercluster", easymultimercluster, &localPar.easymultimerclusterworkflow, COMMAND_EASY,
-                "Multimer level cluster",
-                "#Clustering of PDB files\n"
-                "foldseek easy-multimercluster examples/ result tmp\n"
-                "# Cluster output\n"
-                "#  - result_rep_seq.fasta: Representatives\n"
-                "#  - result_cluster.tsv:   Adjacency list\n\n"
-                "# Important parameter: --cov-mode and -c \n"
-                "#                  --cov-mode \n"
-                "#                  0    1    2\n"
-                "# Q: MAVGTACRPA  60%  IGN  60%\n"
-                "# T: -AVGTAC---  60% 100%  IGN\n"
-                "#        -c 0.7    -    +    -\n"
-                "#        -c 0.6    +    +    +\n\n",
-                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
-                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:clusterPrefix> <tmpDir>",
-                CITATION_FOLDSEEK_MULTIMER, {
-                                        {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
-                                        {"clusterPrefix", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
-                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
-                }
-        },     
         {"multimersearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_MAIN,
                 "Multimer level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get multimer level alignments\n"
@@ -353,7 +299,7 @@ std::vector<Command> foldseekCommands = {
         {"complexsearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
-        {"easy-multimersearch", easymultimersearch, &localPar.easysmultimersearchworkflow, COMMAND_EASY,
+        {"easy-multimersearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
                 "Multimer level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get multimer level alignments\n"
                 "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
@@ -378,7 +324,7 @@ std::vector<Command> foldseekCommands = {
         {"createmultimerreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
                 "Convert complexDB to tsv format",
                 "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u, t, assId\n"
-                "#  (1,2) identifiers for query and target multimer,\n"
+                "#  (1,2) identifiers for query and target multimers,\n"
                 "#  (3,4) chains of query multimer and target multimer,\n"
                 "#  (5,6) tm score based on query and target residue length,\n"
                 "#  (8,9) u and t,\n"
@@ -397,16 +343,16 @@ std::vector<Command> foldseekCommands = {
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"expandmultimer", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
-        "Re-prefilter to ensure complete alignment between multimers",
-        NULL,
-        "Woosub Kim <woosubgo@snu.ac.kr>",
-        "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:prefilterDB>",
-         CITATION_FOLDSEEK, {
-                 {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                 {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                 {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
-                 {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
-             }
+                "Re-prefilter to ensure complete alignment between multimers",
+                NULL,
+                "Woosub Kim <woosubgo@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:prefilterDB>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                        {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                        {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                        {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                        {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
+                                }
         },
         {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
@@ -416,7 +362,7 @@ std::vector<Command> foldseekCommands = {
                 NULL,
                 "",
                 "",
-                CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
+                CITATION_FOLDSEEK, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
 };
 
 std::vector<KmerThreshold> externalThreshold = { {Parameters::DBTYPE_AMINO_ACIDS, 7, 197.0, 11.22}};
