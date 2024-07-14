@@ -15,7 +15,7 @@ set(COMPILED_RESOURCES
         vendor.js.zst
         multimersearch.sh
         easymultimersearch.sh
-        multimerluster.sh
+        multimercluster.sh
         easymultimercluster.sh
         )
 

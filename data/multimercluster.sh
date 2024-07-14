@@ -78,14 +78,14 @@ buldCmplhDb(){
 
 if notExists "${TMP_PATH}/complex_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimersearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/multimersearch_tmp" ${COMPLEXSEARCH_PAR} \
+    "$MMSEQS" multimersearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/multimersearch_tmp" ${MULTIMERSEARCH_PAR} \
         || fail "multimerSearch died"
 fi
 
 if notExists "complex_filt.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" filtercomplex "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" "${TMP_PATH}/filtcov.tsv" ${FILTERCOMPLEX_PAR} \
-        || fail "FilterComplex died"
+    "$MMSEQS" filtermultimer "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" "${TMP_PATH}/filtcov.tsv" ${FILTERMULTIMER_PAR} \
+        || fail "FilterMultimer died"
 fi
 
 # shift query DB, .index, .dbtype
@@ -123,6 +123,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY_PAR}
     rm "${TMP_PATH}/complex_header.tsv"
     rm "${TMP_PATH}/complex_header.tsv_redundant"
-    rm -rf "${TMP_PATH}/complexsearch_tmp"
+    rm -rf "${TMP_PATH}/multimersearch_tmp"
     rm -f "${TMP_PATH}/multimercluster.sh"
 fi

@@ -194,7 +194,7 @@ LocalParameters::LocalParameters() :
     filtermultimer.push_back(&PARAM_THREADS);
     filtermultimer.push_back(&PARAM_C);
     filtermultimer.push_back(&PARAM_COV_MODE);
-    filtermultimer.push_back(&PARAM_COMPLEX_TM_THRESHOLD);
+    filtermultimer.push_back(&PARAM_MULTIMER_TM_THRESHOLD);
     filtermultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
     filtermultimer.push_back(&PARAM_FILTER_MODE);
 
@@ -205,7 +205,7 @@ LocalParameters::LocalParameters() :
 
     // multimersearchworkflow
     multimersearchworkflow = combineList(structuresearchworkflow, scoremultimer);
-    multimersearchworkflow.push_back(&PARAM_EXPAND_COMPLEX_EVALUE);
+    multimersearchworkflow.push_back(&PARAM_EXPAND_MULTIMER_EVALUE);
 
     // easysmultimersearchworkflow
     multimersearchworkflow = combineList(structuresearchworkflow, scoremultimer);
@@ -215,13 +215,20 @@ LocalParameters::LocalParameters() :
     multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE);
     multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE_BC_COMPAT);
 
+    // easymultimersearchworkflow
+    easymultimersearchworkflow = combineList(structurecreatedb, multimersearchworkflow);
+    easymultimersearchworkflow = combineList(easymultimersearchworkflow, convertalignments);
+    easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
+    easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
+
+
     // multimerclusterworkflow
     multimerclusterworkflow = combineList(multimersearchworkflow, filtermultimer);
     multimerclusterworkflow  = combineList(multimerclusterworkflow, clust);
 
-    //easymultimerlusterworkflow
-    easymultimerlusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
-    easymultimerlusterworkflow = combineList(easymultimerlusterworkflow, result2repseq);
+    //easymultimerclusterworkflow
+    easymultimerclusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
+    easymultimerclusterworkflow = combineList(easymultimerclusterworkflow, result2repseq);
     
     // expandmultimer
     expandmultimer.push_back(&PARAM_THREADS);

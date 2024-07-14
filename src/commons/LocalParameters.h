@@ -103,7 +103,7 @@ public:
     std::vector<MMseqsParameter *> scoremultimer;
     std::vector<MMseqsParameter *> filtermultimer;
     std::vector<MMseqsParameter *> multimerclusterworkflow;
-    std::vector<MMseqsParameter *> easymultimerlusterworkflow;
+    std::vector<MMseqsParameter *> easymultimerclusterworkflow;
     std::vector<MMseqsParameter *> multimersearchworkflow;
     std::vector<MMseqsParameter *> easymultimersearchworkflow;
     std::vector<MMseqsParameter *> createmultimerreport;

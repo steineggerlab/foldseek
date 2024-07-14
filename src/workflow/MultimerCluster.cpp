@@ -56,8 +56,8 @@ int multimercluster(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
 
-    cmd.addVariable("COMPLEXSEARCH_PAR", par.createParameterString(par.complexsearchworkflow, true).c_str()); 
-    cmd.addVariable("FILTERCOMPLEX_PAR", par.createParameterString(par.filtercomplex).c_str());    
+    cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str()); 
+    cmd.addVariable("FILTERMULTIMER_PAR", par.createParameterString(par.filtermultimer).c_str());    
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());

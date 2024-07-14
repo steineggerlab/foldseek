@@ -88,7 +88,7 @@ fi
 
 if notExists "${TMP_PATH}/complex_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimerxcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
+    "$MMSEQS" multimercluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
         || fail "Multimercluster died"
 fi
 

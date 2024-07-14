@@ -9,16 +9,14 @@
 #include "MemoryMapped.h"
 #include "Coordinate16.h"
 #include "tmalign/basic_fun.h"
-#include "createcomplexreport.h"
+#include "MultimerUtil.h"
 #include "LDDT.h"
 #include "CalcProbTP.h"
 #include <map>
 
-
 #ifdef OPENMP
 #include <omp.h>
 #endif
-
 
 unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
     switch (covMode) {
@@ -38,22 +36,21 @@ unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
 class ComplexFilterCriteria {
 public:
     unsigned int dbKey;
-    unsigned int qTotalAlnLen;
-    unsigned int tTotalAlnLen;
-    float qCov;
-    float tCov;
     double qTM;
     double tTM;
-    std::vector<double> alignedQChainTmScores;
-    std::vector<double> alignedTChainTmScores;
     std::vector<unsigned int> qChainKeys;
     std::vector<unsigned int> tChainKeys;
     float t[3];
     float u[3][3];
+    unsigned int qTotalAlnLen;
+    unsigned int tTotalAlnLen;
+    float qCov;
+    float tCov;
+    std::vector<double> alignedQChainTmScores;
+    std::vector<double> alignedTChainTmScores;
 
-    
     ComplexFilterCriteria() {}
-    ComplexFilterCriteria(unsigned int dbKey, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &tChainKeys, double qTM, double tTM, float tstring[3], float ustring[3][3]) :
+    ComplexFilterCriteria(unsigned int dbKey, double qTM, double tTM, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &tChainKeys, float tstring[3], float ustring[3][3]) :
                             dbKey(dbKey), qTM(qTM), tTM(tTM), qChainKeys(qChainKeys), tChainKeys(tChainKeys), qTotalAlnLen(0), tTotalAlnLen(0) {
                                 std::copy(tstring, tstring + 3, t);
                                 for (int i = 0; i < 3; i++) {
@@ -67,7 +64,6 @@ public:
 
     bool hasTM(float TMThr, int covMode, int filterMode){
         switch (filterMode){
-            case LocalParameters::FILTER_MODE_INTERFACE:
             case LocalParameters::FILTER_MODE_LOOSE:
                 switch (covMode) {
                     case Parameters::COV_MODE_BIDIRECTIONAL:
@@ -81,12 +77,13 @@ public:
                     case Parameters::COV_MODE_LENGTH_SHORTER :
                         return true;
                 }
+            case LocalParameters::FILTER_MODE_INTERFACE:
             case LocalParameters::FILTER_MODE_CONFORMATION:
                 return true;
         }
     }
 
-    bool hasChainNum(int covMode, int filterMode, int qChainNum, int tChainNum ){
+    bool hasChainNum(int covMode, int filterMode, size_t qChainNum, size_t tChainNum ){
         switch (filterMode){
             case LocalParameters::FILTER_MODE_INTERFACE:
                 switch (covMode) {
@@ -116,10 +113,8 @@ public:
                 }
             case LocalParameters::FILTER_MODE_LOOSE:
                 return true;
-
         }
     } 
-
 
     bool hasChainTm(float chainTMThr, int covMode, int filterMode, unsigned int qChainNum, unsigned int tChainNum) {
         switch (filterMode){
@@ -158,31 +153,31 @@ public:
                     case Parameters::COV_MODE_LENGTH_QUERY :
                     case Parameters::COV_MODE_LENGTH_TARGET :
                     case Parameters::COV_MODE_LENGTH_SHORTER :
-                        break;
-                    return true;
+                        return true;
                 }
+                return true;
             case LocalParameters::FILTER_MODE_CONFORMATION:
             case LocalParameters::FILTER_MODE_LOOSE:
                 return true;
-
+        }
     }
 
     bool isConformation(int filterMode, float chainTMThr){
         switch (filterMode){
             case LocalParameters::FILTER_MODE_CONFORMATION:
-                
+                //TODO
             case LocalParameters::FILTER_MODE_INTERFACE:
             case LocalParameters::FILTER_MODE_LOOSE:
                 return true;
-
+        }
     }
 
-    bool satisfy(int covMode, int filterMode, float covThr, float TMThr, float chainTMThr, int qChainNum, int tChainNum ) {
+    bool satisfy(int covMode, int filterMode, float covThr, float TMThr, float chainTMThr, size_t qChainNum, size_t tChainNum ) {
         const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
         const bool TMOK = hasTM(TMThr, covMode, filterMode);
         const bool chainNumOK = hasChainNum(covMode, filterMode, qChainNum, tChainNum);
         const bool chainTMOK = hasChainTm(chainTMThr, covMode, filterMode, qChainNum, tChainNum);
-        const bool conformationOK = isConformation(filterMode, chainTMThr)
+        const bool conformationOK = isConformation(filterMode, chainTMThr);
         return (covOK && TMOK && chainNumOK && chainTMOK);
     }
 
@@ -509,7 +504,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     unsigned int qtotalaln = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                     unsigned int ttotalaln = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
                     if (localComplexMap.find(assId) == localComplexMap.end()) {
-                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tChainKey, qChainKeys, tChainKeys, retComplex.qTmScore, retComplex.tTmScore, t, u);
+                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tChainKey, retComplex.qTmScore, retComplex.tTmScore, qChainKeys, tChainKeys, t, u);
                         localComplexMap[assId] = cmplfiltcrit;
                         localComplexMap.at(assId).update(qChainKey, tChainKey, qtotalaln, ttotalaln, qChainTm, tChainTm);
                     } else {
@@ -522,7 +517,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
                 std::vector<unsigned int> tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
                 assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
-                if (!(assId_res.second.satisfy(par.covMode, par.filterMode, par.covThr, par.filtComplexTmThr, par.filtChainTmThr, qChainKeys.size(), tChainKeys.size()))){
+                if (!(assId_res.second.satisfy(par.covMode, par.filterMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, qChainKeys.size(), tChainKeys.size()))){
                     assIdsToDelete.push_back(assId_res.first);
                 }
             }
