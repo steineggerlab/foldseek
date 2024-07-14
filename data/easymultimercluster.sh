@@ -88,8 +88,8 @@ fi
 
 if notExists "${TMP_PATH}/complex_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" complexcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${COMPLEXCLUSTER_PAR} \
-        || fail "Complexcluster died"
+    "$MMSEQS" multimerxcluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
+        || fail "Multimercluster died"
 fi
 
 SOURCE="${TMP_PATH}/input"
@@ -155,5 +155,5 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/input_ss" ${VERBOSITY_PAR}
     rm "${TMP_PATH}/rep_seqs.list"
     rm -rf "${TMP_PATH}/latest"
-    rm -f "${TMP_PATH}/easycomplexcluster.sh"
+    rm -f "${TMP_PATH}/easymultimercluster.sh"
 fi

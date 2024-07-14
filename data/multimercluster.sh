@@ -124,5 +124,5 @@ if [ -n "${REMOVE_TMP}" ]; then
     rm "${TMP_PATH}/complex_header.tsv"
     rm "${TMP_PATH}/complex_header.tsv_redundant"
     rm -rf "${TMP_PATH}/complexsearch_tmp"
-    rm -f "${TMP_PATH}/complexcluster.sh"
+    rm -f "${TMP_PATH}/multimercluster.sh"
 fi
