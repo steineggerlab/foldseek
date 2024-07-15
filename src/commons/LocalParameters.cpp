@@ -183,6 +183,8 @@ LocalParameters::LocalParameters() :
     scorecomplex.push_back(&PARAM_V);
     scorecomplex.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
     scorecomplex.push_back(&PARAM_EPS_INIT);
+    scorecomplex.push_back(&PARAM_EPS_DELTA);
+    scorecomplex.push_back(&PARAM_CV_THRESHOLD);
 
     // createcomplexreport
     createcomplexreport.push_back(&PARAM_DB_OUTPUT);
