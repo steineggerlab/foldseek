@@ -26,9 +26,7 @@ unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
             return qcov;
         case Parameters::COV_MODE_QUERY:
             return tcov;
-        case Parameters::COV_MODE_LENGTH_QUERY :
-        case Parameters::COV_MODE_LENGTH_TARGET :
-        case Parameters::COV_MODE_LENGTH_SHORTER :
+        default:
             return 0;
     }
 }
@@ -72,13 +70,10 @@ public:
                         return (tTM >= TMThr);
                     case Parameters::COV_MODE_QUERY:
                         return (qTM >= TMThr);
-                    case Parameters::COV_MODE_LENGTH_QUERY :
-                    case Parameters::COV_MODE_LENGTH_TARGET :
-                    case Parameters::COV_MODE_LENGTH_SHORTER :
+                    default:
                         return true;
                 }
-            case LocalParameters::FILTER_MODE_INTERFACE:
-            case LocalParameters::FILTER_MODE_CONFORMATION:
+            default:
                 return true;
         }
     }
@@ -93,9 +88,7 @@ public:
                         return (alignedTChainTmScores.size()==tChainNum);
                     case Parameters::COV_MODE_QUERY:
                         return (alignedQChainTmScores.size()==qChainNum);
-                    case Parameters::COV_MODE_LENGTH_QUERY :
-                    case Parameters::COV_MODE_LENGTH_TARGET :
-                    case Parameters::COV_MODE_LENGTH_SHORTER :
+                    default:
                         return true;
                 }
             case LocalParameters::FILTER_MODE_CONFORMATION:
@@ -106,12 +99,10 @@ public:
                         return (qChainNum>=tChainNum);
                     case Parameters::COV_MODE_QUERY:
                         return (qChainNum<=tChainNum);
-                    case Parameters::COV_MODE_LENGTH_QUERY :
-                    case Parameters::COV_MODE_LENGTH_TARGET :
-                    case Parameters::COV_MODE_LENGTH_SHORTER :
+                    default:
                         return true;
                 }
-            case LocalParameters::FILTER_MODE_LOOSE:
+            default:
                 return true;
         }
     } 
@@ -150,14 +141,11 @@ public:
                             }
                         }
                         break;
-                    case Parameters::COV_MODE_LENGTH_QUERY :
-                    case Parameters::COV_MODE_LENGTH_TARGET :
-                    case Parameters::COV_MODE_LENGTH_SHORTER :
+                    default:
                         return true;
                 }
                 return true;
-            case LocalParameters::FILTER_MODE_CONFORMATION:
-            case LocalParameters::FILTER_MODE_LOOSE:
+            default:
                 return true;
         }
     }
@@ -166,8 +154,7 @@ public:
         switch (filterMode){
             case LocalParameters::FILTER_MODE_CONFORMATION:
                 //TODO
-            case LocalParameters::FILTER_MODE_INTERFACE:
-            case LocalParameters::FILTER_MODE_LOOSE:
+            default:
                 return true;
         }
     }
@@ -347,7 +334,7 @@ static void getlookupInfo(
     lookupDB.close();
 }
 
-int filtercomplex(int argc, const char **argv, const Command &command) {
+int filtermultimer(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
     const bool sameDB = par.db1.compare(par.db2) == 0 ? true : false;
