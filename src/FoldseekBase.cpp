@@ -377,7 +377,7 @@ std::vector<Command> foldseekCommands = {
         {"createmultimerreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
                 "Convert complexDB to tsv format",
                 "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u, t, assId\n"
-                "#  (1,2) identifiers for query and target multimer,\n"
+                "#  (1,2) identifiers for query and target multimers,\n"
                 "#  (3,4) chains of query multimer and target multimer,\n"
                 "#  (5,6) tm score based on query and target residue length,\n"
                 "#  (8,9) u and t,\n"
