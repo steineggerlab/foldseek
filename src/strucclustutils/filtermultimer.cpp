@@ -10,8 +10,7 @@
 #include "Coordinate16.h"
 #include "tmalign/basic_fun.h"
 #include "MultimerUtil.h"
-#include "LDDT.h"
-#include "CalcProbTP.h"
+// #include "LDDT.h"
 #include <map>
 
 #ifdef OPENMP
