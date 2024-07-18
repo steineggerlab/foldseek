@@ -60,111 +60,93 @@ public:
     }
 
     bool hasTM(float TMThr, int covMode, int filterMode){
-        switch (filterMode){
-            case LocalParameters::FILTER_MODE_LOOSE:
-                switch (covMode) {
-                    case Parameters::COV_MODE_BIDIRECTIONAL:
-                        return ((qTM>= TMThr) && (tTM >= TMThr));
-                    case Parameters::COV_MODE_TARGET:   
-                        return (tTM >= TMThr);
-                    case Parameters::COV_MODE_QUERY:
-                        return (qTM >= TMThr);
-                    default:
-                        return true;
-                }
+        switch (covMode) {
+            case Parameters::COV_MODE_BIDIRECTIONAL:
+                return ((qTM>= TMThr) && (tTM >= TMThr));
+            case Parameters::COV_MODE_TARGET:   
+                return (tTM >= TMThr);
+            case Parameters::COV_MODE_QUERY:
+                return (qTM >= TMThr);
             default:
                 return true;
         }
     }
 
-    bool hasChainNum(int covMode, int filterMode, size_t qChainNum, size_t tChainNum ){
-        switch (filterMode){
-            case LocalParameters::FILTER_MODE_INTERFACE:
-                switch (covMode) {
-                    case Parameters::COV_MODE_BIDIRECTIONAL:
-                        return (alignedQChainTmScores.size()==qChainNum && qChainNum==tChainNum);
-                    case Parameters::COV_MODE_TARGET:
-                        return (alignedTChainTmScores.size()==tChainNum);
-                    case Parameters::COV_MODE_QUERY:
-                        return (alignedQChainTmScores.size()==qChainNum);
-                    default:
-                        return true;
-                }
-            case LocalParameters::FILTER_MODE_CONFORMATION:
-                switch (covMode) {
-                    case Parameters::COV_MODE_BIDIRECTIONAL:
-                        return (qChainNum==tChainNum);
-                    case Parameters::COV_MODE_TARGET:
-                        return (qChainNum>=tChainNum);
-                    case Parameters::COV_MODE_QUERY:
-                        return (qChainNum<=tChainNum);
-                    default:
-                        return true;
-                }
-            default:
-                return true;
-        }
-    } 
+    // bool hasChainNum(int covMode, int filterMode, size_t qChainNum, size_t tChainNum ){
+    //     switch (filterMode){
+    //         case LocalParameters::FILTER_MODE_INTERFACE:
+    //             switch (covMode) {
+    //                 case Parameters::COV_MODE_BIDIRECTIONAL:
+    //                     return (alignedQChainTmScores.size()==qChainNum && qChainNum==tChainNum);
+    //                 case Parameters::COV_MODE_TARGET:
+    //                     return (alignedTChainTmScores.size()==tChainNum);
+    //                 case Parameters::COV_MODE_QUERY:
+    //                     return (alignedQChainTmScores.size()==qChainNum);
+    //                 default:
+    //                     return true;
+    //             }
+    //         case LocalParameters::FILTER_MODE_CONFORMATION:
+    //             switch (covMode) {
+    //                 case Parameters::COV_MODE_BIDIRECTIONAL:
+    //                     return (qChainNum==tChainNum);
+    //                 case Parameters::COV_MODE_TARGET:
+    //                     return (qChainNum>=tChainNum);
+    //                 case Parameters::COV_MODE_QUERY:
+    //                     return (qChainNum<=tChainNum);
+    //                 default:
+    //                     return true;
+    //             }
+    //         default:
+    //             return true;
+    //     }
+    // } 
 
     bool hasChainTm(float chainTMThr, int covMode, int filterMode, unsigned int qChainNum, unsigned int tChainNum) {
-        switch (filterMode){
-            case LocalParameters::FILTER_MODE_INTERFACE:
-                switch (covMode) {
-                    case Parameters::COV_MODE_BIDIRECTIONAL:
-                        if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                            return false;
-                        }
-                        for (size_t i = 0; i < alignedQChainTmScores.size(); i++) {
-                            if (alignedQChainTmScores[i] < chainTMThr || alignedTChainTmScores[i] < chainTMThr) {
-                                return false;
-                            }
-                        }
-                        break;
-                    case Parameters::COV_MODE_TARGET:
-                        if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                            return false;
-                        }
-                        for (size_t i = 0; i < alignedTChainTmScores.size(); i++) {
-                            if (alignedTChainTmScores[i] < chainTMThr) {
-                                return false;
-                            }
-                        }
-                        break;
-                    case Parameters::COV_MODE_QUERY:
-                        if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                            return false;
-                        }
-                        for (size_t i = 0; i < alignedQChainTmScores.size(); i++) {
-                            if (alignedQChainTmScores[i] < chainTMThr) {
-                                return false;
-                            }
-                        }
-                        break;
-                    default:
-                        return true;
+        switch (covMode) {
+            case Parameters::COV_MODE_BIDIRECTIONAL:
+                if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
+                    return false;
                 }
-                return true;
+                for (size_t i = 0; i < alignedQChainTmScores.size(); i++) {
+                    if (alignedQChainTmScores[i] < chainTMThr || alignedTChainTmScores[i] < chainTMThr) {
+                        return false;
+                    }
+                }
+                break;
+            case Parameters::COV_MODE_TARGET:
+                if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
+                    return false;
+                }
+                for (size_t i = 0; i < alignedTChainTmScores.size(); i++) {
+                    if (alignedTChainTmScores[i] < chainTMThr) {
+                        return false;
+                    }
+                }
+                break;
+            case Parameters::COV_MODE_QUERY:
+                if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
+                    return false;
+                }
+                for (size_t i = 0; i < alignedQChainTmScores.size(); i++) {
+                    if (alignedQChainTmScores[i] < chainTMThr) {
+                        return false;
+                    }
+                }
+                break;
             default:
                 return true;
         }
-    }
-
-    bool isConformation(int filterMode, float chainTMThr){
-        switch (filterMode){
-            case LocalParameters::FILTER_MODE_CONFORMATION:
-                //TODO
-            default:
-                return true;
-        }
+        return true;
     }
 
     bool satisfy(int covMode, int filterMode, float covThr, float TMThr, float chainTMThr, size_t qChainNum, size_t tChainNum ) {
         const bool covOK = Util::hasCoverage(covThr, covMode, qCov, tCov);
         const bool TMOK = hasTM(TMThr, covMode, filterMode);
-        const bool chainNumOK = hasChainNum(covMode, filterMode, qChainNum, tChainNum);
+        // const bool chainNumOK = hasChainNum(covMode, filterMode, qChainNum, tChainNum);
         const bool chainTMOK = hasChainTm(chainTMThr, covMode, filterMode, qChainNum, tChainNum);
-        const bool conformationOK = isConformation(filterMode, chainTMThr);
-        return (covOK && TMOK && chainNumOK && chainTMOK);
+        // const bool conformationOK = isConformation(filterMode, chainTMThr);
+        // return (covOK && TMOK && chainNumOK && chainTMOK);
+         return (covOK && TMOK && chainTMOK);
     }
 
     void update(unsigned int qChainKey, unsigned int tChainKey, unsigned int qTotalAlnLen, unsigned int tTotalAlnLen, double qChainTm, double tChainTm) {
