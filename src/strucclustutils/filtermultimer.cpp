@@ -17,6 +17,19 @@
 #include <omp.h>
 #endif
 
+struct Complex {
+    int complexId;
+    std::string complexName;
+    unsigned int nChain;
+    std::vector<unsigned int> chainKeys;
+
+    unsigned int complexLength;
+
+    // Coordinate16 Coords;
+
+    Complex() : complexId(0), complexName(""), nChain(0), complexLength(0) {}
+};
+
 unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
     switch (covMode) {
         case Parameters::COV_MODE_BIDIRECTIONAL:
@@ -262,24 +275,31 @@ double computeChainTmScore(Coordinates &qm, Coordinates &tm, float t[3], float u
     return tmscore;
 }
 
-unsigned int getComplexResidueLength( IndexReader *Dbr, std::vector<unsigned int> &ChainKeys) {
-        unsigned int ResidueLen = 0;
-        for (auto ChainKey: ChainKeys) {
-            size_t id = Dbr->sequenceReader->getId(ChainKey);
+void getComplexResidueLength( IndexReader *Dbr, std::vector<Complex> &complexes) {
+    for (size_t complexIdx = 0; complexIdx < complexes.size(); complexIdx++) {
+        Complex *complex = &complexes[complexIdx];
+        unsigned int complexId = complex->complexId;
+        std::vector<unsigned int> &chainKeys = complex->chainKeys;
+        if (chainKeys.empty()) {
+            continue;
+        }
+        unsigned int reslen = 0;
+        for (auto chainKey: chainKeys) {
+            size_t id = Dbr->sequenceReader->getId(chainKey);
             // Not accessible
             if (id == NOT_AVAILABLE_CHAIN_KEY)
-                return 0;
-            ResidueLen += Dbr->sequenceReader->getSeqLen(id);
+                continue;
+            reslen += Dbr->sequenceReader->getSeqLen(id);
         }
-        return ResidueLen;
+        complex->complexLength = reslen;
+    }
 }
 
 static void getlookupInfo(
         const std::string &file,
-        std::map<unsigned int, std::string> &complexIdtoName,
         std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
-        std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
-        std::vector<unsigned int> &complexIdVec
+        std::vector<Complex> &complexes,
+        std::map<unsigned int, unsigned int> &complexIdtoIdx
 ) {
     if (file.length() == 0) {
         return;
@@ -288,7 +308,9 @@ static void getlookupInfo(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
+
     int prevComplexId =  -1;
+    int nComplex = 0;
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -296,20 +318,26 @@ static void getlookupInfo(
             continue;
         }
         auto chainKey = Util::fast_atoi<int>(entry[0]);
-        std::string chainName(entry[1], (entry[2] - entry[1]) - 1);
         auto complexId = Util::fast_atoi<int>(entry[2]);
         chainKeyToComplexIdLookup.emplace(chainKey, complexId);
         
+        std::string chainName(entry[1], (entry[2] - entry[1]) - 1);
         size_t lastUnderscoreIndex = chainName.find_last_of('_');
         std::string complexName = chainName.substr(0, lastUnderscoreIndex);
 
         if (complexId != prevComplexId) {
-            complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
-            complexIdVec.emplace_back(complexId);
-            complexIdtoName.emplace(complexId, complexName);
+            
+            Complex complex;
+            complex.complexId = complexId;
+            complex.complexName = complexName;
+            complexIdtoIdx.emplace(complexId, nComplex);
+            complexes.emplace_back(complex);
+
             prevComplexId = complexId;
+            nComplex++;
         }
-        complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
+        complexes.back().chainKeys.emplace_back(chainKey);
+        complexes.back().nChain++;
         data = Util::skipLine(data);
     }
     lookupDB.close();
@@ -361,37 +389,23 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     std::string qLookupFile = par.db1 + ".lookup";
     std::string tLookupFile = par.db2 + ".lookup";
     
+    std::vector<Complex> qComplexes, tComplexes;
+    std::map<unsigned int, unsigned int> qComplexIdToIdx, tComplexIdToIdx;
     chainKeyToComplexId_t qChainKeyToComplexIdMap, tChainKeyToComplexIdMap;
-    complexIdToChainKeys_t qComplexIdToChainKeyMap, tComplexIdToChainKeyMap;
-    std::map<unsigned int, std::string> qcomplexIdToName, tcomplexIdToName;
-    std::vector<unsigned int> qComplexIdVec, tComplexIdVec;
-    getlookupInfo(qLookupFile, qcomplexIdToName,qChainKeyToComplexIdMap, qComplexIdToChainKeyMap, qComplexIdVec);
-    getlookupInfo(tLookupFile, tcomplexIdToName, tChainKeyToComplexIdMap, tComplexIdToChainKeyMap, tComplexIdVec);
-    qChainKeyToComplexIdMap.clear();
-    Debug::Progress progress(qComplexIdVec.size());
-    std::map<unsigned int, unsigned int> qComplexLength, tComplexLength;
+
+    getlookupInfo(qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx);
+    getComplexResidueLength(qDbr, qComplexes);    
+    Debug::Progress progress(qComplexes.size());
     std::map<unsigned int, std::string> qComplexIdResult;
 
-    for (size_t tComplexIdx = 0; tComplexIdx < tComplexIdVec.size(); tComplexIdx++) {
-        unsigned int tComplexId = tComplexIdVec[tComplexIdx];
-        std::vector<unsigned int> &tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
-        if (tChainKeys.empty()) {
-            continue;
-        }
-        unsigned int reslen = getComplexResidueLength(tDbr, tChainKeys);
-        tComplexLength[tComplexId] =reslen;
+    if (sameDB) {
+        tChainKeyToComplexIdMap = qChainKeyToComplexIdMap;
+        tComplexes = qComplexes;
+        tComplexIdToIdx = qComplexIdToIdx;
+    } else {
+        getlookupInfo(tLookupFile, tChainKeyToComplexIdMap, tComplexes, tComplexIdToIdx);
+        getComplexResidueLength(tDbr, tComplexes);
     }
-    for (size_t qComplexIdx = 0; qComplexIdx < qComplexIdVec.size(); qComplexIdx++) {
-        unsigned int qComplexId = qComplexIdVec[qComplexIdx];
-        std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
-        if (qChainKeys.empty()) {
-            continue;
-        }
-        unsigned int reslen = getComplexResidueLength(qDbr, qChainKeys);
-        qComplexLength[qComplexId] = reslen;
-    }
-
-    
     
 #pragma omp parallel num_threads(localThreads) 
     {   
@@ -412,11 +426,14 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         
         Matcher::result_t res;
 #pragma omp for schedule(dynamic, 1)    
-        for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
+        for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexes.size(); queryComplexIdx++) {
+            // DOING
             progress.updateProgress();
-            unsigned int qComplexId = qComplexIdVec[queryComplexIdx];
-            std::vector<unsigned int> qChainKeys = qComplexIdToChainKeyMap.at(qComplexId);
-
+   
+            Complex qComplex = qComplexes[queryComplexIdx];
+            unsigned int qComplexId = qComplex.complexId;
+            std::vector<unsigned int> qChainKeys = qComplex.chainKeys;
+            
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainAlnId = alnDbr.getId(qChainKey);
@@ -426,7 +443,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
                     result.append(buffer, (outpos - buffer - 1));
                     result.push_back('\n');
-                    result5.append(qcomplexIdToName.at(qComplexId) + "\t" + tcomplexIdToName.at(qComplexId) + "\t1.000000\t1.000000\t1.000000\t1.000000\n");
+                    result5.append(qComplex.complexName + "\t" + tComplexes[queryComplexIdx].complexName + "\t1.000000\t1.000000\t1.000000\t1.000000\n");
                     break;
                 }
                 
@@ -452,7 +469,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     }
                     unsigned int tChainDbId = tDbr->sequenceReader->getId(tChainKey);
                     unsigned int tComplexId = tChainKeyToComplexIdMap.at(tChainKey);
-                    std::vector<unsigned int> tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
+                    unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
+                    std::vector<unsigned int> tChainKeys = tComplexes[tComplexIdx].chainKeys;
                     
                     float u[3][3];
                     float t[3];
@@ -483,9 +501,11 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             }
             for (auto& assId_res : localComplexMap){
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.dbKey);
-                std::vector<unsigned int> tChainKeys = tComplexIdToChainKeyMap.at(tComplexId);
-                assId_res.second.calcCov(qComplexLength.at(qComplexId), tComplexLength.at(tComplexId));
-                if (!(assId_res.second.satisfy(par.covMode, par.filterMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, qChainKeys.size(), tChainKeys.size()))){
+                unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
+                Complex tComplex = tComplexes[tComplexIdx];
+                std::vector<unsigned int> tChainKeys = tComplex.chainKeys;
+                assId_res.second.calcCov(qComplex.complexLength, tComplex.complexLength);
+                if (!(assId_res.second.satisfy(par.covMode, par.filterMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, qComplex.nChain, tComplex.nChain))){
                     assIdsToDelete.push_back(assId_res.first);
                 }
             }
@@ -514,10 +534,13 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++){
                 unsigned int assId = selectedAssIDs[assIdidx];
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(localComplexMap.at(assId).dbKey);
+                unsigned int tComplexIdIdx = tComplexIdToIdx.at(tComplexId);
+                Complex tComplex = tComplexes[tComplexIdIdx];
+                
                 char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
                 result.append(buffer, (outpos - buffer - 1));
                 result.push_back('\n');
-                result5.append(qcomplexIdToName.at(qComplexId) + "\t" + tcomplexIdToName.at(tComplexId) + "\t" + std::to_string(localComplexMap.at(assId).qCov) + "\t" + std::to_string(localComplexMap.at(assId).tCov) + "\t"+ std::to_string(localComplexMap.at(assId).qTM)+"\t"+ std::to_string(localComplexMap.at(assId).tTM)+ "\n");
+                result5.append(qComplex.complexName + "\t" + tComplex.complexName + "\t" + std::to_string(localComplexMap.at(assId).qCov) + "\t" + std::to_string(localComplexMap.at(assId).tCov) + "\t"+ std::to_string(localComplexMap.at(assId).qTM)+"\t"+ std::to_string(localComplexMap.at(assId).tTM)+ "\n");
             }
             #pragma omp critical
             {
@@ -551,14 +574,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     }
     qChainKeyToComplexIdMap.clear();
     tChainKeyToComplexIdMap.clear();
-    qComplexIdToChainKeyMap.clear();
-    tComplexIdToChainKeyMap.clear();
-    qcomplexIdToName.clear();
-    tcomplexIdToName.clear();
-    qComplexIdVec.clear();
-    tComplexIdVec.clear();
-    qComplexLength.clear();
-    tComplexLength.clear();
+    qComplexes.clear();
+    tComplexes.clear();
     
     return EXIT_SUCCESS;
 }
