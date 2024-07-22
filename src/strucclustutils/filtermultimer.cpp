@@ -49,6 +49,7 @@ unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
 
 class ComplexFilterCriteria {
 public:
+    // unsigned int dbKey; //FIXME: dbkey is key of chain?
     unsigned int targetComplexId;
     double qTM;
     double tTM;
@@ -505,7 +506,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     if (localComplexMap.find(assId) == localComplexMap.end()) {
                         // ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tChainKey, retComplex.qTmScore, retComplex.tTmScore, qChainKeys, tChainKeys, t, u);
                         // ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tChainKey, retComplex.qTmScore, retComplex.tTmScore, t, u);
-                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tComplexId, retComplex.qTmScore, retComplex.tTmScore, t, u);
+                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tComplexId, retComplex.qTmScore, retComplex.tTmScore, t, u); // FIXME: Critical mistake
                         localComplexMap[assId] = cmplfiltcrit;
                         // localComplexMap.at(assId).update(qChainKey, tChainKey, qalnlen, talnlen, qChainTm, tChainTm);
                         localComplexMap.at(assId).update(qalnlen, talnlen, qChainTm, tChainTm);
@@ -548,8 +549,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++){
                 unsigned int assId = selectedAssIDs[assIdidx];
                 unsigned int tComplexId = tChainKeyToComplexIdMap.at(localComplexMap.at(assId).targetComplexId);
-                unsigned int tComplexIdIdx = tComplexIdToIdx.at(tComplexId);
-                Complex tComplex = tComplexes[tComplexIdIdx];
+                unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
+                Complex tComplex = tComplexes[tComplexIdx];
                 
                 char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
                 result.append(buffer, (outpos - buffer - 1));
