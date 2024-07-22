@@ -122,11 +122,11 @@ public:
     // } 
 
     bool hasChainTm(float chainTMThr, int covMode, unsigned int qChainNum, unsigned int tChainNum) {
+        if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
+            return false;
+        }
         switch (covMode) {
             case Parameters::COV_MODE_BIDIRECTIONAL:
-                // if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                //     return false;
-                // }
                 for (size_t i = 0; i < alignedQChainTmScores.size(); i++) {
                     if (alignedQChainTmScores[i] < chainTMThr || alignedTChainTmScores[i] < chainTMThr) {
                         return false;
@@ -134,10 +134,6 @@ public:
                 }
                 break;
             case Parameters::COV_MODE_TARGET:
-                //FIXME : Why does this have if statement?
-                // if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                //     return false;
-                // }
                 for (size_t i = 0; i < alignedTChainTmScores.size(); i++) {
                     if (alignedTChainTmScores[i] < chainTMThr) {
                         return false;
@@ -145,9 +141,6 @@ public:
                 }
                 break;
             case Parameters::COV_MODE_QUERY:
-                // if (alignedQChainTmScores.size()<std::min(qChainNum, tChainNum)){
-                //     return false;
-                // }
                 for (size_t i = 0; i < alignedQChainTmScores.size(); i++) {
                     if (alignedQChainTmScores[i] < chainTMThr) {
                         return false;
@@ -165,6 +158,7 @@ public:
         const bool TMOK = TMThr ? hasTM(TMThr, covMode, filterMode) : true;
         // const bool chainNumOK = hasChainNum(covMode, filterMode, qChainNum, tChainNum);
         const bool chainTMOK = chainTMThr ? hasChainTm(chainTMThr, covMode, qChainNum, tChainNum) : true;
+        // const bool chainTMOK = hasChainTm(chainTMThr, covMode, qChainNum, tChainNum);
 
         // const bool conformationOK = isConformation(filterMode, chainTMThr);
         // return (covOK && TMOK && chainNumOK && chainTMOK);
@@ -436,7 +430,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         Matcher::result_t res;
 #pragma omp for schedule(dynamic, 1)    
         for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
-            // DOING
             progress.updateProgress();
    
             Complex qComplex = qComplexes[qComplexIdx];
@@ -520,12 +513,13 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             
             // Filter the target complexes and get the best alignment
             for (auto& assId_res : localComplexMap){
-                unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.targetComplexId);
+                // unsigned int tComplexId = tChainKeyToComplexIdMap.at(assId_res.second.targetComplexId);
+                unsigned int tComplexId  = assId_res.second.targetComplexId;
                 unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
-                Complex tComplex = tComplexes[tComplexIdx];
+                Complex  tComplex        = tComplexes[tComplexIdx];
 
                 assId_res.second.calcCov(qComplex.complexLength, tComplex.complexLength);
-                // Check if the criteria is satisfied
+                // Check if the criteria are met
                 if (!(assId_res.second.satisfy(par.covMode, par.filterMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, qComplex.nChain, tComplex.nChain))){
                     continue;
                 }
@@ -548,7 +542,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
 
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++){
                 unsigned int assId = selectedAssIDs[assIdidx];
-                unsigned int tComplexId = tChainKeyToComplexIdMap.at(localComplexMap.at(assId).targetComplexId);
+                // unsigned int tComplexId = tChainKeyToComplexIdMap.at(localComplexMap.at(assId).targetComplexId);
+                unsigned int tComplexId = localComplexMap.at(assId).targetComplexId;
                 unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
                 Complex tComplex = tComplexes[tComplexIdx];
                 
