@@ -19,15 +19,14 @@
 
 struct Complex {
     int complexId;
-    std::string complexName;
     unsigned int nChain;
-    std::vector<unsigned int> chainKeys;
-
     unsigned int complexLength;
+    std::string complexName;
+    std::vector<unsigned int> chainKeys;
 
     // Coordinate16 Coords;
 
-    Complex() : complexId(0), complexName(""), nChain(0), complexLength(0) {}
+    Complex() : complexId(0), nChain(0), complexLength(0), complexName("") {}
     ~Complex() {
         chainKeys.clear();
     }
@@ -51,16 +50,16 @@ class ComplexFilterCriteria {
 public:
     // unsigned int dbKey; //FIXME: dbkey is key of chain?
     unsigned int targetComplexId;
+    unsigned int qTotalAlnLen;
+    unsigned int tTotalAlnLen;
+    float t[3];
+    float u[3][3];
+    float qCov;
+    float tCov;
     double qTM;
     double tTM;
     // std::vector<unsigned int> qChainKeys;
     // std::vector<unsigned int> tChainKeys;
-    float t[3];
-    float u[3][3];
-    unsigned int qTotalAlnLen;
-    unsigned int tTotalAlnLen;
-    float qCov;
-    float tCov;
     std::vector<double> alignedQChainTmScores;
     std::vector<double> alignedTChainTmScores;
 
@@ -68,7 +67,7 @@ public:
     // ComplexFilterCriteria(unsigned int dbKey, double qTM, double tTM, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &tChainKeys, float tstring[3], float ustring[3][3]) :
                             // dbKey(dbKey), qTM(qTM), tTM(tTM), qChainKeys(qChainKeys), tChainKeys(tChainKeys), qTotalAlnLen(0), tTotalAlnLen(0) {
     ComplexFilterCriteria(unsigned int targetComplexId, double qTM, double tTM, float tstring[3], float ustring[3][3]) :
-                            targetComplexId(targetComplexId), qTM(qTM), tTM(tTM), qTotalAlnLen(0), tTotalAlnLen(0) {
+                            targetComplexId(targetComplexId), qTotalAlnLen(0), tTotalAlnLen(0), qTM(qTM), tTM(tTM) {
                                 std::copy(tstring, tstring + 3, t);
                                 for (int i = 0; i < 3; i++) {
                                     std::copy(ustring[i], ustring[i] + 3, u[i]);
