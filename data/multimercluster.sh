@@ -53,12 +53,12 @@ buldCmplhDb(){
         {
             split($2,words," ")
             split(words[1],parts,"_")
-            output_string=""
-            for (j = 1; j < length(parts); j++) {
-                output_string = output_string parts[j]
+            output_string=parts[1]
+            for (j = 2; j < length(parts); j++) {
                 if (j < length(parts)-1){
                     output_string=output_string"_" 
                 }
+                output_string = output_string parts[j]
             }
             headerstring=""
             for (k = 2; k < length(words)+1; k++) {
