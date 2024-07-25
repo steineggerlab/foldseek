@@ -59,12 +59,12 @@ public:
     unsigned int targetComplexId;
 
     // per complex
-    double qTM;
-    double tTM;
     unsigned int qTotalAlnLen;
     unsigned int tTotalAlnLen;
     float qCov;
     float tCov;
+    double qTM;
+    double tTM;
     float t[3];
     float u[3][3];
 
