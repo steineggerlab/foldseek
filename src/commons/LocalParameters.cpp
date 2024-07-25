@@ -36,6 +36,7 @@ LocalParameters::LocalParameters() :
         PARAM_GPU(PARAM_GPU_ID, "--gpu", "Use GPU", "Use GPU (CUDA) if possible", typeid(int), (void *) &gpu, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON),
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_FILTER_MODE(PARAM_FILTER_MODE_ID, "--filter-mode", "Filter mode", "0: Interface\n1: Conformation\n2: loose", typeid(int), (void *) &filterMode, "[0-2]{0}$", MMseqsParameter::COMMAND_CLUST)
         
        {
@@ -196,6 +197,7 @@ LocalParameters::LocalParameters() :
     filtermultimer.push_back(&PARAM_COV_MODE);
     filtermultimer.push_back(&PARAM_MULTIMER_TM_THRESHOLD);
     filtermultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
+    filtermultimer.push_back(&PARAM_INTERFACE_LDDT_THRESHOLD);
     filtermultimer.push_back(&PARAM_FILTER_MODE);
 
     // createmultimerreport
@@ -270,6 +272,7 @@ LocalParameters::LocalParameters() :
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, doi:10.1101/2023.07.23.550085 (2024)");
     filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;
+    filtInterfaceLddtThr = 0.0;
     filterMode = 0;
     prostt5Model = "";
     gpu = 0;
