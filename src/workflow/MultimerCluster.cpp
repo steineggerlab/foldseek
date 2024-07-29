@@ -10,12 +10,8 @@
 
 void setMultimerClusterDefaults(LocalParameters *p) {
     p->filtMultimerTmThr = 0.5; // FIX
-<<<<<<< HEAD
     // p->filtChainTmThr=0.0; // FIX
     // p->filtInterfaceLddtThr = 0.0; // FIX
-=======
-    p->filtChainTmThr=0.0; // FIX
->>>>>>> master
     p->filterMode=0;
 }
 
