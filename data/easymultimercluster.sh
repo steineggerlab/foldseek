@@ -80,19 +80,19 @@ postprocessFasta() {
     ' "${1}" > "${1}.tmp" && mv "${1}.tmp" "${1}"
 }
 
-if notExists "${TMP_PATH}/input.dbtype"; then
+if notExists "${TMP_PATH}/query.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/input" ${CREATEDB_PAR} \
-        || fail "input createdb died"
+    "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/query" ${CREATEDB_PAR} \
+        || fail "query createdb died"
 fi
 
 if notExists "${TMP_PATH}/complex_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimercluster "${TMP_PATH}/input" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
+    "$MMSEQS" multimercluster "${TMP_PATH}/query" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
         || fail "Multimercluster died"
 fi
 
-SOURCE="${TMP_PATH}/input"
+SOURCE="${TMP_PATH}/query"
 INPUT="${TMP_PATH}/latest/complex_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
@@ -142,17 +142,17 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_clu" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/query" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input_h" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/query_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input_ca" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/input_ss" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
     rm "${TMP_PATH}/rep_seqs.list"
     rm -rf "${TMP_PATH}/latest"
     rm -f "${TMP_PATH}/easymultimercluster.sh"

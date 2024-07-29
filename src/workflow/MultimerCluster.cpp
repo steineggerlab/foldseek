@@ -9,20 +9,16 @@
 #include "multimercluster.sh.h"
 
 void setMultimerClusterDefaults(LocalParameters *p) {
-    p->covThr = 0.8;
     p->filtMultimerTmThr = 0.5; // FIX
+<<<<<<< HEAD
     // p->filtChainTmThr=0.0; // FIX
     // p->filtInterfaceLddtThr = 0.0; // FIX
+=======
+    p->filtChainTmThr=0.0; // FIX
+>>>>>>> master
     p->filterMode=0;
-    p->covMode = 1;
-    p->clusteringMode = Parameters::GREEDY;
-    p->removeTmpFiles = true;
 }
 
-void setMultimerClusterMustPassAlong(Parameters *p) {
-    p->PARAM_C.wasSet = true;
-    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
-}
 int multimercluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT); //align
@@ -39,7 +35,6 @@ int multimercluster(int argc, const char **argv, const Command &command) {
 
     setMultimerClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    setMultimerClusterMustPassAlong(&par);
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
@@ -62,8 +57,8 @@ int multimercluster(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-    cmd.addVariable("VERBCOMPRESS", par.createParameterString(par.verbandcompression).c_str());
-    
+    // cmd.addVariable("VERBCOMPRESS", par.createParameterString(par.verbandcompression).c_str());
+
     std::string program = tmpDir + "/multimercluster.sh";
     FileUtil::writeFile(program, multimercluster_sh, multimercluster_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);

@@ -53,12 +53,12 @@ buldCmplhDb(){
         {
             split($2,words," ")
             split(words[1],parts,"_")
-            output_string=""
-            for (j = 1; j < length(parts); j++) {
-                output_string = output_string parts[j]
+            output_string=parts[1]
+            for (j = 2; j < length(parts); j++) {
                 if (j < length(parts)-1){
                     output_string=output_string"_" 
                 }
+                output_string = output_string parts[j]
             }
             headerstring=""
             for (k = 2; k < length(words)+1; k++) {
@@ -100,7 +100,8 @@ if notExists "${TMP_PATH}/complex_db_h.dbtype"; then
     # "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/complex_db_header_tmp" ${VERBOSITY_PAR} \
     #     || fail "tsv2db died"
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h.tsv" ${VERBOSITY_PAR} \
+    # "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h.tsv" ${VERBOSITY_PAR} \
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h.tsv" --threads 1 \
         || fail "createtsv died"
     buldCmplhDb "${TMP_PATH}/chain_db_h.tsv" "${TMP_PATH}/complex_header.tsv"
     # shellcheck disable=SC2086
@@ -122,7 +123,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY_PAR}
     rm "${TMP_PATH}/complex_header.tsv"
-    rm "${TMP_PATH}/complex_header.tsv_redundant"
     rm -rf "${TMP_PATH}/multimersearch_tmp"
     rm -f "${TMP_PATH}/multimercluster.sh"
 fi
