@@ -38,6 +38,17 @@ struct AlignedCoordinate {
     std::vector<float> x;
     std::vector<float> y;
     std::vector<float> z;
+    AlignedCoordinate() {}
+    AlignedCoordinate(size_t size) {
+        x.resize(size);
+        y.resize(size);
+        z.resize(size);
+    }
+    ~AlignedCoordinate() {
+        x.clear();
+        y.clear();
+        z.clear();
+    }
 };
 
 unsigned int adjustAlnLen(unsigned int qcov, unsigned int tcov, int covMode) {
@@ -245,10 +256,8 @@ public:
 
     void computeInterfaceLddt(float threshold = 8) {
         float t2 = threshold * threshold;
-        AlignedCoordinate qInterface;
-        AlignedCoordinate tInterface;
-        std::vector<std::set<unsigned int>> qInterfaceLookup(qAlnChains.size()); // chainIdx, resIdx
-        
+        std::vector<std::set<unsigned int>> qInterfacePos(qAlnChains.size()); // chainIdx, resIdx
+        unsigned int intLen = 0;
         // Find and save interface Coordinates
         for (size_t chainIdx1 = 0; chainIdx1 < qAlnChains.size(); chainIdx1++) {
             for (size_t chainIdx2 = chainIdx1+1; chainIdx2 < qAlnChains.size(); chainIdx2++) {
@@ -261,37 +270,42 @@ public:
                         float dist = BasicFunction::dist(qChain1.x[resIdx1], qChain1.y[resIdx1], qChain1.z[resIdx1],
                                                          qChain2.x[resIdx2], qChain2.y[resIdx2], qChain2.z[resIdx2]);
                         if (dist < t2) {
-                            if (qInterfaceLookup[chainIdx1].find(resIdx1) == qInterfaceLookup[chainIdx1].end()) {
-                                qInterface.x.push_back(qChain1.x[resIdx1]);
-                                qInterface.y.push_back(qChain1.y[resIdx1]);
-                                qInterface.z.push_back(qChain1.z[resIdx1]);
-                                tInterface.x.push_back(tChain1.x[resIdx1]);
-                                tInterface.y.push_back(tChain1.y[resIdx1]);
-                                tInterface.z.push_back(tChain1.z[resIdx1]);
-                                qInterfaceLookup[chainIdx1].insert(resIdx1);
+                            if (qInterfacePos[chainIdx1].find(resIdx1) == qInterfacePos[chainIdx1].end()) {
+                                qInterfacePos[chainIdx1].insert(resIdx1);
+                                intLen++;
                             }
-                            if (qInterfaceLookup[chainIdx2].find(resIdx2) == qInterfaceLookup[chainIdx2].end()) {
-                                qInterface.x.push_back(qChain2.x[resIdx2]);
-                                qInterface.y.push_back(qChain2.y[resIdx2]);
-                                qInterface.z.push_back(qChain2.z[resIdx2]);
-                                tInterface.x.push_back(tChain2.x[resIdx2]);
-                                tInterface.y.push_back(tChain2.y[resIdx2]);
-                                tInterface.z.push_back(tChain2.z[resIdx2]);
-                                qInterfaceLookup[chainIdx2].insert(resIdx2);
+                            if (qInterfacePos[chainIdx2].find(resIdx2) == qInterfacePos[chainIdx2].end()) {
+                                qInterfacePos[chainIdx2].insert(resIdx2);
+                                intLen++;
                             }
                         }
                     }
                 }
             }
         }
-        size_t intLen = qInterface.x.size();
+
         if (intLen == 0) {
             return;
+        }
+        AlignedCoordinate qInterface(intLen);
+        AlignedCoordinate tInterface(intLen);
+
+        size_t idx = 0;
+        for (size_t chainIdx = 0; chainIdx < qInterfacePos.size(); chainIdx++) {
+            for (size_t resIdx: qInterfacePos[chainIdx]) {
+                qInterface.x[idx] = qAlnChains[chainIdx].x[resIdx];
+                qInterface.y[idx] = qAlnChains[chainIdx].y[resIdx];
+                qInterface.z[idx] = qAlnChains[chainIdx].z[resIdx];
+                tInterface.x[idx] = tAlnChains[chainIdx].x[resIdx];
+                tInterface.y[idx] = tAlnChains[chainIdx].y[resIdx];
+                tInterface.z[idx] = tAlnChains[chainIdx].z[resIdx];
+                idx++;
+            }
         }
         std::string bt(intLen, 'M');
         LDDTCalculator *lddtcalculator = NULL;
         lddtcalculator = new LDDTCalculator(intLen+1, intLen+1);
-        lddtcalculator->initQuery(qInterface.x.size(), &qInterface.x[0], &qInterface.y[0], &qInterface.z[0]);
+        lddtcalculator->initQuery(intLen, &qInterface.x[0], &qInterface.y[0], &qInterface.z[0]);
         LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator->computeLDDTScore(intLen, 0, 0, bt, &tInterface.x[0], &tInterface.y[0], &tInterface.z[0]);
         interfaceLddt = lddtres.avgLddtScore;
         delete lddtcalculator;
@@ -635,7 +649,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 result.append(buffer, (outpos - buffer - 1));
                 result.push_back('\n');
                 // result5.append(qComplex.complexName + "\t" + tComplex.complexName + "\t" + std::to_string(cmplfiltcrit.qCov) + "\t" + std::to_string(cmplfiltcrit.tCov) + "\t"+ std::to_string(cmplfiltcrit.qTm)+"\t"+ std::to_string(cmplfiltcrit.tTm)+ "\n");
-                result5.append(qComplex.complexName + "\t" + tComplex.complexName + "\t" + std::to_string(cmplfiltcrit.qCov) + "\t" + std::to_string(cmplfiltcrit.tCjjov) + "\t"+ std::to_string(cmplfiltcrit.qTm)+"\t"+ std::to_string(cmplfiltcrit.tTm)+"\t"+ std::to_string(cmplfiltcrit.interfaceLddt)+"\n");
+                result5.append(qComplex.complexName + "\t" + tComplex.complexName + "\t" + std::to_string(cmplfiltcrit.qCov) + "\t" + std::to_string(cmplfiltcrit.tCov) + "\t"+ std::to_string(cmplfiltcrit.qTm)+"\t"+ std::to_string(cmplfiltcrit.tTm)+"\t"+ std::to_string(cmplfiltcrit.interfaceLddt)+"\n");
             }
 
             #pragma omp critical
