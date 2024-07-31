@@ -180,13 +180,13 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 
 class DBSCANCluster {
 public:
-    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov, float initEPS, float deltaEPS) : searchResult(searchResult), finalClusters(finalClusters) {
+    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov, float deltaEPS) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
         minClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         prevMaxClusterSize = 0;
-        maxDist = 0;
-        eps = initEPS;
+        maxDist = FLT_MIN;
+        minDist = FLT_MAX;
         learningRate = deltaEPS;
     }
 
@@ -205,6 +205,7 @@ private:
     SearchResult &searchResult;
     float eps;
     float maxDist;
+    float minDist;
     float learningRate;
     unsigned int cLabel;
     unsigned int prevMaxClusterSize;
@@ -298,9 +299,11 @@ private:
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
                 maxDist = std::max(maxDist, dist);
+                minDist = std::min(minDist, dist);
                 distMap.insert({{i,j}, dist});
             }
         }
+        eps = minDist;
     }
 
     void getNeighbors(size_t centerIdx, std::vector<unsigned int> &neighborVec) {
@@ -438,8 +441,8 @@ private:
 
 class ComplexScorer {
 public:
-    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio, float initEPS, float deltaEPS, float thresholdCV)
-    : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), initEPS(initEPS), deltaEPS(deltaEPS), thresholdCV(thresholdCV) {
+    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio, float deltaEPS, float thresholdCV)
+    : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), deltaEPS(deltaEPS), thresholdCV(thresholdCV) {
         maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen()+1, tDbr3Di->sequenceReader->getMaxSeqLen()+1);
         q3diDbr = qDbr3Di;
         t3diDbr = tDbr3Di;
@@ -531,7 +534,7 @@ public:
             tmAligner = new TMaligner(maxResLen, false, true, false);
         }
         finalClusters.clear();
-        DBSCANCluster dbscanCluster = DBSCANCluster(searchResult, finalClusters, minAssignedChainsRatio, initEPS, deltaEPS);
+        DBSCANCluster dbscanCluster = DBSCANCluster(searchResult, finalClusters, minAssignedChainsRatio, deltaEPS);
         if (!dbscanCluster.getAlnClusters()) {
             finalClusters.clear();
             return;
@@ -568,7 +571,6 @@ private:
     Coordinate16 tCoords;
     unsigned int thread_idx;
     double minAssignedChainsRatio;
-    float initEPS;
     float deltaEPS;
     float thresholdCV;
     unsigned int maxResLen;
@@ -673,7 +675,6 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
     }
 
     double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
-    float initEPS = par.initEPS;
     float deltaEPS = par.deltaEPS;
     float thresholdCV = par.thresholdCV;
 
@@ -701,7 +702,7 @@ int scorecomplex(int argc, const char **argv, const Command &command) {
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
         std::vector<resultToWrite_t> resultToWriteLines;
-        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio, initEPS, deltaEPS, thresholdCV);
+        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio,  deltaEPS, thresholdCV);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {

@@ -122,7 +122,7 @@ public:
     PARAMETER(PARAM_EXPAND_COMPLEX_EVALUE)
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
-    PARAMETER(PARAM_EPS_INIT)
+//    PARAMETER(PARAM_EPS_INIT)
     PARAMETER(PARAM_EPS_DELTA)
     PARAMETER(PARAM_CV_THRESHOLD)
 
@@ -150,7 +150,7 @@ public:
     int inputFormat;
     int pdbOutputMode;
 
-    float initEPS = 0.1;
+//    float initEPS = 0.1;
     float deltaEPS = 0.1;
     float thresholdCV = 0.1;
 

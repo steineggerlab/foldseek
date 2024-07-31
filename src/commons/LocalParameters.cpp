@@ -31,7 +31,7 @@ LocalParameters::LocalParameters() :
         PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
-        PARAM_EPS_INIT(PARAM_EPS_INIT_ID, "--eps-init", "eps init value", "", typeid(float), (void *) &initEPS, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
+//        PARAM_EPS_INIT(PARAM_EPS_INIT_ID, "--eps-init", "eps init value", "", typeid(float), (void *) &initEPS, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_EPS_DELTA(PARAM_EPS_DELTA_ID, "--eps-delta", "eps delta value", "", typeid(float), (void *) &deltaEPS, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_CV_THRESHOLD(PARAM_CV_THRESHOLD_ID, "--cv-threshold", "CV thresjold for feature selection", "", typeid(float), (void *) &thresholdCV, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN)
 
@@ -182,7 +182,7 @@ LocalParameters::LocalParameters() :
     scorecomplex.push_back(&PARAM_THREADS);
     scorecomplex.push_back(&PARAM_V);
     scorecomplex.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
-    scorecomplex.push_back(&PARAM_EPS_INIT);
+//    scorecomplex.push_back(&PARAM_EPS_INIT);
     scorecomplex.push_back(&PARAM_EPS_DELTA);
     scorecomplex.push_back(&PARAM_CV_THRESHOLD);
 
