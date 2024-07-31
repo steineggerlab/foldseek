@@ -363,7 +363,7 @@ private:
     }
 
     bool finishDBSCAN() {
-//        std::cout << dbscanCnt << std::endl;
+        std::cout << minDist << "\t" << eps << "\t" << maxDist << std::endl;
         initializeAlnLabels();
         neighbors.clear();
         neighborsOfCurrNeighbor.clear();
