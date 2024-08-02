@@ -80,8 +80,8 @@ namespace ctranslate2 {
 #if !defined(__linux__) || defined(_OPENMP)
     (void)thread;
     (void)index;
-    throw std::runtime_error("Setting thread affinity is only supported in Linux binaries built "
-                             "with -DOPENMP_RUNTIME=NONE");
+    // throw std::runtime_error("Setting thread affinity is only supported in Linux binaries built "
+    //                          "with -DOPENMP_RUNTIME=NONE");
 #else
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
