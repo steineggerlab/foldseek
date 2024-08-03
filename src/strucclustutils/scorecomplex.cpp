@@ -188,6 +188,7 @@ public:
         maxDist = FLT_MIN;
         minDist = FLT_MAX;
         learningRate = deltaEPS;
+        maxClusterNum = searchResult.alnVec.size() / idealClusterSize;
     }
 
     bool getAlnClusters() {
@@ -208,6 +209,7 @@ private:
     float minDist;
     float learningRate;
     unsigned int cLabel;
+    unsigned int maxClusterNum;
     unsigned int prevMaxClusterSize;
     unsigned int maxClusterSize;
     unsigned int idealClusterSize;
@@ -286,6 +288,9 @@ private:
         if (maxClusterSize>=MULTIPLE_CHAINED_COMPLEX)
             finalClusters.insert(currClusters.begin(), currClusters.end());
 
+        if (maxClusterSize==idealClusterSize && finalClusters.size()==maxClusterNum)
+            finishDBSCAN();
+
         eps += learningRate;
         return runDBSCAN();
     }
@@ -363,7 +368,6 @@ private:
     }
 
     bool finishDBSCAN() {
-        std::cout << "EPS: \t" << minDist << "\t" << eps << "\t" << maxDist << std::endl;
         initializeAlnLabels();
         neighbors.clear();
         neighborsOfCurrNeighbor.clear();
