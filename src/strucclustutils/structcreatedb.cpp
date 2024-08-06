@@ -331,11 +331,42 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             thread_idx = omp_get_thread_num();
 #endif
             const char newline = '\n';
+            // TODO: create command line parameters
+            unsigned const int MAX_SEQUENCE_LENGTH, MIN_SPLIT_LENGTH;
+            MAX_SEQUENCE_LENGTH = 500;
+            MIN_SPLIT_LENGTH = 2;
 #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
                 unsigned int key = reader.getDbKey(i);
                 char* seq = reader.getData(i, thread_idx);
                 size_t length = reader.getSeqLen(i);
+                // TODO: implement splitting here
+
+                unsigned int split_length;
+                split_length = MAX_SEQUENCE_LENGTH;
+
+                if (length > MAX_SEQUENCE_LENGTH) {
+                    unsigned int n_splits, overlap_length;
+                    n_splits = int(length / MAX_SEQUENCE_LENGTH) + 1;
+                    overlap_length = length % MAX_SEQUENCE_LENGTH;
+                    
+                    // ensure minimum overlap length
+                    if (overlap_length < MIN_SPLIT_LENGTH) {
+                        split_length -= int(std::ceil((MIN_SPLIT_LENGTH - overlap_length) / (n_splits - 1)))
+                        n_splits = int(length / split_length) + 1
+
+                        // TODO: create array of split_seq, split_length
+                        
+                        // TODO: create array of predictions
+
+                        // TODO: loop over splits and fill arrays
+
+                        // TODO: concatenate complete sequence 
+                    }
+
+                }
+
+
                 std::vector<std::string> input = { std::string(seq, length) };
                 std::vector<std::string> pred = model.predict(input);
                 if (pred.size() != 0) {
