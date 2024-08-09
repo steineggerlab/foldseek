@@ -337,8 +337,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
                 unsigned int key = reader.getDbKey(i);
-                std::string seq = std::string(reader.getData(i, thread_idx));
                 size_t length = reader.getSeqLen(i);
+                std::string seq = std::string(reader.getData(i, thread_idx), length);
 
                 std::vector<std::string> pred;
 
