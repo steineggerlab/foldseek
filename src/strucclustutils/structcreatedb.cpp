@@ -347,18 +347,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 split_length = MAX_SEQUENCE_LENGTH;
 
                 if (length > MAX_SEQUENCE_LENGTH) {
-                    // verbose ? std::cout << "Splitting! " : std::cout << "";
-
                     unsigned int n_splits, overlap_length;
                     n_splits = int(length / MAX_SEQUENCE_LENGTH) + 1;
                     overlap_length = length % MAX_SEQUENCE_LENGTH;
                     
-                    // ensure minimum overlap length
+                    // ensure minimum overlap length; adjustment length was not computed properly with ceil/ceilf now using simple int cast
                     if (overlap_length < MIN_SPLIT_LENGTH) {
-                        split_length -= int(ceil((MIN_SPLIT_LENGTH - overlap_length) / (n_splits - 1)));
-                        n_splits = int(length / split_length) + 1;
+                        split_length -= int((MIN_SPLIT_LENGTH - overlap_length) / (n_splits - 1)) + 1;
                     }
-                    // verbose ? std::cout << "n_splits: " << n_splits << " split_length: " << split_length << "\n" : std::cout << "";
 
                     // acumulate full predicion in a string
                     std::string full_prediction;
@@ -367,22 +363,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     // loop over splits and predict
                     for (unsigned int i = 0; i < n_splits; i++){
                         unsigned int split_start = i * split_length;
-                        unsigned int split_end = (i + 1) * split_length;
-                        // verbose ? std::cout << "i: " << i << " split_length: " << split_length << " computed split: " << split_start << " - " << split_end << "\n" : std::cout << "";
-                        
                         std::vector<std::string> split_input(split_length);
-                        split_input = { std::string(seq.substr(split_start, split_length)) }; // TODO: remove redundant std::string()
-                        
+                        split_input = { std::string(seq.substr(split_start, split_length)) };
                         std::vector<std::string> split_pred = model.predict(split_input);
-                        
                         full_prediction.append(split_pred[0]);
                     }
-                    // verbose ? std::cout << "Initial pred: " << full_prediction << "\n" : std::cout << "";
                     pred = { full_prediction };
                 } else {
-                    // verbose ? std::cout << "Not splitting!" << "\n" : std::cout << "";
                     std::vector<std::string> input = { seq };
-                    // verbose ? std::cout << "Initial pred: " << input[0] << "\n" : std::cout << "";
                     pred = model.predict(input);
                 }
 
