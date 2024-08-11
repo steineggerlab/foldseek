@@ -19,13 +19,19 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
     if notExists "$TMP_PATH/pref_tmp_${STEP}.done"; then
         PARAM="PREFILTER_PAR_$STEP"
         eval TMP="\$$PARAM"
+        TOOL="prefilter"
+        if [ "$PREFMODE" = "UNGAPPED" ]; then
+            TOOL="ungappedprefilter"
+            PARAM="UNGAPPEDPREFILTER_PAR_$STEP"
+            eval TMP="\$$PARAM"
+        fi
         if [ $STEP -eq 0 ]; then
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" prefilter "${QUERYDB}_ss" "${TARGET_PREFILTER}${INDEXEXT}" "$TMP_PATH/pref_${STEP}" ${TMP} \
+            $RUNNER "$MMSEQS" $TOOL "${QUERYDB}_ss" "${TARGET_PREFILTER}${INDEXEXT}" "$TMP_PATH/pref_${STEP}" ${TMP} \
                 || fail "Prefilter died"
         else
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" prefilter "${QUERYDB}_ss" "${TARGET_PREFILTER}${INDEXEXT}" "$TMP_PATH/pref_tmp_${STEP}" ${TMP} \
+            $RUNNER "$MMSEQS" $TOOL "${QUERYDB}_ss" "${TARGET_PREFILTER}${INDEXEXT}" "$TMP_PATH/pref_tmp_${STEP}" ${TMP} \
                 || fail "Prefilter died"
         fi
         touch "$TMP_PATH/pref_tmp_${STEP}.done"

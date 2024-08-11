@@ -152,6 +152,8 @@ int structuresearch(int argc, const char **argv, const Command &command) {
             par.compBiasCorrectionScale = 0.15;
             cmd.addVariable(std::string("PREFILTER_PAR_" + SSTR(i)).c_str(),
                             par.createParameterString(par.prefilter).c_str());
+            cmd.addVariable(std::string("UNGAPPEDPREFILTER_PAR_" + SSTR(i)).c_str(),
+                            par.createParameterString(par.ungappedprefilter).c_str());
             par.compBiasCorrectionScale = 0.5;
             if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
                 cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(), par.createParameterString(par.align).c_str());
