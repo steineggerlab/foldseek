@@ -7,6 +7,7 @@
 namespace ctranslate2 {
   namespace ops {
 
+#ifdef CT2_WITH_CURAND
     class add_gumbel_noise_func {
     public:
       add_gumbel_noise_func(curandStatePhilox4_32_10_t* states)
@@ -23,15 +24,20 @@ namespace ctranslate2 {
     private:
       curandStatePhilox4_32_10_t* _states;
     };
+#endif
 
     template <Device D, typename T>
     void GumbelMax::add_gumbel_noise(const StorageView& x, StorageView& y) const {
+#ifdef CT2_WITH_CURAND
       THRUST_CALL(thrust::transform,
                   cuda::device_cast(x.data<T>()),
                   cuda::device_cast(x.data<T>()) + x.size(),
                   thrust::counting_iterator<cuda::index_t>(0),
                   cuda::device_cast(y.data<T>()),
                   add_gumbel_noise_func(cuda::get_curand_states(x.size())));
+#else
+      throw std::runtime_error("Compiled without cuRAND support");
+#endif
     }
 
 #define DECLARE_IMPL(T)                                                 \

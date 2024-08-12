@@ -23,6 +23,7 @@ namespace ctranslate2 {
 
     constexpr dim_t num_threads = 256;
 
+#ifdef CT2_WITH_CURAND
     template <typename In, typename Out>
     __global__ void multinomial_kernel(const In* probs,
                                        cuda::index_t class_size,
@@ -62,6 +63,7 @@ namespace ctranslate2 {
       if (threadIdx.x == 0)
         output[blockIdx.x] = first_candidate;
     }
+#endif
 
     template <Device D, typename T>
     void Multinomial::compute(const StorageView& input, StorageView& output) const {
@@ -77,6 +79,7 @@ namespace ctranslate2 {
       const dim_t batch_size = input.size() / depth;
       const dim_t blocks = std::min(batch_size, cuda::max_blocks);
 
+#ifdef CT2_WITH_CURAND
       // Get one curand state per block.
       auto* curand_states = cuda::get_curand_states(blocks);
 
@@ -85,6 +88,9 @@ namespace ctranslate2 {
         depth,
         output.data<int32_t>(),
         curand_states);
+#else
+      throw std::runtime_error("Compiled without cuRAND support");
+#endif
     }
 
 #define DECLARE_IMPL(T)                                                 \

@@ -1,5 +1,6 @@
 #include "random.h"
 
+#ifdef HAVE_CURAND
 #include <memory>
 
 #include "ctranslate2/allocator.h"
@@ -57,3 +58,4 @@ namespace ctranslate2 {
 
   }
 }
+#endif
