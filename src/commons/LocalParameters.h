@@ -127,6 +127,7 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
+    PARAMETER(PARAM_PROSTT5_SPLIT_LENGTH)
     PARAMETER(PARAM_GPU)
 
     int prefMode;
@@ -152,6 +153,7 @@ public:
     int inputFormat;
     int pdbOutputMode;
     std::string prostt5Model;
+    int prostt5SplitLength;
     int gpu;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,

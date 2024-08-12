@@ -331,8 +331,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             thread_idx = omp_get_thread_num();
 #endif
             const char newline = '\n';
-            // TODO: create command line parameters
-            unsigned const int MAX_SEQUENCE_LENGTH = 500;
+            unsigned const int MAX_SEQUENCE_LENGTH = par.prostt5SplitLength;
             unsigned const int MIN_SPLIT_LENGTH = 2;
 #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
@@ -346,10 +345,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 unsigned int split_length;
                 split_length = MAX_SEQUENCE_LENGTH;
 
-                if (length > MAX_SEQUENCE_LENGTH) {
+                // split lenght of 0 will deactivate splitting
+                if (split_length > 0 && length > split_length) {
                     unsigned int n_splits, overlap_length;
-                    n_splits = int(length / MAX_SEQUENCE_LENGTH) + 1;
-                    overlap_length = length % MAX_SEQUENCE_LENGTH;
+                    n_splits = int(length / split_length) + 1;
+                    overlap_length = length % split_length;
                     
                     // ensure minimum overlap length; adjustment length was not computed properly with ceil/ceilf now using simple int cast
                     if (overlap_length < MIN_SPLIT_LENGTH) {
