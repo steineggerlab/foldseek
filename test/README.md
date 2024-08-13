@@ -10,13 +10,13 @@ conda create -n cuda-dev -c conda-forge cmake cuda-nvcc rust openblas libcublas-
 To compile the foldseek binries run this command on a gpu server (e.g. devbox001)
 ```bash
 srun -c 32 -t 20-0 --pty /bin/bash
-cmake -DCMAKE_INSTALL_PREFIX=. -DWITH_CUDA=1 -DENABLE_CUDA=1 ..
+cmake -DCMAKE_BUILD_TYPE=debug -DCMAKE_INSTALL_PREFIX=. -DWITH_CUDA=1 -DENABLE_CUDA=1 ..
 
 # run this in foldseek repo root
 mkdir -p build-test
 cd build-test
 # cmake -DCMAKE_INSTALL_PREFIX=. -DENABLE_CUDA=0 -DIGNORE_RUST_VERSION=1 -DCMAKE_BUILD_TYPE=debug ..
-cmake -DCMAKE_INSTALL_PREFIX=. -DENABLE_CUDA=0 -DIGNORE_RUST_VERSION=1 ..
+cmake -DCMAKE_BUILD_TYPE=debug -DCMAKE_INSTALL_PREFIX=. -DENABLE_CUDA=0 -DIGNORE_RUST_VERSION=1 ..
 
 make -j 32
 
@@ -37,7 +37,7 @@ mkdir -p test/dbs/
 
 # create foldseek db based on ProstT5 predicted 3Di
 cd build-test
-src/foldseek createdb test/data/long.500.aa.fasta test/dbs/long_500 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --threads 32
+src/foldseek createdb test/data/long.aa.fasta test/dbs/long_500 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --prostt5-split-length 500 --threads 32
 src/foldseek lndb test/dbs/long_500_h test/dbs/long_500_ss_h
 src/foldseek convert2fasta test/dbs/long_500_ss test/dbs/long.500.3Di.fasta
 
@@ -53,7 +53,7 @@ src/foldseek lndb test/dbs/long_6000_h test/dbs/long_6000_ss_h
 src/foldseek convert2fasta test/dbs/long_6000_ss test/dbs/long.6000.3Di.fasta
 
 # create foldseek db with no splitting (all sequences shorter 500)
-src/foldseek createdb test/data/short.500.aa.fasta test/dbs/short_500 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --threads 32
-src/foldseek lndb test/dbs/short_500_h test/dbs/short_500_ss_h
-src/foldseek convert2fasta test/dbs/short_500_ss test/dbs/short.500.3Di.fasta
+src/foldseek createdb test/data/short.6000.aa.fasta test/dbs/short_6000 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --threads 32
+src/foldseek lndb test/dbs/short_6000_h test/dbs/short_6000_ss_h
+src/foldseek convert2fasta test/dbs/short_6000_ss test/dbs/short.6000.3Di.fasta
 ```
