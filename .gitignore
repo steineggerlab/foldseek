@@ -1,0 +1,6 @@
+.vscode/
+*build*
+test/*
+!test/README.md
+!test/data
+
