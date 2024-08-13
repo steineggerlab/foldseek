@@ -75,8 +75,8 @@ namespace ctranslate2 {
     _can_get_job.notify_all();
   }
 
-
   static void set_thread_affinity(std::thread& thread, int index) {
+/*
 #if !defined(__linux__) || defined(_OPENMP)
     (void)thread;
     (void)index;
@@ -92,6 +92,7 @@ namespace ctranslate2 {
                                + std::to_string(status));
     }
 #endif
+*/
   }
 
   static thread_local Worker* local_worker = nullptr;
