@@ -75,4 +75,3 @@ dependencies:
   - tzdata=2024a=h0c530f3_0
   - xz=5.2.6=h166bdaf_0
   - zstd=1.5.6=ha6fb4c9_0
-prefix: /home/mpjw/miniforge3/envs/cuda-dev
