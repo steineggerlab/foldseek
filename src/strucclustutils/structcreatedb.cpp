@@ -331,7 +331,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             thread_idx = omp_get_thread_num();
 #endif
             const char newline = '\n';
-            unsigned const int MAX_SEQUENCE_LENGTH = par.prostt5SplitLength;
             unsigned const int MIN_SPLIT_LENGTH = 2;
 #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
@@ -342,8 +341,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 std::vector<std::string> pred;
 
                 // splitting input sequences longer than ProstT5 attention (current cutoff 6000 AAs)
-                unsigned int split_length;
-                split_length = MAX_SEQUENCE_LENGTH;
+                unsigned int split_length = par.prostt5SplitLength;
 
                 // split lenght of 0 will deactivate splitting
                 if (split_length > 0 && length > split_length) {
@@ -363,7 +361,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     // loop over splits and predict
                     for (unsigned int i = 0; i < n_splits; i++){
                         unsigned int split_start = i * split_length;
-                        // split_length = split_start + split_length > length ? length % split_length : split_length; 
                         std::vector<std::string> split_input(split_length);
                         split_input = { std::string(seq.substr(split_start, split_length)) };
                         std::vector<std::string> split_pred = model.predict(split_input);
