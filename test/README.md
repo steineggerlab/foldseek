@@ -50,17 +50,17 @@ mkdir -p test/dbs/
 
 # create foldseek db based on ProstT5 predicted 3Di
 cd build-test
-src/foldseek createdb test/data/long.aa.fasta test/dbs/long_500 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --prostt5-split-length 500 --threads 32
+src/foldseek createdb test/data/long.500.aa.fasta test/dbs/long_500 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --prostt5-split-length 500 --threads 32
 src/foldseek lndb test/dbs/long_500_h test/dbs/long_500_ss_h
 src/foldseek convert2fasta test/dbs/long_500_ss test/dbs/long.500.3Di.fasta
 
 # create foldseek db from pre-splitted sequences
-src/foldseek createdb test/data/short.500.aa.fasta test/dbs/short_500 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --prostt5-split-length 0 --prostt5-split-length 0 --threads 32
+src/foldseek createdb test/data/short.500.aa.fasta test/dbs/short_500 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --prostt5-split-length 0 --threads 32
 src/foldseek lndb test/dbs/short_500_h test/dbs/short_500_ss_h
 src/foldseek convert2fasta test/dbs/short_500_ss test/dbs/short.500.3Di.fasta
 
 # create foldseek db based on ProstT5 predicted 3Di (ProstT5 implementation will do the splitting)
-src/foldseek createdb test/data/long.aa.fasta test/dbs/long_6000 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --prostt5-split-length 6000 --threads 32
+src/foldseek createdb test/data/long.6000.aa.fasta test/dbs/long_6000 --prostt5-model /home/sukhwan/foldseek_ctranslate/foldseek/weights/model --prostt5-split-length 6000 --threads 32
 src/foldseek lndb test/dbs/long_6000_h test/dbs/long_6000_ss_h
 src/foldseek convert2fasta test/dbs/long_6000_ss test/dbs/long.6000.3Di.fasta
 
