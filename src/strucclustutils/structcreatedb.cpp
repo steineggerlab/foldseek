@@ -363,6 +363,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     // loop over splits and predict
                     for (unsigned int i = 0; i < n_splits; i++){
                         unsigned int split_start = i * split_length;
+                        // split_length = split_start + split_length > length ? length % split_length : split_length; 
                         std::vector<std::string> split_input(split_length);
                         split_input = { std::string(seq.substr(split_start, split_length)) };
                         std::vector<std::string> split_pred = model.predict(split_input);
