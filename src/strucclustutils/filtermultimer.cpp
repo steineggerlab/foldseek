@@ -263,8 +263,6 @@ public:
             for (size_t chainIdx2 = chainIdx1+1; chainIdx2 < qAlnChains.size(); chainIdx2++) {
                 AlignedCoordinate qChain1 = qAlnChains[chainIdx1];
                 AlignedCoordinate qChain2 = qAlnChains[chainIdx2];
-                AlignedCoordinate tChain1 = tAlnChains[chainIdx1];
-                AlignedCoordinate tChain2 = tAlnChains[chainIdx2];
                 for (size_t resIdx1 = 0; resIdx1 < qChain1.x.size(); resIdx1++) {
                     for (size_t resIdx2 = 0; resIdx2 < qChain2.x.size(); resIdx2++) {
                         float dist = BasicFunction::dist(qChain1.x[resIdx1], qChain1.y[resIdx1], qChain1.z[resIdx1],
@@ -289,7 +287,6 @@ public:
         }
         AlignedCoordinate qInterface(intLen);
         AlignedCoordinate tInterface(intLen);
-
         size_t idx = 0;
         for (size_t chainIdx = 0; chainIdx < qInterfacePos.size(); chainIdx++) {
             for (size_t resIdx: qInterfacePos[chainIdx]) {
@@ -388,9 +385,9 @@ void getComplexResidueLength( IndexReader *Dbr, std::vector<Complex> &complexes)
         unsigned int cmpllen = 0;
         for (auto chainKey: chainKeys) {
             size_t id = Dbr->sequenceReader->getId(chainKey);
-            // Not accessible
-            if (id == NOT_AVAILABLE_CHAIN_KEY)
-                continue;
+            if (id == NOT_AVAILABLE_CHAIN_KEY){
+                break;
+            }
             unsigned int reslen = Dbr->sequenceReader->getSeqLen(id);
             complex->chainLengths.push_back(reslen);
             cmpllen += Dbr->sequenceReader->getSeqLen(id);
@@ -565,16 +562,15 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     data = Util::skipLine(data);
                     unsigned int assId = retComplex.assId;
                     unsigned int tChainKey = res.dbKey;
-                    unsigned int tChainAlnId = alnDbr.getId(tChainKey);
-                    //if target is monomer, break to be singleton
-                    if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
-                        break;
-                    }
                     unsigned int tChainDbId = tDbr->sequenceReader->getId(tChainKey);
                     unsigned int tComplexId = tChainKeyToComplexIdMap.at(tChainKey);
                     unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
                     std::vector<unsigned int> tChainKeys = tComplexes[tComplexIdx].chainKeys;
-                    
+                    //if target is monomer, break to be singleton
+                    unsigned int tChainAlnId = alnDbr.getId(tChainKey);
+                    if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
+                        break;
+                    }
                     float u[3][3];
                     float t[3];
                     fillUArr(retComplex.uString, u);
