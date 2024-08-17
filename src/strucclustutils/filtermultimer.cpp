@@ -2,7 +2,6 @@
 #include "Util.h"
 #include "LocalParameters.h"
 #include "Matcher.h"
-#include "Debug.h"
 #include "DBReader.h"
 #include "IndexReader.h"
 #include "FileUtil.h"
@@ -105,7 +104,7 @@ public:
         tAlnChains.clear();
     }
 
-    bool hasTm(float TmThr, int covMode, int filterMode){
+    bool hasTm(float TmThr, int covMode){
         switch (covMode) {
             case Parameters::COV_MODE_BIDIRECTIONAL:
                 return ((qTm>= TmThr) && (tTm >= TmThr));
@@ -117,35 +116,6 @@ public:
                 return true;
         }
     }
-
-    // bool hasChainNum(int covMode, int filterMode, size_t qChainNum, size_t tChainNum ){
-    //     switch (filterMode){
-    //         case LocalParameters::FILTER_MODE_INTERFACE:
-    //             switch (covMode) {
-    //                 case Parameters::COV_MODE_BIDIRECTIONAL:
-    //                     return (qAlnChainTms.size()==qChainNum && qChainNum==tChainNum);
-    //                 case Parameters::COV_MODE_TARGET:
-    //                     return (tAlnChainTms.size()==tChainNum);
-    //                 case Parameters::COV_MODE_QUERY:
-    //                     return (qAlnChainTms.size()==qChainNum);
-    //                 default:
-    //                     return true;
-    //             }
-    //         case LocalParameters::FILTER_MODE_CONFORMATION:
-    //             switch (covMode) {
-    //                 case Parameters::COV_MODE_BIDIRECTIONAL:
-    //                     return (qChainNum==tChainNum);
-    //                 case Parameters::COV_MODE_TARGET:
-    //                     return (qChainNum>=tChainNum);
-    //                 case Parameters::COV_MODE_QUERY:
-    //                     return (qChainNum<=tChainNum);
-    //                 default:
-    //                     return true;
-    //             }
-    //         default:
-    //             return true;
-    //     }
-    // } 
 
     bool hasChainTm(float chainTmThr, int covMode, unsigned int qChainNum, unsigned int tChainNum) {
         if (qAlnChainTms.size()<std::min(qChainNum, tChainNum)){
@@ -179,15 +149,11 @@ public:
         return true;
     }
 
-    bool satisfy(int covMode, int filterMode, float covThr, float TmThr, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
+    bool satisfy(int covMode, float covThr, float TmThr, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
-        const bool TmOK = TmThr ? hasTm(TmThr, covMode, filterMode) : true;
-        // const bool chainNumOK = hasChainNum(covMode, filterMode, qChainNum, tChainNum);
+        const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
         const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true;
         const bool lddtOK = iLddtThr ? (interfaceLddt >= iLddtThr) : true;
-
-        // const bool conformationOK = isConformation(filterMode, chainTmThr);
-        // return (covOK && TmOK && chainNumOK && chainTmOK);
          return (covOK && TmOK && chainTmOK && lddtOK);
     }
 
@@ -255,6 +221,9 @@ public:
     }
 
     void computeInterfaceLddt(float threshold = 8) {
+        if(qAlnChains.size() == 1){
+            interfaceLddt = 1;
+        }
         float t2 = threshold * threshold;
         std::vector<std::set<unsigned int>> qInterfacePos(qAlnChains.size()); // chainIdx, resIdx
         unsigned int intLen = 0;
@@ -537,13 +506,13 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 unsigned int qChainAlnId = alnDbr.getId(qChainKey);
                 unsigned int qChainDbId = qDbr->sequenceReader->getId(qChainKey);
                 // Handling monomer as singleton
-                if (qChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
-                    char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
-                    result.append(buffer, (outpos - buffer - 1));
-                    result.push_back('\n');
-                    result5.append(qComplex.complexName + "\t" + tComplexes[qComplexIdx].complexName + "\t1.000000\t1.000000\t1.000000\t1.000000\n");
-                    break;
-                }
+                // if (qChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
+                //     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
+                //     result.append(buffer, (outpos - buffer - 1));
+                //     result.push_back('\n');
+                //     result5.append(qComplex.complexName + "\t" + tComplexes[qComplexIdx].complexName + "\t1.000000\t1.000000\t1.000000\t1.000000\n");
+                //     break;
+                // }
 
                 char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
                 size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
@@ -568,9 +537,9 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     std::vector<unsigned int> tChainKeys = tComplexes[tComplexIdx].chainKeys;
                     //if target is monomer, break to be singleton
                     unsigned int tChainAlnId = alnDbr.getId(tChainKey);
-                    if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
-                        break;
-                    }
+                    // if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
+                    //     continue;
+                    // }
                     float u[3][3];
                     float t[3];
                     fillUArr(retComplex.uString, u);
@@ -614,7 +583,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 }
 
                 // Check if the criteria are met
-                if (!(cmplfiltcrit.satisfy(par.covMode, par.filterMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, par.filtInterfaceLddtThr, qComplex.nChain, tComplex.nChain))){
+                if (!(cmplfiltcrit.satisfy(par.covMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, par.filtInterfaceLddtThr, qComplex.nChain, tComplex.nChain))){
                     continue;
                 }
 
@@ -644,7 +613,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
                 result.append(buffer, (outpos - buffer - 1));
                 result.push_back('\n');
-                // result5.append(qComplex.complexName + "\t" + tComplex.complexName + "\t" + std::to_string(cmplfiltcrit.qCov) + "\t" + std::to_string(cmplfiltcrit.tCov) + "\t"+ std::to_string(cmplfiltcrit.qTm)+"\t"+ std::to_string(cmplfiltcrit.tTm)+ "\n");
                 result5.append(qComplex.complexName + "\t" + tComplex.complexName + "\t" + std::to_string(cmplfiltcrit.qCov) + "\t" + std::to_string(cmplfiltcrit.tCov) + "\t"+ std::to_string(cmplfiltcrit.qTm)+"\t"+ std::to_string(cmplfiltcrit.tTm)+"\t"+ std::to_string(cmplfiltcrit.interfaceLddt)+"\n");
             }
 
@@ -682,6 +650,5 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     qComplexes.clear();
     tComplexes.clear();
     qComplexIdResult.clear();
-    
     return EXIT_SUCCESS;
 }

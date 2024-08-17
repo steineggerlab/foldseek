@@ -3,16 +3,14 @@
 #include "FileUtil.h"
 #include "CommandCaller.h"
 #include "Util.h"
-#include "Debug.h"
 #include "LocalParameters.h"
-
+#include "Debug.h"
 #include "multimercluster.sh.h"
 
 void setMultimerClusterDefaults(LocalParameters *p) {
     p->filtMultimerTmThr = 0.5; // FIX
     // p->filtChainTmThr=0.0; // FIX
     // p->filtInterfaceLddtThr = 0.0; // FIX
-    p->filterMode=0;
 }
 
 int multimercluster(int argc, const char **argv, const Command &command) {

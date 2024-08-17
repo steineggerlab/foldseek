@@ -139,10 +139,6 @@ public:
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
-    PARAMETER(PARAM_FILTER_MODE)
-
-    
-
 
     int prefMode;
     float tmScoreThr;
@@ -169,7 +165,6 @@ public:
     float filtMultimerTmThr;
     float filtChainTmThr;
     float filtInterfaceLddtThr;
-    int filterMode;
     std::string prostt5Model;
     int gpu;
 
