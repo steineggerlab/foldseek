@@ -55,7 +55,7 @@ buldCmplhDb(){
             split(words[1],parts,"_")
             output_string=parts[1]
             for (j = 2; j < length(parts); j++) {
-                if (j < length(parts)-1){
+                if (j < length(parts)){
                     output_string=output_string"_" 
                 }
                 output_string = output_string parts[j]
