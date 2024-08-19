@@ -179,12 +179,12 @@ class DBSCANCluster {
 public:
     DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
-        // clusterSizeThr = std::max(MULTIPLE_CHAINED_COMPLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
-        clusterSizeThr = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
-        idealClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
+        minimumClusterSize = std::max(MULTIPLE_CHAINED_COMPLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
+        maximumClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
+        maximumClusterNum = searchResult.alnVec.size() / maximumClusterSize;
         prevMaxClusterSize = 0;
-        maxDist = 0;
-        eps = DEFAULT_EPS;
+        maxDist = FLT_MIN;
+        minDist = FLT_MAX;
         learningRate = LEARNING_RATE;
     }
 
@@ -193,7 +193,7 @@ public:
         filterAlnsByRBH();
         fillDistMap();
         // To skip DBSCAN clustering when alignments are few enough.
-        if (searchResult.alnVec.size() <= idealClusterSize)
+        if (searchResult.alnVec.size() <= maximumClusterSize)
             return checkClusteringNecessity();
 
         return runDBSCAN();
@@ -203,12 +203,14 @@ private:
     SearchResult &searchResult;
     float eps;
     float maxDist;
+    float minDist;
     float learningRate;
     unsigned int cLabel;
+    unsigned int maximumClusterNum;
     unsigned int prevMaxClusterSize;
-    unsigned int maxClusterSize;
-    unsigned int idealClusterSize;
-    unsigned int clusterSizeThr;
+    unsigned int currMaxClusterSize;
+    unsigned int maximumClusterSize;
+    unsigned int minimumClusterSize;
     std::vector<unsigned int> neighbors;
     std::vector<unsigned int> neighborsOfCurrNeighbor;
     std::vector<NeighborsWithDist> neighborsWithDist;
@@ -252,16 +254,16 @@ private:
                         neighbors.emplace_back(neighbor);
                 }
             }
-            if (neighbors.size() > idealClusterSize || checkChainRedundancy())
+            if (neighbors.size() > maximumClusterSize || checkChainRedundancy())
                 getNearestNeighbors(centerAlnIdx);
 
             // too small cluster
-            if (neighbors.size() < maxClusterSize)
+            if (neighbors.size() < currMaxClusterSize)
                 continue;
 
             // new Biggest cluster
-            if (neighbors.size() > maxClusterSize) {
-                maxClusterSize = neighbors.size();
+            if (neighbors.size() >currMaxClusterSize) {
+                currMaxClusterSize = neighbors.size();
                 currClusters.clear();
             }
             SORT_SERIAL(neighbors.begin(), neighbors.end());
@@ -271,16 +273,19 @@ private:
         if (!finalClusters.empty() && currClusters.empty())
             return finishDBSCAN();
 
-        if (maxClusterSize < prevMaxClusterSize)
+        if (currMaxClusterSize < prevMaxClusterSize)
             return finishDBSCAN();
 
-        if (maxClusterSize > prevMaxClusterSize) {
+        if (currMaxClusterSize > prevMaxClusterSize) {
             finalClusters.clear();
-            prevMaxClusterSize = maxClusterSize;
+            prevMaxClusterSize = currMaxClusterSize;
         }
 
-        if (maxClusterSize >= clusterSizeThr)
+        if (currMaxClusterSize >= minimumClusterSize)
             finalClusters.insert(currClusters.begin(), currClusters.end());
+
+        if (currMaxClusterSize==maximumClusterSize && finalClusters.size() == maximumClusterNum)
+            return finishDBSCAN();
 
         eps += learningRate;
         return runDBSCAN();
@@ -295,9 +300,11 @@ private:
                 ChainToChainAln &currAln = searchResult.alnVec[j];
                 dist = prevAln.getDistance(currAln);
                 maxDist = std::max(maxDist, dist);
+                minDist = std::min(minDist, dist);
                 distMap.insert({{i,j}, dist});
             }
         }
+        eps = minDist;
     }
 
     void getNeighbors(size_t centerIdx, std::vector<unsigned int> &neighborVec) {
@@ -320,7 +327,7 @@ private:
             aln.label = INITIALIZED_LABEL;
         }
         cLabel = INITIALIZED_LABEL;
-        maxClusterSize = 0;
+        currMaxClusterSize = 0;
         currClusters.clear();
     }
 
@@ -340,7 +347,7 @@ private:
 
     bool checkClusteringNecessity() {
         // Too few alns => do nothing and finish it
-        if (searchResult.alnVec.size() < clusterSizeThr)
+        if (searchResult.alnVec.size() < minimumClusterSize)
             return finishDBSCAN();
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
@@ -366,14 +373,6 @@ private:
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
         distMap.clear();
-//        auto it = finalClusters.begin();
-//        while (it != finalClusters.end()) {
-//            if (it->size() < clusterSizeThr) {
-//                it = finalClusters.erase(it);
-//                continue;
-//            }
-//            it++;
-//        }
         return !finalClusters.empty();
     }
 
@@ -386,17 +385,17 @@ private:
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
         for (auto qChainKey: searchResult.qChainKeys) {
-            qBestTmScore.insert({qChainKey, DEF_TM_SCORE});
+            qBestTmScore.insert({qChainKey, FLT_MIN});
         }
         for (auto dbChainKey: searchResult.dbChainKeys) {
-            dbBestTmScore.insert({dbChainKey, DEF_TM_SCORE});
+            dbBestTmScore.insert({dbChainKey, FLT_MIN});
         }
         for (auto &aln: searchResult.alnVec) {
             qKey = aln.qChain.chainKey;
             dbKey = aln.dbChain.chainKey;
             tmScore = aln.tmScore;
-            qBestTmScore[qKey] = qBestTmScore[qKey] < UNINITIALIZED ? tmScore : std::max(tmScore, qBestTmScore[qKey]);
-            dbBestTmScore[dbKey] = dbBestTmScore[dbKey] < UNINITIALIZED ? tmScore : std::max(tmScore, dbBestTmScore[dbKey]);
+            qBestTmScore[qKey] = std::max(tmScore, qBestTmScore[qKey]);
+            dbBestTmScore[dbKey] = std::max(tmScore, dbBestTmScore[dbKey]);
         }
         size_t alnIdx = 0;
         while (alnIdx < searchResult.alnVec.size()) {
@@ -412,7 +411,7 @@ private:
             alnIdx ++;
         }
 
-        if (std::min(qFoundChainKeys.size(), dbFoundChainKeys.size()) < clusterSizeThr)
+        if (std::min(qFoundChainKeys.size(), dbFoundChainKeys.size()) < minimumClusterSize)
             searchResult.alnVec.clear();
     }
 

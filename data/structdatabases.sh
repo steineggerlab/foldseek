@@ -159,6 +159,15 @@ case "${SELECTION}" in
         push_back "${TMP_PATH}/cath50"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
+    "BFMD")
+        if notExists "${TMP_PATH}/bfmd.tar.gz"; then
+            downloadFile "https://foldseek.steineggerlab.workers.dev/bfmd.tar.gz" "${TMP_PATH}/bfmd.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/bfmd.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/bfmd.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/bfmd"
+        INPUT_TYPE="FOLDSEEK_DB"
+    ;;
     "ProstT5")
         MODEL=prostt5-f16-safetensors.tar.gz
         if [ -n "${PROSTT5_QUANTIZED}" ]; then

@@ -486,6 +486,14 @@ std::vector<DatabaseDownload> externalDownloads = {
                 {}
         },
         {
+                "BFMD",
+                "BFMD Big fantastic multimer database (combined multimers from large prediction projects).",
+                "Kim et al. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv (2024)",
+                "https://foldseek.steineggerlab.workers.dev/bfmd.version",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
                 "ProstT5",
                 "Protein language model to predict 3Di directly from sequence.",
                 "Heinzinger et al. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, 2023.07.23.550085v2 (2024)",
