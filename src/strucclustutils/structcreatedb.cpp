@@ -89,6 +89,150 @@ std::string removeModel(const std::string& input) {
     std::string suffix = input.substr(secondUnderscoreIndex+1);
     return prefix + suffix;
 }
+
+void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pulchra){
+    for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+        size_t chainStart = readStructure.chain[ch].first;
+        size_t chainLen = readStructure.chain[ch].second - readStructure.chain[ch].first;
+        // Detect if structure is Ca only
+        if (std::isnan(readStructure.n[chainStart + 0].x) &&
+            std::isnan(readStructure.n[chainStart + 1].x) &&
+            std::isnan(readStructure.n[chainStart + 2].x) &&
+            std::isnan(readStructure.n[chainStart + 3].x) &&
+            std::isnan(readStructure.c[chainStart + 0].x) &&
+            std::isnan(readStructure.c[chainStart + 1].x) &&
+            std::isnan(readStructure.c[chainStart + 2].x) &&
+            std::isnan(readStructure.c[chainStart + 3].x)) {
+            pulchra.rebuildBackbone(&readStructure.ca[chainStart],
+                                    &readStructure.n[chainStart],
+                                    &readStructure.c[chainStart],
+                                    &readStructure.ami[chainStart],
+                                    chainLen);
+        }
+    }
+}
+
+void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t> res1, std::pair<size_t, size_t> res2,
+                           std::vector<size_t> & resIdx1, std::vector<size_t> & resIdx2)
+{
+    std::vector<Vec3> coord1, coord2;
+    LocalParameters& par = LocalParameters::getLocalInstance();
+    for (size_t res1Idx = res1.first; res1Idx < res1.second; res1Idx++) {
+        float shortestDistance = std::numeric_limits<float>::infinity();
+        float x1, y1, z1;
+        if (readStructure.ami[res1Idx] == 'G') {
+            x1 = readStructure.ca[res1Idx].x;
+            y1 = readStructure.ca[res1Idx].y;
+            z1 = readStructure.ca[res1Idx].z;
+        }
+        else {
+            x1 = readStructure.cb[res1Idx].x;
+            y1 = readStructure.cb[res1Idx].y;
+            z1 = readStructure.cb[res1Idx].z;
+        }
+        for (size_t res2Idx = res2.first; res2Idx < res2.second; res2Idx++) {
+            float x2, y2, z2;
+            if (readStructure.ami[res2Idx] == 'G') {
+                x2 = readStructure.ca[res2Idx].x;
+                y2 = readStructure.ca[res2Idx].y;
+                z2 = readStructure.ca[res2Idx].z;
+            }
+            else {
+                x2 = readStructure.cb[res2Idx].x;
+                y2 = readStructure.cb[res2Idx].y;
+                z2 = readStructure.cb[res2Idx].z;
+            }
+            float D2 = 0;
+            D2 += (x1 - x2) * (x1 - x2);
+            D2 += (y1 - y2) * (y1 - y2);
+            D2 += (z1 - z2) * (z1 - z2);
+            float distance = sqrt(D2);
+            if (distance < shortestDistance) {
+                shortestDistance = distance;
+            }
+        }
+        if (shortestDistance < par.distanceThreshold) {
+            resIdx1.push_back(res1Idx);
+        }
+    }
+}
+
+void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di) {
+    std::vector<size_t> resIdx1, resIdx2;
+    std::vector<Vec3> ca, n, c, cb;
+    std::vector<char> interfaceSeq3di, interfaceAmi;
+    std::vector<Vec3> interfaceCa;
+    std::vector<std::string> interfaceNames, interfaceChainName;
+    std::vector<std::pair<size_t, size_t>> interfaceChain;
+    size_t prevInterfaceChainLen = 0;
+    for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
+        for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
+            findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1, resIdx2);
+            for(size_t i = 0; i < resIdx1.size(); i++){
+                ca.push_back(readStructure.ca[resIdx1[i]]);
+                n.push_back(readStructure.n[resIdx1[i]]);
+                c.push_back(readStructure.c[resIdx1[i]]);
+                cb.push_back(readStructure.cb[resIdx1[i]]);
+            }
+            std::sort(resIdx2.begin(), resIdx2.end());
+            findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2, resIdx1);
+            for(size_t i = 0; i < resIdx2.size(); i++){
+                ca.push_back(readStructure.ca[resIdx2[i]]);
+                n.push_back(readStructure.n[resIdx2[i]]);
+                c.push_back(readStructure.c[resIdx2[i]]);
+                cb.push_back(readStructure.cb[resIdx2[i]]);
+            }
+//            if(resIdx1.size() != resIdx2.size() ){
+//                std::cout << "ERROR: resIdx1.size() != resIdx2.size() " << resIdx1.size() << " != " << resIdx2.size() << std::endl;
+//                exit(1);
+//            }
+            char *states = structureTo3Di.structure2states(ca.data(),
+                                                           n.data(),
+                                                           c.data(),
+                                                           cb.data(),
+                                                           resIdx1.size() + resIdx2.size());
+            for (size_t i = 0; i < resIdx1.size(); i++) {
+                interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[i])]);
+                interfaceAmi.push_back(readStructure.ami[resIdx1[i]]);
+                interfaceCa.push_back(readStructure.ca[resIdx1[i]]);
+            }
+            for (size_t i = 0; i < resIdx2.size(); i++) {
+                interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[resIdx1.size()+i])]);
+                interfaceAmi.push_back(readStructure.ami[resIdx2[i]]);
+                interfaceCa.push_back(readStructure.ca[resIdx2[i]]);
+            }
+            interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx1.size()));
+            prevInterfaceChainLen += resIdx1.size();
+            interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx2.size()));
+            prevInterfaceChainLen += resIdx2.size();
+            interfaceNames.push_back(readStructure.names[ch1]);
+            interfaceNames.push_back(readStructure.names[ch2]);
+            interfaceChainName.push_back(readStructure.chainNames[ch1]);
+            interfaceChainName.push_back(readStructure.chainNames[ch2]);
+            resIdx1.clear();
+            resIdx2.clear();
+            ca.clear();
+            n.clear();
+            c.clear();
+            cb.clear();
+        }
+    }
+    // copy interface data to readStructure
+    // this overwrites the original data (clear and push_back)
+    readStructure.ca.clear();
+    readStructure.ca.insert(readStructure.ca.begin(), interfaceCa.begin(), interfaceCa.end());
+    readStructure.ami.clear();
+    readStructure.ami.insert(readStructure.ami.begin(), interfaceAmi.begin(), interfaceAmi.end());
+    readStructure.seq3di.clear();
+    readStructure.seq3di.insert(readStructure.seq3di.begin(), interfaceSeq3di.begin(), interfaceSeq3di.end());
+    readStructure.chain.clear();
+    readStructure.chain.insert(readStructure.chain.begin(), interfaceChain.begin(), interfaceChain.end());
+    readStructure.names.clear();
+    readStructure.names.insert(readStructure.names.begin(), interfaceNames.begin(), interfaceNames.end());
+    readStructure.chainNames.clear();
+    readStructure.chainNames.insert(readStructure.chainNames.begin(), interfaceChainName.begin(), interfaceChainName.end());
+}
+
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
@@ -100,6 +244,11 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     std::map<std::string, size_t> & filenameToFileId,
                     std::map<size_t, std::string> & fileIdToName,
                     DBWriter* mappingWriter) {
+    LocalParameters &par = LocalParameters::getLocalInstance();
+    if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
+        addMissingAtomsInStructure(readStructure, pulchra);
+        compute3DiInterfaces(readStructure, structureTo3Di, mat);
+    }
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
     size_t entriesAdded = 0;
     for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
@@ -107,55 +256,68 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         size_t chainStart = readStructure.chain[ch].first;
         size_t chainEnd = readStructure.chain[ch].second;
         size_t chainLen = chainEnd - chainStart;
-        if (chainLen <= 3) {
-            tooShort++;
-            continue;
-        }
 
-        bool allX = true;
-        for (size_t pos = 0; pos < chainLen; pos++) {
-            const char aa = readStructure.ami[chainStart+pos];
-            if (aa != 'X' && aa != 'x') {
-                allX = false;
-                break;
+        if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN){
+        
+            if (chainLen <= 3) {
+                tooShort++;
+                continue;
             }
-        }
-        if (allX) {
-            notProtein++;
-            continue;
-        }
 
-        // Detect if structure is Ca only
-        if (std::isnan(readStructure.n[chainStart + 0].x) &&
-            std::isnan(readStructure.n[chainStart + 1].x) &&
-            std::isnan(readStructure.n[chainStart + 2].x) &&
-            std::isnan(readStructure.n[chainStart + 3].x) &&
-            std::isnan(readStructure.c[chainStart + 0].x) &&
-            std::isnan(readStructure.c[chainStart + 1].x) &&
-            std::isnan(readStructure.c[chainStart + 2].x) &&
-            std::isnan(readStructure.c[chainStart + 3].x))
-        {
-            pulchra.rebuildBackbone(&readStructure.ca[chainStart],
-                                    &readStructure.n[chainStart],
-                                    &readStructure.c[chainStart],
-                                    &readStructure.ami[chainStart],
-                                    chainLen);
-        }
+            bool allX = true;
+            for (size_t pos = 0; pos < chainLen; pos++) {
+                const char aa = readStructure.ami[chainStart+pos];
+                if (aa != 'X' && aa != 'x') {
+                    allX = false;
+                    break;
+                }
+            }
 
-        char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
-                                                        &readStructure.n[chainStart],
-                                                        &readStructure.c[chainStart],
-                                                        &readStructure.cb[chainStart],
-                                                        chainLen);
-        for(size_t pos = 0; pos < chainLen; pos++){
-            if(readStructure.ca_bfactor[pos] < maskBfactorThreshold){
-                alphabet3di.push_back(tolower(mat.num2aa[static_cast<int>(states[pos])]));
-                alphabetAA.push_back(tolower(readStructure.ami[chainStart+pos]));
-            }else{
-                alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
+            if (allX) {
+                notProtein++;
+                continue;
+            }
+
+            // Detect if structure is Ca only
+            if (std::isnan(readStructure.n[chainStart + 0].x) &&
+                std::isnan(readStructure.n[chainStart + 1].x) &&
+                std::isnan(readStructure.n[chainStart + 2].x) &&
+                std::isnan(readStructure.n[chainStart + 3].x) &&
+                std::isnan(readStructure.c[chainStart + 0].x) &&
+                std::isnan(readStructure.c[chainStart + 1].x) &&
+                std::isnan(readStructure.c[chainStart + 2].x) &&
+                std::isnan(readStructure.c[chainStart + 3].x))
+            {
+                pulchra.rebuildBackbone(&readStructure.ca[chainStart],
+                                        &readStructure.n[chainStart],
+                                        &readStructure.c[chainStart],
+                                        &readStructure.ami[chainStart],
+                                        chainLen);
+
+            }
+
+            char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
+                                                            &readStructure.n[chainStart],
+                                                            &readStructure.c[chainStart],
+                                                            &readStructure.cb[chainStart],
+                                                            chainLen);
+            for(size_t pos = 0; pos < chainLen; pos++){
+                if(readStructure.ca_bfactor[pos] < maskBfactorThreshold){
+                    alphabet3di.push_back(tolower(mat.num2aa[static_cast<int>(states[pos])]));
+                    alphabetAA.push_back(tolower(readStructure.ami[chainStart+pos]));
+                }else{
+                    alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
+                    alphabetAA.push_back(readStructure.ami[chainStart+pos]);
+                }
+            }   
+        }
+        else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
+            for(size_t pos = 0; pos < chainLen; pos++){
+                alphabet3di.push_back(readStructure.seq3di[chainStart+pos]);
                 alphabetAA.push_back(readStructure.ami[chainStart+pos]);
             }
         }
+
         alphabet3di.push_back('\n');
         alphabetAA.push_back('\n');
         torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
