@@ -25,7 +25,7 @@ To compile the foldseek binries run this command on a gpu server (e.g. devbox001
 mkdir -p build
 cd build
 
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. -DWITH_CUDA=1 -DENABLE_CUDA=1 ..
+cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. -DWITH_CUDA=1 -DENABLE_CUDA=1 -DCUDA_TOOLKIT_ROOT_DIR=$HOME/miniforge3/envs/cuda-dev/targets/x86_64-linux ..
 # cmake -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=. -DENABLE_CUDA=0 -DIGNORE_RUST_VERSION=1 ..
 
 srun -c 32 -t 20-0 --pty /bin/bash
