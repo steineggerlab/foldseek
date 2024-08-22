@@ -311,14 +311,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         
         ProstT5 model(
             par.prostt5Model,
-            "cpu",
+            par.gpu ? "cuda" : "cpu",
             { 0 },
             1,
             1,
             1,
             0,
             "float32",
-            "float32",
+            "float16",
             0
         );
 #ifdef OPENMP
