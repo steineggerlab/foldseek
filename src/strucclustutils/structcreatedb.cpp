@@ -311,14 +311,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         
         ProstT5 model(
             par.prostt5Model,
-            "cpu",
+            par.gpu ? "cuda" : "cpu",
             { 0 },
             1,
             1,
             1,
             0,
             "float32",
-            "float32",
+            "float16",
             0
         );
 #ifdef OPENMP
@@ -331,13 +331,47 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             thread_idx = omp_get_thread_num();
 #endif
             const char newline = '\n';
+            unsigned const int MIN_SPLIT_LENGTH = 2;
 #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
                 unsigned int key = reader.getDbKey(i);
-                char* seq = reader.getData(i, thread_idx);
                 size_t length = reader.getSeqLen(i);
-                std::vector<std::string> input = { std::string(seq, length) };
-                std::vector<std::string> pred = model.predict(input);
+                std::string seq = std::string(reader.getData(i, thread_idx), length);
+
+                std::vector<std::string> pred;
+
+                // splitting input sequences longer than ProstT5 attention (current cutoff 6000 AAs)
+                unsigned int split_length = par.prostt5SplitLength;
+
+                // split lenght of 0 will deactivate splitting
+                if (split_length > 0 && length > split_length) {
+                    unsigned int n_splits, overlap_length;
+                    n_splits = int(length / split_length) + 1;
+                    overlap_length = length % split_length;
+                    
+                    // ensure minimum overlap length; adjustment length was not computed properly with ceil/ceilf now using simple int cast
+                    if (overlap_length < MIN_SPLIT_LENGTH) {
+                        split_length -= int((MIN_SPLIT_LENGTH - overlap_length) / (n_splits - 1)) + 1;
+                    }
+
+                    // acumulate full predicion in a string
+                    std::string full_prediction;
+                    full_prediction.reserve(length);
+
+                    // loop over splits and predict
+                    for (unsigned int i = 0; i < n_splits; i++){
+                        unsigned int split_start = i * split_length;
+                        std::vector<std::string> split_input(split_length);
+                        split_input = { std::string(seq.substr(split_start, split_length)) };
+                        std::vector<std::string> split_pred = model.predict(split_input);
+                        full_prediction.append(split_pred[0]);
+                    }
+                    pred = { full_prediction };
+                } else {
+                    std::vector<std::string> input = { seq };
+                    pred = model.predict(input);
+                }
+
                 if (pred.size() != 0) {
                     writer.writeStart(thread_idx);
                     writer.writeAdd(pred[0].c_str(), pred[0].length(), thread_idx);
