@@ -263,7 +263,7 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     if (coordinates.size() == 0) {
         return false;
     }
-
+    taxIds.clear();
     title.clear();
     chain.clear();
     names.clear();
