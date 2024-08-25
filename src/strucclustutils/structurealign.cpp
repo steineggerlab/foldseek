@@ -294,11 +294,11 @@ int structurealign(int argc, const char **argv, const Command& command) {
         TMaligner *tmaligner = NULL;
         if(needTMaligner) {
             tmaligner = new TMaligner(
-                    std::max(q3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr.sequenceReader->getMaxSeqLen() + 1), false, true, par.exactTMscore);
+                    std::max((par.queryCopyCount + 1) * q3DiDbr->sequenceReader->getMaxSeqLen() + 1, t3DiDbr.sequenceReader->getMaxSeqLen() + 1), false, true, par.exactTMscore);
         }
         LDDTCalculator *lddtcalculator = NULL;
         if(needLDDT) {
-            lddtcalculator = new LDDTCalculator(q3DiDbr->sequenceReader->getMaxSeqLen() + 1,  t3DiDbr.sequenceReader->getMaxSeqLen() + 1);
+            lddtcalculator = new LDDTCalculator((par.queryCopyCount + 1) * q3DiDbr->sequenceReader->getMaxSeqLen() + 1,  t3DiDbr.sequenceReader->getMaxSeqLen() + 1);
         }
         Sequence qSeqAA(par.maxSeqLen, qAADbr->getDbtype(), (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
         Sequence qSeq3Di(par.maxSeqLen, q3DiDbr->getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
@@ -310,7 +310,9 @@ int structurealign(int argc, const char **argv, const Command& command) {
 
         Coordinate16 qcoords;
         Coordinate16 tcoords;
-
+        std::string querySeqAAcopied;
+        std::string querySeq3Dicopied;
+        std::vector<float> queryCacopied;
         TMaligner::TMscoreResult tmres;
         LDDTCalculator::LDDTScoreResult lddtres;
         // write output file
@@ -326,13 +328,35 @@ int structurealign(int argc, const char **argv, const Command& command) {
                 char *querySeqAA = qAADbr->sequenceReader->getData(queryId, thread_idx);
                 char *querySeq3Di = q3DiDbr->sequenceReader->getData(queryId, thread_idx);
                 unsigned int querySeqLen = q3DiDbr->sequenceReader->getSeqLen(queryId);
+                unsigned int queryOrigSeqLen = querySeqLen;
+
+                if (par.queryCopyCount > 0) {
+                    querySeqAAcopied.clear();
+                    querySeq3Dicopied.clear();
+                    for(int i = 0; i <= par.queryCopyCount; i++){
+                        querySeqAAcopied.append(querySeqAA, querySeqLen);
+                        querySeq3Dicopied.append(querySeq3Di, querySeqLen);
+                    }
+                    querySeqAA = (char*)(querySeqAAcopied).c_str();
+                    querySeq3Di = (char*)(querySeq3Dicopied).c_str();
+                    querySeqLen = querySeqAAcopied.size();
+                }
                 qSeq3Di.mapSequence(id, queryKey, querySeq3Di, querySeqLen);
                 qSeqAA.mapSequence(id, queryKey, querySeqAA, querySeqLen);
                 if(needCalpha){
                     size_t qId = qcadbr->sequenceReader->getId(queryKey);
                     char *qcadata = qcadbr->sequenceReader->getData(qId, thread_idx);
                     size_t qCaLength = qcadbr->sequenceReader->getEntryLen(qId);
-                    float* queryCaData = qcoords.read(qcadata, qSeq3Di.L, qCaLength);
+                    float* queryCaData = qcoords.read(qcadata, queryOrigSeqLen, qCaLength);
+                    if (par.queryCopyCount > 0) {
+                        queryCacopied.clear();
+                        for (int dimension = 0; dimension < 3; ++dimension) {
+                            for (int i = 0; i <= par.queryCopyCount; ++i) {
+                                queryCacopied.insert(queryCacopied.end(), &queryCaData[queryOrigSeqLen * dimension], &queryCaData[queryOrigSeqLen * (dimension + 1)]);
+                            }
+                        }
+                        queryCaData = queryCacopied.data();
+                    }
                     if(needTMaligner){
                         tmaligner->initQuery(queryCaData, &queryCaData[qSeq3Di.L], &queryCaData[qSeq3Di.L+qSeq3Di.L], NULL, qSeq3Di.L);
                     }

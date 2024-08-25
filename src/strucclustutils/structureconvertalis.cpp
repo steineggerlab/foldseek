@@ -529,6 +529,7 @@ R"html(<!DOCTYPE html>
 
             const unsigned int queryKey = alnDbr.getDbKey(i);
             char *querySeqData = NULL;
+            std::string querySeqCopy;
             size_t querySeqLen = 0;
             queryProfData.clear();
             if (needSequenceDB) {
@@ -542,6 +543,14 @@ R"html(<!DOCTYPE html>
                 if (queryProfile) {
                     size_t queryEntryLen = qDbr.sequenceReader->getEntryLen(qId);
                     Sequence::extractProfileConsensus(querySeqData, queryEntryLen, *subMat, queryProfData);
+                }
+                if(par.queryCopyCount > 0){
+                    querySeqCopy.clear();
+                    for(size_t j = 0; j <= par.queryCopyCount; j++){
+                        querySeqCopy.append(querySeqData, querySeqLen);
+                    }
+                    querySeqData = (char*) querySeqCopy.c_str();
+                    querySeqLen = querySeqCopy.size();
                 }
             }
             float *queryCaData = NULL;

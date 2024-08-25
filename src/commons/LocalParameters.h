@@ -106,6 +106,7 @@ public:
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
     PARAMETER(PARAM_LDDT_THRESHOLD)
+    PARAMETER(PARAM_QUERY_COPY_COUNT)
     PARAMETER(PARAM_SORT_BY_STRUCTURE_BITS)
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
@@ -131,6 +132,7 @@ public:
 
     int prefMode;
     float tmScoreThr;
+    int queryCopyCount;
     int tmAlignHitOrder;
     float lddtThr;
     int sortByStructureBits;

@@ -12,6 +12,7 @@ LocalParameters::LocalParameters() :
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_TMALIGN_HIT_ORDER(PARAM_TMALIGN_HIT_ORDER_ID,"--tmalign-hit-order", "TMalign hit order", "order hits by 0: (qTM+tTM)/2, 1: qTM, 2: tTM, 3: min(qTM,tTM) 4: max(qTM,tTM)",typeid(int), (void *) &tmAlignHitOrder, "^[0-4]{1}$"),
         PARAM_LDDT_THRESHOLD(PARAM_LDDT_THRESHOLD_ID,"--lddt-threshold", "LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &lddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_QUERY_COPY_COUNT(PARAM_QUERY_COPY_COUNT_ID,"--query-copy-count", "Query copy count", "copy query to find permuated alignemnts N def",typeid(int), (void *) &queryCopyCount, "^[0-9]{1}[0-9]*$"),
         PARAM_SORT_BY_STRUCTURE_BITS(PARAM_SORT_BY_STRUCTURE_BITS_ID,"--sort-by-structure-bits", "Sort by structure bit score", "sort by bits*sqrt(alnlddt*alntmscore)",typeid(int), (void *) &sortByStructureBits, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
         PARAM_MASK_BFACTOR_THRESHOLD(PARAM_MASK_BFACTOR_THRESHOLD_ID,"--mask-bfactor-threshold", "Mask b-factor threshold", "mask residues for seeding if b-factor < thr [0,100]",typeid(float), (void *) &maskBfactorThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
@@ -94,6 +95,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_V);
 
     convertalignments.push_back(&PARAM_EXACT_TMSCORE);
+    convertalignments.push_back(&PARAM_QUERY_COPY_COUNT);
 
     createindex.push_back(&PARAM_INDEX_EXCLUDE);
 
@@ -104,6 +106,7 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_MAX_REJECTED);
     tmalign.push_back(&PARAM_MAX_ACCEPT);
     tmalign.push_back(&PARAM_ADD_BACKTRACE);
+    tmalign.push_back(&PARAM_QUERY_COPY_COUNT);
     tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
     tmalign.push_back(&PARAM_TMALIGN_HIT_ORDER);
@@ -120,6 +123,7 @@ LocalParameters::LocalParameters() :
 
     structurealign.push_back(&PARAM_TMSCORE_THRESHOLD);
     structurealign.push_back(&PARAM_LDDT_THRESHOLD);
+    structurealign.push_back(&PARAM_QUERY_COPY_COUNT);
     structurealign.push_back(&PARAM_SORT_BY_STRUCTURE_BITS);
     structurealign.push_back(&PARAM_ALIGNMENT_TYPE);
     structurealign.push_back(&PARAM_EXACT_TMSCORE);
@@ -218,6 +222,7 @@ LocalParameters::LocalParameters() :
     tmScoreThr = 0.0;
     tmAlignHitOrder = TMALIGN_HIT_ORDER_AVG;
     lddtThr = 0.0;
+    queryCopyCount = 0;
     evalThr = 10;
     sortByStructureBits = 1;
     minDiagScoreThr = 30;
