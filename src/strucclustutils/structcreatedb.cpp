@@ -161,6 +161,7 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
 void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, int chainNameMode) {
     std::vector<size_t> resIdx1, resIdx2;
     std::vector<int> interfacetaxIds;
+    std::vector<unsigned int> interfaceModelIndices;
     std::vector<Vec3> ca, n, c, cb;
     std::vector<char> interfaceSeq3di, interfaceAmi;
     std::vector<Vec3> interfaceCa;
@@ -169,77 +170,80 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
     size_t prevInterfaceChainLen = 0;
     for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
         for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
-            findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1);
-            findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2);
-            if (resIdx1.size() >= 4 && resIdx2.size() >= 4){
-                for(size_t i = 0; i < resIdx1.size(); i++){
-                    ca.push_back(readStructure.ca[resIdx1[i]]);
-                    n.push_back(readStructure.n[resIdx1[i]]);
-                    c.push_back(readStructure.c[resIdx1[i]]);
-                    cb.push_back(readStructure.cb[resIdx1[i]]);
+            if (readStructure.modelIndices[ch1] == readStructure.modelIndices[ch2]){
+                findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1);
+                findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2);
+                if (resIdx1.size() >= 4 && resIdx2.size() >= 4){
+                    for(size_t i = 0; i < resIdx1.size(); i++){
+                        ca.push_back(readStructure.ca[resIdx1[i]]);
+                        n.push_back(readStructure.n[resIdx1[i]]);
+                        c.push_back(readStructure.c[resIdx1[i]]);
+                        cb.push_back(readStructure.cb[resIdx1[i]]);
+                    }
+                    // std::sort(resIdx2.begin(), resIdx2.end());
+                    for(size_t i = 0; i < resIdx2.size(); i++){
+                        ca.push_back(readStructure.ca[resIdx2[i]]);
+                        n.push_back(readStructure.n[resIdx2[i]]);
+                        c.push_back(readStructure.c[resIdx2[i]]);
+                        cb.push_back(readStructure.cb[resIdx2[i]]);
+                    }
+    //            if(resIdx1.size() != resIdx2.size() ){
+    //                std::cout << "ERROR: resIdx1.size() != resIdx2.size() " << resIdx1.size() << " != " << resIdx2.size() << std::endl;
+    //                exit(1);
+    //            }
+                    char *states = structureTo3Di.structure2states(ca.data(),
+                                                                n.data(),
+                                                                c.data(),
+                                                                cb.data(),
+                                                                resIdx1.size() + resIdx2.size());
+                    for (size_t i = 0; i < resIdx1.size(); i++) {
+                        interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[i])]);
+                        interfaceAmi.push_back(readStructure.ami[resIdx1[i]]);
+                        interfaceCa.push_back(readStructure.ca[resIdx1[i]]);
+                    }
+                    for (size_t i = 0; i < resIdx2.size(); i++) {
+                        interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[resIdx1.size()+i])]);
+                        interfaceAmi.push_back(readStructure.ami[resIdx2[i]]);
+                        interfaceCa.push_back(readStructure.ca[resIdx2[i]]);
+                    }
+                    interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx1.size() + resIdx2.size()));
+                    prevInterfaceChainLen += resIdx1.size();
+                    prevInterfaceChainLen += resIdx2.size();
+                    std::string interfaceName;
+                    if (Util::endsWith(".gz", readStructure.names[ch1] )){
+                        interfaceName.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch1])));
+                    } else{
+                        interfaceName.append(Util::remove_extension(readStructure.names[ch1]));
+                    } 
+                    if(readStructure.modelCount > 1){
+                        interfaceName.append("_MODEL_");
+                        interfaceName.append(std::to_string(readStructure.modelIndices[ch1]));
+                    }
+                    interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
+                    if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
+                        (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
+                        interfaceName.push_back('_');
+                        interfaceName.append(readStructure.chainNames[ch1]);
+                        interfaceName.push_back('_');
+                        interfaceName.append(readStructure.chainNames[ch2]);
+                    }
+                    if(readStructure.title.size() > 0){
+                        interfaceName.push_back(' ');
+                        interfaceName.append(readStructure.title);
+                    }   
+                    interfaceNames.push_back(interfaceName);
+                    // interfaceNames.push_back(readStructure.names[ch1]);
+                    // interfaceNames.push_back(readStructure.names[ch2]);
+                    string interfaceChainName = readStructure.chainNames[ch1] + "_" + readStructure.chainNames[ch2];
+                    interfaceChainNameVec.push_back(interfaceChainName);
+                    interfacetaxIds.push_back(readStructure.taxIds[ch1]);
+                    resIdx1.clear();
+                    resIdx2.clear();
+                    ca.clear();
+                    n.clear();
+                    c.clear();
+                    cb.clear();
                 }
-                // std::sort(resIdx2.begin(), resIdx2.end());
-                for(size_t i = 0; i < resIdx2.size(); i++){
-                    ca.push_back(readStructure.ca[resIdx2[i]]);
-                    n.push_back(readStructure.n[resIdx2[i]]);
-                    c.push_back(readStructure.c[resIdx2[i]]);
-                    cb.push_back(readStructure.cb[resIdx2[i]]);
-                }
-//            if(resIdx1.size() != resIdx2.size() ){
-//                std::cout << "ERROR: resIdx1.size() != resIdx2.size() " << resIdx1.size() << " != " << resIdx2.size() << std::endl;
-//                exit(1);
-//            }
-                char *states = structureTo3Di.structure2states(ca.data(),
-                                                            n.data(),
-                                                            c.data(),
-                                                            cb.data(),
-                                                            resIdx1.size() + resIdx2.size());
-                for (size_t i = 0; i < resIdx1.size(); i++) {
-                    interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[i])]);
-                    interfaceAmi.push_back(readStructure.ami[resIdx1[i]]);
-                    interfaceCa.push_back(readStructure.ca[resIdx1[i]]);
-                }
-                for (size_t i = 0; i < resIdx2.size(); i++) {
-                    interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[resIdx1.size()+i])]);
-                    interfaceAmi.push_back(readStructure.ami[resIdx2[i]]);
-                    interfaceCa.push_back(readStructure.ca[resIdx2[i]]);
-                }
-                interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx1.size() + resIdx2.size()));
-                prevInterfaceChainLen += resIdx1.size();
-                prevInterfaceChainLen += resIdx2.size();
-                std::string interfaceName;
-                if (Util::endsWith(".gz", readStructure.names[ch1] )){
-                    interfaceName.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch1])));
-                } else{
-                    interfaceName.append(Util::remove_extension(readStructure.names[ch1]));
-                } 
-                if(readStructure.modelCount > 1){
-                    interfaceName.append("_MODEL_");
-                    interfaceName.append(std::to_string(readStructure.modelIndices[ch1]));
-                }
-                if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-                    (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
-                    interfaceName.push_back('_');
-                    interfaceName.append(readStructure.chainNames[ch1]);
-                    interfaceName.push_back('_');
-                    interfaceName.append(readStructure.chainNames[ch2]);
-                }
-                if(readStructure.title.size() > 0){
-                    interfaceName.push_back(' ');
-                    interfaceName.append(readStructure.title);
-                }   
-                interfaceNames.push_back(interfaceName);
-                // interfaceNames.push_back(readStructure.names[ch1]);
-                // interfaceNames.push_back(readStructure.names[ch2]);
-                string interfaceChainName = readStructure.chainNames[ch1] + "_" + readStructure.chainNames[ch2];
-                interfaceChainNameVec.push_back(interfaceChainName);
-                interfacetaxIds.push_back(readStructure.taxIds[ch1]);
-                resIdx1.clear();
-                resIdx2.clear();
-                ca.clear();
-                n.clear();
-                c.clear();
-                cb.clear();
             }
         }
     }
@@ -259,6 +263,8 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
     readStructure.chainNames.insert(readStructure.chainNames.begin(), interfaceChainNameVec.begin(), interfaceChainNameVec.end());
     readStructure.taxIds.clear();
     readStructure.taxIds.insert(readStructure.taxIds.begin(), interfacetaxIds.begin(), interfacetaxIds.end());
+    readStructure.modelIndices.clear();
+    readStructure.modelIndices.insert(readStructure.modelIndices.begin(), interfaceModelIndices.begin(), interfaceModelIndices.end());
 }
 
 size_t
@@ -357,8 +363,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                 alphabet3di.push_back(readStructure.seq3di[chainStart+pos]);
                 alphabetAA.push_back(readStructure.ami[chainStart+pos]);
             }
-            header.append(readStructure.names[ch]);  
-            Debug(Debug::WARNING)<<header<<"\n";
+            header.append(readStructure.names[ch]);
         }
         alphabet3di.push_back('\n');
         alphabetAA.push_back('\n');
@@ -368,22 +373,50 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            std::string filenameWithExtension = readStructure.names[ch];
-            if (Util::endsWith(".gz", readStructure.names[ch])){
-                filenameWithExtension = Util::remove_extension(readStructure.names[ch]);
+            if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN){
+                std::string filenameWithExtension;
+                if (Util::endsWith(".gz", readStructure.names[ch] )){
+                    filenameWithExtension = Util::remove_extension(Util::remove_extension(readStructure.names[ch]));
+                }
+                else{
+                    filenameWithExtension = Util::remove_extension(readStructure.names[ch]);
+                }
+                std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
+                std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
+                size_t fileid;
+                if (it != filenameToFileId.end()) {
+                    fileid = it->second;
+                } else {
+                    fileid = fileidCnt;
+                    filenameToFileId[filenameWithoutExtension] = fileid;
+                    fileIdToName[fileid] = filenameWithoutExtension;
+                    fileidCnt++;
+                }
+                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
             }
-            std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
-            std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
-            size_t fileid;
-            if (it != filenameToFileId.end()) {
-                fileid = it->second;
-            } else {
-                fileid = fileidCnt;
-                filenameToFileId[filenameWithoutExtension] = fileid;
-                fileIdToName[fileid] = filenameWithoutExtension;
-                fileidCnt++;
+            else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
+                // TODO
+                std::string filenameWithoutExtension;
+                if(chainNameMode == LocalParameters::CHAIN_MODE_ADD || chainNameMode == LocalParameters::CHAIN_MODE_AUTO){
+                    size_t firstUnderscore = readStructure.names[ch].find('_');
+                    size_t secondUnderscore = readStructure.names[ch].find('_', firstUnderscore);
+                    filenameWithoutExtension = readStructure.names[ch].substr(0, secondUnderscore);
+                }
+                else {
+                    filenameWithoutExtension = readStructure.names[ch];
+                }
+                std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
+                size_t fileid;
+                if (it != filenameToFileId.end()) {
+                    fileid = it->second;
+                } else {
+                    fileid = fileidCnt;
+                    filenameToFileId[filenameWithoutExtension] = fileid;
+                    fileIdToName[fileid] = filenameWithoutExtension;
+                    fileidCnt++;
+                }
+                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
             }
-            entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
         }
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
 
@@ -1152,6 +1185,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
+            //TODO, lookup
             std::string entryNameWithModel = Util::parseFastaHeader(header);
             entry.entryName = removeModel(entryNameWithModel);
             std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameWithModel];
@@ -1165,7 +1199,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 entry.fileNumber = modelFileIdLookup[fileIdModelEntry];
                 needToWriteSource = false;
             }
-
             maxFileId = std::max(fileId, maxFileId);
             readerHeader.lookupEntryToBuffer(buffer, entry);
             size_t written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), file);
@@ -1175,6 +1208,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
             buffer.clear();
             if(needToWriteSource) {
+                //TODO, source
                 std::string filename = FileUtil::baseName(fileIdToName[fileId]);
                 if(needToWriteModel) {
                     filename.append("_MODEL_");
