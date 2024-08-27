@@ -95,8 +95,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     std::vector<int8_t> & camol, std::string & header, 
                     DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
                     float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
-                    std::string & filename,  size_t & fileidCnt,
-                    std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
+                    size_t & fileidCnt, std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
                     std::map<size_t, std::string> & fileIdToName,
                     DBWriter* mappingWriter) {
@@ -184,9 +183,12 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            std::string filenameWithExtension = filename;
-            if (Util::endsWith(".gz", filename)){
-                filenameWithExtension = Util::remove_extension(filename);
+            std::string filenameWithExtension;
+            if (Util::endsWith(".gz", readStructure.names[ch] )){
+                filenameWithExtension = Util::remove_extension(Util::remove_extension(readStructure.names[ch]));
+            }
+            else{
+                filenameWithExtension = Util::remove_extension(readStructure.names[ch]);
             }
             std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
             std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
@@ -649,7 +651,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         mat, readStructure, structureTo3Di, pulchra,
                         alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                        name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                        globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
                     );
                 }
@@ -692,7 +694,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 mat, readStructure, structureTo3Di,  pulchra,
                 alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                 par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                looseFiles[i], globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                 mappingWriter
             );
         }
@@ -755,7 +757,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                     mat, readStructure, structureTo3Di,  pulchra,
                                     alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                                     par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                                    obj_name, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                                    globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                                     mappingWriter
                                 );
                             }
@@ -806,7 +808,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         mat, readStructure, structureTo3Di,  pulchra,
                         alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                        dbname, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                        globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
                         mappingWriter
                     );
                 }
