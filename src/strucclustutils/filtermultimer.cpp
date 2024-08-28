@@ -123,6 +123,9 @@ public:
         }
         switch (covMode) {
             case Parameters::COV_MODE_BIDIRECTIONAL:
+                if (qChainNum != tChainNum){
+                    return false;
+                }
                 for (size_t i = 0; i < qAlnChainTms.size(); i++) {
                     if (qAlnChainTms[i] < chainTmThr || tAlnChainTms[i] < chainTmThr) {
                         return false;
@@ -154,7 +157,7 @@ public:
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
         const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true;
         const bool lddtOK = iLddtThr ? (interfaceLddt >= iLddtThr) : true;
-         return (covOK && TmOK && chainTmOK && lddtOK);
+        return (covOK && TmOK && chainTmOK && lddtOK);
     }
 
     void updateAln(unsigned int qAlnLen, unsigned int tAlnLen) {
@@ -258,15 +261,17 @@ public:
         AlignedCoordinate tInterface(intLen);
         size_t idx = 0;
         for (size_t chainIdx = 0; chainIdx < qInterfacePos.size(); chainIdx++) {
-            for (size_t resIdx: qInterfacePos[chainIdx]) {
-                qInterface.x[idx] = qAlnChains[chainIdx].x[resIdx];
-                qInterface.y[idx] = qAlnChains[chainIdx].y[resIdx];
-                qInterface.z[idx] = qAlnChains[chainIdx].z[resIdx];
-                tInterface.x[idx] = tAlnChains[chainIdx].x[resIdx];
-                tInterface.y[idx] = tAlnChains[chainIdx].y[resIdx];
-                tInterface.z[idx] = tAlnChains[chainIdx].z[resIdx];
-                idx++;
-            }
+            // if (qInterfacePos[chainIdx].size() >= 4){
+                for (size_t resIdx: qInterfacePos[chainIdx]) {
+                    qInterface.x[idx] = qAlnChains[chainIdx].x[resIdx];
+                    qInterface.y[idx] = qAlnChains[chainIdx].y[resIdx];
+                    qInterface.z[idx] = qAlnChains[chainIdx].z[resIdx];
+                    tInterface.x[idx] = tAlnChains[chainIdx].x[resIdx];
+                    tInterface.y[idx] = tAlnChains[chainIdx].y[resIdx];
+                    tInterface.z[idx] = tAlnChains[chainIdx].z[resIdx];
+                    idx++;
+                }
+            // }
         }
         std::string bt(intLen, 'M');
         LDDTCalculator *lddtcalculator = NULL;
@@ -536,7 +541,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
                     std::vector<unsigned int> tChainKeys = tComplexes[tComplexIdx].chainKeys;
                     //if target is monomer, break to be singleton
-                    unsigned int tChainAlnId = alnDbr.getId(tChainKey);
+                    // unsigned int tChainAlnId = alnDbr.getId(tChainKey);
                     // if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY){
                     //     continue;
                     // }

@@ -703,15 +703,18 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
+            Debug(Debug::WARNING)<<qCompIdx<<"\n";
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
             // if (qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
             //     continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
+            Debug(Debug::WARNING)<<"finished getSearchResults\n";
             // for each db complex
             for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
                 complexScorer.getAssignments(searchResults[dbId], assignments);
             }
+            Debug(Debug::WARNING)<<"finished getAssignments\n";
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
             for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
@@ -729,11 +732,13 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                     resultToWriteLines[currIdx].append(buffer);
                 }
             }
+            Debug(Debug::WARNING)<<"finished for each assignment\n";
             for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
                 resultToWrite_t &resultToWrite = resultToWriteLines[qChainKeyIdx];
                 unsigned int & qKey = qChainKeys[qChainKeyIdx];
                 resultWriter.writeData(resultToWrite.c_str(),resultToWrite.length(),qKey,thread_idx);
             }
+            Debug(Debug::WARNING)<<"finished writing\n";
             assignments.clear();
             resultToWriteLines.clear();
             searchResults.clear();
