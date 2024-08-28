@@ -154,22 +154,23 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
 }
 
 void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, int chainNameMode) {
+    size_t prevInterfaceChainLen = 0;
+    std::vector<char> interfaceSeq3di, interfaceAmi;
     std::vector<size_t> resIdx1, resIdx2;
     std::vector<int> interfacetaxIds;
     std::vector<unsigned int> interfaceModelIndices;
     std::vector<Vec3> ca, n, c, cb;
-    std::vector<char> interfaceSeq3di, interfaceAmi;
     std::vector<Vec3> interfaceCa;
     std::vector<std::string> interfaceNames, interfaceChainNames;
     std::vector<std::pair<size_t, size_t>> interfaceChain;
-    size_t prevInterfaceChainLen = 0;
-    unsigned int interfaceNum = 1;
+    std::map<unsigned int, unsigned int> modelToInterfaceNum;
     for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
         for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
             if (readStructure.modelIndices[ch1] == readStructure.modelIndices[ch2]){
                 findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1);
                 findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2);
                 if (resIdx1.size() >= 4 && resIdx2.size() >= 4){
+                    modelToInterfaceNum[readStructure.modelIndices[ch2]]++;
                     for(size_t i = 0; i < resIdx1.size(); i++){
                         ca.push_back(readStructure.ca[resIdx1[i]]);
                         n.push_back(readStructure.n[resIdx1[i]]);
@@ -215,7 +216,7 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
                     interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
                     interfaceModelIndices.push_back(readStructure.modelIndices[ch2]);
                     interfaceName.append("_INT_");
-                    interfaceName.append(std::to_string(interfaceNum));
+                    interfaceName.append(std::to_string(modelToInterfaceNum[readStructure.modelIndices[ch2]]));
                     std::string interfaceNameFirst = interfaceName;
                     std::string interfaceNameSecond = interfaceName;
                     if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
@@ -243,7 +244,6 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
                     n.clear();
                     c.clear();
                     cb.clear();
-                    interfaceNum++;
                 }
             }
         }
