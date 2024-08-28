@@ -15,7 +15,8 @@
 #include "PatternCompiler.h"
 #include "Coordinate16.h"
 #include "itoa.h"
-#include <tmalign/basic_fun.h>
+#include "MathUtil.h"
+
 #ifdef HAVE_PROSTT5
 #include "prostt5.h"
 #endif
@@ -118,9 +119,8 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
 {
     std::vector<Vec3> coord1, coord2;
     LocalParameters& par = LocalParameters::getLocalInstance();
+    const float squareThreshold = par.distanceThreshold * par.distanceThreshold;
     for (size_t res1Idx = res1.first; res1Idx < res1.second; res1Idx++) {
-        // float shortestDistance = std::numeric_limits<float>::infinity();
-        float squarethreshold = par.distanceThreshold * par.distanceThreshold;
         float x1, y1, z1;
         if (readStructure.ami[res1Idx] == 'G') {
             x1 = readStructure.ca[res1Idx].x;
@@ -144,13 +144,8 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
                 y2 = readStructure.cb[res2Idx].y;
                 z2 = readStructure.cb[res2Idx].z;
             }
-            // float D2 = 0;
-            // D2 += (x1 - x2) * (x1 - x2);
-            // D2 += (y1 - y2) * (y1 - y2);
-            // D2 += (z1 - z2) * (z1 - z2);
-            // float distance = sqrt(D2);
-            float distance = BasicFunction::dist(x1, y1, z1, x2, y2, z2);
-            if (distance < squarethreshold) {
+            float distance = MathUtil::squaredist(x1, y1, z1, x2, y2, z2);
+            if (distance < squareThreshold) {
                 resIdx1.push_back(res1Idx);
                 break;
             }
@@ -165,7 +160,7 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
     std::vector<Vec3> ca, n, c, cb;
     std::vector<char> interfaceSeq3di, interfaceAmi;
     std::vector<Vec3> interfaceCa;
-    std::vector<std::string> interfaceNames, interfaceChainNameVec;
+    std::vector<std::string> interfaceNames, interfaceChainNames;
     std::vector<std::pair<size_t, size_t>> interfaceChain;
     size_t prevInterfaceChainLen = 0;
     for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
@@ -187,10 +182,6 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
                         c.push_back(readStructure.c[resIdx2[i]]);
                         cb.push_back(readStructure.cb[resIdx2[i]]);
                     }
-    //            if(resIdx1.size() != resIdx2.size() ){
-    //                std::cout << "ERROR: resIdx1.size() != resIdx2.size() " << resIdx1.size() << " != " << resIdx2.size() << std::endl;
-    //                exit(1);
-    //            }
                     char *states = structureTo3Di.structure2states(ca.data(),
                                                                 n.data(),
                                                                 c.data(),
@@ -232,10 +223,8 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
                         interfaceName.append(readStructure.title);
                     }   
                     interfaceNames.push_back(interfaceName);
-                    // interfaceNames.push_back(readStructure.names[ch1]);
-                    // interfaceNames.push_back(readStructure.names[ch2]);
-                    string interfaceChainName = readStructure.chainNames[ch1] + "_" + readStructure.chainNames[ch2];
-                    interfaceChainNameVec.push_back(interfaceChainName);
+                    std::string interfaceChainName = readStructure.chainNames[ch1] + "_" + readStructure.chainNames[ch2];
+                    interfaceChainNames.push_back(interfaceChainName);
                     interfacetaxIds.push_back(readStructure.taxIds[ch1]);
                     resIdx1.clear();
                     resIdx2.clear();
@@ -260,7 +249,7 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
     readStructure.names.clear();
     readStructure.names.insert(readStructure.names.begin(), interfaceNames.begin(), interfaceNames.end());
     readStructure.chainNames.clear();
-    readStructure.chainNames.insert(readStructure.chainNames.begin(), interfaceChainNameVec.begin(), interfaceChainNameVec.end());
+    readStructure.chainNames.insert(readStructure.chainNames.begin(), interfaceChainNames.begin(), interfaceChainNames.end());
     readStructure.taxIds.clear();
     readStructure.taxIds.insert(readStructure.taxIds.begin(), interfacetaxIds.begin(), interfacetaxIds.end());
     readStructure.modelIndices.clear();
