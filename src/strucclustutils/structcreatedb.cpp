@@ -163,6 +163,7 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
     std::vector<std::string> interfaceNames, interfaceChainNames;
     std::vector<std::pair<size_t, size_t>> interfaceChain;
     size_t prevInterfaceChainLen = 0;
+    unsigned int interfaceNum = 1;
     for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
         for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
             if (readStructure.modelIndices[ch1] == readStructure.modelIndices[ch2]){
@@ -197,8 +198,9 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
                         interfaceAmi.push_back(readStructure.ami[resIdx2[i]]);
                         interfaceCa.push_back(readStructure.ca[resIdx2[i]]);
                     }
-                    interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx1.size() + resIdx2.size()));
+                    interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx1.size()));
                     prevInterfaceChainLen += resIdx1.size();
+                    interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx2.size()));
                     prevInterfaceChainLen += resIdx2.size();
                     std::string interfaceName;
                     if (Util::endsWith(".gz", readStructure.names[ch1] )){
@@ -211,27 +213,37 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
                         interfaceName.append(std::to_string(readStructure.modelIndices[ch1]));
                     }
                     interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
+                    interfaceModelIndices.push_back(readStructure.modelIndices[ch2]);
+                    interfaceName.append("_INT_");
+                    interfaceName.append(std::to_string(interfaceNum));
+                    std::string interfaceNameFirst = interfaceName;
+                    std::string interfaceNameSecond = interfaceName;
                     if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
                         (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
-                        interfaceName.push_back('_');
-                        interfaceName.append(readStructure.chainNames[ch1]);
-                        interfaceName.push_back('_');
-                        interfaceName.append(readStructure.chainNames[ch2]);
+                        interfaceNameFirst.push_back('_');
+                        interfaceNameFirst.append(readStructure.chainNames[ch1]);
+                        interfaceNameSecond.push_back('_');
+                        interfaceNameSecond.append(readStructure.chainNames[ch2]);
                     }
                     if(readStructure.title.size() > 0){
-                        interfaceName.push_back(' ');
-                        interfaceName.append(readStructure.title);
+                        interfaceNameFirst.push_back(' ');
+                        interfaceNameFirst.append(readStructure.title);
+                        interfaceNameSecond.push_back(' ');
+                        interfaceNameSecond.append(readStructure.title);
                     }   
-                    interfaceNames.push_back(interfaceName);
-                    std::string interfaceChainName = readStructure.chainNames[ch1] + "_" + readStructure.chainNames[ch2];
-                    interfaceChainNames.push_back(interfaceChainName);
+                    interfaceNames.push_back(interfaceNameFirst);
+                    interfaceNames.push_back(interfaceNameSecond);
+                    interfaceChainNames.push_back(readStructure.chainNames[ch1]);
+                    interfaceChainNames.push_back(readStructure.chainNames[ch2]);
                     interfacetaxIds.push_back(readStructure.taxIds[ch1]);
+                    interfacetaxIds.push_back(readStructure.taxIds[ch2]);
                     resIdx1.clear();
                     resIdx2.clear();
                     ca.clear();
                     n.clear();
                     c.clear();
                     cb.clear();
+                    interfaceNum++;
                 }
             }
         }
@@ -384,12 +396,10 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                 entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
             }
             else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
-                // TODO
                 std::string filenameWithoutExtension;
                 if(chainNameMode == LocalParameters::CHAIN_MODE_ADD || chainNameMode == LocalParameters::CHAIN_MODE_AUTO){
                     size_t firstUnderscore = readStructure.names[ch].find('_');
-                    size_t secondUnderscore = readStructure.names[ch].find('_', firstUnderscore);
-                    filenameWithoutExtension = readStructure.names[ch].substr(0, secondUnderscore);
+                    filenameWithoutExtension = readStructure.names[ch].substr(0, firstUnderscore);
                 }
                 else {
                     filenameWithoutExtension = readStructure.names[ch];
@@ -1174,7 +1184,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
-            //TODO, lookup
             std::string entryNameWithModel = Util::parseFastaHeader(header);
             entry.entryName = removeModel(entryNameWithModel);
             std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameWithModel];
@@ -1197,7 +1206,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
             buffer.clear();
             if(needToWriteSource) {
-                //TODO, source
                 std::string filename = FileUtil::baseName(fileIdToName[fileId]);
                 if(needToWriteModel) {
                     filename.append("_MODEL_");
