@@ -144,7 +144,7 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
                 y2 = readStructure.cb[res2Idx].y;
                 z2 = readStructure.cb[res2Idx].z;
             }
-            float distance = MathUtil::squaredist(x1, y1, z1, x2, y2, z2);
+            float distance = MathUtil::squareDist(x1, y1, z1, x2, y2, z2);
             if (distance < squareThreshold) {
                 resIdx1.push_back(res1Idx);
                 break;

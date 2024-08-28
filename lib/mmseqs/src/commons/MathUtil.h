@@ -256,7 +256,7 @@ public:
         return sum;
     }
 
-    static float squaredist(const float xx, const float xy, const float xz,
+    static float squareDist(const float xx, const float xy, const float xz,
                const float yx, const float yy, const float yz){
         float d1=xx-yx;
         float d2=xy-yy;
