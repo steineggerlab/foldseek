@@ -81,19 +81,20 @@ static inline bool compareByFirst(const std::pair<T, U>& a, const std::pair<T, U
 
 std::string removeModel(const std::string& input) {
     size_t modelIndex = input.find("MODEL");
-    if (modelIndex == std::string::npos){
+    if (modelIndex == std::string::npos) {
         return input;
     }
     std::string prefix = input.substr(0, modelIndex);
     size_t secondUnderscoreIndex = input.find('_', modelIndex + 6);
-    if (secondUnderscoreIndex == std::string::npos)
+    if (secondUnderscoreIndex == std::string::npos){
         return prefix;
+    }
     std::string suffix = input.substr(secondUnderscoreIndex+1);
     return prefix + suffix;
 }
 
 void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pulchra){
-    for(size_t ch = 0; ch < readStructure.chain.size(); ch++){
+    for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
         size_t chainStart = readStructure.chain[ch].first;
         size_t chainLen = readStructure.chain[ch].second - readStructure.chain[ch].first;
         // Detect if structure is Ca only
@@ -115,11 +116,10 @@ void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pul
 }
 
 void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t> res1, std::pair<size_t, size_t> res2,
-                           std::vector<size_t> & resIdx1)
+                           std::vector<size_t> & resIdx1, float distanceThreshold)
 {
     std::vector<Vec3> coord1, coord2;
-    LocalParameters& par = LocalParameters::getLocalInstance();
-    const float squareThreshold = par.distanceThreshold * par.distanceThreshold;
+    const float squareThreshold = distanceThreshold * distanceThreshold;
     for (size_t res1Idx = res1.first; res1Idx < res1.second; res1Idx++) {
         float x1, y1, z1;
         if (readStructure.ami[res1Idx] == 'G') {
@@ -153,7 +153,7 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
     }
 }
 
-void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, int chainNameMode) {
+void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, int chainNameMode, float distanceThreshold) {
     size_t prevInterfaceChainLen = 0;
     std::vector<char> interfaceSeq3di, interfaceAmi;
     std::vector<size_t> resIdx1, resIdx2;
@@ -163,22 +163,22 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
     std::vector<Vec3> interfaceCa;
     std::vector<std::string> interfaceNames, interfaceChainNames;
     std::vector<std::pair<size_t, size_t>> interfaceChain;
-    std::map<unsigned int, unsigned int> modelToInterfaceNum;
+    std::unordered_map<unsigned int, unsigned int> modelToInterfaceNum;
     for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
         for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
-            if (readStructure.modelIndices[ch1] == readStructure.modelIndices[ch2]){
-                findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1);
-                findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2);
-                if (resIdx1.size() >= 4 && resIdx2.size() >= 4){
+            if (readStructure.modelIndices[ch1] == readStructure.modelIndices[ch2]) {
+                findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1, distanceThreshold);
+                findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2, distanceThreshold);
+                if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
                     modelToInterfaceNum[readStructure.modelIndices[ch2]]++;
-                    for(size_t i = 0; i < resIdx1.size(); i++){
+                    for (size_t i = 0; i < resIdx1.size(); i++) {
                         ca.push_back(readStructure.ca[resIdx1[i]]);
                         n.push_back(readStructure.n[resIdx1[i]]);
                         c.push_back(readStructure.c[resIdx1[i]]);
                         cb.push_back(readStructure.cb[resIdx1[i]]);
                     }
                     // std::sort(resIdx2.begin(), resIdx2.end());
-                    for(size_t i = 0; i < resIdx2.size(); i++){
+                    for (size_t i = 0; i < resIdx2.size(); i++) {
                         ca.push_back(readStructure.ca[resIdx2[i]]);
                         n.push_back(readStructure.n[resIdx2[i]]);
                         c.push_back(readStructure.c[resIdx2[i]]);
@@ -204,29 +204,29 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, StructureTo3Di &structure
                     interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx2.size()));
                     prevInterfaceChainLen += resIdx2.size();
                     std::string interfaceName;
-                    if (Util::endsWith(".gz", readStructure.names[ch1] )){
+                    if (Util::endsWith(".gz", readStructure.names[ch1] )) {
                         interfaceName.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch1])));
-                    } else{
+                    } else {
                         interfaceName.append(Util::remove_extension(readStructure.names[ch1]));
                     } 
-                    if(readStructure.modelCount > 1){
+                    if (readStructure.modelCount > 1) {
                         interfaceName.append("_MODEL_");
-                        interfaceName.append(std::to_string(readStructure.modelIndices[ch1]));
+                        interfaceName.append(SSTR(readStructure.modelIndices[ch1]));
                     }
                     interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
                     interfaceModelIndices.push_back(readStructure.modelIndices[ch2]);
                     interfaceName.append("_INT_");
-                    interfaceName.append(std::to_string(modelToInterfaceNum[readStructure.modelIndices[ch2]]));
+                    interfaceName.append(SSTR(modelToInterfaceNum[readStructure.modelIndices[ch2]]));
                     std::string interfaceNameFirst = interfaceName;
                     std::string interfaceNameSecond = interfaceName;
-                    if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-                        (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
+                    if (chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
+                        (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)) {
                         interfaceNameFirst.push_back('_');
                         interfaceNameFirst.append(readStructure.chainNames[ch1]);
                         interfaceNameSecond.push_back('_');
                         interfaceNameSecond.append(readStructure.chainNames[ch2]);
                     }
-                    if(readStructure.title.size() > 0){
+                    if (readStructure.title.size() > 0) {
                         interfaceNameFirst.push_back(' ');
                         interfaceNameFirst.append(readStructure.title);
                         interfaceNameSecond.push_back(' ');
@@ -281,7 +281,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
     LocalParameters &par = LocalParameters::getLocalInstance();
     if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
         addMissingAtomsInStructure(readStructure, pulchra);
-        compute3DiInterfaces(readStructure, structureTo3Di, mat, chainNameMode );
+        compute3DiInterfaces(readStructure, structureTo3Di, mat, chainNameMode, par.distanceThreshold);
     }
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
     size_t entriesAdded = 0;
@@ -291,7 +291,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         size_t chainEnd = readStructure.chain[ch].second;
         size_t chainLen = chainEnd - chainStart;
         header.clear();
-        if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN){
+        if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN) {
             if (chainLen <= 3) {
                 tooShort++;
                 continue;
@@ -316,8 +316,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                 std::isnan(readStructure.c[chainStart + 0].x) &&
                 std::isnan(readStructure.c[chainStart + 1].x) &&
                 std::isnan(readStructure.c[chainStart + 2].x) &&
-                std::isnan(readStructure.c[chainStart + 3].x))
-            {
+                std::isnan(readStructure.c[chainStart + 3].x)) {
                 pulchra.rebuildBackbone(&readStructure.ca[chainStart],
                                         &readStructure.n[chainStart],
                                         &readStructure.c[chainStart],
@@ -330,37 +329,37 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                                                             &readStructure.c[chainStart],
                                                             &readStructure.cb[chainStart],
                                                             chainLen);
-            for(size_t pos = 0; pos < chainLen; pos++){
-                if(readStructure.ca_bfactor[pos] < maskBfactorThreshold){
+            for (size_t pos = 0; pos < chainLen; pos++) {
+                if (readStructure.ca_bfactor[pos] < maskBfactorThreshold) {
                     alphabet3di.push_back(tolower(mat.num2aa[static_cast<int>(states[pos])]));
                     alphabetAA.push_back(tolower(readStructure.ami[chainStart+pos]));
-                }else{
+                } else {
                     alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
                     alphabetAA.push_back(readStructure.ami[chainStart+pos]);
                 }
             }
-            if (Util::endsWith(".gz", readStructure.names[ch] )){
+            if (Util::endsWith(".gz", readStructure.names[ch] )) {
                 header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
             }
-            else{
+            else {
                 header.append(Util::remove_extension(readStructure.names[ch]));
             } 
-            if(readStructure.modelCount > 1){
+            if (readStructure.modelCount > 1) {
                 header.append("_MODEL_");
-                header.append(std::to_string(readStructure.modelIndices[ch]));
+                header.append(SSTR(readStructure.modelIndices[ch]));
             }
-            if(chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-                (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)){
+            if (chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
+                (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)) {
                 header.push_back('_');
                 header.append(readStructure.chainNames[ch]);
             }
-            if(readStructure.title.size() > 0){
+            if (readStructure.title.size() > 0) {
                 header.push_back(' ');
                 header.append(readStructure.title);
             }
         }
         else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
-            for(size_t pos = 0; pos < chainLen; pos++){
+            for (size_t pos = 0; pos < chainLen; pos++) {
                 alphabet3di.push_back(readStructure.seq3di[chainStart+pos]);
                 alphabetAA.push_back(readStructure.ami[chainStart+pos]);
             }
@@ -374,12 +373,12 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN){
+            if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN) {
                 std::string filenameWithExtension;
-                if (Util::endsWith(".gz", readStructure.names[ch] )){
+                if (Util::endsWith(".gz", readStructure.names[ch] )) {
                     filenameWithExtension = Util::remove_extension(Util::remove_extension(readStructure.names[ch]));
                 }
-                else{
+                else {
                     filenameWithExtension = Util::remove_extension(readStructure.names[ch]);
                 }
                 std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
@@ -397,11 +396,10 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             }
             else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
                 std::string filenameWithoutExtension;
-                if(chainNameMode == LocalParameters::CHAIN_MODE_ADD || chainNameMode == LocalParameters::CHAIN_MODE_AUTO){
+                if (chainNameMode == LocalParameters::CHAIN_MODE_ADD || chainNameMode == LocalParameters::CHAIN_MODE_AUTO) {
                     size_t firstUnderscore = readStructure.names[ch].find('_');
                     filenameWithoutExtension = readStructure.names[ch].substr(0, firstUnderscore);
-                }
-                else {
+                } else {
                     filenameWithoutExtension = readStructure.names[ch];
                 }
                 std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
@@ -703,7 +701,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     int inputFormat = par.inputFormat;
 
     // Process tar files!
-    for(size_t i = 0; i < tarFiles.size(); i++) {
+    for (size_t i = 0; i < tarFiles.size(); i++) {
         mtar_t tar;
         if (Util::endsWith(".tar.gz", tarFiles[i]) || Util::endsWith(".tgz", tarFiles[i])) {
 #ifdef HAVE_ZLIB
@@ -898,7 +896,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
 
-            if(readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false){
+            if(readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false) {
                 incorrectFiles++;
                 continue;
             }
@@ -1188,12 +1186,12 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             entry.entryName = removeModel(entryNameWithModel);
             std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameWithModel];
             size_t fileId = fileIdModelEntry.first;
-            if(modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()){
+            if (modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()) {
                 modelFileIdLookup[fileIdModelEntry] = globalFileNumber;
                 entry.fileNumber = globalFileNumber;
                 globalFileNumber++;
                 needToWriteSource = true;
-            }else{
+            } else {
                 entry.fileNumber = modelFileIdLookup[fileIdModelEntry];
                 needToWriteSource = false;
             }
@@ -1205,9 +1203,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 EXIT(EXIT_FAILURE);
             }
             buffer.clear();
-            if(needToWriteSource) {
+            if (needToWriteSource) {
                 std::string filename = FileUtil::baseName(fileIdToName[fileId]);
-                if(needToWriteModel) {
+                if (needToWriteModel) {
                     filename.append("_MODEL_");
                     filename.append(SSTR(fileIdModelEntry.second));
                 }
