@@ -32,6 +32,10 @@ public:
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
 
+    static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
+    static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
+    static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
+
     static const int PREF_MODE_KMER = 0;
     static const int PREF_MODE_UNGAPPED = 1;
     static const int PREF_MODE_EXHAUSTIVE = 2;
@@ -104,6 +108,7 @@ public:
 
     PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
+    PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
     PARAMETER(PARAM_LDDT_THRESHOLD)
     PARAMETER(PARAM_SORT_BY_STRUCTURE_BITS)
@@ -131,6 +136,7 @@ public:
 
     int prefMode;
     float tmScoreThr;
+    int tmScoreThrMode;
     int tmAlignHitOrder;
     float lddtThr;
     int sortByStructureBits;

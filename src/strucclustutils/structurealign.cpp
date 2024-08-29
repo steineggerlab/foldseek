@@ -388,7 +388,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                                                   res.qStartPos,
                                                                   res.dbStartPos,
                                                                   res.backtrace,
-                                                                  res.backtrace.size());
+                                                                  TMaligner::normalization(par.tmScoreThrMode, res.backtrace.size(), res.qLen, res.dbLen));
                                 if (tmres.tmscore < par.tmScoreThr) {
                                     continue;
                                 }

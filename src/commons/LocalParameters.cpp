@@ -10,6 +10,7 @@ LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_PREF_MODE(PARAM_PREF_MODE_ID,"--prefilter-mode", "Prefilter mode", "prefilter mode: 0: kmer/ungapped 1: ungapped, 2: nofilter",typeid(int), (void *) &prefMode, "^[0-2]{1}$"),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_TMSCORE_THRESHOLD_MODE(PARAM_TMSCORE_THRESHOLD_MODE_ID,"--tmscore-threshold-mode", "TMscore threshold mode", "0: alignment, 1: query 2: target length",typeid(int), (void *) &tmScoreThrMode, "^[0-2]{1}$"),
         PARAM_TMALIGN_HIT_ORDER(PARAM_TMALIGN_HIT_ORDER_ID,"--tmalign-hit-order", "TMalign hit order", "order hits by 0: (qTM+tTM)/2, 1: qTM, 2: tTM, 3: min(qTM,tTM) 4: max(qTM,tTM)",typeid(int), (void *) &tmAlignHitOrder, "^[0-4]{1}$"),
         PARAM_LDDT_THRESHOLD(PARAM_LDDT_THRESHOLD_ID,"--lddt-threshold", "LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &lddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_SORT_BY_STRUCTURE_BITS(PARAM_SORT_BY_STRUCTURE_BITS_ID,"--sort-by-structure-bits", "Sort by structure bit score", "sort by bits*sqrt(alnlddt*alntmscore)",typeid(int), (void *) &sortByStructureBits, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
@@ -106,6 +107,7 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_ADD_BACKTRACE);
     tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    tmalign.push_back(&PARAM_TMSCORE_THRESHOLD_MODE);
     tmalign.push_back(&PARAM_TMALIGN_HIT_ORDER);
     tmalign.push_back(&PARAM_TMALIGN_FAST);
     tmalign.push_back(&PARAM_PRELOAD_MODE);
@@ -114,11 +116,13 @@ LocalParameters::LocalParameters() :
 
     structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD_MODE);
     structurerescorediagonal.push_back(&PARAM_LDDT_THRESHOLD);
     structurerescorediagonal.push_back(&PARAM_ALIGNMENT_TYPE);
     structurerescorediagonal = combineList(structurerescorediagonal, align);
 
     structurealign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurealign.push_back(&PARAM_TMSCORE_THRESHOLD_MODE);
     structurealign.push_back(&PARAM_LDDT_THRESHOLD);
     structurealign.push_back(&PARAM_SORT_BY_STRUCTURE_BITS);
     structurealign.push_back(&PARAM_ALIGNMENT_TYPE);
@@ -216,6 +220,7 @@ LocalParameters::LocalParameters() :
     prefMode = PREF_MODE_KMER;
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
+    tmScoreThrMode = TMSCORE_THRESHOLD_MODE_ALIGNMENT;
     tmAlignHitOrder = TMALIGN_HIT_ORDER_AVG;
     lddtThr = 0.0;
     evalThr = 10;
