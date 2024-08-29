@@ -380,6 +380,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                             size_t tCaLength = tcadbr->sequenceReader->getEntryLen(tId);
                             float* targetCaData = tcoords.read(tcadata, res.dbLen, tCaLength);
                             if(needTMaligner) {
+                                unsigned int normLen = std::min(res.dbLen, res.qLen);
                                 tmres = tmaligner->computeTMscore(targetCaData,
                                                                   &targetCaData[res.dbLen],
                                                                   &targetCaData[res.dbLen +
@@ -388,7 +389,9 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                                                   res.qStartPos,
                                                                   res.dbStartPos,
                                                                   res.backtrace,
-                                                                  std::min(static_cast<unsigned int>(res.backtrace.size()), std::min(res.dbLen, res.qLen)));
+                                                                  normLen);
+                                tmres.tmscore = (tmres.tmscore / static_cast<double>(normLen))
+                                                    * static_cast<double>(res.backtrace.size());
                                 if (tmres.tmscore < par.tmScoreThr) {
                                     continue;
                                 }

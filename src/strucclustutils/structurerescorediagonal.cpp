@@ -342,9 +342,12 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                         char *tcadata = tcadbr->sequenceReader->getData(tId, thread_idx);
                         size_t tCaLength = tcadbr->sequenceReader->getEntryLen(tId);
                         float* targetCaData = tcoords.read(tcadata, res.dbLen, tCaLength);
+                        unsigned int normLen = std::min(res.dbLen, res.qLen);
                         TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                                                    res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
-                                                                                   std::min(static_cast<unsigned int>(res.backtrace.length()), std::min(res.dbLen, res.qLen)));
+                                                                                   normLen);
+                        tmres.tmscore = (tmres.tmscore / static_cast<double>(normLen))
+                                        * static_cast<double>(res.backtrace.size());
                         if(tmres.tmscore < par.tmScoreThr){
                             continue;
                         }

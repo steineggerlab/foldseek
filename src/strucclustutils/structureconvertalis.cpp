@@ -653,12 +653,12 @@ R"html(<!DOCTYPE html>
                 }
                 if(needTMaligner){
                     tmaligner->initQuery(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen], NULL, res.qLen);
+                    unsigned int normlen= std::min(res.qLen, res.dbLen);
                     tmpBt = Matcher::uncompressAlignment(res.backtrace);
                     tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                      res.qStartPos, res.dbStartPos, tmpBt,
-                                                      std::min(std::min(res.dbLen, res.qLen), static_cast<unsigned int>(tmpBt.size())));
+                                                      res.qStartPos, res.dbStartPos, tmpBt,normlen);
+                    tmres.tmscore = tmres.tmscore / normlen;
                     rmsd = tmres.rmsd;
-
                 }
                 LDDTCalculator::LDDTScoreResult lddtres;
                 if(needLDDT) {
@@ -885,19 +885,13 @@ R"html(<!DOCTYPE html>
                                         result.append(SSTR(tmres.t[2]));
                                         break;
                                     case LocalParameters::OUTFMT_ALNTMSCORE:
-                                        result.append(SSTR(tmres.tmscore));
+                                        result.append(SSTR(tmres.tmscore * tmpBt.size()));
                                         break;
                                     case LocalParameters::OUTFMT_QTMSCORE:
-                                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
-                                                                          res.qLen);
-                                        result.append(SSTR(tmres.tmscore));
+                                        result.append(SSTR(tmres.tmscore * res.qLen));
                                         break;
                                     case LocalParameters::OUTFMT_TTMSCORE:
-                                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
-                                                                          res.dbLen);
-                                        result.append(SSTR(tmres.tmscore));
+                                        result.append(SSTR(tmres.tmscore * res.dbLen));
                                         break;
                                     case LocalParameters::OUTFMT_RMSD:
                                         result.append(SSTR(rmsd));

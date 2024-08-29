@@ -101,10 +101,11 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 float* tdata = tcoords.read(tcadata, targetLen, tCaLength);
 
                 // Matching residue index collection
+                unsigned int normLen = std::min(res.dbLen, res.qLen);
                 TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen,
-                                                                      res.qStartPos, res.dbStartPos, res.backtrace,
-                                                                      std::min(static_cast<unsigned int>(res.backtrace.length()), std::min(res.dbLen, res.qLen)));
-
+                                                                      res.qStartPos, res.dbStartPos, res.backtrace, normLen);
+                tmres.tmscore = (tmres.tmscore / static_cast<double>(normLen))
+                                * static_cast<double>(res.backtrace.size());
                 //std::cout << TMalnScore << std::endl;
                 resultsStr.append(SSTR(dbKey));
                 resultsStr.push_back(' ');
