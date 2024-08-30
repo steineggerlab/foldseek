@@ -84,7 +84,7 @@ fi
 
 if notExists "complex_filt.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" filtermultimer "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" "${TMP_PATH}/filtcov.tsv" ${FILTERMULTIMER_PAR} \
+    "$MMSEQS" filtermultimer "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" "${TMP_PATH}/complex_filt_info" ${FILTERMULTIMER_PAR} \
         || fail "FilterMultimer died"
 fi
 

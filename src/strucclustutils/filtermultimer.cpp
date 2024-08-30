@@ -73,6 +73,7 @@ public:
     float interfaceLddt;
     double qTm;
     double tTm;
+    double avgTm;
     float t[3];
     float u[3][3];
 
@@ -160,12 +161,28 @@ public:
         return true;
     }
 
+    void calculateAvgTm(int covMode){
+        switch (covMode) {
+            case Parameters::COV_MODE_BIDIRECTIONAL:
+                avgTm = ( qTm + tTm ) / 2 ;
+                break;
+            case Parameters::COV_MODE_TARGET:
+                avgTm = tTm ;
+                break;
+            case Parameters::COV_MODE_QUERY:
+                avgTm = qTm ;
+                break;
+            default :
+                avgTm = ( qTm + tTm ) / 2 ;
+        }
+    }
     bool satisfy(int covMode, float covThr, float TmThr, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
         const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true;
         const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
         const bool lddtOK = iLddtThr ? (interfaceLddt >= iLddtThr) : true;
+        calculateAvgTm(covMode);
         return (covOK && TmOK && chainTmOK && lddtOK && chainNumOK);
     }
 
@@ -291,6 +308,46 @@ public:
         delete lddtcalculator;
     }
 };
+
+
+char* filterToBuffer(ComplexFilterCriteria cmplfiltcrit, char* tmpBuff){
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.qCov, tmpBuff);
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.tCov, tmpBuff);
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.qTm, tmpBuff);
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.tTm, tmpBuff);
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.interfaceLddt, tmpBuff);
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.t[0], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.t[1], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.t[2], tmpBuff);
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[0][0], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[0][1], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[0][2], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[1][0], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[1][1], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[1][2], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[2][0], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[2][1], tmpBuff);
+    *(tmpBuff-1) = ',';
+    tmpBuff = Util::fastSeqIdToBuffer(cmplfiltcrit.u[2][2], tmpBuff);
+    *(tmpBuff-1) = '\n';
+    return tmpBuff;
+}
 
 void fillUArr(const std::string &uString, float (&u)[3][3]) {
     std::string tmp;
@@ -455,19 +512,15 @@ int filtermultimer(int argc, const char **argv, const Command &command) {
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX| DBReader<unsigned int>::USE_DATA);
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     size_t localThreads = 1;
-
-    // Debug(Debug::WARNING) << "Monomer will be treated as singleton\nMonomer chain key: \n";
 #ifdef OPENMP
 localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
 #endif
     const bool shouldCompress = (par.compressed == true);
     const int db4Type = Parameters::DBTYPE_CLUSTER_RES;
-    
-    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), 1, shouldCompress, db4Type);
+    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), par.threads, shouldCompress, db4Type);
     resultWriter.open();
-
     const int db5Type = Parameters::DBTYPE_GENERIC_DB;
-    DBWriter resultWrite5(par.db5.c_str(), par.db5Index.c_str(), 1, shouldCompress, db5Type);
+    DBWriter resultWrite5(par.db5.c_str(), par.db5Index.c_str(), par.threads, shouldCompress, db5Type);
     resultWrite5.open();
 
     std::string qLookupFile = par.db1 + ".lookup";
@@ -480,7 +533,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     getlookupInfo(qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx);
     getComplexResidueLength(qDbr, qComplexes);
     Debug::Progress progress(qComplexes.size());
-    std::map<unsigned int, resultToWrite_t> qComplexIdResult;
 
     if (sameDB) {
         tChainKeyToComplexIdMap = qChainKeyToComplexIdMap;
@@ -493,15 +545,15 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     
 #pragma omp parallel num_threads(localThreads) 
     {   
-        resultToWrite_t result5;
         char buffer[32];
+        char buffer2[4096];
         unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         resultToWrite_t result;
         std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
-        std::map<unsigned int, std::vector<unsigned int>> cmplIdToBestAssId; // cmplId : [assId, alnSum]
+        std::map<unsigned int, std::vector<double>> cmplIdToBestAssId;
         std::vector<unsigned int> selectedAssIDs;
         Coordinate16 qcoords;
         Coordinate16 tcoords;
@@ -510,7 +562,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
 #pragma omp for schedule(dynamic, 1)    
         for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
             progress.updateProgress();
-   
             Complex qComplex = qComplexes[qComplexIdx];
             unsigned int qComplexId = qComplex.complexId;
             std::vector<unsigned int> qChainKeys = qComplex.chainKeys;
@@ -561,7 +612,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     unsigned int qalnlen = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                     unsigned int talnlen = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
                     if (localComplexMap.find(assId) == localComplexMap.end()) {
-                        ComplexFilterCriteria cmplfiltcrit = ComplexFilterCriteria(tComplexId, retComplex.qTmScore, retComplex.tTmScore, t, u);
+                        ComplexFilterCriteria cmplfiltcrit(tComplexId, retComplex.qTmScore, retComplex.tTmScore, t, u);
                         localComplexMap[assId] = cmplfiltcrit;
                     }
                     ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
@@ -600,15 +651,20 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 if (!(cmplfiltcrit.satisfy(par.covMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, par.filtInterfaceLddtThr, qComplex.nChain, tComplex.nChain))) {
                     continue;
                 }
-
-                unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
+                // TODO: trying to look into the results to make sure what makes more sense
+                // unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
+                
                 // Get the best alignement per each target complex
                 if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()) {
-                    cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                    // cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                    cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
                 }
                 else {
-                    if (alnlen > cmplIdToBestAssId.at(tComplexId)[1]) {
-                        cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                    // if (alnlen > cmplIdToBestAssId.at(tComplexId)[1]) {
+                    //     cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                    // }
+                    if (cmplfiltcrit.avgTm > cmplIdToBestAssId.at(tComplexId)[1]) {
+                        cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
                     }
                 }
             }
@@ -616,7 +672,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             for (const auto& pair : cmplIdToBestAssId) {
                 selectedAssIDs.push_back(pair.second[0]);
             }
-
+            resultWrite5.writeStart(thread_idx);
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs[assIdidx];
                 ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
@@ -627,31 +683,22 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
                 result.append(buffer, (outpos - buffer - 1));
                 result.push_back('\n');
-                result5.append(qComplex.complexName + "\t" + tComplex.complexName + "\t" + std::to_string(cmplfiltcrit.qCov) + "\t" + std::to_string(cmplfiltcrit.tCov) + "\t"+ std::to_string(cmplfiltcrit.qTm)+"\t"+ std::to_string(cmplfiltcrit.tTm)+"\t"+ std::to_string(cmplfiltcrit.interfaceLddt)+"\n");
-            }
 
-            #pragma omp critical
-            {
-                qComplexIdResult[qComplexId]= result;
+                char * tmpBuff = Itoa::u32toa_sse2(tComplexId, buffer2);
+                tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
+                resultWrite5.writeAdd(buffer2, tmpBuff - buffer2, thread_idx);
             }
+            resultWriter.writeData(result.c_str(), result.length(), qComplexId);
+            resultWrite5.writeEnd(qComplexId, thread_idx);
             result.clear();
             localComplexMap.clear();
             cmplIdToBestAssId.clear();
             selectedAssIDs.clear();
         } // for end
-        #pragma omp critical
-        {
-            resultWrite5.writeData(result5.c_str(), result5.length(), 0);
-            result5.clear();
-        }
     } // MP end
-
-    for (auto &pair : qComplexIdResult) {
-        resultWriter.writeData(pair.second.c_str(), pair.second.length(), pair.first);
-    }
     
     resultWriter.close(true);
-    resultWrite5.close(par.dbOut == false);
+    resultWrite5.close(true);
     qStructDbr.close();
     alnDbr.close();
     delete qDbr;
@@ -663,6 +710,5 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     tChainKeyToComplexIdMap.clear();
     qComplexes.clear();
     tComplexes.clear();
-    qComplexIdResult.clear();
     return EXIT_SUCCESS;
 }
