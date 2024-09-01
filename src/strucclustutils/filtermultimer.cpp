@@ -520,7 +520,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), par.threads, shouldCompress, db4Type);
     resultWriter.open();
     const int db5Type = Parameters::DBTYPE_GENERIC_DB;
-    DBWriter resultWrite5(par.db5.c_str(), par.db5Index.c_str(), par.threads, shouldCompress, db5Type);
+    DBWriter resultWrite5((par.db4 + "_info").c_str(), (par.db4 + "_info.index").c_str(), par.threads, shouldCompress, db5Type);
     resultWrite5.open();
 
     std::string qLookupFile = par.db1 + ".lookup";
@@ -575,7 +575,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 //     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
                 //     result.append(buffer, (outpos - buffer - 1));
                 //     result.push_back('\n');
-                //     result5.append(qComplex.complexName + "\t" + tComplexes[qComplexIdx].complexName + "\t1.000000\t1.000000\t1.000000\t1.000000\n");
+                //     resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
                 //     break;
                 // }
 
