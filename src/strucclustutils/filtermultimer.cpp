@@ -688,7 +688,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
                 resultWrite5.writeAdd(buffer2, tmpBuff - buffer2, thread_idx);
             }
-            resultWriter.writeData(result.c_str(), result.length(), qComplexId);
+            resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
             resultWrite5.writeEnd(qComplexId, thread_idx);
             result.clear();
             localComplexMap.clear();
