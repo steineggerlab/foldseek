@@ -388,7 +388,7 @@ int structurealign(int argc, const char **argv, const Command& command) {
                                                                   res.qStartPos,
                                                                   res.dbStartPos,
                                                                   res.backtrace,
-                                                                  std::min(static_cast<unsigned int>(res.backtrace.size()), std::min(res.dbLen, res.qLen)));
+                                                                  TMaligner::normalization(par.tmScoreThrMode, res.backtrace.size(), res.qLen, res.dbLen));
                                 if (tmres.tmscore < par.tmScoreThr) {
                                     continue;
                                 }
