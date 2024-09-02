@@ -1239,3 +1239,4 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect: " << incorrectFiles << ", not proteins: " << notProtein << ".\n";
     return EXIT_SUCCESS;
 }
+       
