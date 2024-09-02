@@ -86,14 +86,14 @@ std::string removeModel(const std::string& input) {
     }
     std::string prefix = input.substr(0, modelIndex);
     size_t secondUnderscoreIndex = input.find('_', modelIndex + 6);
-    if (secondUnderscoreIndex == std::string::npos){
+    if (secondUnderscoreIndex == std::string::npos) {
         return prefix;
     }
     std::string suffix = input.substr(secondUnderscoreIndex+1);
     return prefix + suffix;
 }
 
-void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pulchra){
+void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pulchra) {
     for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
         size_t chainStart = readStructure.chain[ch].first;
         size_t chainLen = readStructure.chain[ch].second - readStructure.chain[ch].first;
@@ -393,8 +393,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     fileidCnt++;
                 }
                 entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
-            }
-            else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
+            } else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
                 std::string filenameWithoutExtension;
                 if (chainNameMode == LocalParameters::CHAIN_MODE_ADD || chainNameMode == LocalParameters::CHAIN_MODE_AUTO) {
                     size_t firstUnderscore = readStructure.names[ch].find('_');
@@ -722,7 +721,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         progress.updateProgress();
 #ifdef OPENMP
         int localThreads = par.threads;
-        if(localThreads > 1){
+        if (localThreads > 1) {
             needsReorderingAtTheEnd = true;
         }
 #endif
@@ -896,7 +895,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
 
-            if(readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false) {
+            if (readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false) {
                 incorrectFiles++;
                 continue;
             }
