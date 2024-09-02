@@ -106,8 +106,6 @@ public:
     std::vector<MMseqsParameter *> convert2pdb;
 
     PARAMETER(PARAM_PREF_MODE)
-    PARAMETER(PARAM_DB_EXTRACTION_MODE)
-    PARAMETER(PARAM_DISTANCE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
     PARAMETER(PARAM_LDDT_THRESHOLD)
@@ -133,10 +131,10 @@ public:
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_GPU)
+    PARAMETER(PARAM_DB_EXTRACTION_MODE)
+    PARAMETER(PARAM_DISTANCE_THRESHOLD)
 
     int prefMode;
-    int dbExtractionMode;
-    float distanceThreshold;
     float tmScoreThr;
     int tmAlignHitOrder;
     float lddtThr;
@@ -160,6 +158,8 @@ public:
     int pdbOutputMode;
     std::string prostt5Model;
     int gpu;
+    int dbExtractionMode;
+    float distanceThreshold;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
