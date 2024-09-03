@@ -193,7 +193,7 @@ public:
     bool getAlnClusters() {
         // rbh filter
         filterAlnsByRBH();
-        fillDistMap();
+        fillDistMatrix();
         // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= maximumClusterSize)
             return checkClusteringNecessity();
@@ -218,7 +218,7 @@ private:
     std::vector<NeighborsWithDist> neighborsWithDist;
     std::set<unsigned int> qFoundChainKeys;
     std::set<unsigned int> dbFoundChainKeys;
-    distMap_t distMap;
+    std::vector<float> distMatrix;
     std::vector<cluster_t> currClusters;
     std::set<cluster_t> &finalClusters;
     std::map<unsigned int, float> qBestTmScore;
@@ -292,18 +292,23 @@ private:
         eps += learningRate;
         return runDBSCAN();
     }
+    size_t getDistMatrixIndex(size_t i, size_t j) const {
+            if (i > j) std::swap(i, j); // Ensure i <= j for symmetry
+            size_t n = searchResult.alnVec.size();
+            return (2 * n *i - i - i * i) / 2 + j - i - 1;
+    }
 
-    void fillDistMap() {
-        float dist;
-        distMap.clear();
-        for (size_t i=0; i < searchResult.alnVec.size(); i++) {
-            ChainToChainAln &prevAln = searchResult.alnVec[i];
-            for (size_t j = i+1; j < searchResult.alnVec.size(); j++) {
-                ChainToChainAln &currAln = searchResult.alnVec[j];
-                dist = prevAln.getDistance(currAln);
+    void fillDistMatrix() {
+        size_t size = searchResult.alnVec.size();
+        distMatrix.resize(size * (size - 1) / 2, 0.0f);
+        for (size_t i = 0; i < searchResult.alnVec.size(); i++) {
+            const ChainToChainAln &prevAln = searchResult.alnVec[i];
+            for (size_t j = i + 1; j < searchResult.alnVec.size(); j++) {
+                const ChainToChainAln &currAln = searchResult.alnVec[j];
+                float dist = prevAln.getDistance(currAln);
                 maxDist = std::max(maxDist, dist);
                 minDist = std::min(minDist, dist);
-                distMap.insert({{i,j}, dist});
+                distMatrix[getDistMatrixIndex(i, j)] = dist;
             }
         }
         eps = minDist;
@@ -317,7 +322,7 @@ private:
             if (neighborIdx == centerIdx)
                 continue;
 
-            if (distMap[{std::min(centerIdx, neighborIdx), std::max(centerIdx, neighborIdx)}] >= eps)
+            if (distMatrix[getDistMatrixIndex(centerIdx, neighborIdx)] >= eps)
                 continue;
 
             neighborVec.emplace_back(neighborIdx);
@@ -374,7 +379,7 @@ private:
         dbBestTmScore.clear();
         qFoundChainKeys.clear();
         dbFoundChainKeys.clear();
-        distMap.clear();
+        distMatrix.clear();
         return !finalClusters.empty();
     }
 
@@ -425,7 +430,7 @@ private:
         for (auto neighborIdx: neighbors) {
             if (neighborIdx == centerIdx)
                 continue;
-            neighborsWithDist.emplace_back(neighborIdx, distMap[{std::min(centerIdx, neighborIdx), std::max(centerIdx, neighborIdx)}]);
+            neighborsWithDist.emplace_back(neighborIdx, distMatrix[getDistMatrixIndex(centerIdx, neighborIdx)]);
         }
         SORT_SERIAL(neighborsWithDist.begin(), neighborsWithDist.end(), compareNeighborWithDist);
         neighbors.clear();
@@ -533,7 +538,7 @@ public:
             tmAligner = new TMaligner(maxResLen, false, true, false);
         }
         finalClusters.clear();
-        DBSCANCluster dbscanCluster = DBSCANCluster(searchResult, finalClusters, minAssignedChainsRatio);
+        DBSCANCluster dbscanCluster(searchResult, finalClusters, minAssignedChainsRatio);
         if (!dbscanCluster.getAlnClusters()) {
             finalClusters.clear();
             return;
