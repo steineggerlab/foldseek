@@ -32,6 +32,7 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
     - [Important Parameters](#important-cluster-parameters)
   - [Multimer](#multimersearch)
     - [Output](#multimer-search-output)
+  - [MultimerCluster](#multimercluster)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -299,6 +300,47 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 ```
 1tim.pdb.gz 8tim.pdb.gz A,B A,B 0.98941 0.98941 0.999983,0.000332,0.005813,-0.000373,0.999976,0.006884,-0.005811,-0.006886,0.999959 0.298992,0.060047,0.565875  0
 ```
+
+### Multimercluster
+The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates two output files with the following prefixes: (1) `_cluster.tsv` and (2) `_rep_seq.fasta`.  The first file (1) is a [tab-separated](#tab-separated_cluster.tsv) file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences](#representative-multiemr-fasta).
+
+#### Output MultimerCluster
+##### Tab-separated_cluster.tsv
+```
+5o002	5o002
+194l2	194l2
+194l2	193l2
+10mh121	10mh121
+10mh121	10mh114
+10mh121	10mh119
+```
+##### Representative multimer fasta
+```
+#5o002
+>5o002_A
+SHGK......R
+>5o002_B
+SHGK......R
+#194l2
+>194l2_A0
+KVFG......L
+>194l2_A6
+KVFG......L
+```
+
+#### Important multimer cluster parameters
+
+| Option            | Category        | Description                                                                                               |
+|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
+| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
+| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
+| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
+
+| --multimer-tm-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
+| --chain-tm-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
+| --interface-lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr       |
+
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
