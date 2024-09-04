@@ -552,8 +552,12 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         resultToWrite_t result;
-        std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
-        std::map<unsigned int, std::vector<double>> cmplIdToBestAssId;
+        //As scoremultimer prints out after sorting assignment id, map can be replaced with vector.
+        // std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
+        std::vector< ComplexFilterCriteria> localComplexVector;
+        // std::map<unsigned int, std::vector<double>> cmplIdToBestAssId;
+        std::vector<unsigned int> cmpltargetIds;
+        std::vector<double> targetIdBestTm;
         std::vector<unsigned int> selectedAssIDs;
         Coordinate16 qcoords;
         Coordinate16 tcoords;
@@ -578,7 +582,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 //     resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
                 //     break;
                 // }
-
+                
                 char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
                 size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
                 size_t qChainLen = qDbr->sequenceReader->getSeqLen(qChainDbId);
@@ -611,11 +615,20 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     fillTArr(retComplex.tString, t);
                     unsigned int qalnlen = (std::max(res.qStartPos, res.qEndPos) - std::min(res.qStartPos, res.qEndPos) + 1);
                     unsigned int talnlen = (std::max(res.dbStartPos, res.dbEndPos) - std::min(res.dbStartPos, res.dbEndPos) + 1);
-                    if (localComplexMap.find(assId) == localComplexMap.end()) {
+                    if (localComplexVector.size() <= assId) {
                         ComplexFilterCriteria cmplfiltcrit(tComplexId, retComplex.qTmScore, retComplex.tTmScore, t, u);
-                        localComplexMap[assId] = cmplfiltcrit;
+                        size_t subt = assId - localComplexVector.size();
+                        for (size_t sub=0; sub < subt; sub ++) {
+                            localComplexVector.push_back(cmplfiltcrit);
+                        }
+                        localComplexVector.push_back(cmplfiltcrit);
                     }
-                    ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                    // if (localComplexMap.find(assId) == localComplexMap.end()) {
+                    //     ComplexFilterCriteria cmplfiltcrit(tComplexId, retComplex.qTmScore, retComplex.tTmScore, t, u);
+                    //     localComplexMap[assId] = cmplfiltcrit;
+                    // }
+                    // ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                    ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
                     cmplfiltcrit.updateAln(qalnlen, talnlen);
     
                     // save Aligned coordinatese if needed : chainTmThr & lddtThr
@@ -635,12 +648,16 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             }
             
             // Filter the target complexes and get the best alignment
-            for (auto& assId_res : localComplexMap) {
-                unsigned int tComplexId  = assId_res.second.targetComplexId;
+            for (unsigned int assId = 0; assId < localComplexVector.size(); assId++) {
+            // for (auto& assId_res : localComplexMap) {
+                // unsigned int tComplexId  = assId_res.second.targetComplexId;
+                unsigned int tComplexId  = localComplexVector.at(assId).targetComplexId;
+                
                 unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
                 Complex  tComplex = tComplexes[tComplexIdx];
 
-                ComplexFilterCriteria &cmplfiltcrit = assId_res.second;
+                // ComplexFilterCriteria &cmplfiltcrit = assId_res.second;
+                ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
                 cmplfiltcrit.calcCov(qComplex.complexLength, tComplex.complexLength);
 
                 if (par.filtInterfaceLddtThr > 0.0) {
@@ -654,31 +671,49 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 // TODO: trying to look into the results to make sure what makes more sense
                 // unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
                 
-                // Get the best alignement per each target complex
-                if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()) {
-                    // cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
-                    cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
-                }
-                else {
-                    // if (alnlen > cmplIdToBestAssId.at(tComplexId)[1]) {
-                    //     cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
-                    // }
-                    if (cmplfiltcrit.avgTm > cmplIdToBestAssId.at(tComplexId)[1]) {
-                        cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
+                // Get the best alignement per each target complex   
+                // if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()) {
+                //     // cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                //     // cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
+                //     cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId), cmplfiltcrit.avgTm};
+                // }
+                // else {
+                //     // if (alnlen > cmplIdToBestAssId.at(tComplexId)[1]) {
+                //     //     cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                //     // }
+                //     if (cmplfiltcrit.avgTm > cmplIdToBestAssId.at(tComplexId)[1]) {
+                //         // cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
+                //         cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res), cmplfiltcrit.avgTm};
+                //     }
+                // }
+                
+                unsigned int targetindex;
+                auto it = std::find(cmpltargetIds.begin(), cmpltargetIds.end(), tComplexId);
+                if ( it == cmpltargetIds.end()) {
+                    cmpltargetIds.push_back(tComplexId);
+                    selectedAssIDs.push_back(assId);
+                    targetIdBestTm.push_back(cmplfiltcrit.avgTm);
+                } else {
+                    targetindex = std::distance(cmpltargetIds.begin(), it);
+                    if (cmplfiltcrit.avgTm > targetIdBestTm[targetindex]) {
+                        targetIdBestTm[targetindex] = cmplfiltcrit.avgTm;
+                        selectedAssIDs[targetindex] = assId;
                     }
                 }
+
             }
 
-            for (const auto& pair : cmplIdToBestAssId) {
-                selectedAssIDs.push_back(pair.second[0]);
-            }
+            // for (const auto& pair : cmplIdToBestAssId) {
+            //     selectedAssIDs.push_back(pair.second[0]);
+            // }
             resultWrite5.writeStart(thread_idx);
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
-                unsigned int assId = selectedAssIDs[assIdidx];
-                ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                unsigned int assId = selectedAssIDs.at(assIdidx);
+                // ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
                 unsigned int tComplexId = cmplfiltcrit.targetComplexId;
                 unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
-                Complex tComplex = tComplexes[tComplexIdx];
+                Complex tComplex = tComplexes.at(tComplexIdx);
                 
                 char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
                 result.append(buffer, (outpos - buffer - 1));
@@ -691,9 +726,12 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
             resultWrite5.writeEnd(qComplexId, thread_idx);
             result.clear();
-            localComplexMap.clear();
-            cmplIdToBestAssId.clear();
-            selectedAssIDs.clear();
+            // localComplexMap.clear();
+            // cmplIdToBestAssId.clear();
+            selectedAssIDs.clear();        
+            localComplexVector.clear();
+            cmpltargetIds.clear();
+            targetIdBestTm.clear();
         } // for end
     } // MP end
     
@@ -706,9 +744,9 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         delete tDbr;
         delete tStructDbr;
     }
-    qChainKeyToComplexIdMap.clear();
-    tChainKeyToComplexIdMap.clear();
-    qComplexes.clear();
-    tComplexes.clear();
+    // qChainKeyToComplexIdMap.clear();
+    // tChainKeyToComplexIdMap.clear();
+    // qComplexes.clear();
+    // tComplexes.clear();
     return EXIT_SUCCESS;
 }

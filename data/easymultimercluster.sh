@@ -86,57 +86,57 @@ if notExists "${TMP_PATH}/query.dbtype"; then
         || fail "query createdb died"
 fi
 
-if notExists "${TMP_PATH}/complex_clu.dbtype"; then
+if notExists "${TMP_PATH}/multimer_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimercluster "${TMP_PATH}/query" "${TMP_PATH}/complex_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
+    "$MMSEQS" multimercluster "${TMP_PATH}/query" "${TMP_PATH}/multimer_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
         || fail "Multimercluster died"
 fi
 
 SOURCE="${TMP_PATH}/query"
-INPUT="${TMP_PATH}/latest/complex_db"
+INPUT="${TMP_PATH}/latest/multimer_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
         || fail "Convert Alignments died"
 fi
 
-if notExists "${TMP_PATH}/complex_rep_seqs.dbtype"; then
+if notExists "${TMP_PATH}/multimer_rep_seqs.dbtype"; then
     mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${SOURCE}" "${TMP_PATH}/rep_seqs.list" 
     # shellcheck disable=SC2086
-    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list" "${SOURCE}" "${TMP_PATH}/complex_rep_seqs" ${CREATESUBDB_PAR} \
+    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list" "${SOURCE}" "${TMP_PATH}/multimer_rep_seqs" ${CREATESUBDB_PAR} \
         || fail "createsubdb died"
 fi
 
-if notExists "${TMP_PATH}/complex_rep_seq.fasta"; then
+if notExists "${TMP_PATH}/multimer_rep_seq.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}"  "${TMP_PATH}/complex_rep_seqs" "${TMP_PATH}/complex_rep_seq.fasta" ${VERBOSITY_PAR} \
+    "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}"  "${TMP_PATH}/multimer_rep_seqs" "${TMP_PATH}/multimer_rep_seq.fasta" ${VERBOSITY_PAR} \
             || fail "result2flat died"
-    postprocessFasta "${TMP_PATH}/complex_rep_seq.fasta"
+    postprocessFasta "${TMP_PATH}/multimer_rep_seq.fasta"
 fi
 
 #TODO: generate fasta file for all sequences
-# if notExists "${TMP_PATH}/complex_all_seqs.fasta"; then
-#     # shellcheck disable=SC2086
-#     "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/complex_clust" "${TMP_PATH}/complex_clust_seqs" ${THREADS_PAR} \
-#             || fail "Result2repseq  died"
+if notExists "${TMP_PATH}/multimer_all_seqs.fasta"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/multimer_clust_seqs" ${THREADS_PAR} \
+            || fail "Result2repseq  died"
 
-#     # shellcheck disable=SC2086
-#     "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_clust_seqs" "${TMP_PATH}/complex_all_seqs.fasta" ${VERBOSITY_PAR} \
-#             || fail "result2flat died"
-# fi
+    # shellcheck disable=SC2086
+    "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clust_seqs" "${TMP_PATH}/multimer_all_seqs.fasta" ${VERBOSITY_PAR} \
+            || fail "result2flat died"
+fi
 
-# mv "${TMP_PATH}/complex_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
-mv "${TMP_PATH}/complex_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
+mv "${TMP_PATH}/multimer_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
+mv "${TMP_PATH}/multimer_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
 mv "${TMP_PATH}/cluster.tsv"  "${RESULT}_cluster.tsv"
 
 if [ -n "${REMOVE_TMP}" ]; then
     rm "${INPUT}.0"
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_db" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_db" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    # "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_seqs" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_rep_seqs" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_rep_seqs_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086

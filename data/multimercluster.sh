@@ -76,26 +76,26 @@ buldCmplhDb(){
 
 # [ ! -d "$3" ] && echo "tmp directory $3 not found!" && mkdir -p "${TMP_PATH}";
 
-if notExists "${TMP_PATH}/complex_result.dbtype"; then
+if notExists "${TMP_PATH}/multimer_result.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimersearch "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/multimersearch_tmp" ${MULTIMERSEARCH_PAR} \
+    "$MMSEQS" multimersearch "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_result" "${TMP_PATH}/multimersearch_tmp" ${MULTIMERSEARCH_PAR} \
         || fail "multimerSearch died"
 fi
 
-if notExists "complex_filt.dbtype"; then
+if notExists "multimer_filt.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" filtermultimer "${INPUT}" "${INPUT}" "${TMP_PATH}/complex_result" "${TMP_PATH}/complex_filt" ${FILTERMULTIMER_PAR} \
+    "$MMSEQS" filtermultimer "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_result" "${TMP_PATH}/multimer_filt" ${FILTERMULTIMER_PAR} \
         || fail "FilterMultimer died"
 fi
 
 # shift query DB, .index, .dbtype
-if notExists "${TMP_PATH}/complex_db.dbtype"; then    
+if notExists "${TMP_PATH}/multimer_db.dbtype"; then    
     # build complex db as output
-    buildCmplDb "${INPUT}" "${TMP_PATH}/complex_db"
+    buildCmplDb "${INPUT}" "${TMP_PATH}/multimer_db"
 fi
 
 # Shift _h, _h.dbtype
-if notExists "${TMP_PATH}/complex_db_h.dbtype"; then
+if notExists "${TMP_PATH}/multimer_db_h.dbtype"; then
     # # shellcheck disable=SC2086
     # "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/complex_db_header_tmp" ${VERBOSITY_PAR} \
     #     || fail "tsv2db died"
@@ -103,26 +103,27 @@ if notExists "${TMP_PATH}/complex_db_h.dbtype"; then
     # "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h.tsv" ${VERBOSITY_PAR} \
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}_h" "${TMP_PATH}/chain_db_h.tsv" --threads 1 \
         || fail "createtsv died"
-    buldCmplhDb "${TMP_PATH}/chain_db_h.tsv" "${TMP_PATH}/complex_header.tsv"
+    buldCmplhDb "${TMP_PATH}/chain_db_h.tsv" "${TMP_PATH}/multimer_header.tsv"
     # shellcheck disable=SC2086
-    "$MMSEQS" tsv2db "${TMP_PATH}/complex_header.tsv" "${TMP_PATH}/complex_db_h" ${VERBOSITY_PAR} \
+    "$MMSEQS" tsv2db "${TMP_PATH}/multimer_header.tsv" "${TMP_PATH}/multimer_db_h" ${VERBOSITY_PAR} \
         || fail "tsv2db died"
 fi
 
-COMP="${TMP_PATH}/complex_db"
+COMP="${TMP_PATH}/multimer_db"
 
 if notExists "${RESULT}.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" clust "${COMP}" "${TMP_PATH}/complex_filt" "${RESULT}" ${CLUSTER_PAR} \
+    "$MMSEQS" clust "${COMP}" "${TMP_PATH}/multimer_filt" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_filt" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_filt" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_result" ${VERBOSITY_PAR}
-    rm "${TMP_PATH}/complex_header.tsv"
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY_PAR}
+    rm "${TMP_PATH}/chain_db_h.tsv"
+    rm "${TMP_PATH}/multimer_header.tsv"
     rm -rf "${TMP_PATH}/multimersearch_tmp"
     rm -f "${TMP_PATH}/multimercluster.sh"
 fi
