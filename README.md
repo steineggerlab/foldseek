@@ -302,10 +302,12 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 ```
 
 ### Multimercluster
-The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates two output files with the following prefixes: (1) `_cluster.tsv` and (2) `_rep_seq.fasta`.  The first file (1) is a [tab-separated] file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences].
+The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates thress output files with the following prefixes: (1) `_cluster.tsv`, (2) `_rep_seq.fasta` and (3) `_cluster_report`.  The first file (1) is a [tab-separated](#tab-separated-multimercluster) file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences](#representative-multimer-fasta). The third file (3) is also a [tab-separated](#filtered_search_result) file describing filtered alignments.
+
+Make sure chain names in PDB/mmcIF files does not contain underscores(_).
 
 #### Output MultimerCluster
-##### Tab-separated_cluster.tsv
+##### Tab-separated multimercluster.tsv
 ```
 5o002	   5o002
 194l2	   194l2
@@ -327,6 +329,13 @@ KVFG...L
 >194l2_A6
 KVFG...L
 ```
+##### Filtered search result
+The `_cluster_report` contains query coverage, target coverage, query multimer Tm, target multimer Tm, interface lddt, ustring, tstring of filtered alignments. 
+```
+5o0f2	5o0f2	1.000	1.000	1.000	1.000	1.000	1.000,0.000,0.000,0.000,1.000,0.000,0.000,0.000,1.000	0.000,0.000,0.000
+5o0f2	5o0d2	1.000	1.000	0.999	0.992	1.000	0.999,0.000,-0.000,-0.000,0.999,-0.000,0.000,0.000,0.999	-0.004,-0.001,0.084
+5o0f2	5o082	1.000	0.990	0.978	0.962	0.921	0.999,-0.025,-0.002,0.025,0.999,-0.001,0.002,0.001,0.999	-0.039,0.000,-0.253
+```
 
 #### Important multimer cluster parameters
 
@@ -335,15 +344,20 @@ KVFG...L
 | -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
 | --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
 | -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
-| --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
-| --multimer-tm-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
-| --chain-tm-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
-| --interface-lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr       |
+| --cov-mode      | Alignment  | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query                               |
+| --multimer-tm-threshold      | Alignment  | accept alignments with an multimer alignment TMscore > thr                               |
+| --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr                               |
+| --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr       |
 
+```
+foldseek easy-multimercluster example/ clu tmp 
+```
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
 - `easy-cluster`      fast protein structure clustering  
+- `easy-multimersearch`       fast protein multimer-level structure search  
+- `easy-multimercluster`       fast protein multimer-level structure clustering  
 - `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 - `databases`         download pre-assembled databases
 

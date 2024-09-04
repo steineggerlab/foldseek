@@ -115,6 +115,10 @@ if notExists "${RESULT}.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" clust "${COMP}" "${TMP_PATH}/multimer_filt" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" mvdb "${TMP_PATH}/multimer_filt_info" "${RESULT}_filt_info" \
+        || fail "mv died"
+
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then

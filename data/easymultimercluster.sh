@@ -96,7 +96,10 @@ SOURCE="${TMP_PATH}/query"
 INPUT="${TMP_PATH}/latest/multimer_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR}   \
+        || fail "Convert Alignments died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu_filt_info" "${TMP_PATH}/cluster_report" ${THREADS_PAR}  \
         || fail "Convert Alignments died"
 fi
 
@@ -128,6 +131,7 @@ fi
 # mv "${TMP_PATH}/multimer_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
 mv "${TMP_PATH}/multimer_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
 mv "${TMP_PATH}/cluster.tsv"  "${RESULT}_cluster.tsv"
+mv "${TMP_PATH}/cluster_report"  "${RESULT}_cluster_report"
 
 if [ -n "${REMOVE_TMP}" ]; then
     rm "${INPUT}.0"
