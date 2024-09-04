@@ -332,7 +332,7 @@ KVFG...L
 KVFG...L
 ```
 ##### Filtered search result
-The `_cluster_report` contains query coverage, target coverage, query multimer Tm, target multimer Tm, interface lddt, ustring, tstring of filtered alignments. 
+The `_cluster_report` contains `qcoverage, tcoverage, multimer qTm, multimer tTm, interface lddt, ustring, tstring` of filtered alignments. 
 ```
 5o0f2	5o0f2	1.000	1.000	1.000	1.000	1.000	1.000,0.000,0.000,0.000,1.000,0.000,0.000,0.000,1.000	0.000,0.000,0.000
 5o0f2	5o0d2	1.000	1.000	0.999	0.992	1.000	0.999,0.000,-0.000,-0.000,0.999,-0.000,0.000,0.000,0.999	-0.004,-0.001,0.084
