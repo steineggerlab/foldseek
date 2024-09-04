@@ -306,8 +306,10 @@ The `easy-multimercluster` module is designed for multimer-level structural clus
 
 Make sure chain names in PDB/mmcIF files does not contain underscores(_).
 
+    foldseek easy-multimercluster example/ clu tmp 
+
 #### Output MultimerCluster
-##### Tab-separated multimercluster.tsv
+##### Tab-separated multimercluster
 ```
 5o002	   5o002
 194l2	   194l2
@@ -348,10 +350,6 @@ The `_cluster_report` contains query coverage, target coverage, query multimer T
 | --multimer-tm-threshold      | Alignment  | accept alignments with an multimer alignment TMscore > thr                               |
 | --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr                               |
 | --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr       |
-
-```
-foldseek easy-multimercluster example/ clu tmp 
-```
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
