@@ -302,7 +302,7 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 ```
 
 ### Multimercluster
-The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates thress output files with the following prefixes: (1) `_cluster.tsv`, (2) `_rep_seq.fasta` and (3) `_cluster_report`.  The first file (1) is a [tab-separated](#tab-separated-multimercluster) file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences](#representative-multimer-fasta). The third file (3) is also a [tab-separated](#filtered_search_result) file describing filtered alignments.
+The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates thress output files with the following prefixes: (1) `_cluster.tsv`, (2) `_rep_seq.fasta` and (3) `_cluster_report`.  The first file (1) is a [tab-separated](#tab-separated-multimercluster) file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences](#representative-multimer-fasta). The third file (3) is also a [tab-separated](#filtered-search-result) file describing filtered alignments.
 
 Make sure chain names in PDB/mmcIF files does not contain underscores(_).
 
