@@ -669,7 +669,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 if (!(cmplfiltcrit.satisfy(par.covMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, par.filtInterfaceLddtThr, qComplex.nChain, tComplex.nChain))) {
                     continue;
                 }
-                unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
+                // unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
                 
                 // Get the best alignement per each target complex   
                 // if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()) {
@@ -709,8 +709,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             resultWrite5.writeStart(thread_idx);
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
-                ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                // ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
+                // ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
                 unsigned int tComplexId = cmplfiltcrit.targetComplexId;
                 unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
                 Complex tComplex = tComplexes.at(tComplexIdx);

@@ -115,17 +115,17 @@ if notExists "${TMP_PATH}/multimer_rep_seq.fasta"; then
 fi
 
 #TODO: generate fasta file for all sequences
-if notExists "${TMP_PATH}/multimer_all_seqs.fasta"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/multimer_clust_seqs" ${THREADS_PAR} \
-            || fail "Result2repseq  died"
+# if notExists "${TMP_PATH}/multimer_all_seqs.fasta"; then
+#     # shellcheck disable=SC2086
+#     "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/multimer_clust_seqs" ${THREADS_PAR} \
+#             || fail "Result2repseq  died"
 
-    # shellcheck disable=SC2086
-    "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clust_seqs" "${TMP_PATH}/multimer_all_seqs.fasta" ${VERBOSITY_PAR} \
-            || fail "result2flat died"
-fi
+#     # shellcheck disable=SC2086
+#     "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clust_seqs" "${TMP_PATH}/multimer_all_seqs.fasta" ${VERBOSITY_PAR} \
+#             || fail "result2flat died"
+# fi
 
-mv "${TMP_PATH}/multimer_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
+# mv "${TMP_PATH}/multimer_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
 mv "${TMP_PATH}/multimer_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
 mv "${TMP_PATH}/cluster.tsv"  "${RESULT}_cluster.tsv"
 
@@ -134,11 +134,11 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_db" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_clu_seqs" ${VERBOSITY_PAR}
+    # "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/complex_rep_seqs_h" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/complex_clu" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
