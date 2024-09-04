@@ -405,11 +405,13 @@ double computeChainTmScore(AlignedCoordinate &qchain, AlignedCoordinate &tchain,
     float d0 = 1.24*(cbrt(tLen-15)) -1.8;
     float d02 = d0*d0;
 
+    Coordinates tmt(alnLen);
+    BasicFunction::do_rotation(tchain.x, tchain.y, tchain.z, tmt, alnLen, t, u);
     for (unsigned int k=0; k<alnLen; k++) {
-        float tmx, tmy, tmz;
-        // TODO: SIMD is not applicable here :(
-        BasicFunction::transform(t, u, tchain.x[k], tchain.y[k], tchain.z[k], tmx, tmy, tmz);
-        double di = BasicFunction::dist(qchain.x[k], qchain.y[k], qchain.z[k], tmx, tmy, tmz);
+        // float tmx, tmy, tmz;
+        // BasicFunction::transform(t, u, tchain.x[k], tchain.y[k], tchain.z[k], tmx, tmy, tmz);
+        double di = BasicFunction::dist(qchain.x[k], qchain.y[k], qchain.z[k], tmt.x[k], tmt.y[k], tmt.z[k]);
+        // double di = BasicFunction::dist(qchain.x[k], qchain.y[k], qchain.z[k], tmx, tmy, tmz);
         tmscore += 1/(1+di/d02);
     }
     return tmscore;
@@ -552,7 +554,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         resultToWrite_t result;
-        //As scoremultimer prints out after sorting assignment id, map can be replaced with vector.
         // std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
         std::vector< ComplexFilterCriteria> localComplexVector;
         // std::map<unsigned int, std::vector<double>> cmplIdToBestAssId;
@@ -668,8 +669,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 if (!(cmplfiltcrit.satisfy(par.covMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, par.filtInterfaceLddtThr, qComplex.nChain, tComplex.nChain))) {
                     continue;
                 }
-                // TODO: trying to look into the results to make sure what makes more sense
-                // unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
+                unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
                 
                 // Get the best alignement per each target complex   
                 // if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()) {
@@ -709,8 +709,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             resultWrite5.writeStart(thread_idx);
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
-                // ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
+                ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                // ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
                 unsigned int tComplexId = cmplfiltcrit.targetComplexId;
                 unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
                 Complex tComplex = tComplexes.at(tComplexIdx);
@@ -744,9 +744,9 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         delete tDbr;
         delete tStructDbr;
     }
-    // qChainKeyToComplexIdMap.clear();
-    // tChainKeyToComplexIdMap.clear();
-    // qComplexes.clear();
-    // tComplexes.clear();
+    qChainKeyToComplexIdMap.clear();
+    tChainKeyToComplexIdMap.clear();
+    qComplexes.clear();
+    tComplexes.clear();
     return EXIT_SUCCESS;
 }
