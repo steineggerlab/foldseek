@@ -300,12 +300,13 @@ private:
 
     void fillDistMatrix() {
         size_t size = searchResult.alnVec.size();
+        float dist;
         distMatrix.resize(size * (size - 1) / 2, 0.0f);
         for (size_t i = 0; i < searchResult.alnVec.size(); i++) {
             const ChainToChainAln &prevAln = searchResult.alnVec[i];
             for (size_t j = i + 1; j < searchResult.alnVec.size(); j++) {
                 const ChainToChainAln &currAln = searchResult.alnVec[j];
-                float dist = prevAln.getDistance(currAln);
+                dist = prevAln.getDistance(currAln);
                 maxDist = std::max(maxDist, dist);
                 minDist = std::min(minDist, dist);
                 distMatrix[getDistMatrixIndex(i, j)] = dist;
