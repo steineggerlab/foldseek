@@ -182,6 +182,14 @@ case "${SELECTION}" in
         tar xvfz "${TMP_PATH}/${MODEL}" -C "${OUTDB}"
         INPUT_TYPE="MODEL_WEIGHTS"
     ;;
+    "BFVD")
+        if notExists "${TMP_PATH}/bfvd.tar.gz"; then
+            downloadFile "https://bfvd.steineggerlab.workers.dev/bfvd.tar.gz" "${TMP_PATH}/bfvd.tar.gz"
+            # downloadFile "https://foldseek.steineggerlab.workers.dev/bfvd.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/bfvd.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/bfvd"
+        INPUT_TYPE="FOLDSEEK_DB"
 esac
 
 if notExists "${OUTDB}.dbtype"; then

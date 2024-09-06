@@ -447,5 +447,13 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "https://huggingface.co/Rostlab/ProstT5",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
+        },
+        {
+                "BFVD",
+                "BFVD Big fantastic virus database (predicted viral protein structures).", // TODO
+                "Heinzinger et al. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, 2023.07.23.550085v2 (2024)", // TODO
+                "https://bfvd.steineggerlab.workers.dev/ProstT5",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
         }
 };
