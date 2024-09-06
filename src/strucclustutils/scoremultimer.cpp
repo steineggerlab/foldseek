@@ -217,8 +217,8 @@ private:
     std::vector<unsigned int> neighborsOfCurrNeighbor;
     std::unordered_set<unsigned int> foundNeighbors;
     std::vector<NeighborsWithDist> neighborsWithDist;
-    std::set<unsigned int> qFoundChainKeys;
-    std::set<unsigned int> dbFoundChainKeys;
+    std::unordered_set<unsigned int> qFoundChainKeys;
+    std::unordered_set<unsigned int> dbFoundChainKeys;
     std::vector<float> distMatrix;
     std::vector<cluster_t> currClusters;
     std::set<cluster_t> &finalClusters;
