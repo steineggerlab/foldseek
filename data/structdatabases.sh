@@ -184,7 +184,7 @@ case "${SELECTION}" in
     ;;
     "BFVD")
         if notExists "${TMP_PATH}/bfvd.tar.gz"; then
-            downloadFile "https://bfvd.steineggerlab.workers.dev/bfvd.tar.gz" "${TMP_PATH}/bfvd.tar.gz"
+            downloadFile "https://bfvd.steineggerlab.workers.dev/bfvd_foldseekdb.tar.gz" "${TMP_PATH}/bfvd.tar.gz"
             downloadFile "https://bfvd.steineggerlab.workers.dev/bfvd.version" "${TMP_PATH}/version"
         fi
         tar xvfz "${TMP_PATH}/bfvd.tar.gz" -C "${TMP_PATH}"
