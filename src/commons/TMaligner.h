@@ -43,6 +43,8 @@ public:
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
                             char * targetSeq, unsigned int targetLen, float &TM);
 
+    static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
+
 private:
     AffineNeedlemanWunsch * affineNW;
     std::string backtrace;

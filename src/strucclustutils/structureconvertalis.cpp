@@ -522,7 +522,6 @@ R"html(<!DOCTYPE html>
         Coordinate16 tcoords;
 
         std::string tmpBt;
-        double rmsd = 0.0;
 #pragma omp  for schedule(dynamic, 10)
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
             progress.updateProgress();
@@ -654,11 +653,6 @@ R"html(<!DOCTYPE html>
                 if(needTMaligner){
                     tmaligner->initQuery(queryCaData, &queryCaData[res.qLen], &queryCaData[res.qLen+res.qLen], NULL, res.qLen);
                     tmpBt = Matcher::uncompressAlignment(res.backtrace);
-                    tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                      res.qStartPos, res.dbStartPos, tmpBt,
-                                                      std::min(std::min(res.dbLen, res.qLen), static_cast<unsigned int>(tmpBt.size())));
-                    rmsd = tmres.rmsd;
-
                 }
                 LDDTCalculator::LDDTScoreResult lddtres;
                 if(needLDDT) {
@@ -885,22 +879,25 @@ R"html(<!DOCTYPE html>
                                         result.append(SSTR(tmres.t[2]));
                                         break;
                                     case LocalParameters::OUTFMT_ALNTMSCORE:
+                                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                                          res.qStartPos, res.dbStartPos, tmpBt,
+                                                                          tmpBt.size());
                                         result.append(SSTR(tmres.tmscore));
                                         break;
                                     case LocalParameters::OUTFMT_QTMSCORE:
                                         tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
-                                                                          res.qLen);
+                                                                          res.qStartPos, res.dbStartPos, tmpBt,res.qLen);
                                         result.append(SSTR(tmres.tmscore));
                                         break;
                                     case LocalParameters::OUTFMT_TTMSCORE:
                                         tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
-                                                                          res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
-                                                                          res.dbLen);
+                                                                          res.qStartPos, res.dbStartPos, tmpBt, res.dbLen);
                                         result.append(SSTR(tmres.tmscore));
                                         break;
                                     case LocalParameters::OUTFMT_RMSD:
-                                        result.append(SSTR(rmsd));
+                                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                                          res.qStartPos, res.dbStartPos, tmpBt, res.dbLen);
+                                        result.append(SSTR(tmres.rmsd));
                                         break;
                                     case LocalParameters::OUTFMT_LDDT:
                                         // TODO: make SSTR_approx that outputs %2f, not %3f

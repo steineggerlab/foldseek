@@ -8,6 +8,7 @@
 #include <tmalign/basic_fun.h>
 #include "StructureSmithWaterman.h"
 #include "StructureSmithWaterman.h"
+#include "LocalParameters.h"
 
 TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly, bool computeExactScore)
    : tmAlignFast(tmAlignFast),
@@ -323,4 +324,15 @@ Matcher::result_t TMaligner::align(unsigned int dbKey, float *x, float *y, float
     float qCov = StructureSmithWaterman::computeCov(shiftQ, queryLen-endQ-1, queryLen);
     float tCov = StructureSmithWaterman::computeCov(shiftT, targetLen-endT-1, targetLen);
     return Matcher::result_t(dbKey, TM_0*100000 , qCov, tCov, seqId, TM2, backtrace.length(), shiftQ, queryLen-endQ-1, queryLen, shiftT, targetLen-endT-1, targetLen, Matcher::compressAlignment(backtrace));
+}
+
+unsigned int TMaligner::normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen) {
+    if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_ALIGNMENT){
+        return alignmentLen;
+    } else if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_QUERY){
+        return queryLen;
+    } else if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_TARGET){
+        return targetLen;
+    }
+    return 0;
 }

@@ -239,6 +239,8 @@ MCAR...Q
 | --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
 | --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
 | --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
+| --tmscore-threshold-mode    | Alignment  | normalize TMscore by 0: alignment, 1: representative, 2: member length                             |
+
 | --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
 
 
