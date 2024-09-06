@@ -450,8 +450,8 @@ std::vector<DatabaseDownload> externalDownloads = {
         },
         {
                 "BFVD",
-                "BFVD Big fantastic virus database (predicted viral protein structures).", // TODO
-                "Heinzinger et al. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, 2023.07.23.550085v2 (2024)", // TODO
+                "BFVD Big fantastic virus database (predicted viral protein structures based on the viral sequence representatives of the UniRef30 clusters",
+                "Kim et al. BFVD - a large repository of predicted viral protein structures. bioRxiv,  (2024)", // TODO
                 "https://bfvd.steineggerlab.workers.dev/ProstT5",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
