@@ -10,7 +10,7 @@
 #include "Coordinate16.h"
 #include "MultimerUtil.h"
 #include "set"
-
+#include "unordered_set"
 #ifdef OPENMP
 #include <omp.h>
 #endif
@@ -215,7 +215,7 @@ private:
     unsigned int minimumClusterSize;
     std::vector<unsigned int> neighbors;
     std::vector<unsigned int> neighborsOfCurrNeighbor;
-    std::set<unsigned int> foundNeighbors;
+    std::unordered_set<unsigned int> foundNeighbors;
     std::vector<NeighborsWithDist> neighborsWithDist;
     std::set<unsigned int> qFoundChainKeys;
     std::set<unsigned int> dbFoundChainKeys;
