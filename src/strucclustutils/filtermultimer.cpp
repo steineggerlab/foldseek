@@ -406,12 +406,12 @@ double computeChainTmScore(AlignedCoordinate &qchain, AlignedCoordinate &tchain,
     float d02 = d0*d0;
 
     Coordinates tmt(alnLen);
-    BasicFunction::do_rotation(tchain.x, tchain.y, tchain.z, tmt, alnLen, t, u);
+    // BasicFunction::do_rotation(tchain.x, tchain.y, tchain.z, tmt, alnLen, t, u);
     for (unsigned int k=0; k<alnLen; k++) {
-        // float tmx, tmy, tmz;
-        // BasicFunction::transform(t, u, tchain.x[k], tchain.y[k], tchain.z[k], tmx, tmy, tmz);
-        double di = BasicFunction::dist(qchain.x[k], qchain.y[k], qchain.z[k], tmt.x[k], tmt.y[k], tmt.z[k]);
-        // double di = BasicFunction::dist(qchain.x[k], qchain.y[k], qchain.z[k], tmx, tmy, tmz);
+        float tmx, tmy, tmz;
+        BasicFunction::transform(t, u, tchain.x[k], tchain.y[k], tchain.z[k], tmx, tmy, tmz);
+        // double di = BasicFunction::dist(qchain.x[k], qchain.y[k], qchain.z[k], tmt.x[k], tmt.y[k], tmt.z[k]);
+        double di = BasicFunction::dist(qchain.x[k], qchain.y[k], qchain.z[k], tmx, tmy, tmz);
         tmscore += 1/(1+di/d02);
     }
     return tmscore;
