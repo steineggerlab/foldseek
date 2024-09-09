@@ -224,7 +224,6 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     return {assId, qTmScore, tTmScore, uString, tString, true};
 }
 
-<<<<<<< HEAD
 static char* fastfloatToBuffer(float value, char* buffer) {
     if (value < 0) {
         value *= -1;
@@ -250,6 +249,3 @@ static char* fastfloatToBuffer(float value, char* buffer) {
 }
 
 #endif //FOLDSEEK_MULTIMERUTIL_H
-=======
-#endif //FOLDSEEK_MULTIMERUTIL_H
->>>>>>> upstream/master
