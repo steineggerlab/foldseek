@@ -335,13 +335,13 @@ KVFG...L
 ...
 ```
 ##### Filtered search result
-The `_cluster_report` contains `qcoverage, tcoverage, multimer qTm, multimer tTm, interface lddt, ustring, tstring` of filtered alignments. 
+The `_cluster_report` contains `qcoverage, tcoverage, multimer qTm, multimer tTm, interface lddt, ustring, tstring` of alignments after filtering and before clustering. 
 ```
 5o0f2	5o0f2	1.000	1.000	1.000	1.000	1.000	1.000,0.000,0.000,0.000,1.000,0.000,0.000,0.000,1.000	0.000,0.000,0.000
 5o0f2	5o0d2	1.000	1.000	0.999	0.992	1.000	0.999,0.000,-0.000,-0.000,0.999,-0.000,0.000,0.000,0.999	-0.004,-0.001,0.084
 5o0f2	5o082	1.000	0.990	0.978	0.962	0.921	0.999,-0.025,-0.002,0.025,0.999,-0.001,0.002,0.001,0.999	-0.039,0.000,-0.253
 ```
-The coverage here represents the sum of the coverages of all aligned chains, divided by the total query/target lengths.
+The query and target coverages here represent the sum of the coverages of all aligned chains, divided by the total query and target multimer length respectively.
 
 #### Important multimer cluster parameters
 
