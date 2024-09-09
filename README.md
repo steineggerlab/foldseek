@@ -351,10 +351,10 @@ The coverage here represents the sum of the coverages of all aligned chains, div
 | -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
 | --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
 | -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
-| --cov-mode      | Alignment  | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query                               |
-| --multimer-tm-threshold      | Alignment  | accept alignments with an multimer alignment TMscore > thr                               |
-| --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr                               |
-| --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr                      |
+| --cov-mode      | Alignment  | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query |
+| --multimer-tm-threshold      | Alignment  | accept alignments with an multimer alignment TMscore > thr |
+| --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr |
+| --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr |
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
