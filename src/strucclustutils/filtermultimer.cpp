@@ -563,7 +563,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         resultToWrite_t result;
         std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
         // std::vector< ComplexFilterCriteria> localComplexVector;
-        std::map<unsigned int, std::vector<double>> cmplIdToBestAssId;
+        std::map<unsigned int, std::vector<unsigned int>> cmplIdToBestAssId;
         // std::vector<unsigned int> cmpltargetIds;
         // std::vector<double> targetIdBestTm;
         std::vector<unsigned int> selectedAssIDs;
@@ -657,7 +657,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             
             // Filter the target complexes and get the best alignment
             // for (unsigned int assId = 0; assId < localComplexVector.size(); assId++) {
-
             for (auto& assId_res : localComplexMap) {
                 unsigned int tComplexId  = assId_res.second.targetComplexId;
                 // unsigned int tComplexId  = localComplexVector.at(assId).targetComplexId;
@@ -677,20 +676,20 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 if (!(cmplfiltcrit.satisfy(par.covMode, par.covThr, par.filtMultimerTmThr, par.filtChainTmThr, par.filtInterfaceLddtThr, qComplex.nChain, tComplex.nChain))) {
                     continue;
                 }
-                // unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
+                unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
                 // Get the best alignement per each target complex   
                 if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()) {
-                    // cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
-                    cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
+                    cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
+                    // cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
                     // cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId), cmplfiltcrit.avgTm};
                 } else {
-                    // if (alnlen > cmplIdToBestAssId.at(tComplexId)[1]) {
-                    //     cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
-                    // }
-                    if (cmplfiltcrit.avgTm > cmplIdToBestAssId.at(tComplexId)[1]) {
-                        cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
-                        // cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res), cmplfiltcrit.avgTm};
+                    if (alnlen > cmplIdToBestAssId.at(tComplexId)[1]) {
+                        cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
                     }
+                    // if (cmplfiltcrit.avgTm > cmplIdToBestAssId.at(tComplexId)[1]) {
+                    //     cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res.first), cmplfiltcrit.avgTm};
+                    //     // cmplIdToBestAssId[tComplexId] = {static_cast<double>(assId_res), cmplfiltcrit.avgTm};
+                    // }
                 }
                 
                 // unsigned int targetindex;
