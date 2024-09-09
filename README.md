@@ -308,7 +308,7 @@ The `easy-multimercluster` module is designed for multimer-level structural clus
 
 Make sure chain names in PDB/mmcIF files does not contain underscores(_).
 
-    foldseek easy-multimercluster example/ clu tmp 
+    foldseek easy-multimercluster example/ clu tmp --multimer-tm-threshold 0.65 --chain-tm-threshold 0.5 --interface-tm-threshold 0.65
 
 #### Output MultimerCluster
 ##### Tab-separated multimercluster
@@ -332,6 +332,8 @@ SHGK...R
 KVFG...L
 >194l2_A6
 KVFG...L
+#10mh121
+...
 ```
 ##### Filtered search result
 The `_cluster_report` contains `qcoverage, tcoverage, multimer qTm, multimer tTm, interface lddt, ustring, tstring` of filtered alignments. 
@@ -340,6 +342,7 @@ The `_cluster_report` contains `qcoverage, tcoverage, multimer qTm, multimer tTm
 5o0f2	5o0d2	1.000	1.000	0.999	0.992	1.000	0.999,0.000,-0.000,-0.000,0.999,-0.000,0.000,0.000,0.999	-0.004,-0.001,0.084
 5o0f2	5o082	1.000	0.990	0.978	0.962	0.921	0.999,-0.025,-0.002,0.025,0.999,-0.001,0.002,0.001,0.999	-0.039,0.000,-0.253
 ```
+The coverage here represents the sum of the coverages of all aligned chains, divided by the total query/target lengths.
 
 #### Important multimer cluster parameters
 
@@ -352,8 +355,6 @@ The `_cluster_report` contains `qcoverage, tcoverage, multimer qTm, multimer tTm
 | --multimer-tm-threshold      | Alignment  | accept alignments with an multimer alignment TMscore > thr                               |
 | --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr                               |
 | --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr                      |
-
-The coverage here represents the sum of the coverages of all aligned chains, divided by the total query/target lengths.
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
