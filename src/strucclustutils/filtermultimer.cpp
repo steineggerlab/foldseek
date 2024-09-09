@@ -544,6 +544,13 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         getlookupInfo(tLookupFile, tChainKeyToComplexIdMap, tComplexes, tComplexIdToIdx);
         getComplexResidueLength(tDbr, tComplexes);
     }
+    std::vector<unsigned int> qComplexOrder(qComplexes.size());
+    for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
+            qComplexOrder[qComplexIdx] = qComplexIdx;
+    }
+    std::sort(qComplexOrder.begin(), qComplexOrder.end(), [&qComplexes](unsigned int lhs, unsigned int rhs) {
+              return qComplexes[lhs].chainKeys.size() > qComplexes[rhs].chainKeys.size();
+          });
     
 #pragma omp parallel num_threads(localThreads) 
     {   
@@ -563,16 +570,16 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         Coordinate16 qcoords;
         Coordinate16 tcoords;
         
-        Matcher::result_t res;
-#pragma omp for schedule(dynamic, 1)    
-        for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
+        Matcher::result_t res;   
+#pragma omp for schedule(dynamic, 1) 
+        // for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
+        for (size_t qComplexIdx : qComplexOrder) {
+            Debug(Debug::WARNING) << qComplexIdx<<"\n";
             progress.updateProgress();
             Complex qComplex = qComplexes[qComplexIdx];
             unsigned int qComplexId = qComplex.complexId;
             std::vector<unsigned int> qChainKeys = qComplex.chainKeys;
-            Debug(Debug::WARNING)<<qComplexIdx<<"\n";
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++ ) {
-                Debug(Debug::WARNING)<<qChainIdx<<"\n";
                 unsigned int qChainKey = qChainKeys[qChainIdx];
                 unsigned int qChainAlnId = alnDbr.getId(qChainKey);
                 unsigned int qChainDbId = qDbr->sequenceReader->getId(qChainKey);
@@ -651,6 +658,7 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             
             // Filter the target complexes and get the best alignment
             // for (unsigned int assId = 0; assId < localComplexVector.size(); assId++) {
+
             for (auto& assId_res : localComplexMap) {
                 unsigned int tComplexId  = assId_res.second.targetComplexId;
                 // unsigned int tComplexId  = localComplexVector.at(assId).targetComplexId;
@@ -671,7 +679,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     continue;
                 }
                 // unsigned int alnlen = adjustAlnLen(cmplfiltcrit.qTotalAlnLen, cmplfiltcrit.tTotalAlnLen, par.covMode);
-                
                 // Get the best alignement per each target complex   
                 if (cmplIdToBestAssId.find(tComplexId) == cmplIdToBestAssId.end()) {
                     // cmplIdToBestAssId[tComplexId] = {assId_res.first, alnlen};
