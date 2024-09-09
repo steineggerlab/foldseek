@@ -240,7 +240,6 @@ MCAR...Q
 | --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
 | --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
 | --tmscore-threshold-mode    | Alignment  | normalize TMscore by 0: alignment, 1: representative, 2: member length                             |
-
 | --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
 
 
