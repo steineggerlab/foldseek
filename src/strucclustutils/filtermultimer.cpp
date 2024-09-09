@@ -574,7 +574,6 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
 #pragma omp for schedule(dynamic, 1) 
         // for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
         for (size_t qComplexIdx : qComplexOrder) {
-            Debug(Debug::WARNING) << qComplexIdx<<"\n";
             progress.updateProgress();
             Complex qComplex = qComplexes[qComplexIdx];
             unsigned int qComplexId = qComplex.complexId;
