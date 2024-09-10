@@ -8,9 +8,9 @@
 #include "multimercluster.sh.h"
 
 void setMultimerClusterDefaults(LocalParameters *p) {
-    p->filtMultimerTmThr = 0.5; // FIX
-    // p->filtChainTmThr=0.0; // FIX
-    // p->filtInterfaceLddtThr = 0.0; // FIX
+    p->filtMultimerTmThr = 0.65; // FIX
+    p->filtChainTmThr = 0.001; // FIX
+    p->filtInterfaceLddtThr = 0.5; // FIX
 }
 
 int multimercluster(int argc, const char **argv, const Command &command) {
