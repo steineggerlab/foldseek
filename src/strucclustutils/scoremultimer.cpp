@@ -181,7 +181,7 @@ class DBSCANCluster {
 public:
     DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
-        minimumClusterSize = std::max(MULTIPLE_CHAINED_COMPLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
+        minimumClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
         maximumClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         maximumClusterNum = searchResult.alnVec.size() / maximumClusterSize;
         prevMaxClusterSize = 0;
@@ -191,6 +191,9 @@ public:
     }
 
     bool getAlnClusters() {
+        if (searchResult.qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX || searchResult.dbChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
+            return earlyStopForSingleChainComplex();
+
         // rbh filter
         filterAlnsByRBH();
         fillDistMatrix();
@@ -224,6 +227,16 @@ private:
     std::set<cluster_t> &finalClusters;
     std::map<unsigned int, float> qBestTmScore;
     std::map<unsigned int, float> dbBestTmScore;
+
+    bool earlyStopForSingleChainComplex() {
+        if (minimumClusterSize >= MULTIPLE_CHAINED_COMPLEX)
+            return finishDBSCAN();
+
+        for (size_t alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++ ) {
+            finalClusters.insert(cluster_t(alnIdx));
+        }
+        return finishDBSCAN();
+    }
 
     bool runDBSCAN() {
         unsigned int neighborIdx;
@@ -519,7 +532,7 @@ public:
                 continue;
             }
             paredSearchResult.standardize();
-            if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
+            if (!paredSearchResult.alnVec.empty())
                 searchResults.emplace_back(paredSearchResult);
 
             paredSearchResult.alnVec.clear();
@@ -531,7 +544,7 @@ public:
         }
         currAlns.clear();
         paredSearchResult.standardize();
-        if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
+        if (!paredSearchResult.alnVec.empty())
             searchResults.emplace_back(paredSearchResult);
 
         paredSearchResult.alnVec.clear();
@@ -714,8 +727,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
-                continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
             for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
