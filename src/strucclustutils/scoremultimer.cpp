@@ -191,7 +191,8 @@ public:
     }
 
     bool getAlnClusters() {
-        if (searchResult.qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX || searchResult.dbChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
+        // if Query or Target is a Single Chain Complex.
+        if (std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size()) < MULTIPLE_CHAINED_COMPLEX)
             return earlyStopForSingleChainComplex();
 
         // rbh filter
@@ -232,8 +233,9 @@ private:
         if (minimumClusterSize >= MULTIPLE_CHAINED_COMPLEX)
             return finishDBSCAN();
 
-        for (size_t alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++ ) {
-            finalClusters.insert(cluster_t(alnIdx));
+        for (unsigned int alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++ ) {
+            neighbors = {alnIdx};
+            finalClusters.insert(neighbors);
         }
         return finishDBSCAN();
     }
@@ -375,6 +377,7 @@ private:
         // Too few alns => do nothing and finish it
         if (searchResult.alnVec.size() < minimumClusterSize)
             return finishDBSCAN();
+        // All alns as a cluster
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
@@ -384,7 +387,6 @@ private:
             return runDBSCAN();
         }
         // Already good => finish it without clustering
-        prevMaxClusterSize = neighbors.size();
         finalClusters.insert(neighbors);
         return finishDBSCAN();
     }
