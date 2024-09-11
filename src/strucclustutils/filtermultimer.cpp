@@ -161,28 +161,37 @@ public:
         return true;
     }
 
-    void calculateAvgTm(int covMode){
-        switch (covMode) {
-            case Parameters::COV_MODE_BIDIRECTIONAL:
-                avgTm = ( qTm + tTm ) / 2 ;
-                break;
-            case Parameters::COV_MODE_TARGET:
-                avgTm = tTm ;
-                break;
-            case Parameters::COV_MODE_QUERY:
-                avgTm = qTm ;
-                break;
-            default :
-                avgTm = ( qTm + tTm ) / 2 ;
+    // void calculateAvgTm(int covMode){
+    //     switch (covMode) {
+    //         case Parameters::COV_MODE_BIDIRECTIONAL:
+    //             avgTm = ( qTm + tTm ) / 2 ;
+    //             break;
+    //         case Parameters::COV_MODE_TARGET:
+    //             avgTm = tTm ;
+    //             break;
+    //         case Parameters::COV_MODE_QUERY:
+    //             avgTm = qTm ;
+    //             break;
+    //         default :
+    //             avgTm = ( qTm + tTm ) / 2 ;
+    //     }
+    // }
+
+    void hasInterfaceLDDT(float iLddtThr) {
+        if (qAlnChainTms.size()<std::min(qChainNum, tChainNum)) {
+            return false;
         }
+        return(interfaceLddt >= iLddtThr);
+        }
+
     }
     bool satisfy(int covMode, float covThr, float TmThr, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
         const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true;
         const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
-        const bool lddtOK = iLddtThr ? (interfaceLddt >= iLddtThr) : true;
-        calculateAvgTm(covMode);
+        const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr) : true;
+        // calculateAvgTm(covMode);
         return (covOK && TmOK && chainTmOK && lddtOK && chainNumOK);
     }
 
