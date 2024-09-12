@@ -177,7 +177,7 @@ public:
     //     }
     // }
 
-    void hasInterfaceLDDT(float iLddtThr) {
+    bool hasInterfaceLDDT(float iLddtThr, unsigned int qChainNum, unsigned int tChainNum) {
         if (qAlnChainTms.size()<std::min(qChainNum, tChainNum)) {
             return false;
         }
@@ -188,7 +188,7 @@ public:
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
         const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true;
         const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
-        const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr) : true;
+        const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr, qChainNum, tChainNum) : true;
         // calculateAvgTm(covMode);
         return (covOK && TmOK && chainTmOK && lddtOK && chainNumOK);
     }
