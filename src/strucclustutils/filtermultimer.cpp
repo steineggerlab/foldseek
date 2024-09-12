@@ -182,8 +182,6 @@ public:
             return false;
         }
         return(interfaceLddt >= iLddtThr);
-        }
-
     }
     bool satisfy(int covMode, float covThr, float TmThr, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
