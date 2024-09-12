@@ -487,8 +487,16 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "BFMD",
                 "BFMD Big fantastic multimer database (combined multimers from large prediction projects).",
-                "Kim et al. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv (2024)",
+                "Kim W et al. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv (2024)",
                 "https://foldseek.steineggerlab.workers.dev/bfmd.version",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "BFVD",
+                "BFVD Big fantastic virus database (predicted viral protein structures based on the viral sequence representatives of the UniRef30 clusters",
+                "Kim R et al. BFVD - a large repository of predicted viral protein structures. bioRxiv, 2024.09.08.611582v1 (2024)",
+                "https://bfvd.steineggerlab.workers.dev",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         },
