@@ -195,7 +195,6 @@ LocalParameters::LocalParameters() :
     scoremultimer.push_back(&PARAM_EPS_DELTA);
     scoremultimer.push_back(&PARAM_CV_THRESHOLD);
 
-
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
     createmultimerreport.push_back(&PARAM_THREADS);

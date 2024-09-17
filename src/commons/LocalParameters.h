@@ -132,7 +132,6 @@ public:
     PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT)
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
-//    PARAMETER(PARAM_EPS_INIT)
     PARAMETER(PARAM_EPS_DELTA)
     PARAMETER(PARAM_CV_THRESHOLD)
     PARAMETER(PARAM_PROSTT5_MODEL)
@@ -164,10 +163,8 @@ public:
     std::string prostt5Model;
     int gpu;
 
-//    float initEPS = 0.1;
     float deltaEPS = 0.1;
     float thresholdCV = 0.1;
-
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
                                             bool &needLDDT);
