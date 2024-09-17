@@ -25,10 +25,13 @@ std::vector<Command> foldseekCommands = {
                 "foldseek createdb examples.tsv DB\n"
                 "# Process a directory or tar file and filter based on file name\n"
                 "# Note: --file-include and --file-exclude only apply to directory or tar input\n"
-                "foldseek createdb examples/ --file-include \"pdb.gz$\"\n",
+                "foldseek createdb examples/ DB --file-include \"pdb.gz$\"\n"
+                "# Predict 3Di sequences from an amino acid FASTA file using ProstT5\n"
+                "foldseek databases ProstT5 weights tmp\n"
+                "foldseek createdb QUERY.fasta DB --prostt5-model weights\n\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:directory|.tsv>|<i:PDB|mmCIF[.gz]|tar[.gz]|DB> ... <i:PDB|mmCIF[.gz]|tar|DB> <o:sequenceDB>",
-                CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin|tar[.gz]|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
+                CITATION_FOLDSEEK | CITATION_PROSTT5, {{"PDB|mmCIF[.gz]|stdin|tar[.gz]|DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,
 #ifdef HAVE_GCS
                                             &DbValidator::flatfileStdinGenericUri
 #else
@@ -254,90 +257,105 @@ std::vector<Command> foldseekCommands = {
                 "<i:Db> <o:pdbFile|pdbDir>",
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"pdbFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
-        {"scorecomplex", scorecomplex, &localPar.scorecomplex, COMMAND_ALIGNMENT,
-                "Get complex level alignments from alignmentDB",
-                "# Get complex level alignments (chain assignments and tm-scores) from alignmentDB.\n"
-                "foldseek scorecomplex queryDB targetDB alignmentDB complexDB\n"
+        {"scoremultimer", scoremultimer, &localPar.scoremultimer, COMMAND_ALIGNMENT,
+                "Get multimer level alignments from alignmentDB",
+                "# Get multimer level alignments (chain assignments and tm-scores) from alignmentDB.\n"
+                "foldseek scoremultimer queryDB targetDB alignmentDB complexDB\n"
                 "# simple tsv output format"
-                "foldseek createcomplexreport queryDB targetDB complexDB result.tsv"
+                "foldseek createmultimerreport queryDB targetDB complexDB result.tsv"
                 "# output files with convertalis"
                 "foldseek convertalis queryDB targetDB complexDB result.m8\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDb> <i:targetDb> <i:alignmentDB> <o:complexDB>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb}
                                    }
         },
-        {"complexsearch", complexsearch, &localPar.complexsearchworkflow, COMMAND_MAIN,
-                "Complex level search",
-                "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
-                "foldseek complexsearch queryDB targetDB result tmp\n"
+        {"scorecomplex", scoremultimer, &localPar.scoremultimer, COMMAND_HIDDEN,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
+        },
+        {"multimersearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_MAIN,
+                "Multimer level search",
+                "# Search a single/multiple PDB file against a set of PDB files and get multimer level alignments\n"
+                "foldseek multimersearch queryDB targetDB result tmp\n"
                 "# Format output differently\n"
-                "foldseek complexsearch queryDB targetDB result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "foldseek multimersearch queryDB targetDB result tmp --format-output query,target,qstart,tstart,cigar\n"
                 "# Align with TMalign (global)\n"
-                "foldseek complexsearch queryDB targetDB result tmp --alignment-type 1\n"
+                "foldseek multimersearch queryDB targetDB result tmp --alignment-type 1\n"
                 "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
-                "foldseek complexsearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
+                "foldseek multimersearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
-        {"easy-complexsearch", easycomplexsearch, &localPar.easyscomplexsearchworkflow, COMMAND_EASY,
-                "Complex level search",
-                "# Search a single/multiple PDB file against a set of PDB files and get complex level alignments\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
+        {"complexsearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_HIDDEN,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
+        },
+        {"easy-multimersearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
+                "Multimer level search",
+                "# Search a single/multiple PDB file against a set of PDB files and get multimer level alignments\n"
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
                 "# Format output differently\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --format-output query,target,qstart,tstart,cigar\n"
                 "# Align with TMalign (global)\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --alignment-type 1\n"
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --alignment-type 1\n"
                 "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
-                "foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
+                "foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder},
                                            {"outputFileName", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
-        {"createcomplexreport", createcomplexreport, &localPar.createcomplexreport, COMMAND_FORMAT_CONVERSION,
+        {"easy-complexsearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
+        },
+        {"createmultimerreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
                 "Convert complexDB to tsv format",
                 "# Create output in tsv format (9 columns):  qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u, t, assId\n"
-                "#  (1,2) identifiers for query and target complex,\n"
-                "#  (3,4) chains of query complex and target complex,\n"
+                "#  (1,2) identifiers for query and target multimers,\n"
+                "#  (3,4) chains of query multimer and target multimer,\n"
                 "#  (5,6) tm score based on query and target residue length,\n"
                 "#  (8,9) u and t,\n"
                 "#  (9) assignment id\n"
-                "foldseek createcomplexreport queryDB targetDB complexDB result.tsv\n",
+                "foldseek createmultimerreport queryDB targetDB complexDB result.tsv\n",
                 "Woosub Kim <woosubgo@snu.ac.kr>",
                 "<i:queryDb> <i:targetDb> <i:complexDB> <o:complexFile>",
-                CITATION_FOLDSEEK, {
+                CITATION_FOLDSEEK_MULTIMER, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"complexDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                            {"complexFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
                                    }
         },
-        {"expandcomplex", expandcomplex, &localPar.expandcomplex, COMMAND_PREFILTER,
-        "Re-prefilter to ensure complete alignment between complexes",
-        NULL,
-        "Woosub Kim <woosubgo@snu.ac.kr>",
-        "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:prefilterDB>",
-         CITATION_FOLDSEEK, {
-                 {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                 {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                 {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
-                 {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
-             }
+        {"createcomplexreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
+        },
+        {"expandmultimer", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
+                "Re-prefilter to ensure complete alignment between multimers",
+                NULL,
+                "Woosub Kim <woosubgo@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:prefilterDB>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                        {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                        {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                        {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                        {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
+                                }
+        },
+        {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
+                "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
@@ -412,6 +430,30 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "Bordin et al. AlphaFold2 reveals commonalities and novelties in protein structure space for 21 model organisms. Communications Biology, 6, 160 (2023)",
                 "https://www.cath.info",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "BFMD",
+                "BFMD Big fantastic multimer database (combined multimers from large prediction projects).",
+                "Kim W et al. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv (2024)",
+                "https://foldseek.steineggerlab.workers.dev/bfmd.version",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "BFVD",
+                "BFVD Big fantastic virus database (predicted viral protein structures based on the viral sequence representatives of the UniRef30 clusters",
+                "Kim R et al. BFVD - a large repository of predicted viral protein structures. bioRxiv, 2024.09.08.611582v1 (2024)",
+                "https://bfvd.steineggerlab.workers.dev",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "ProstT5",
+                "Protein language model to predict 3Di directly from sequence.",
+                "Heinzinger et al. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, 2023.07.23.550085v2 (2024)",
+                "https://huggingface.co/Rostlab/ProstT5",
+                false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         }
 };

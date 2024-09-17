@@ -4,6 +4,8 @@
 #include <Parameters.h>
 
 const int CITATION_FOLDSEEK = CITATION_END;
+const int CITATION_FOLDSEEK_MULTIMER = CITATION_FOLDSEEK << 1;
+const int CITATION_PROSTT5 = CITATION_FOLDSEEK << 2;
 
 struct FoldSeekDbValidator : public DbValidator {
     static std::vector<int> tmscore;
@@ -30,6 +32,11 @@ public:
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
 
+    static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
+    static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
+    static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
+    static const int TMSCORE_THRESHOLD_MODE_MIN = 3;
+
     static const int PREF_MODE_KMER = 0;
     static const int PREF_MODE_UNGAPPED = 1;
     static const int PREF_MODE_EXHAUSTIVE = 2;
@@ -54,7 +61,7 @@ public:
     static const int OUTFMT_PROBTP = 48;
     static const int OUTFMT_QTMSCORE = 49;
     static const int OUTFMT_TTMSCORE = 50;
-    // for scorecomplex
+    // for Foldseek-MM
     static const int OUTFMT_QUERY_COMPLEX = 51;
     static const int OUTFMT_TARGET_COMPLEX = 52;
     static const int OUTFMT_Q_COMPLEX_TMSCORE = 53;
@@ -93,15 +100,16 @@ public:
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
-    std::vector<MMseqsParameter *> scorecomplex;
-    std::vector<MMseqsParameter *> complexsearchworkflow;
-    std::vector<MMseqsParameter *> easyscomplexsearchworkflow;
-    std::vector<MMseqsParameter *> createcomplexreport;
-    std::vector<MMseqsParameter *> expandcomplex;
+    std::vector<MMseqsParameter *> scoremultimer;
+    std::vector<MMseqsParameter *> multimersearchworkflow;
+    std::vector<MMseqsParameter *> easymultimersearchworkflow;
+    std::vector<MMseqsParameter *> createmultimerreport;
+    std::vector<MMseqsParameter *> expandmultimer;
     std::vector<MMseqsParameter *> convert2pdb;
 
     PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
+    PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
     PARAMETER(PARAM_LDDT_THRESHOLD)
     PARAMETER(PARAM_SORT_BY_STRUCTURE_BITS)
@@ -118,17 +126,21 @@ public:
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
     PARAMETER(PARAM_INDEX_EXCLUDE)
-    PARAMETER(PARAM_COMPLEX_REPORT_MODE)
-    PARAMETER(PARAM_EXPAND_COMPLEX_EVALUE)
+    PARAMETER(PARAM_MULTIMER_REPORT_MODE)
+    PARAMETER(PARAM_MULTIMER_REPORT_MODE_BC_COMPAT)
+    PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE)
+    PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT)
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
 //    PARAMETER(PARAM_EPS_INIT)
     PARAMETER(PARAM_EPS_DELTA)
     PARAMETER(PARAM_CV_THRESHOLD)
-
+    PARAMETER(PARAM_PROSTT5_MODEL)
+    PARAMETER(PARAM_GPU)
 
     int prefMode;
     float tmScoreThr;
+    int tmScoreThrMode;
     int tmAlignHitOrder;
     float lddtThr;
     int sortByStructureBits;
@@ -145,10 +157,12 @@ public:
     std::string fileInclude;
     std::string fileExclude;
     int indexExclude;
-    int complexReportMode;
-    double eValueThrExpandComplex;
+    int multimerReportMode;
+    double eValueThrExpandMultimer;
     int inputFormat;
     int pdbOutputMode;
+    std::string prostt5Model;
+    int gpu;
 
 //    float initEPS = 0.1;
     float deltaEPS = 0.1;

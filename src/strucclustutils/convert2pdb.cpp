@@ -7,7 +7,7 @@
 #include "Util.h"
 #include "FileUtil.h"
 #include "Coordinate16.h"
-#include "createcomplexreport.h"
+#include "MultimerUtil.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -208,7 +208,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                         aa = 'X';
                     }
                     const char* aa3 = threeLetterLookup[(int)(aa - 'A')];
-                    fprintf(threadHandle, "ATOM  % 5d  CA  %s %c% 4d% 12.3f% 8.3f% 8.3f\n", (int)(j + 1), aa3, chainName[0], int(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)]);
+                    fprintf(threadHandle, "ATOM  %5d  CA  %s %c%4d    %8.3f%8.3f%8.3f\n", (int)(j + 1), aa3, chainName[0], int(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)]);
                 }
                 if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
                     fprintf(threadHandle, "ENDMDL\n");

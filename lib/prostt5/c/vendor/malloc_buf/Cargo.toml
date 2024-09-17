@@ -1,0 +1,12 @@
+[dependencies]
+libc = ">= 0.1, < 0.3"
+
+[package]
+authors = ["Steven Sheldon"]
+description = "Structs for handling malloc'd memory passed to Rust."
+documentation = "http://ssheldon.github.io/malloc_buf/malloc_buf/"
+exclude = [".gitignore"]
+license = "MIT"
+name = "malloc_buf"
+repository = "https://github.com/SSheldon/malloc_buf"
+version = "0.0.6"

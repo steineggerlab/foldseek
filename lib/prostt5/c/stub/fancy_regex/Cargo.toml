@@ -1,0 +1,4 @@
+[package]
+name = "fancy-regex"
+version = "0.13.0"
+edition = "2021"

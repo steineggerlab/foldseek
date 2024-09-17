@@ -118,7 +118,7 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "Alphafold/Proteome")
-        if notExists "${TMP_PATH}/alphafolddb.tar.gz"; then
+        if notExists "${TMP_PATH}/afdb_proteome.tar.gz"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_proteome.tar.gz" "${TMP_PATH}/afdb_proteome.tar.gz"
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_proteome.version" "${TMP_PATH}/version"
         fi
@@ -127,7 +127,7 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "Alphafold/Swiss-Prot")
-        if notExists "${TMP_PATH}/alphafold_swissprot.tar.gz"; then
+        if notExists "${TMP_PATH}/afdb_swissprot.tar.gz"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_swissprot.tar.gz" "${TMP_PATH}/afdb_swissprot.tar.gz"
             downloadFile "https://foldseek.steineggerlab.workers.dev/afdb_swissprot.version" "${TMP_PATH}/version"
         fi
@@ -159,6 +159,37 @@ case "${SELECTION}" in
         push_back "${TMP_PATH}/cath50"
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
+    "BFMD")
+        if notExists "${TMP_PATH}/bfmd.tar.gz"; then
+            downloadFile "https://foldseek.steineggerlab.workers.dev/bfmd.tar.gz" "${TMP_PATH}/bfmd.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers.dev/bfmd.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/bfmd.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/bfmd"
+        INPUT_TYPE="FOLDSEEK_DB"
+    ;;
+    "ProstT5")
+        MODEL=prostt5-f16-safetensors.tar.gz
+        if [ -n "${PROSTT5_QUANTIZED}" ]; then
+            # quantized weights are worse and slower
+            # they were only added to reduce download size in continous integration
+            MODEL=prostt5-q4_0-gguf.tar.gz
+        fi
+        if notExists "${TMP_PATH}/${MODEL}"; then
+            downloadFile "https://foldseek.steineggerlab.workers.dev/${MODEL}" "${TMP_PATH}/${MODEL}"
+        fi
+        mkdir -p -- "${OUTDB}"
+        tar xvfz "${TMP_PATH}/${MODEL}" -C "${OUTDB}"
+        INPUT_TYPE="MODEL_WEIGHTS"
+    ;;
+    "BFVD")
+        if notExists "${TMP_PATH}/bfvd.tar.gz"; then
+            downloadFile "https://bfvd.steineggerlab.workers.dev/bfvd_foldseekdb.tar.gz" "${TMP_PATH}/bfvd.tar.gz"
+            downloadFile "https://bfvd.steineggerlab.workers.dev/bfvd.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/bfvd.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/bfvd"
+        INPUT_TYPE="FOLDSEEK_DB"
 esac
 
 if notExists "${OUTDB}.dbtype"; then
@@ -166,10 +197,18 @@ case "${INPUT_TYPE}" in
     "FOLDSEEK_DB")
         eval "set -- $ARR"
         IN="${*}"
-        for SUFFIX in ".source" "_mapping" "_taxonomy"; do
+        for SUFFIX in ".source" "_mapping" "_taxonomy" ".lookup"; do
             if [ -e "${IN}_seq${SUFFIX}" ]; then
-                mv -f -- "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}"
+                if [ -L "${IN}_seq${SUFFIX}" ]; then
+                    # recreate symlinks
+                    BASE=$(basename "${OUTDB}")
+                    DIRN=$(dirname "${OUTDB}")
+                    (cd "${DIRN}"; ln -sf -- "${BASE}${SUFFIX}" "${BASE}_seq${SUFFIX}")
+                else
+                    mv -f -- "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}"
+                fi
             fi
+
             if [ -e "${IN}${SUFFIX}" ]; then
                 mv -f -- "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}"
             fi
@@ -185,6 +224,15 @@ case "${INPUT_TYPE}" in
         done
 
         if [ -e "${IN}_clu.dbtype" ]; then
+            # fix symlinks of clusterdbs
+            for SUFFIX in "" "_ss" "_h" "_ca"; do
+                if [ -L "${OUTDB}_seq${SUFFIX}.0" ] && [ ! -e "${OUTDB}_seq${SUFFIX}.0" ]; then
+                    BASE=$(basename "${OUTDB}")
+                    DIRN=$(dirname "${OUTDB}")
+                    (cd "${DIRN}"; ln -sf -- "${BASE}${SUFFIX}" "${BASE}_seq${SUFFIX}.0")
+                fi
+            done
+
             # shellcheck disable=SC2086
             "${MMSEQS}" mvdb "${IN}_clu" "${OUTDB}_clu" || fail "mv died"
         fi
@@ -207,7 +255,7 @@ case "${INPUT_TYPE}" in
 esac
 fi
 
-if notExists "${OUTDB}.version"; then
+if [ -f "${TMP_PATH}/version" ] && notExists "${OUTDB}.version"; then
     mv -f "${TMP_PATH}/version" "${OUTDB}.version"
 fi
 

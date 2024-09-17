@@ -1,0 +1,15 @@
+[dev-dependencies.objc_test_utils]
+path = "test_utils"
+version = "0.0"
+
+[package]
+authors = ["Steven Sheldon"]
+description = "Rust interface for Apple's C language extension of blocks."
+documentation = "http://ssheldon.github.io/rust-objc/block/"
+exclude = [".gitignore", ".travis.yml", "travis_install.sh", "travis_test.sh", "tests-ios/**"]
+keywords = ["blocks", "osx", "ios", "objective-c"]
+license = "MIT"
+name = "block"
+readme = "README.md"
+repository = "http://github.com/SSheldon/rust-block"
+version = "0.1.6"

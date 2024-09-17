@@ -5,9 +5,12 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
 ## Publications
-[van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist C, Söding J, and Steinegger M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
+[van Kempen M, Kim S, Tumescheit C, Mirdita M, Lee J, Gilchrist CLM, Söding J, and Steinegger M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)](https://www.nature.com/articles/s41587-023-01773-0)
 
-[Barrio-Hernandez I, Yeo J, Jänes J, Mirdita M, Gilchrist LMC, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. Nature, doi:10.1038/s41586-023-06510-w (2023)](https://www.nature.com/articles/s41586-023-06510-w)
+[Barrio-Hernandez I, Yeo J, Jänes J, Mirdita M, Gilchrist CLM, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. Nature, doi:10.1038/s41586-023-06510-w (2023)](https://www.nature.com/articles/s41586-023-06510-w)
+
+[Kim W, Mirdita M, Levy Karin E, Gilchrist CLM, Schweke H, Söding J, Levy E, and Steinegger M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)](https://www.biorxiv.org/content/10.1101/2024.04.14.589414v1)
+
 # Table of Contents
 
 - [Foldseek](#foldseek)
@@ -21,13 +24,14 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
     - [Output](#output-search)
     - [Important Parameters](#important-search-parameters)
     - [Alignment Mode](#alignment-mode)
+    - [Structure search from FASTA input](#structure-search-from-fasta-input)
   - [Databases](#databases)
     - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
   - [Cluster](#cluster)
     - [Output](#output-cluster)
     - [Important Parameters](#important-cluster-parameters)
-  - [Complexsearch](#complexsearch)
-    - [Output](#complex-search-output)
+  - [Multimer](#multimersearch)
+    - [Output](#multimer-search-output)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -135,6 +139,24 @@ By default, Foldseek uses its local 3Di+AA structural alignment but it also supp
 
 If alignment type is set to tmalign (`--alignment-type 1`), the results will be sorted by the TMscore normalized by query length. The TMscore is used for reporting two fields: the e-value=(qTMscore+tTMscore)/2 and the score=(qTMscore*100). All output fields (e.g., pident, fident, and alnlen) are calculated based on the TMalign alignment.
 
+#### Structure search from FASTA input
+Search by predicting 3Di directly from amino acid sequences without the need for existing protein structures. 
+This feature uses the [ProstT5](https://www.biorxiv.org/content/10.1101/2023.07.23.550085v2) protein language model and runs by default on CPU and is about 400-4000x compared to predicted structures by [ColabFold](https://github.com/sokrypton/ColabFold).
+
+```
+foldseek databases ProstT5 weights tmp
+foldseek databases PDB pdb tmp
+foldseek easy-search QUERY.fasta pdb result.m8 tmp --prostt5-model weights
+```
+
+Or create your a structural database from a fasta files.
+
+```
+foldseek createdb db.fasta db --prostt5-model weights
+```
+
+Faster inference using GPU/CUDA is also supported. Compile from source with `cmake -DCMAKE_BUILD_TYPE=Release  -DENABLE_CUDA=1 -DCUDAToolkit_ROOT=Path-To-Cuda-Toolkit` and call with `createdb/easy-search --prostt5-model weights --gpu 1`.
+
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
     
@@ -216,29 +238,31 @@ MCAR...Q
 | --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
 | --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
 | --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
+| --tmscore-threshold-mode    | Alignment  | normalize TMscore by 0: alignment, 1: representative, 2: member length                             |
+
 | --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
 
 
-### Complexsearch
-The `easy-complexsearch` module is designed for querying one or more protein complex (multi-chain) structures (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
+### Multimersearch
+The `easy-multimersearch` module is designed for querying one or more protein complex (multi-chain) structures (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
 
-#### Using Complexsearch
+#### Using Multimersearch
 The examples below use files that can be found in the `example` directory, which is part of the Foldseek repo, if you clone it. 
 If you use the precompiled version of the software, you can download the files directly: [1tim.pdb.gz](https://github.com/steineggerlab/foldseek/raw/master/example/1tim.pdb.gz) and [8tim.pdb.gz](https://github.com/steineggerlab/foldseek/raw/master/example/8tim.pdb.gz).
 
-For a pairwise alignment of complexes using `easy-complexsearch`, run the following command:
+For a pairwise alignment of complexes using `easy-multimersearch`, run the following command:
 ```
-foldseek easy-complexsearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFolder
+foldseek easy-multimersearch example/1tim.pdb.gz example/8tim.pdb.gz result tmpFolder
 ```
-Foldseek `easy-complexsearch` can also be used for searching one or more query complexes against a target database: 
+Foldseek `easy-multimersearch` can also be used for searching one or more query complexes against a target database: 
 ```
 foldseek databases PDB pdb tmp 
-foldseek easy-complexsearch example/1tim.pdb.gz pdb result tmpFolder
+foldseek easy-multimersearch example/1tim.pdb.gz pdb result tmpFolder
 ```
 
-#### Complex Search Output
+#### Multimer Search Output
 ##### Tab-separated-complex
-By default, `easy-complexsearch` reports the output alignment in a tab-separated file.
+By default, `easy-multimersearch` reports the output alignment in a tab-separated file.
 The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,complexassignid` but they can be customized with the `--format-output` option e.g., `--format-output "query,target,complexqtmscore,complexttmscore,complexassignid"` alters the output to show specific scores and identifiers.
 
 | Code | Description |
@@ -260,7 +284,7 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 ```
 
 ##### Complex Report
-`easy-complexsearch` also generates a report (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
+`easy-multimersearch` also generates a report (prefixed `_report`), which provides a summary of the inter-complex chain matching, including identifiers, chains, TMscores, rotation matrices, translation vectors, and assignment IDs. The report includes the following fields:
 | Column | Description |
 | --- | --- |
 | 1 | Identifier of the query complex |

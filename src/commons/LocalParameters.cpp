@@ -3,7 +3,6 @@
 #include "Debug.h"
 #include "mat3di.out.h"
 
-
 const int LocalParameters::DBTYPE_CA_ALPHA = 101;
 const int LocalParameters::DBTYPE_TMSCORE = 102;
 
@@ -11,6 +10,7 @@ LocalParameters::LocalParameters() :
         Parameters(),
         PARAM_PREF_MODE(PARAM_PREF_MODE_ID,"--prefilter-mode", "Prefilter mode", "prefilter mode: 0: kmer/ungapped 1: ungapped, 2: nofilter",typeid(int), (void *) &prefMode, "^[0-2]{1}$"),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_TMSCORE_THRESHOLD_MODE(PARAM_TMSCORE_THRESHOLD_MODE_ID,"--tmscore-threshold-mode", "TMscore threshold mode", "0: alignment, 1: query 2: target length",typeid(int), (void *) &tmScoreThrMode, "^[0-2]{1}$"),
         PARAM_TMALIGN_HIT_ORDER(PARAM_TMALIGN_HIT_ORDER_ID,"--tmalign-hit-order", "TMalign hit order", "order hits by 0: (qTM+tTM)/2, 1: qTM, 2: tTM, 3: min(qTM,tTM) 4: max(qTM,tTM)",typeid(int), (void *) &tmAlignHitOrder, "^[0-4]{1}$"),
         PARAM_LDDT_THRESHOLD(PARAM_LDDT_THRESHOLD_ID,"--lddt-threshold", "LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &lddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_SORT_BY_STRUCTURE_BITS(PARAM_SORT_BY_STRUCTURE_BITS_ID,"--sort-by-structure-bits", "Sort by structure bit score", "sort by bits*sqrt(alnlddt*alntmscore)",typeid(int), (void *) &sortByStructureBits, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
@@ -27,14 +27,17 @@ LocalParameters::LocalParameters() :
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
         PARAM_INDEX_EXCLUDE(PARAM_INDEX_EXCLUDE_ID, "--index-exclude", "Index Exclusion", "Exclude parts of the index:\n0: Full index\n1: Exclude k-mer index (for use with --prefilter-mode 1)\n2: Exclude C-alpha coordinates (for use with --sort-by-structure-bits 0)\nFlags can be combined bit wise", typeid(int), (void *) &indexExclude, "^[0-3]{1}$", MMseqsParameter::COMMAND_EXPERT),
-        PARAM_COMPLEX_REPORT_MODE(PARAM_COMPLEX_REPORT_MODE_ID, "--complex-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &complexReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
-        PARAM_EXPAND_COMPLEX_EVALUE(PARAM_EXPAND_COMPLEX_EVALUE_ID, "--expand-complex-evalue", "E-value threshold for expandcomplex", "E-value threshold for expandcomplex (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandComplex, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
+        PARAM_MULTIMER_REPORT_MODE(PARAM_MULTIMER_REPORT_MODE_ID, "--multimer-report-mode", "Complex report mode", "Complex report mode:\n0: No report\n1: Write complex report", typeid(int), (void *) &multimerReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_MULTIMER_REPORT_MODE_BC_COMPAT(PARAM_MULTIMER_REPORT_MODE_BC_COMPAT_ID, "--complex-report-mode", "", "", typeid(int), (void *) &multimerReportMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_HIDDEN),
+        PARAM_EXPAND_MULTIMER_EVALUE(PARAM_EXPAND_MULTIMER_EVALUE_ID, "--expand-multimer-evalue", "Multimer E-value", "E-value threshold for multimer chain expansion (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandMultimer, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
+        PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT(PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT_ID, "--expand-complex-evalue", "", "", typeid(double), (void *) &eValueThrExpandMultimer, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
 //        PARAM_EPS_INIT(PARAM_EPS_INIT_ID, "--eps-init", "eps init value", "", typeid(float), (void *) &initEPS, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_EPS_DELTA(PARAM_EPS_DELTA_ID, "--eps-delta", "eps delta value", "", typeid(float), (void *) &deltaEPS, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_CV_THRESHOLD(PARAM_CV_THRESHOLD_ID, "--cv-threshold", "CV thresjold for feature selection", "", typeid(float), (void *) &thresholdCV, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN)
-
+        PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
+        PARAM_GPU(PARAM_GPU_ID, "--gpu", "Use GPU", "Use GPU (CUDA) if possible", typeid(int), (void *) &gpu, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON)
 
 {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
@@ -79,6 +82,10 @@ LocalParameters::LocalParameters() :
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
 
     // structurecreatedb
+#ifdef HAVE_CUDA
+    structurecreatedb.push_back(&PARAM_GPU);
+#endif
+    structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
@@ -104,6 +111,7 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_ADD_BACKTRACE);
     tmalign.push_back(&PARAM_INCLUDE_IDENTITY);
     tmalign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    tmalign.push_back(&PARAM_TMSCORE_THRESHOLD_MODE);
     tmalign.push_back(&PARAM_TMALIGN_HIT_ORDER);
     tmalign.push_back(&PARAM_TMALIGN_FAST);
     tmalign.push_back(&PARAM_PRELOAD_MODE);
@@ -112,11 +120,13 @@ LocalParameters::LocalParameters() :
 
     structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD_MODE);
     structurerescorediagonal.push_back(&PARAM_LDDT_THRESHOLD);
     structurerescorediagonal.push_back(&PARAM_ALIGNMENT_TYPE);
     structurerescorediagonal = combineList(structurerescorediagonal, align);
 
     structurealign.push_back(&PARAM_TMSCORE_THRESHOLD);
+    structurealign.push_back(&PARAM_TMSCORE_THRESHOLD_MODE);
     structurealign.push_back(&PARAM_LDDT_THRESHOLD);
     structurealign.push_back(&PARAM_SORT_BY_STRUCTURE_BITS);
     structurealign.push_back(&PARAM_ALIGNMENT_TYPE);
@@ -179,31 +189,35 @@ LocalParameters::LocalParameters() :
     compressca.push_back(&PARAM_V);
 
     //scorecomplex
-    scorecomplex.push_back(&PARAM_THREADS);
-    scorecomplex.push_back(&PARAM_V);
-    scorecomplex.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
-//    scorecomplex.push_back(&PARAM_EPS_INIT);
-    scorecomplex.push_back(&PARAM_EPS_DELTA);
-    scorecomplex.push_back(&PARAM_CV_THRESHOLD);
+    scoremultimer.push_back(&PARAM_THREADS);
+    scoremultimer.push_back(&PARAM_V);
+    scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
+    scoremultimer.push_back(&PARAM_EPS_DELTA);
+    scoremultimer.push_back(&PARAM_CV_THRESHOLD);
 
-    // createcomplexreport
-    createcomplexreport.push_back(&PARAM_DB_OUTPUT);
-    createcomplexreport.push_back(&PARAM_THREADS);
-    createcomplexreport.push_back(&PARAM_V);
 
-    // complexsearchworkflow
-    complexsearchworkflow = combineList(structuresearchworkflow, scorecomplex);
-    complexsearchworkflow.push_back(&PARAM_EXPAND_COMPLEX_EVALUE);
+    // createmultimerreport
+    createmultimerreport.push_back(&PARAM_DB_OUTPUT);
+    createmultimerreport.push_back(&PARAM_THREADS);
+    createmultimerreport.push_back(&PARAM_V);
 
-    // easycomplexsearchworkflow
-    easyscomplexsearchworkflow = combineList(structurecreatedb, complexsearchworkflow);
-    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, convertalignments);
-    easyscomplexsearchworkflow = combineList(easyscomplexsearchworkflow, createcomplexreport);
-    easyscomplexsearchworkflow.push_back(&PARAM_COMPLEX_REPORT_MODE);
+    // multimersearchworkflow
+    multimersearchworkflow = combineList(structuresearchworkflow, scoremultimer);
+    multimersearchworkflow = combineList(multimersearchworkflow, expandmultimer);
+    multimersearchworkflow.push_back(&PARAM_EXPAND_MULTIMER_EVALUE);
+    multimersearchworkflow.push_back(&PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT);
+    multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE);
+    multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE_BC_COMPAT);
 
-    // expandcomplex
-    expandcomplex.push_back(&PARAM_THREADS);
-    expandcomplex.push_back(&PARAM_V);
+    // easymultimersearchworkflow
+    easymultimersearchworkflow = combineList(structurecreatedb, multimersearchworkflow);
+    easymultimersearchworkflow = combineList(easymultimersearchworkflow, convertalignments);
+    easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
+    easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
+
+    // expandmultimer
+    expandmultimer.push_back(&PARAM_THREADS);
+    expandmultimer.push_back(&PARAM_V);
 
     // convert2pdb
     convert2pdb.push_back(&PARAM_PDB_OUTPUT_MODE);
@@ -213,6 +227,7 @@ LocalParameters::LocalParameters() :
     prefMode = PREF_MODE_KMER;
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
+    tmScoreThrMode = TMSCORE_THRESHOLD_MODE_ALIGNMENT;
     tmAlignHitOrder = TMALIGN_HIT_ORDER_AVG;
     lddtThr = 0.0;
     evalThr = 10;
@@ -234,9 +249,14 @@ LocalParameters::LocalParameters() :
     fileExclude = "^$";
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
-    complexReportMode = 1;
-    eValueThrExpandComplex = 10000.0;
+    multimerReportMode = 1;
+    eValueThrExpandMultimer = 10000.0;
+    prostt5Model = "";
+    gpu = 0;
+
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
+    citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");
+    citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, doi:10.1101/2023.07.23.550085 (2024)");
 
     //rewrite param vals.
     PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
@@ -303,11 +323,11 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("lddtfull") == 0) { needQCa = true; needTCa = true; needLDDT = true; needBacktrace = true; code = LocalParameters::OUTFMT_LDDT_FULL; }
         else if (outformatSplit[i].compare("prob") == 0) { needQCa = true; needTCa = true; needLDDT = true; needBacktrace = true; needTMaligner = true; code = LocalParameters::OUTFMT_PROBTP; }
         // TODO
-        else if (outformatSplit[i].compare("complexqtmscore")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
-        else if (outformatSplit[i].compare("complexttmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
-        else if (outformatSplit[i].compare("complexassignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
-        else if (outformatSplit[i].compare("complexu")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
-        else if (outformatSplit[i].compare("complext")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
+        else if (outformatSplit[i].compare("complexqtmscore")==0 || outformatSplit[i].compare("multimerqtmscore")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE; }
+        else if (outformatSplit[i].compare("complexttmscore")==0 || outformatSplit[i].compare("multimerttmscore")==0){code=LocalParameters::OUTFMT_T_COMPLEX_TMSCORE;}
+        else if (outformatSplit[i].compare("complexassignid")==0 || outformatSplit[i].compare("multimerassignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
+        else if (outformatSplit[i].compare("complexu")==0 || outformatSplit[i].compare("multimeru")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
+        else if (outformatSplit[i].compare("complext")==0 || outformatSplit[i].compare("multimert")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

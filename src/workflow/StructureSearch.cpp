@@ -152,6 +152,8 @@ int structuresearch(int argc, const char **argv, const Command &command) {
             par.compBiasCorrectionScale = 0.15;
             cmd.addVariable(std::string("PREFILTER_PAR_" + SSTR(i)).c_str(),
                             par.createParameterString(par.prefilter).c_str());
+            cmd.addVariable(std::string("UNGAPPEDPREFILTER_PAR_" + SSTR(i)).c_str(),
+                            par.createParameterString(par.ungappedprefilter).c_str());
             par.compBiasCorrectionScale = 0.5;
             if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
                 cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(), par.createParameterString(par.align).c_str());
@@ -216,7 +218,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
                     EXIT(EXIT_FAILURE);
                 }
             }
-            cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.threadsandcompression).c_str());
+            cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
             cmd.addVariable("EXPAND", "1");
         }
         std::string program = tmpDir + "/structuresearch.sh";

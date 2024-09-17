@@ -13,14 +13,14 @@ set(strucclustutils_source_files
         strucclustutils/structurerescorediagonal.cpp
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
-        strucclustutils/scorecomplex.cpp
-        strucclustutils/createcomplexreport.cpp
-        strucclustutils/createcomplexreport.h
-        strucclustutils/expandcomplex.cpp
+        strucclustutils/scoremultimer.cpp
+        strucclustutils/createmultimerreport.cpp
+        strucclustutils/MultimerUtil.h
+        strucclustutils/expandmultimer.cpp
         PARENT_SCOPE
         )
 
-add_library(gemmiwrapper OBJECT
+add_library(gemmiwrapper
     GemmiWrapper.cpp
     GemmiWrapper.h
     )
@@ -34,4 +34,5 @@ set_property(TARGET gemmiwrapper APPEND PROPERTY COMPILE_DEFINITIONS ${DEF_TMP})
 set_property(TARGET gemmiwrapper APPEND PROPERTY INCLUDE_DIRECTORIES ${INCL_TMP})
 restore_exceptions(gemmiwrapper)
 target_link_libraries(gemmiwrapper foldcomp)
+target_include_directories(gemmiwrapper PRIVATE ../../lib/gemmi)
 target_include_directories(gemmiwrapper PRIVATE ../../lib/foldcomp/src)

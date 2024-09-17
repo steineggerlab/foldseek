@@ -344,7 +344,7 @@ int structureungappedalign(int argc, const char **argv, const Command& command) 
                         float* targetCaData = tcoords.read(tcadata, res.dbLen, tCaLength);
                         TMaligner::TMscoreResult tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                                                    res.qStartPos, res.dbStartPos, Matcher::uncompressAlignment(res.backtrace),
-                                                                                   std::min(static_cast<unsigned int>(res.backtrace.length()), std::min(res.dbLen, res.qLen)));
+                                                                                   TMaligner::normalization(par.tmScoreThrMode, std::min(res.qEndPos - res.qStartPos, res.dbEndPos - res.dbStartPos ), res.qLen, res.dbLen));
                         if(tmres.tmscore < par.tmScoreThr){
                             continue;
                         }
