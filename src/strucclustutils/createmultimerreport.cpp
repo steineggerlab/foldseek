@@ -123,7 +123,7 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-//        Matcher::result_t res;
+        Matcher::result_t res;
         std::vector<ScoreComplexResult> localComplexResults;
 #pragma omp for schedule(dynamic, 10) nowait
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
