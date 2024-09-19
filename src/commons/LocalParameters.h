@@ -87,9 +87,9 @@ public:
     static const int PDB_OUTPUT_MODE_COMPLEX = 2;
 
     // filter mode
-    static const int FILTER_MODE_INTERFACE  = 0;
-    static const int FILTER_MODE_CONFORMATION = 1;
-    static const int FILTER_MODE_LOOSE = 2;
+    // static const int FILTER_MODE_INTERFACE  = 0;
+    // static const int FILTER_MODE_CONFORMATION = 1;
+    // static const int FILTER_MODE_LOOSE = 2;
 
     // TODO
     static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;

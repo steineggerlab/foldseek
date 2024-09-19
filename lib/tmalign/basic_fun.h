@@ -124,46 +124,4 @@ public:
 //        transform(t, u, x.x[i], x.y[i], x.z[i], y.x[i], y.y[i], y.z[i]);
         }
     }
-
-    static void do_rotation( std::vector<float> & qx, std::vector<float> & qy, std::vector<float> & qz,
-                             Coordinates & y,
-                             int len, float t[3], float u[3][3])
-    {
-        simd_float t0 = simdf32_set(t[0]);
-        simd_float t1 = simdf32_set(t[1]);
-        simd_float t2 = simdf32_set(t[2]);
-
-        simd_float u00 = simdf32_set(u[0][0]);
-        simd_float u01 = simdf32_set(u[0][1]);
-        simd_float u02 = simdf32_set(u[0][2]);
-        simd_float u10 = simdf32_set(u[1][0]);
-        simd_float u11 = simdf32_set(u[1][1]);
-        simd_float u12 = simdf32_set(u[1][2]);
-        simd_float u20 = simdf32_set(u[2][0]);
-        simd_float u21 = simdf32_set(u[2][1]);
-        simd_float u22 = simdf32_set(u[2][2]);
-        for(int i=0; i<len; i+=VECSIZE_FLOAT) {
-            simd_float x_x = simdf32_load(&qx[i]);
-            simd_float x_y = simdf32_load(&qy[i]);
-            simd_float x_z = simdf32_load(&qz[i]);
-            simd_float xx = simdf32_mul(u00, x_x);
-            simd_float yy = simdf32_mul(u01, x_y);
-            simd_float zz = simdf32_mul(u02, x_z);
-            xx = simdf32_add(xx, yy);
-            zz = simdf32_add(xx, zz);
-            simdf32_store(&y.x[i], simdf32_add(t0, zz));
-            xx = simdf32_mul(u10, x_x);
-            yy = simdf32_mul(u11, x_y);
-            zz = simdf32_mul(u12, x_z);
-            xx = simdf32_add(xx, yy);
-            zz = simdf32_add(xx, zz);
-            simdf32_store(&y.y[i], simdf32_add(t1, zz));
-            xx = simdf32_mul(u20, x_x);
-            yy = simdf32_mul(u21, x_y);
-            zz = simdf32_mul(u22, x_z);
-            xx = simdf32_add(xx, yy);
-            zz = simdf32_add(xx, zz);
-            simdf32_store(&y.z[i], simdf32_add(t2, zz));
-        }
-    }
 };
