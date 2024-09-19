@@ -108,7 +108,6 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
     std::string qLookupFile = par.db1 + ".lookup";
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
 
-    Matcher::result_t res;
     std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap;
     std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeyMap;
     std::vector<unsigned int> qComplexIdVec;
