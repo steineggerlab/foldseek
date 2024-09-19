@@ -123,6 +123,7 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
+//        Matcher::result_t res;
         std::vector<ScoreComplexResult> localComplexResults;
 #pragma omp for schedule(dynamic, 10) nowait
         for (size_t queryComplexIdx = 0; queryComplexIdx < qComplexIdVec.size(); queryComplexIdx++) {
@@ -177,9 +178,9 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
     } // MP end
     SORT_PARALLEL(complexResults.begin(), complexResults.end(), compareComplexResultByQuery);
     for (size_t complexResIdx = 0; complexResIdx < complexResults.size(); complexResIdx++) {
-        const ScoreComplexResult& complexRes = complexResults[complexResIdx];
-        const resultToWrite_t& data = complexRes.resultToWrite;
-        resultWriter.writeData(data.c_str(), data.length(), complexRes.assId, 0, isDb, isDb);
+        const ScoreComplexResult& cRes = complexResults[complexResIdx];
+        const resultToWrite_t& data = cRes.resultToWrite;
+        resultWriter.writeData(data.c_str(), data.length(), cRes.assId, 0, isDb, isDb);
     }
     resultWriter.close(true);
     if (isDb == false) {
