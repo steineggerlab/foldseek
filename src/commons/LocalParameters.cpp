@@ -192,7 +192,6 @@ LocalParameters::LocalParameters() :
     scoremultimer.push_back(&PARAM_SINGLE_CHAIN_INCLUDE_MODE);
     scoremultimer.push_back(&PARAM_THREADS);
     scoremultimer.push_back(&PARAM_V);
-    scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
     scoremultimer.push_back(&PARAM_EPS_DELTA);
     scoremultimer.push_back(&PARAM_CV_THRESHOLD);
 
