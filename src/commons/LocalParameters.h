@@ -122,6 +122,7 @@ public:
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
+    PARAMETER(PARAM_SINGLE_CHAIN_INCLUDE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
@@ -152,6 +153,7 @@ public:
     int nsample;
     int coordStoreMode;
     float minAssignedChainsThreshold;
+    int singleChainIncludeMode;
     int clusterSearch;
     std::string fileInclude;
     std::string fileExclude;
