@@ -5,7 +5,7 @@
 #include "TMaligner.h"
 
 const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
-const double MAX_ASSIGNED_CHAIN_RATIO = 1.0;
+const float MAX_ASSIGNED_CHAIN_RATIO = 1.0;
 const double TOO_SMALL_MEAN = 1.0;
 const double TOO_SMALL_CV = 0.1;
 const double FILTERED_OUT = 0.0;
@@ -15,6 +15,7 @@ const float LEARNING_RATE = 0.1;
 const float TM_SCORE_MARGIN = 0.7;
 const unsigned int MULTIPLE_CHAINED_COMPLEX = 2;
 const unsigned int SIZE_OF_SUPERPOSITION_VECTOR = 12;
+const int SKIP_SINGLE_CHAIN_ASSIGNMENTS = 1;
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;
