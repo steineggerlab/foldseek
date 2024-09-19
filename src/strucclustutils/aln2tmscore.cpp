@@ -103,7 +103,7 @@ int aln2tmscore(int argc, const char **argv, const Command& command) {
                 // Matching residue index collection
                 TMaligner::TMscoreResult tmres = tmaln.computeTMscore(tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetLen,
                                                                       res.qStartPos, res.dbStartPos, res.backtrace,
-                                                                      TMaligner::normalization(par.tmScoreThrMode, res.backtrace.size(), res.qLen, res.dbLen));
+                                                                      TMaligner::normalization(par.tmScoreThrMode, std::min(res.qEndPos - res.qStartPos, res.dbEndPos - res.dbStartPos ), res.qLen, res.dbLen));
                 //std::cout << TMalnScore << std::endl;
                 resultsStr.append(SSTR(dbKey));
                 resultsStr.push_back(' ');
