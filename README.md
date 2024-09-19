@@ -303,7 +303,7 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 ```
 
 ### Multimercluster
-The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates thress output files with the following prefixes: (1) `_cluster.tsv`, (2) `_rep_seq.fasta` and (3) `_cluster_report`.  The first file (1) is a [tab-separated](#tab-separated-multimercluster) file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences](#representative-multimer-fasta). The third file (3) is also a [tab-separated](#filtered-search-result) file describing filtered alignments.
+The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates three output files with the following prefixes: (1) `_cluster.tsv`, (2) `_rep_seq.fasta` and (3) `_cluster_report`.  The first file (1) is a [tab-separated](#tab-separated-multimercluster) file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences](#representative-multimer-fasta). The third file (3) is also a [tab-separated](#filtered-search-result) file describing filtered alignments.
 
 Make sure chain names in PDB/mmcIF files does not contain underscores(_).
 
@@ -351,7 +351,7 @@ The query and target coverages here represent the sum of the coverages of all al
 | --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
 | -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode      | Alignment  | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query |
-| --multimer-tm-threshold      | Alignment  | accept alignments with an multimer alignment TMscore > thr |
+| --multimer-tm-threshold      | Alignment  | accept alignments with multimer alignment TMscore > thr |
 | --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr |
 | --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr |
 
