@@ -32,6 +32,7 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
     - [Important Parameters](#important-cluster-parameters)
   - [Multimer](#multimersearch)
     - [Output](#multimer-search-output)
+  - [MultimerCluster](#multimercluster)
 - [Main Modules](#main-modules)
 - [Examples](#examples)
 
@@ -239,7 +240,6 @@ MCAR...Q
 | --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
 | --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
 | --tmscore-threshold-mode    | Alignment  | normalize TMscore by 0: alignment, 1: representative, 2: member length                             |
-
 | --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
 
 
@@ -302,9 +302,64 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 1tim.pdb.gz 8tim.pdb.gz A,B A,B 0.98941 0.98941 0.999983,0.000332,0.005813,-0.000373,0.999976,0.006884,-0.005811,-0.006886,0.999959 0.298992,0.060047,0.565875  0
 ```
 
+### Multimercluster
+The `easy-multimercluster` module is designed for multimer-level structural clustering(supported input formats: PDB/mmCIF, flat or gzipped). By default, easy-multimercluster generates three output files with the following prefixes: (1) `_cluster.tsv`, (2) `_rep_seq.fasta` and (3) `_cluster_report`.  The first file (1) is a [tab-separated](#tab-separated-multimercluster) file describing the mapping from representative multimer to member, while the second file (2) contains only [representative sequences](#representative-multimer-fasta). The third file (3) is also a [tab-separated](#filtered-search-result) file describing filtered alignments.
+
+Make sure chain names in PDB/mmcIF files does not contain underscores(_).
+
+    foldseek easy-multimercluster example/ clu tmp --multimer-tm-threshold 0.65 --chain-tm-threshold 0.5 --interface-tm-threshold 0.65
+
+#### Output MultimerCluster
+##### Tab-separated multimercluster
+```
+5o002	   5o002
+194l2	   194l2
+194l2	   193l2
+10mh121	 10mh121
+10mh121	 10mh114
+10mh121	 10mh119
+```
+##### Representative multimer fasta
+```
+#5o002
+>5o002_A
+SHGK...R
+>5o002_B
+SHGK...R
+#194l2
+>194l2_A0
+KVFG...L
+>194l2_A6
+KVFG...L
+#10mh121
+...
+```
+##### Filtered search result
+The `_cluster_report` contains `qcoverage, tcoverage, multimer qTm, multimer tTm, interface lddt, ustring, tstring` of alignments after filtering and before clustering. 
+```
+5o0f2	5o0f2	1.000	1.000	1.000	1.000	1.000	1.000,0.000,0.000,0.000,1.000,0.000,0.000,0.000,1.000	0.000,0.000,0.000
+5o0f2	5o0d2	1.000	1.000	0.999	0.992	1.000	0.999,0.000,-0.000,-0.000,0.999,-0.000,0.000,0.000,0.999	-0.004,-0.001,0.084
+5o0f2	5o082	1.000	0.990	0.978	0.962	0.921	0.999,-0.025,-0.002,0.025,0.999,-0.001,0.002,0.001,0.999	-0.039,0.000,-0.253
+```
+The query and target coverages here represent the sum of the coverages of all aligned chains, divided by the total query and target multimer length respectively.
+
+#### Important multimer cluster parameters
+
+| Option            | Category        | Description                                                                                               |
+|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
+| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
+| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
+| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode      | Alignment  | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query |
+| --multimer-tm-threshold      | Alignment  | accept alignments with multimer alignment TMscore > thr |
+| --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr |
+| --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr |
+
 ## Main Modules
 - `easy-search`       fast protein structure search  
 - `easy-cluster`      fast protein structure clustering  
+- `easy-multimersearch`       fast protein multimer-level structure search  
+- `easy-multimercluster`       fast protein multimer-level structure clustering  
 - `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 - `databases`         download pre-assembled databases
 
