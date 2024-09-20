@@ -881,7 +881,7 @@ R"html(<!DOCTYPE html>
                                     case LocalParameters::OUTFMT_ALNTMSCORE:
                                         tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                                           res.qStartPos, res.dbStartPos, tmpBt,
-                                                                          tmpBt.size());
+                                                                          std::min(res.qEndPos - res.qStartPos, res.dbEndPos - res.dbStartPos));
                                         result.append(SSTR(tmres.tmscore));
                                         break;
                                     case LocalParameters::OUTFMT_QTMSCORE:

@@ -108,7 +108,6 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
     std::string qLookupFile = par.db1 + ".lookup";
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
 
-    Matcher::result_t res;
     std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap;
     std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeyMap;
     std::vector<unsigned int> qComplexIdVec;
@@ -178,9 +177,9 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
     } // MP end
     SORT_PARALLEL(complexResults.begin(), complexResults.end(), compareComplexResultByQuery);
     for (size_t complexResIdx = 0; complexResIdx < complexResults.size(); complexResIdx++) {
-        const ScoreComplexResult& res = complexResults[complexResIdx];
-        const resultToWrite_t& data = res.resultToWrite;
-        resultWriter.writeData(data.c_str(), data.length(), res.assId, 0, isDb, isDb);
+        const ScoreComplexResult& cRes = complexResults[complexResIdx];
+        const resultToWrite_t& data = cRes.resultToWrite;
+        resultWriter.writeData(data.c_str(), data.length(), cRes.assId, 0, isDb, isDb);
     }
     resultWriter.close(true);
     if (isDb == false) {

@@ -35,6 +35,7 @@ public:
     static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
     static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
     static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
+    static const int TMSCORE_THRESHOLD_MODE_MIN = 3;
 
     static const int PREF_MODE_KMER = 0;
     static const int PREF_MODE_UNGAPPED = 1;
@@ -124,6 +125,7 @@ public:
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
+    PARAMETER(PARAM_SINGLE_CHAIN_INCLUDE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
@@ -154,6 +156,7 @@ public:
     int nsample;
     int coordStoreMode;
     float minAssignedChainsThreshold;
+    int singleChainIncludeMode;
     int clusterSearch;
     std::string fileInclude;
     std::string fileExclude;
