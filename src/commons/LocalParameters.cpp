@@ -276,15 +276,11 @@ LocalParameters::LocalParameters() :
     eValueThrExpandMultimer = 10000.0;
     prostt5Model = "";
     gpu = 0;
-<<<<<<< HEAD
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
     distanceThreshold = 8.0;
-
-=======
     filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;
     filtInterfaceLddtThr = 0.0;
->>>>>>> upstream/master
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, doi:10.1101/2023.07.23.550085 (2024)");
