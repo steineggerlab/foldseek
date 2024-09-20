@@ -194,13 +194,13 @@ LocalParameters::LocalParameters() :
     scoremultimer.push_back(&PARAM_V);
 
     //filtermultimer
-    filtermultimer.push_back(&PARAM_V);
-    filtermultimer.push_back(&PARAM_THREADS);
     filtermultimer.push_back(&PARAM_C);
     filtermultimer.push_back(&PARAM_COV_MODE);
     filtermultimer.push_back(&PARAM_MULTIMER_TM_THRESHOLD);
     filtermultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
     filtermultimer.push_back(&PARAM_INTERFACE_LDDT_THRESHOLD);
+    filtermultimer.push_back(&PARAM_THREADS);
+    filtermultimer.push_back(&PARAM_V);
 
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
@@ -265,8 +265,8 @@ LocalParameters::LocalParameters() :
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
     multimerReportMode = 1;
-    eValueThrExpandMultimer = 10000.0;   
-    prostt5Model = ""; 
+    eValueThrExpandMultimer = 10000.0;
+    prostt5Model = "";
     gpu = 0;
     filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;
