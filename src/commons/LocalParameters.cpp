@@ -23,7 +23,7 @@ LocalParameters::LocalParameters() :
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
         PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "Minimum ratio of assigned chains out of all query chains > thr [0.0,1.0]", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
-        PARAM_SINGLE_CHAIN_INCLUDE_MODE(PARAM_SINGLE_CHAIN_INCLUDE_MODE_ID, "--single-chain-include-mode", "Single Chained Assignments Inclusion Mode for Multimer", "Single Chained Assignments Inclusion 0: include single chained assignments, 1: NOT include single chained assignment", typeid(int), (void *) & singleChainIncludeMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN),
+        PARAM_MONOMER_INCLUDE_MODE(PARAM_MONOMER_INCLUDE_MODE_ID, "--single-monomer-mode", "Monomer inclusion Mode for MultimerSerch", "Monomer Complex Inclusion 0: include monomers, 1: NOT include monomers", typeid(int), (void *) & monomerIncludeMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
@@ -191,7 +191,7 @@ LocalParameters::LocalParameters() :
 
     //scorecmultimer
     scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
-    scoremultimer.push_back(&PARAM_SINGLE_CHAIN_INCLUDE_MODE);
+    scoremultimer.push_back(&PARAM_MONOMER_INCLUDE_MODE);
     scoremultimer.push_back(&PARAM_THREADS);
     scoremultimer.push_back(&PARAM_V);
 
@@ -253,7 +253,7 @@ LocalParameters::LocalParameters() :
     maskBfactorThreshold = 0;
     chainNameMode = 0;
     minAssignedChainsThreshold = 0.0;
-    singleChainIncludeMode = 0;
+    monomerIncludeMode = 0;
     writeMapping = 0;
     tmAlignFast = 1;
     exactTMscore = 0;
