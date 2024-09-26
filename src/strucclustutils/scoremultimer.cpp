@@ -470,7 +470,7 @@ private:
 
 class ComplexScorer {
 public:
-    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio, int monomerIncludeMode) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), monomerIncludeMode(monomerIncludeMode)  {
+    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, float minAssignedChainsRatio, float complexTmThr, int monomerIncludeMode) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio),  complexTmThr(complexTmThr), monomerIncludeMode(monomerIncludeMode)  {
         maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen()+1, tDbr3Di->sequenceReader->getMaxSeqLen()+1);
         q3diDbr = qDbr3Di;
         t3diDbr = tDbr3Di;
@@ -573,8 +573,10 @@ public:
                 assignment.appendChainToChainAln(searchResult.alnVec[alnIdx]);
             }
             assignment.getTmScore(*tmAligner);
-            assignment.updateResultToWriteLines();
-            assignments.emplace_back(assignment);
+            if (assignment.qTmScore >= complexTmThr) {
+                assignment.updateResultToWriteLines();
+                assignments.emplace_back(assignment);
+            }
             assignment.reset();
         }
         finalClusters.clear();
@@ -598,7 +600,8 @@ private:
     Coordinate16 qCoords;
     Coordinate16 tCoords;
     unsigned int thread_idx;
-    double minAssignedChainsRatio;
+    float minAssignedChainsRatio;
+    float complexTmThr;
     unsigned int maxResLen;
     Chain qChain;
     Chain dbChain;
@@ -702,6 +705,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     }
 
     float minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
+    float complexTmThr = par.complexTMScoreThreshold > maxTmScore ? maxTmScore: par.complexTMScoreThreshold;
     int monomerIncludeMode = par.monomerIncludeMode;
 
     std::vector<unsigned int> qComplexIndices;
@@ -728,13 +732,13 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
         std::vector<resultToWrite_t> resultToWriteLines;
-        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
+        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio, complexTmThr, monomerIncludeMode);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (par.monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
+            if (monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
                 continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
