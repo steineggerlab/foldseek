@@ -192,6 +192,7 @@ LocalParameters::LocalParameters() :
 
     //scorecmultimer
     scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
+    scoremultimer.push_back(&PARAM_COMPLEX_TM_THRESHOLD);
     scoremultimer.push_back(&PARAM_MONOMER_INCLUDE_MODE);
     scoremultimer.push_back(&PARAM_THREADS);
     scoremultimer.push_back(&PARAM_V);
@@ -254,6 +255,7 @@ LocalParameters::LocalParameters() :
     maskBfactorThreshold = 0;
     chainNameMode = 0;
     minAssignedChainsThreshold = 0.0;
+    complexTMScoreThreshold = 0.0;
     monomerIncludeMode = 0;
     writeMapping = 0;
     tmAlignFast = 1;
