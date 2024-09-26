@@ -236,11 +236,16 @@ private:
         if (minimumClusterSize >= MULTIPLE_CHAINED_COMPLEX)
             return finishDBSCAN();
 
+        getSingleChainedCluster();
+        return finishDBSCAN();
+    }
+
+    void getSingleChainedCluster() {
+        finalClusters.clear();
         for (unsigned int alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++ ) {
             neighbors = {alnIdx};
             finalClusters.insert(neighbors);
         }
-        return finishDBSCAN();
     }
 
     bool runDBSCAN() {
@@ -312,6 +317,10 @@ private:
 
             eps += learningRate;
         }
+        //
+        if (minimumClusterSize < MULTIPLE_CHAINED_COMPLEX && currMaxClusterSize < MULTIPLE_CHAINED_COMPLEX)
+            getSingleChainedCluster();
+
         return finishDBSCAN();
     }
 
@@ -573,7 +582,7 @@ public:
                 assignment.appendChainToChainAln(searchResult.alnVec[alnIdx]);
             }
             assignment.getTmScore(*tmAligner);
-            if (assignment.qTmScore >= complexTmThr) {
+            if (assignment.qTmScore > complexTmThr) {
                 assignment.updateResultToWriteLines();
                 assignments.emplace_back(assignment);
             }
