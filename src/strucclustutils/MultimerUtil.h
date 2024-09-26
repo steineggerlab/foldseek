@@ -15,7 +15,6 @@ const float LEARNING_RATE = 0.1;
 const float TM_SCORE_MARGIN = 0.7;
 const unsigned int MULTIPLE_CHAINED_COMPLEX = 2;
 const unsigned int SIZE_OF_SUPERPOSITION_VECTOR = 12;
-const float maxTmScore = 1.0;
 const int SKIP_MONOMERS = 1;
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;

@@ -130,7 +130,6 @@ public:
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
-    PARAMETER(PARAM_COMPLEX_TM_THRESHOLD)
     PARAMETER(PARAM_MONOMER_INCLUDE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
     PARAMETER(PARAM_FILE_INCLUDE)
@@ -163,7 +162,6 @@ public:
     int nsample;
     int coordStoreMode;
     float minAssignedChainsThreshold;
-    float complexTMScoreThreshold;
     int monomerIncludeMode;
     int clusterSearch;
     std::string fileInclude;
