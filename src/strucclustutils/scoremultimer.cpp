@@ -242,9 +242,15 @@ private:
 
     void getSingleChainedCluster() {
         finalClusters.clear();
-        for (unsigned int alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++ ) {
-            neighbors = {alnIdx};
-            finalClusters.insert(neighbors);
+        float maxScore = FLT_MIN;
+        float score;
+        for (unsigned int alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++) {
+            auto &aln = searchResult.alnVec[alnIdx];
+            score = aln.tmScore * (float) aln.matches;
+            if (score < maxScore)
+                continue;
+            maxScore = score;
+            finalClusters = {{alnIdx}};
         }
     }
 
