@@ -236,22 +236,11 @@ private:
         if (minimumClusterSize >= MULTIPLE_CHAINED_COMPLEX)
             return finishDBSCAN();
 
-        getSingleChainedCluster();
-        return finishDBSCAN();
-    }
-
-    void getSingleChainedCluster() {
-        finalClusters.clear();
-        float maxScore = FLT_MIN;
-        float score;
-        for (unsigned int alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++) {
-            auto &aln = searchResult.alnVec[alnIdx];
-            score = aln.tmScore * (float) aln.matches;
-            if (score < maxScore)
-                continue;
-            maxScore = score;
-            finalClusters = {{alnIdx}};
+        for (unsigned int alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++ ) {
+            neighbors = {alnIdx};
+            finalClusters.insert(neighbors);
         }
+        return finishDBSCAN();
     }
 
     bool runDBSCAN() {
@@ -323,10 +312,6 @@ private:
 
             eps += learningRate;
         }
-        //
-        if (minimumClusterSize < MULTIPLE_CHAINED_COMPLEX && currMaxClusterSize < MULTIPLE_CHAINED_COMPLEX)
-            getSingleChainedCluster();
-
         return finishDBSCAN();
     }
 
@@ -485,7 +470,7 @@ private:
 
 class ComplexScorer {
 public:
-    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, float minAssignedChainsRatio, int monomerIncludeMode) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), monomerIncludeMode(monomerIncludeMode)  {
+    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio, int monomerIncludeMode) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), monomerIncludeMode(monomerIncludeMode)  {
         maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen()+1, tDbr3Di->sequenceReader->getMaxSeqLen()+1);
         q3diDbr = qDbr3Di;
         t3diDbr = tDbr3Di;
@@ -613,7 +598,7 @@ private:
     Coordinate16 qCoords;
     Coordinate16 tCoords;
     unsigned int thread_idx;
-    float minAssignedChainsRatio;
+    double minAssignedChainsRatio;
     unsigned int maxResLen;
     Chain qChain;
     Chain dbChain;
@@ -749,7 +734,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
+            if (par.monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
                 continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
