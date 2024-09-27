@@ -184,7 +184,7 @@ class DBSCANCluster {
 public:
     DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
-        minimumClusterSize = (unsigned int) ((double) searchResult.qChainKeys.size() * minCov);
+        minimumClusterSize = std::ceil((float) searchResult.qChainKeys.size() * minCov);
         maximumClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         maximumClusterNum = searchResult.alnVec.size() / maximumClusterSize;
         prevMaxClusterSize = 0;
@@ -199,7 +199,7 @@ public:
             return earlyStopForMonomers();
 
         // rbh filter
-        filterAlnsByRBH();
+//        filterAlnsByRBH();
         fillDistMatrix();
         // To skip DBSCAN clustering when alignments are few enough.
         if (searchResult.alnVec.size() <= maximumClusterSize)
