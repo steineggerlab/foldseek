@@ -182,7 +182,7 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 
 class DBSCANCluster {
 public:
-    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
+    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, float minCov) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
         minimumClusterSize = std::ceil((float) searchResult.qChainKeys.size() * minCov);
         maximumClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
@@ -317,7 +317,7 @@ private:
 
             eps += learningRate;
         }
-        //
+
         if (minimumClusterSize < MULTIPLE_CHAINED_COMPLEX && currMaxClusterSize < MULTIPLE_CHAINED_COMPLEX)
             getSingleChainedCluster();
 
