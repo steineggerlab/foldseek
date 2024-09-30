@@ -318,7 +318,7 @@ private:
             eps += learningRate;
         }
 
-        if (minimumClusterSize < MULTIPLE_CHAINED_COMPLEX && currMaxClusterSize < MULTIPLE_CHAINED_COMPLEX)
+        if (minimumClusterSize < MULTIPLE_CHAINED_COMPLEX && prevMaxClusterSize < MULTIPLE_CHAINED_COMPLEX)
             getSingleChainedCluster();
 
         return finishDBSCAN();
