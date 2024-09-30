@@ -272,12 +272,6 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, 
                     interfaceChainNames.push_back(readStructure.chainNames[ch2]);
                     interfacetaxIds.push_back(readStructure.taxIds[ch1]);
                     interfacetaxIds.push_back(readStructure.taxIds[ch2]);
-                    resIdx1.clear();
-                    resIdx2.clear();
-                    ca.clear();
-                    n.clear();
-                    c.clear();
-                    cb.clear();
                 }
                 else {
                     interfaceCa.push_back(Vec3(0,0,0));
@@ -289,6 +283,12 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, 
                     interfacetaxIds.push_back(readStructure.taxIds[ch1]);
                     interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
                 }
+                resIdx1.clear();
+                resIdx2.clear();
+                ca.clear();
+                n.clear();
+                c.clear();
+                cb.clear();
             }
         }
     }
