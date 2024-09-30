@@ -86,6 +86,11 @@ public:
     static const int PDB_OUTPUT_MODE_SINGLECHAIN = 1;
     static const int PDB_OUTPUT_MODE_COMPLEX = 2;
 
+    // filter mode
+    // static const int FILTER_MODE_INTERFACE  = 0;
+    // static const int FILTER_MODE_CONFORMATION = 1;
+    // static const int FILTER_MODE_LOOSE = 2;
+
     // TODO
     static const unsigned int FORMAT_ALIGNMENT_PDB_SUPERPOSED = 5;
     std::vector<MMseqsParameter *> strucclust;
@@ -101,6 +106,9 @@ public:
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
     std::vector<MMseqsParameter *> scoremultimer;
+    std::vector<MMseqsParameter *> filtermultimer;
+    std::vector<MMseqsParameter *> multimerclusterworkflow;
+    std::vector<MMseqsParameter *> easymultimerclusterworkflow;
     std::vector<MMseqsParameter *> multimersearchworkflow;
     std::vector<MMseqsParameter *> easymultimersearchworkflow;
     std::vector<MMseqsParameter *> createmultimerreport;
@@ -122,7 +130,7 @@ public:
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
-    PARAMETER(PARAM_SINGLE_CHAIN_INCLUDE_MODE)
+    PARAMETER(PARAM_MONOMER_INCLUDE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
@@ -137,6 +145,9 @@ public:
     PARAMETER(PARAM_CV_THRESHOLD)
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_GPU)
+    PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
+    PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
+    PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
 
     int prefMode;
     float tmScoreThr;
@@ -153,7 +164,7 @@ public:
     int nsample;
     int coordStoreMode;
     float minAssignedChainsThreshold;
-    int singleChainIncludeMode;
+    int monomerIncludeMode;
     int clusterSearch;
     std::string fileInclude;
     std::string fileExclude;
@@ -162,6 +173,9 @@ public:
     double eValueThrExpandMultimer;
     int inputFormat;
     int pdbOutputMode;
+    float filtMultimerTmThr;
+    float filtChainTmThr;
+    float filtInterfaceLddtThr;
     std::string prostt5Model;
     int gpu;
 

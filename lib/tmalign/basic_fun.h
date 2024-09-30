@@ -124,5 +124,4 @@ public:
 //        transform(t, u, x.x[i], x.y[i], x.z[i], y.x[i], y.y[i], y.z[i]);
         }
     }
-
 };

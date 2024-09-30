@@ -15,6 +15,8 @@ set(COMPILED_RESOURCES
         vendor.js.zst
         multimersearch.sh
         easymultimersearch.sh
+        multimercluster.sh
+        easymultimercluster.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")
