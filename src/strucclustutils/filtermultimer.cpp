@@ -590,13 +590,33 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 unsigned int qChainAlnId = alnDbr.getId(qChainKey);
                 unsigned int qChainDbId = qDbr->sequenceReader->getId(qChainKey);
                 // Handling monomer as singleton
-                // if (qChainAlnId == NOT_AVAILABLE_CHAIN_KEY) {
-                //     char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
-                //     result.append(buffer, (outpos - buffer - 1));
-                //     result.push_back('\n');
-                //     resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
-                //     break;
-                // }
+                if (qChainAlnId == NOT_AVAILABLE_CHAIN_KEY) {
+                    float t[3];
+                    float u[3][3];
+                    for (int i=0; i < 3; i++) {
+                        t[i] = 0.0;
+                    }
+                    for (int i=0; i < 3; i++) {
+                        for (int j=0; j < 3; j++) {
+                            u[i][j] = 0.0;
+                        }
+                    }
+                    ComplexFilterCriteria cmplfiltcrit(qComplexId, 1.0, 1.0, t, u);
+                    cmplfiltcrit.qCov = 1.0;
+                    cmplfiltcrit.tCov = 1.0;
+                    cmplfiltcrit.interfaceLddt = 1.0;
+                    resultWrite5.writeStart(thread_idx);
+                    char * tmpBuff = Itoa::u32toa_sse2(qComplexId, buffer2);
+                    tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
+                    resultWrite5.writeAdd(buffer2, tmpBuff - buffer2, thread_idx);
+                    resultWrite5.writeEnd(qComplexId, thread_idx);
+
+                    char *outpos = Itoa::u32toa_sse2(qComplexId, buffer);
+                    result.append(buffer, (outpos - buffer - 1));
+                    result.push_back('\n');
+                    resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
+                    break;
+                }
                 
                 char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
                 size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
@@ -620,10 +640,10 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                     unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
                     std::vector<unsigned int> tChainKeys = tComplexes[tComplexIdx].chainKeys;
                     //if target is monomer, break to be singleton
-                    // unsigned int tChainAlnId = alnDbr.getId(tChainKey);
-                    // if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY) {
-                    //     continue;
-                    // }
+                    unsigned int tChainAlnId = alnDbr.getId(tChainKey);
+                    if (tChainAlnId == NOT_AVAILABLE_CHAIN_KEY) {
+                        continue;
+                    }
                     float u[3][3];
                     float t[3];
                     fillUArr(retComplex.uString, u);
@@ -718,25 +738,27 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             for (const auto& pair : cmplIdToBestAssId) {
                 selectedAssIDs.push_back(pair.second[0]);
             }
-            resultWrite5.writeStart(thread_idx);
-            for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
-                unsigned int assId = selectedAssIDs.at(assIdidx);
-                ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                // ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
-                unsigned int tComplexId = cmplfiltcrit.targetComplexId;
-                unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
-                Complex tComplex = tComplexes.at(tComplexIdx);
-                
-                char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
-                result.append(buffer, (outpos - buffer - 1));
-                result.push_back('\n');
+            if (selectedAssIDs.size() >= 1) {
+                resultWrite5.writeStart(thread_idx);
+                for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
+                    unsigned int assId = selectedAssIDs.at(assIdidx);
+                    ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                    // ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
+                    unsigned int tComplexId = cmplfiltcrit.targetComplexId;
+                    unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
+                    Complex tComplex = tComplexes.at(tComplexIdx);
+                    
+                    char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
+                    result.append(buffer, (outpos - buffer - 1));
+                    result.push_back('\n');
 
-                char * tmpBuff = Itoa::u32toa_sse2(tComplexId, buffer2);
-                tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
-                resultWrite5.writeAdd(buffer2, tmpBuff - buffer2, thread_idx);
+                    char * tmpBuff = Itoa::u32toa_sse2(tComplexId, buffer2);
+                    tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
+                    resultWrite5.writeAdd(buffer2, tmpBuff - buffer2, thread_idx);
+                }
+                resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
+                resultWrite5.writeEnd(qComplexId, thread_idx);
             }
-            resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
-            resultWrite5.writeEnd(qComplexId, thread_idx);
             result.clear();
             localComplexMap.clear();
             cmplIdToBestAssId.clear();
