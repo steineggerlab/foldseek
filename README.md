@@ -307,7 +307,7 @@ The `easy-multimercluster` module is designed for multimer-level structural clus
 
 Make sure chain names in PDB/mmcIF files does not contain underscores(_).
 
-    foldseek easy-multimercluster example/ clu tmp --multimer-tm-threshold 0.65 --chain-tm-threshold 0.5 --interface-tm-threshold 0.65
+    foldseek easy-multimercluster example/ clu tmp --multimer-tm-threshold 0.65 --chain-tm-threshold 0.5 --interface-lddt-threshold 0.65
 
 #### Output MultimerCluster
 ##### Tab-separated multimercluster
