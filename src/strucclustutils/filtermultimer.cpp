@@ -738,27 +738,25 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
             for (const auto& pair : cmplIdToBestAssId) {
                 selectedAssIDs.push_back(pair.second[0]);
             }
-            if (selectedAssIDs.size() >= 1) {
-                resultWrite5.writeStart(thread_idx);
-                for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
-                    unsigned int assId = selectedAssIDs.at(assIdidx);
-                    ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                    // ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
-                    unsigned int tComplexId = cmplfiltcrit.targetComplexId;
-                    unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
-                    Complex tComplex = tComplexes.at(tComplexIdx);
-                    
-                    char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
-                    result.append(buffer, (outpos - buffer - 1));
-                    result.push_back('\n');
+            resultWrite5.writeStart(thread_idx);
+            for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
+                unsigned int assId = selectedAssIDs.at(assIdidx);
+                ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
+                // ComplexFilterCriteria &cmplfiltcrit = localComplexVector.at(assId);
+                unsigned int tComplexId = cmplfiltcrit.targetComplexId;
+                unsigned int tComplexIdx = tComplexIdToIdx.at(tComplexId);
+                Complex tComplex = tComplexes.at(tComplexIdx);
+                
+                char *outpos = Itoa::u32toa_sse2(tComplexId, buffer);
+                result.append(buffer, (outpos - buffer - 1));
+                result.push_back('\n');
 
-                    char * tmpBuff = Itoa::u32toa_sse2(tComplexId, buffer2);
-                    tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
-                    resultWrite5.writeAdd(buffer2, tmpBuff - buffer2, thread_idx);
-                }
-                resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
-                resultWrite5.writeEnd(qComplexId, thread_idx);
+                char * tmpBuff = Itoa::u32toa_sse2(tComplexId, buffer2);
+                tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
+                resultWrite5.writeAdd(buffer2, tmpBuff - buffer2, thread_idx);
             }
+            resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
+            resultWrite5.writeEnd(qComplexId, thread_idx);
             result.clear();
             localComplexMap.clear();
             cmplIdToBestAssId.clear();
