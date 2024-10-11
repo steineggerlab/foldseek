@@ -551,13 +551,13 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         getlookupInfo(tLookupFile, tChainKeyToComplexIdMap, tComplexes, tComplexIdToIdx);
         getComplexResidueLength(tDbr, tComplexes);
     }
-    std::vector<unsigned int> qComplexOrder(qComplexes.size());
-    for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
-            qComplexOrder[qComplexIdx] = qComplexIdx;
-    }
-    std::sort(qComplexOrder.begin(), qComplexOrder.end(), [&qComplexes](unsigned int lhs, unsigned int rhs) {
-              return qComplexes[lhs].chainKeys.size() > qComplexes[rhs].chainKeys.size();
-          });
+    // std::vector<unsigned int> qComplexOrder(qComplexes.size());
+    // for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
+    //         qComplexOrder[qComplexIdx] = qComplexIdx;
+    // }
+    // std::sort(qComplexOrder.begin(), qComplexOrder.end(), [&qComplexes](unsigned int lhs, unsigned int rhs) {
+    //           return qComplexes[lhs].chainKeys.size() > qComplexes[rhs].chainKeys.size();
+    //       });
     
 #pragma omp parallel num_threads(localThreads) 
     {   
@@ -579,8 +579,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         
         Matcher::result_t res;   
 #pragma omp for schedule(dynamic, 1) 
-        // for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
-        for (size_t qComplexIdx : qComplexOrder) {
+        for (size_t qComplexIdx = 0; qComplexIdx < qComplexes.size(); qComplexIdx++) {
+        // for (size_t qComplexIdx : qComplexOrder) {
             progress.updateProgress();
             Complex qComplex = qComplexes[qComplexIdx];
             unsigned int qComplexId = qComplex.complexId;
@@ -755,6 +755,9 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
                 result.append(buffer, (outpos - buffer - 1));
                 result.push_back('\n');
             }
+            // if (qComplexId == 1) {
+            //     Debug(Debug::WARNING)<< "hi\n";
+            // }
             resultWriter.writeData(result.c_str(), result.length(), qComplexId, thread_idx);
             resultWrite5.writeEnd(qComplexId, thread_idx);
             result.clear();
