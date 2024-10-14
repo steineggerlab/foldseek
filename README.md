@@ -14,27 +14,45 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
 # Table of Contents
 
 - [Foldseek](#foldseek)
-- [Webserver](#webserver)
-- [Installation](#installation)
-- [Memory requirements](#memory-requirements)
-- [Tutorial Video](#tutorial-video)
-- [Documentation](#documentation)
-- [Quick Start](#quick-start)
-  - [Search](#search)
-    - [Output](#output-search)
-    - [Important Parameters](#important-search-parameters)
-    - [Alignment Mode](#alignment-mode)
-    - [Structure search from FASTA input](#structure-search-from-fasta-input)
-  - [Databases](#databases)
-    - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
-  - [Cluster](#cluster)
-    - [Output](#output-cluster)
-    - [Important Parameters](#important-cluster-parameters)
-  - [Multimer](#multimersearch)
-    - [Output](#multimer-search-output)
-  - [MultimerCluster](#multimercluster)
-- [Main Modules](#main-modules)
-- [Examples](#examples)
+  - [Publications](#publications)
+- [Table of Contents](#table-of-contents)
+  - [Webserver](#webserver)
+  - [Installation](#installation)
+  - [Memory requirements](#memory-requirements)
+  - [Tutorial Video](#tutorial-video)
+  - [Documentation](#documentation)
+  - [Quick start](#quick-start)
+    - [Search](#search)
+      - [Output Search](#output-search)
+        - [Tab-separated](#tab-separated)
+        - [Superpositioned Cα only PDB files](#superpositioned-cα-only-pdb-files)
+        - [Interactive HTML](#interactive-html)
+      - [Important search parameters](#important-search-parameters)
+      - [Alignment Mode](#alignment-mode)
+      - [Structure search from FASTA input](#structure-search-from-fasta-input)
+    - [Databases](#databases)
+      - [Create custom databases and indexes](#create-custom-databases-and-indexes)
+    - [Cluster](#cluster)
+      - [Output Cluster](#output-cluster)
+        - [Tab-separated cluster](#tab-separated-cluster)
+        - [Representative fasta](#representative-fasta)
+        - [All member fasta](#all-member-fasta)
+      - [Important cluster parameters](#important-cluster-parameters)
+    - [Multimersearch](#multimersearch)
+      - [Using Multimersearch](#using-multimersearch)
+      - [Multimer Search Output](#multimer-search-output)
+        - [Tab-separated-complex](#tab-separated-complex)
+        - [Complex Report](#complex-report)
+    - [Multimercluster](#multimercluster)
+      - [Output MultimerCluster](#output-multimercluster)
+        - [Tab-separated multimercluster](#tab-separated-multimercluster)
+        - [Representative multimer fasta](#representative-multimer-fasta)
+        - [Filtered search result](#filtered-search-result)
+      - [Important multimer cluster parameters](#important-multimer-cluster-parameters)
+  - [Main Modules](#main-modules)
+  - [Examples](#examples)
+    - [Rescore aligments using TMscore](#rescore-aligments-using-tmscore)
+    - [Query centered multiple sequence alignment](#query-centered-multiple-sequence-alignment)
 
 ## Webserver 
 Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using the Foldseek webserver ([code](https://github.com/soedinglab/mmseqs2-app)): [search.foldseek.com](https://search.foldseek.com) 🚀
@@ -380,16 +398,6 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 ```
 
 Output format `aln_tmscore.tsv`: query and target identifiers, TMscore, translation(3) and rotation vector=(3x3)
-
-### Cluster search results 
-The following command performs an all-against-all alignments of the input structures and retains only the alignments, which cover 80% of the sequence (-c 0.8) (read more about alignment coverage options [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster)). It then clusters the results using a greedy set cover algorithm. The clustering mode can be adjusted using --cluster-mode, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
-
-```
-foldseek createdb example/ db
-foldseek search db db aln tmpFolder -c 0.8 
-foldseek clust db aln clu
-foldseek createtsv db db clu clu.tsv
-```
 
 ### Query centered multiple sequence alignment 
 Foldseek can output multiple sequence alignments in a3m format using the following commands. 
