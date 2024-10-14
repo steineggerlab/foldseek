@@ -14,6 +14,7 @@ set(strucclustutils_source_files
         strucclustutils/convert2pdb.cpp
         strucclustutils/compressca.cpp
         strucclustutils/scoremultimer.cpp
+        strucclustutils/filtermultimer.cpp
         strucclustutils/createmultimerreport.cpp
         strucclustutils/MultimerUtil.h
         strucclustutils/expandmultimer.cpp

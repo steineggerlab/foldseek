@@ -22,7 +22,8 @@ LocalParameters::LocalParameters() :
         PARAM_EXACT_TMSCORE(PARAM_EXACT_TMSCORE_ID,"--exact-tmscore", "Exact TMscore","turn on fast exact TMscore (slow), default is approximate" ,typeid(int), (void *) &exactTMscore, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
-        PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "minimum percentage of assigned chains out of all query chains > thr [0,100] %", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$"),
+        PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "Minimum ratio of assigned chains out of all query chains > thr [0.0,1.0]", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
+        PARAM_MONOMER_INCLUDE_MODE(PARAM_MONOMER_INCLUDE_MODE_ID, "--monomer-include-mode", "Monomer inclusion Mode for MultimerSerch", "Monomer Complex Inclusion 0: include monomers, 1: NOT include monomers", typeid(int), (void *) & monomerIncludeMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
@@ -34,8 +35,12 @@ LocalParameters::LocalParameters() :
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
-        PARAM_GPU(PARAM_GPU_ID, "--gpu", "Use GPU", "Use GPU (CUDA) if possible", typeid(int), (void *) &gpu, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON)
-{
+        PARAM_GPU(PARAM_GPU_ID, "--gpu", "Use GPU", "Use GPU (CUDA) if possible", typeid(int), (void *) &gpu, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON),
+        PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
+    
+       {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
     PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
@@ -186,8 +191,18 @@ LocalParameters::LocalParameters() :
 
     //scorecmultimer
     scoremultimer.push_back(&PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD);
+    scoremultimer.push_back(&PARAM_MONOMER_INCLUDE_MODE);
     scoremultimer.push_back(&PARAM_THREADS);
     scoremultimer.push_back(&PARAM_V);
+
+    //filtermultimer
+    filtermultimer.push_back(&PARAM_C);
+    filtermultimer.push_back(&PARAM_COV_MODE);
+    filtermultimer.push_back(&PARAM_MULTIMER_TM_THRESHOLD);
+    filtermultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
+    filtermultimer.push_back(&PARAM_INTERFACE_LDDT_THRESHOLD);
+    filtermultimer.push_back(&PARAM_THREADS);
+    filtermultimer.push_back(&PARAM_V);
 
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
@@ -208,6 +223,15 @@ LocalParameters::LocalParameters() :
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
     easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
 
+
+    // multimerclusterworkflow
+    multimerclusterworkflow = combineList(multimersearchworkflow, filtermultimer);
+    multimerclusterworkflow  = combineList(multimerclusterworkflow, clust);
+
+    //easymultimerclusterworkflow
+    easymultimerclusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
+    easymultimerclusterworkflow = combineList(easymultimerclusterworkflow, result2repseq);
+    
     // expandmultimer
     expandmultimer.push_back(&PARAM_THREADS);
     expandmultimer.push_back(&PARAM_V);
@@ -228,6 +252,8 @@ LocalParameters::LocalParameters() :
     minDiagScoreThr = 30;
     maskBfactorThreshold = 0;
     chainNameMode = 0;
+    minAssignedChainsThreshold = 0.0;
+    monomerIncludeMode = 0;
     writeMapping = 0;
     tmAlignFast = 1;
     exactTMscore = 0;
@@ -246,11 +272,13 @@ LocalParameters::LocalParameters() :
     eValueThrExpandMultimer = 10000.0;
     prostt5Model = "";
     gpu = 0;
-
+    filtMultimerTmThr = 0.0;
+    filtChainTmThr = 0.0;
+    filtInterfaceLddtThr = 0.0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, doi:10.1101/2023.07.23.550085 (2024)");
-
+    
     //rewrite param vals.
     PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
 }

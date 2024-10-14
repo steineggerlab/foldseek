@@ -5,7 +5,7 @@
 #include "TMaligner.h"
 
 const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
-const double MAX_ASSIGNED_CHAIN_RATIO = 1.0;
+const float MAX_ASSIGNED_CHAIN_RATIO = 1.0;
 const double TOO_SMALL_MEAN = 1.0;
 const double TOO_SMALL_CV = 0.1;
 const double FILTERED_OUT = 0.0;
@@ -15,6 +15,7 @@ const float LEARNING_RATE = 0.1;
 const float TM_SCORE_MARGIN = 0.7;
 const unsigned int MULTIPLE_CHAINED_COMPLEX = 2;
 const unsigned int SIZE_OF_SUPERPOSITION_VECTOR = 12;
+const int SKIP_MONOMERS = 1;
 typedef std::pair<std::string, std::string> compNameChainName_t;
 typedef std::map<unsigned int, unsigned int> chainKeyToComplexId_t;
 typedef std::map<unsigned int, std::vector<unsigned int>> complexIdToChainKeys_t;
@@ -222,6 +223,30 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     auto assId = Util::fast_atoi<unsigned int>(entry[15]);
     res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
     return {assId, qTmScore, tTmScore, uString, tString, true};
+}
+
+static char* fastfloatToBuffer(float value, char* buffer) {
+    if (value < 0) {
+        value *= -1;
+        *(buffer) = '-';
+        buffer++;
+    }
+    int value1 = (int)(value);
+    buffer = Itoa::i32toa_sse2(value1, buffer);
+    *(buffer) = '.';
+    buffer++;
+
+    double value2 = value - value1;
+    if (value2 < 0.1){
+        *(buffer) = '0';
+        buffer++;
+    }
+    if (value2 < 0.01){
+        *(buffer) = '0';
+        buffer++;
+    }
+    buffer = Itoa::i32toa_sse2((int)(value2 * 1000), buffer);
+    return buffer;
 }
 
 #endif //FOLDSEEK_MULTIMERUTIL_H

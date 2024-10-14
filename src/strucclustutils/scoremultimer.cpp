@@ -31,8 +31,11 @@ struct SearchResult {
         dbResidueLen = residueLen;
     }
 
-    void standardize() {
+    void standardize(int MonomerIncludeMode) {
         if (dbResidueLen == 0)
+            alnVec.clear();
+
+        if (MonomerIncludeMode == SKIP_MONOMERS && dbChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
             alnVec.clear();
 
         if (alnVec.empty())
@@ -179,9 +182,9 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 
 class DBSCANCluster {
 public:
-    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, double minCov) : searchResult(searchResult), finalClusters(finalClusters) {
+    DBSCANCluster(SearchResult &searchResult, std::set<cluster_t> &finalClusters, float minCov) : searchResult(searchResult), finalClusters(finalClusters) {
         cLabel = 0;
-        minimumClusterSize = std::max(MULTIPLE_CHAINED_COMPLEX, (unsigned int) ((double) searchResult.qChainKeys.size() * minCov));
+        minimumClusterSize = std::ceil((float) searchResult.qChainKeys.size() * minCov);
         maximumClusterSize = std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size());
         maximumClusterNum = searchResult.alnVec.size() / maximumClusterSize;
         prevMaxClusterSize = 0;
@@ -191,6 +194,10 @@ public:
     }
 
     bool getAlnClusters() {
+        // if Query or Target is a Monomer Complex.
+        if (std::min(searchResult.qChainKeys.size(), searchResult.dbChainKeys.size()) < MULTIPLE_CHAINED_COMPLEX)
+            return earlyStopForMonomers();
+
         // rbh filter
         filterAlnsByRBH();
         fillDistMatrix();
@@ -224,6 +231,22 @@ private:
     std::set<cluster_t> &finalClusters;
     std::map<unsigned int, float> qBestTmScore;
     std::map<unsigned int, float> dbBestTmScore;
+
+    bool earlyStopForMonomers() {
+        if (minimumClusterSize >= MULTIPLE_CHAINED_COMPLEX)
+            return finishDBSCAN();
+
+        getSingleChainedCluster();
+        return finishDBSCAN();
+    }
+
+    void getSingleChainedCluster() {
+        finalClusters.clear();
+        for (unsigned int alnIdx = 0; alnIdx < searchResult.alnVec.size(); alnIdx++ ) {
+            neighbors = {alnIdx};
+            finalClusters.insert(neighbors);
+        }
+    }
 
     bool runDBSCAN() {
         unsigned int neighborIdx;
@@ -294,6 +317,10 @@ private:
 
             eps += learningRate;
         }
+
+        if (minimumClusterSize < MULTIPLE_CHAINED_COMPLEX && prevMaxClusterSize < MULTIPLE_CHAINED_COMPLEX)
+            getSingleChainedCluster();
+
         return finishDBSCAN();
     }
 
@@ -362,6 +389,7 @@ private:
         // Too few alns => do nothing and finish it
         if (searchResult.alnVec.size() < minimumClusterSize)
             return finishDBSCAN();
+        // All alns as a cluster
         for (size_t alnIdx=0; alnIdx<searchResult.alnVec.size(); alnIdx++) {
             neighbors.emplace_back(alnIdx);
         }
@@ -371,7 +399,6 @@ private:
             return runDBSCAN();
         }
         // Already good => finish it without clustering
-        prevMaxClusterSize = neighbors.size();
         finalClusters.insert(neighbors);
         return finishDBSCAN();
     }
@@ -452,7 +479,7 @@ private:
 
 class ComplexScorer {
 public:
-    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, double minAssignedChainsRatio) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio) {
+    ComplexScorer(IndexReader *qDbr3Di, IndexReader *tDbr3Di, DBReader<unsigned int> &alnDbr, IndexReader *qCaDbr, IndexReader *tCaDbr, unsigned int thread_idx, float minAssignedChainsRatio, int monomerIncludeMode) : alnDbr(alnDbr), qCaDbr(qCaDbr), tCaDbr(tCaDbr), thread_idx(thread_idx), minAssignedChainsRatio(minAssignedChainsRatio), monomerIncludeMode(monomerIncludeMode)  {
         maxChainLen = std::max(qDbr3Di->sequenceReader->getMaxSeqLen()+1, tDbr3Di->sequenceReader->getMaxSeqLen()+1);
         q3diDbr = qDbr3Di;
         t3diDbr = tDbr3Di;
@@ -518,8 +545,8 @@ public:
                 paredSearchResult.alnVec.emplace_back(aln);
                 continue;
             }
-            paredSearchResult.standardize();
-            if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
+            paredSearchResult.standardize(monomerIncludeMode);
+            if (!paredSearchResult.alnVec.empty())
                 searchResults.emplace_back(paredSearchResult);
 
             paredSearchResult.alnVec.clear();
@@ -530,8 +557,8 @@ public:
             paredSearchResult.alnVec.emplace_back(aln);
         }
         currAlns.clear();
-        paredSearchResult.standardize();
-        if (!paredSearchResult.alnVec.empty() && currDbChainKeys.size() >= MULTIPLE_CHAINED_COMPLEX)
+        paredSearchResult.standardize(monomerIncludeMode);
+        if (!paredSearchResult.alnVec.empty())
             searchResults.emplace_back(paredSearchResult);
 
         paredSearchResult.alnVec.clear();
@@ -580,7 +607,7 @@ private:
     Coordinate16 qCoords;
     Coordinate16 tCoords;
     unsigned int thread_idx;
-    double minAssignedChainsRatio;
+    float minAssignedChainsRatio;
     unsigned int maxResLen;
     Chain qChain;
     Chain dbChain;
@@ -590,6 +617,7 @@ private:
     SearchResult paredSearchResult;
     std::set<cluster_t> finalClusters;
     bool hasBacktrace;
+    int monomerIncludeMode;
 
     unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
@@ -682,7 +710,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         );
     }
 
-    double minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
+    float minAssignedChainsRatio = par.minAssignedChainsThreshold > MAX_ASSIGNED_CHAIN_RATIO ? MAX_ASSIGNED_CHAIN_RATIO: par.minAssignedChainsThreshold;
+    int monomerIncludeMode = par.monomerIncludeMode;
 
     std::vector<unsigned int> qComplexIndices;
     std::vector<unsigned int> dbComplexIndices;
@@ -708,13 +737,13 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
         std::vector<resultToWrite_t> resultToWriteLines;
-        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio);
+        ComplexScorer complexScorer(q3DiDbr, &t3DiDbr, alnDbr, qCaDbr, &tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
+            if (monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
                 continue;
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex

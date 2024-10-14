@@ -327,12 +327,14 @@ Matcher::result_t TMaligner::align(unsigned int dbKey, float *x, float *y, float
 }
 
 unsigned int TMaligner::normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen) {
-    if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_ALIGNMENT){
+    if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_ALIGNMENT) {
         return alignmentLen;
     } else if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_QUERY){
         return queryLen;
     } else if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_TARGET){
         return targetLen;
+    } else if(mode == LocalParameters::TMSCORE_THRESHOLD_MODE_MIN){
+        return std::min(queryLen, targetLen);
     }
     return 0;
 }
