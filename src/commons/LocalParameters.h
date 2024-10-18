@@ -70,6 +70,9 @@ public:
     static const int OUTFMT_COMPLEX_U = 56;
     static const int OUTFMT_COMPLEX_T = 57;
 
+    static const int DB_EXTRACT_MODE_CHAIN = 0;
+    static const int DB_EXTRACT_MODE_INTERFACE = 1;
+
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
     static const int COORD_STORE_MODE_CA_PLAIN_TEXT  = 3;
@@ -143,6 +146,8 @@ public:
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_GPU)
+    PARAMETER(PARAM_DB_EXTRACTION_MODE)
+    PARAMETER(PARAM_DISTANCE_THRESHOLD)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
@@ -176,6 +181,8 @@ public:
     float filtInterfaceLddtThr;
     std::string prostt5Model;
     int gpu;
+    int dbExtractionMode;
+    float distanceThreshold;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
