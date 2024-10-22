@@ -131,12 +131,16 @@ void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pul
     }
     readStructure.chainNames.clear();
     readStructure.chainNames.insert(readStructure.chainNames.begin(), chainNames.begin(), chainNames.end());
+    chainNames.clear();
 }
 
 void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t> res1, std::pair<size_t, size_t> res2,
                            std::vector<size_t> & resIdx1, float distanceThreshold)
 {
     std::vector<Vec3> coord1, coord2;
+    size_t sameRes = 0;
+    size_t chainLen = res1.second - res1.first;
+    bool noSameRes = true;
     const float squareThreshold = distanceThreshold * distanceThreshold;
     for (size_t res1Idx = res1.first; res1Idx < res1.second; res1Idx++) {
         float x1, y1, z1;
@@ -163,11 +167,21 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
                 z2 = readStructure.cb[res2Idx].z;
             }
             float distance = MathUtil::squareDist(x1, y1, z1, x2, y2, z2);
-            if (distance < squareThreshold) {
-                resIdx1.push_back(res1Idx);
+            if (distance < 0.01) {
+                noSameRes = false;
+                sameRes++;
                 break;
             }
+            if (distance < squareThreshold) {
+                resIdx1.push_back(res1Idx);
+                if (noSameRes) {
+                    break;
+                }
+            } 
         }
+    }
+    if (sameRes / chainLen > 0.9){
+        resIdx1.clear();
     }
 }
 
@@ -194,6 +208,7 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, 
             interfaceChainNames.push_back(readStructure.chainNames[ch1]);
             interfacetaxIds.push_back(readStructure.taxIds[ch1]);
             interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
+            prevInterfaceChainLen++;
             continue;
         }
         for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
@@ -282,6 +297,7 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, 
                     interfaceChainNames.push_back(readStructure.chainNames[ch1]);
                     interfacetaxIds.push_back(readStructure.taxIds[ch1]);
                     interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
+                    prevInterfaceChainLen++;
                 }
                 resIdx1.clear();
                 resIdx2.clear();
