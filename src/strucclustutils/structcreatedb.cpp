@@ -262,8 +262,8 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, 
                         interfaceName.append("_MODEL_");
                         interfaceName.append(SSTR(readStructure.modelIndices[ch1]));
                     }
-                    interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
-                    interfaceModelIndices.push_back(readStructure.modelIndices[ch2]);
+                    interfaceModelIndices.push_back(modelToInterfaceNum[readStructure.modelIndices[ch2]]);
+                    interfaceModelIndices.push_back(modelToInterfaceNum[readStructure.modelIndices[ch2]]);
                     interfaceName.append("_INT_");
                     interfaceName.append(SSTR(modelToInterfaceNum[readStructure.modelIndices[ch2]]));
                     std::string interfaceNameFirst = interfaceName;
