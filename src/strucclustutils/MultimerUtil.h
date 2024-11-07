@@ -216,8 +216,8 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
     float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
     size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
-    double qTmScore = std::stod(entry[11]);
-    double tTmScore = std::stod(entry[12]);
+    double qTmScore = strtod(entry[11], NULL);
+    double tTmScore = strtod(entry[12], NULL);
     std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
     std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
     auto assId = Util::fast_atoi<unsigned int>(entry[15]);
