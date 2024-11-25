@@ -2,7 +2,9 @@
     "files.associations": {
         "cstdint": "cpp",
         "string": "cpp",
-        "cstdio": "cpp"
+        "cstdio": "cpp",
+        "limits": "cpp",
+        "cfloat": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

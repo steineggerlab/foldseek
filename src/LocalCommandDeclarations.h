@@ -29,4 +29,5 @@ extern int createmultimerreport(int argc, const char **argv, const Command &comm
 extern int expandmultimer(int argc, const char **argv, const Command &command);
 extern int multimersearch(int argc, const char **argv, const Command &command);
 extern int fwbw(int argc, const char **argv, const Command& command);
+extern int lolalign(int argc, const char **argv, const Command& command);
 #endif
