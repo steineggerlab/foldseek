@@ -184,7 +184,11 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         par.covMode = swapedCovMode;
         cmd.addVariable("PREFILTER_REASSIGN_PAR", par.createParameterString(par.prefilter).c_str());
         par.covMode = tmpCovMode;
-        cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.structurealign).c_str());
+        if (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN) {
+            cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.tmalign).c_str());
+        } else if (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI) {
+            cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.structurealign).c_str());
+        }
         cmd.addVariable("MERGEDBS_PAR", par.createParameterString(par.mergedbs).c_str());
 
         std::string program = tmpDir + "/clustering.sh";
