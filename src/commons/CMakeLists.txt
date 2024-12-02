@@ -16,6 +16,7 @@ set(commons_header_files
         commons/Domain.h
         commons/ExpressionParser.h
         commons/FileUtil.h
+        commons/GpuUtil.h
         commons/HeaderSummarizer.h
         commons/IndexReader.h
         commons/itoa.h
@@ -38,7 +39,6 @@ set(commons_header_files
         commons/StringBlock.h
         commons/SubstitutionMatrix.h
         commons/SubstitutionMatrixProfileStates.h
-        commons/tantan.h
         commons/TranslateNucl.h
         commons/Timer.h
         commons/UniprotKB.h
@@ -72,7 +72,6 @@ set(commons_source_files
         commons/Sequence.cpp
         commons/SequenceWeights.cpp
         commons/SubstitutionMatrix.cpp
-        commons/tantan.cpp
         commons/UniprotKB.cpp
         commons/Util.cpp
         PARENT_SCOPE
