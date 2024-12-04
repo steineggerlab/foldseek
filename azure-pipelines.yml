@@ -65,7 +65,7 @@ jobs:
                 -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           fi
 
-          make -j $(nproc --all)
+          make -j $(nproc --all) VERBOSE=1
         displayName: Build foldseek
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
