@@ -16,7 +16,7 @@
 
 class lolAlign{
 public:
-    lolAlign(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly, bool exact);
+    lolAlign(unsigned int maxSeqLen, bool exact);
     ~lolAlign();
 
     struct TMscoreResult{
@@ -38,6 +38,27 @@ public:
         double tmscore;
         double rmsd;
     };
+    void computeForwardScoreMatrix(
+        char* queryNumAA,
+        char* queryNum3Di,
+        char* targetNumAA,
+        char* targetNum3Di,
+        int queryLen,
+        int targetLen,
+        SubstitutionMatrix &subMatAA,
+        SubstitutionMatrix &subMat3Di,
+        float T,
+        float** scoreForward
+    );
+
+
+    unsigned char* seq2num(const std::string& seq, const unsigned char* aa2num) {
+        unsigned char* idx = static_cast<unsigned char*>(malloc(seq.size() * sizeof(unsigned char)));
+        for (size_t i = 0; i < seq.size(); ++i) {
+            idx[i] = aa2num[static_cast<unsigned char>(seq[i])];
+        }
+        return idx;
+    }
 
     void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, unsigned int queryLen);
     
@@ -50,9 +71,22 @@ public:
                             char * targetSeq, char* target3diSeq, unsigned int targetLen);
 
     static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
+    void lol_fwbw(float** scoreForward, float** P,
+        size_t queryLen, size_t targetLen,
+        float go, float ge, float T, int length, int blocks);
+
+    float** allocateMemory(size_t queryLen, size_t targetLen);
+    void rescaleBlocks(float **matrix, float **scale, size_t rows, size_t length, size_t blocks, size_t targetLen);
+    void forwardBackwardSaveBlockMaxLocal(float** S, float** z_init,
+                                            float T, float go, float ge,
+                                            size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen,
+                                            float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock);
 
 private:
-    AffineNeedlemanWunsch * affineNW;
+
+
+
+
     std::string backtrace;
     float * query_x;
     float * query_y;
@@ -62,6 +96,8 @@ private:
     float * target_z;
     char * querySecStruc;
     char * targetSecStruc;
+    float ** scoreForward;
+    float ** P;
     float *mem;
     float w1[3][2] = {
         {-1.3584513e-04,  9.9329501e-01},
@@ -77,7 +113,7 @@ private:
     char * querySeq;
     char * query3diSeq;
     std::string seqM, seqxA, seqyA;// for output alignment
-    bool tmAlignFast;
+
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
@@ -85,15 +121,8 @@ private:
     void lolscore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> d_seq, std::vector<float> score); 
     float alignment_lolScore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> anchorpoints, size_t anchor_length);
 
-    TMscoreResult computeExactTMscore(float *x, float *y, float *z,
-                                      unsigned int targetLen, int qStartPos,
-                                      int targetStartPos, const std::string & backtrace,
-                                      int normalizationLen);
+    void align(char *targetSeq, char * target3diSeq);
 
-    TMscoreResult computeAppoximateTMscore(float *x, float *y, float *z,
-                                      unsigned int targetLen, int qStartPos,
-                                      int targetStartPos, const std::string & backtrace,
-                                      int normalizationLen);
 };
 
 

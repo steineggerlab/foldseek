@@ -48,15 +48,7 @@ void align(double* scoreForward, double* P, double* S_log,
     }
 
 
-   /*for (size_t j = 0; j < targetLen; ++j) {
-            zmForward[0][j] = -DBL_MAX;
-            zmBackward[0][j] = -DBL_MAX;
 
-    }
-    for(size_t i = 0; i < queryLen; ++i){
-        zmForward[i][0] = -DBL_MAX;
-        zmBackward[i][0] = -DBL_MAX;
-    }*/
 
 
     double* zInit[3];
@@ -80,6 +72,7 @@ void align(double* scoreForward, double* P, double* S_log,
         
     }
     ///////////////////////////////////Backward////////////////////////////////////////
+
     for (unsigned int i=0; i < queryLen; ++i){
         zInit[0][i] = -DBL_MAX;
         zInit[1][i] = -DBL_MAX;
@@ -102,20 +95,7 @@ void align(double* scoreForward, double* P, double* S_log,
     
     rescaleBlocks(zmForward, zmaxForward, queryLen, length, blocks, targetLen);
     rescaleBlocks(zmBackward, zmaxBackward, queryLen, length, blocks, targetLen);
-    /*std::ofstream outfile;
-    outfile.open("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
-    if (outfile.is_open()) {
-        for (size_t i = 0; i < queryLen; ++i) {
-            for (size_t j = 0; j < targetLen; ++j) {
-                outfile << zmForward[i][j] << " ";
-            }
-            outfile << "\n";
-        }
-        outfile.close();
-    } else {
-        std::cout << "Unable to open file";
-    }*/
-
+    
 
     double max_zm = -std::numeric_limits<double>::max();
     for (size_t i = 0; i < queryLen; ++i) {
@@ -124,7 +104,7 @@ void align(double* scoreForward, double* P, double* S_log,
         }
     }
 
-    double sum_exp= 0.0;
+    double sum_exp = 0.0;
     for (size_t i = 0; i < queryLen; ++i) {
         for (size_t j = 0; j < targetLen; ++j) {
             sum_exp += exp(zmForward[i][j] - max_zm);
@@ -134,17 +114,8 @@ void align(double* scoreForward, double* P, double* S_log,
 
 
 
-
-    // compute posterior probabilities
-
-    //float maxP = -std::numeric_limits<float>::max();
-    
-    //outfile.open("/home/lasse/Desktop/Projects/FB_martin/hello.txt");
-
-
     for (size_t i = 0; i < queryLen; ++i) {
         for (size_t j = 0; j < targetLen; ++j) {
-            // Debug(Debug::INFO) << zmForward[i][j] << '\t' << zmBackward[queryLen - 1 - i][targetLen - 1 - j] << '\n';
             P[i*targetLen + j] = exp(
                 zmForward[i][j]
                 + zmBackward[queryLen - 1 - i][targetLen - 1 - j]
@@ -152,14 +123,8 @@ void align(double* scoreForward, double* P, double* S_log,
                 - logsumexp_zm
             );
             
-            //outfile << i << "," << j << "," <<  zmForward[i][j] << "," << zmBackward[queryLen - 1 - i][targetLen - 1 - j] << std::endl;
-            
-            //maxP = std::max(maxP, P[i*targetLen + j]);
-            // Debug(Debug::INFO) << P[i][j] << '\t';
         }
-        // Debug(Debug::INFO) << '\n';
     }
-    //outfile.close();
 
 
     free(scoreBackward);
@@ -180,11 +145,7 @@ void forwardBackwardSaveBlockMaxLocal(double* S, double* S_log, double** z_init,
                                                    double** zm, double* zmax, double** zmBlock, double* zeBlock, double* zfBlock) {
     double exp_go = exp(go / T);
     double exp_ge = exp(ge / T);
-    
-    
-    
 
-    //std::cout << "test" << std::endl;
     memset(zeBlock, 0, (end - start + 1) * sizeof(double)); 
     memset(zfBlock, 0, (end - start + 1) * sizeof(double)); 
  
@@ -262,60 +223,27 @@ void forwardBackwardSaveBlockMaxLocal(double* S, double* S_log, double** z_init,
             z_init[2][i-1] = log(zfBlock[cols]) + current_max;
 
         }
-        
-        // for (size_t j = i; j <= rows; ++j) {
-        //     zmBlock[j][0] -= zmax[i-1];
-        //     zeBlock[j][0] -= zmax[i-1];
-        //     zfBlock[j][0] -= zmax[i-1];
-        // }
 
-        //free(zm_exp);
     }
-    // Debug(Debug::INFO) << '\n';
 
-    //Calculate the cumulative sum of zmax[1:]
     std::vector<double> rescale(rows);
-    // std::partial_sum(zmax + 1, zmax + rows + 1, rescale.begin());
     std::partial_sum(zmax, zmax + rows, rescale.begin());
 
-    //Fixme
-    // 
-    /*for (size_t i = 0; i < rows; ++i) {
-        z_init[0][i] = log(zmBlock[i + 1][memcpy_cols]) + rescale[i];
-        z_init[1][i] = log(zeBlock[i + 1][memcpy_cols]) + rescale[i];
-        z_init[2][i] = log(zfBlock[i + 1][memcpy_cols]) + rescale[i];
-    }*/
 
     for (size_t i = 0; i < rows; ++i) {
         memcpy(zm[i] + start, zmBlock[i+1]+1, memcpy_cols * sizeof(double));
-        //memcpy(ze[i] + start, zeBlock[i+1]+1, memcpy_cols * sizeof(float));
-        //memcpy(zf[i] + start, zfBlock[i+1]+1, memcpy_cols * sizeof(float));
     }
-
-    //free(zmBlock);
-    //free(zeBlock);
-    //free(zfBlock);
-    //free(exp_ge_arr);
 }
 
 void rescaleBlocks(double **matrix, double **scale, size_t rows, size_t length, size_t blocks, size_t targetLen){
-    // Function to rescale the values by the maximum in the log space for each block
     for (size_t b = 0; b < blocks; ++b) {
         size_t start = b * length;
         size_t end = std::min((b + 1) * length, targetLen);
-        // size_t end = (b + 1) * length;
         std::vector<double> cumsum(rows);
         std::partial_sum(scale[b], scale[b] + rows, cumsum.begin());
-        // DEBUG:: print cumsum vector for each block
-        // std::cout << "block " << b << " cumsum: ";
-        // for (size_t i = 0; i < rows; ++i) {
-        //     std::cout << cumsum[i] << " ";
-        // }
-        // std::cout << std::endl;
 
         for (size_t i = 0; i < rows; ++i) {
             for (size_t j = start; j < end; ++j) {
-                // matrix[i][j] = log(matrix[i][j]) ;// + cumsum[i-1];
                 matrix[i][j] = log(matrix[i][j]) + cumsum[i];
             }
         }
