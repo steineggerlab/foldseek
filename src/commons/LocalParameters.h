@@ -37,10 +37,6 @@ public:
     static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
     static const int TMSCORE_THRESHOLD_MODE_MIN = 3;
 
-    static const int PREF_MODE_KMER = 0;
-    static const int PREF_MODE_UNGAPPED = 1;
-    static const int PREF_MODE_EXHAUSTIVE = 2;
-
     static const int TMALIGN_HIT_ORDER_AVG = 0;
     static const int TMALIGN_HIT_ORDER_QUERY = 1;
     static const int TMALIGN_HIT_ORDER_TARGET = 2;
