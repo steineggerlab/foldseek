@@ -128,7 +128,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("GREEDY_BEST_HITS", par.greedyBestHits ? "TRUE" : NULL);
     cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
-    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddedseqdb).c_str());
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 

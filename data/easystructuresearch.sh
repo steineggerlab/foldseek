@@ -30,21 +30,8 @@ if notExists "${TARGET}.dbtype"; then
     if [ -n "${GPU}" ]; then
         if notExists "${TMP_PATH}/target_pad"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" lndb "${TMP_PATH}/target_h" "${TMP_PATH}/target_ss_h" ${VERBOSITY} \
-                || fail "lndb died"
-            # shellcheck disable=SC2086
-            "$MMSEQS" makepaddedseqdb "${TMP_PATH}/target_ss" "${TMP_PATH}/target_pad_ss" ${MAKEPADDEDSEQDB_PAR} \
+            "$MMSEQS" makepaddedseqdb "${TMP_PATH}/target" "${TMP_PATH}/target_pad" "${TMP_PATH}/pad_tmp" ${MAKEPADDEDSEQDB_PAR} \
                 || fail "makepaddedseqdb died"
-            awk '{ print $3"\t"$1; }' "${TMP_PATH}/target_pad_ss.lookup" > "${TMP_PATH}/target_pad_ss.gpu_mapping"
-            # shellcheck disable=SC2086
-            "$MMSEQS" renamedbkeys "${TMP_PATH}/target_pad_ss.gpu_mapping" "${TMP_PATH}/target" "${TMP_PATH}/target_pad" \
-                --subdb-mode 1 ${THREADS_PAR} \
-                || fail "renamedbkeys died"
-            # shellcheck disable=SC2086
-            "$MMSEQS" renamedbkeys "${TMP_PATH}/target_pad_ss.gpu_mapping" "${TMP_PATH}/target_ca" "${TMP_PATH}/target_pad_ca" \
-                --subdb-mode 1 ${THREADS_PAR} \
-                || fail "renamedbkeys died"
-            rm -f -- "${TMP_PATH}/target_pad.gpu_mapping"
         fi
         TARGET="${TMP_PATH}/target_pad"
     fi
@@ -119,5 +106,6 @@ if [ -n "${REMOVE_TMP}" ]; then
         fi
     fi
     rm -rf "${TMP_PATH}/search_tmp"
+    rm -rf "${TMP_PATH}/pad_tmp"
     rm -f "${TMP_PATH}/easystructuresearch.sh"
 fi

@@ -205,6 +205,15 @@ LocalParameters::LocalParameters() :
     filtermultimer.push_back(&PARAM_THREADS);
     filtermultimer.push_back(&PARAM_V);
 
+    //makepaddeddb
+    makepaddeddb.push_back(&PARAM_SUB_MAT);
+    makepaddeddb.push_back(&PARAM_SCORE_BIAS);
+    makepaddeddb.push_back(&PARAM_MASK_RESIDUES);
+    makepaddeddb.push_back(&PARAM_MASK_PROBABILTY);
+    makepaddeddb.push_back(&PARAM_WRITE_LOOKUP);
+    makepaddeddb.push_back(&PARAM_THREADS);
+    makepaddeddb.push_back(&PARAM_V);
+    
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
     createmultimerreport.push_back(&PARAM_THREADS);
