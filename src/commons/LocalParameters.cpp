@@ -35,7 +35,6 @@ LocalParameters::LocalParameters() :
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
-        PARAM_GPU(PARAM_GPU_ID, "--gpu", "Use GPU", "Use GPU (CUDA) if possible", typeid(int), (void *) &gpu, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON),
         PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
         PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-beta below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
@@ -85,9 +84,7 @@ LocalParameters::LocalParameters() :
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
 
     // structurecreatedb
-#ifdef HAVE_CUDA
     structurecreatedb.push_back(&PARAM_GPU);
-#endif
     structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_DB_EXTRACTION_MODE);
@@ -147,6 +144,7 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_RUNNER);
     // structuresearchworkflow
     structuresearchworkflow = combineList(structurealign, prefilter);
+    structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
     structuresearchworkflow.push_back(&PARAM_PREF_MODE);
@@ -276,7 +274,6 @@ LocalParameters::LocalParameters() :
     multimerReportMode = 1;
     eValueThrExpandMultimer = 10000.0;
     prostt5Model = "";
-    gpu = 0;
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
     distanceThreshold = 8.0;
     filtMultimerTmThr = 0.0;

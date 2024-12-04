@@ -26,6 +26,28 @@ if notExists "${TARGET}.dbtype"; then
             || fail "target createdb died"
     fi
     TARGET="${TMP_PATH}/target"
+
+    if [ -n "${GPU}" ]; then
+        if notExists "${TMP_PATH}/target_pad"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" lndb "${TMP_PATH}/target_h" "${TMP_PATH}/target_ss_h" ${VERBOSITY} \
+                || fail "lndb died"
+            # shellcheck disable=SC2086
+            "$MMSEQS" makepaddedseqdb "${TMP_PATH}/target_ss" "${TMP_PATH}/target_pad_ss" ${MAKEPADDEDSEQDB_PAR} \
+                || fail "makepaddedseqdb died"
+            awk '{ print $3"\t"$1; }' "${TMP_PATH}/target_pad_ss.lookup" > "${TMP_PATH}/target_pad_ss.gpu_mapping"
+            # shellcheck disable=SC2086
+            "$MMSEQS" renamedbkeys "${TMP_PATH}/target_pad_ss.gpu_mapping" "${TMP_PATH}/target" "${TMP_PATH}/target_pad" \
+                --subdb-mode 1 ${THREADS_PAR} \
+                || fail "renamedbkeys died"
+            # shellcheck disable=SC2086
+            "$MMSEQS" renamedbkeys "${TMP_PATH}/target_pad_ss.gpu_mapping" "${TMP_PATH}/target_ca" "${TMP_PATH}/target_pad_ca" \
+                --subdb-mode 1 ${THREADS_PAR} \
+                || fail "renamedbkeys died"
+            rm -f -- "${TMP_PATH}/target_pad.gpu_mapping"
+        fi
+        TARGET="${TMP_PATH}/target_pad"
+    fi
 fi
 
 
@@ -74,6 +96,16 @@ if [ -n "${REMOVE_TMP}" ]; then
             "$MMSEQS" rmdb "${TMP_PATH}/target_ca" ${VERBOSITY}
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${TMP_PATH}/target_ss" ${VERBOSITY}
+        fi
+        if [ -f "${TMP_PATH}/target_pad" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad_h" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad_ss" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad_ss_h" ${VERBOSITY}
         fi
         if [ -f "${TMP_PATH}/query.dbtype" ]; then
             # shellcheck disable=SC2086
