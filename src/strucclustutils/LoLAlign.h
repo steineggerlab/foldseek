@@ -72,7 +72,7 @@ public:
 
     static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
     void lol_fwbw(float** scoreForward, float** P,
-        size_t queryLen, size_t targetLen,
+        size_t queryLen, size_t targetLen,size_t assignTargetLen,
         float go, float ge, float T, int length, int blocks);
 
     float** allocateMemory(size_t queryLen, size_t targetLen);

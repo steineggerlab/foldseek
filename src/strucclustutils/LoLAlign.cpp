@@ -7,6 +7,7 @@
 #include <numeric>
 #include <cmath>
 #include <vector>
+#include <fstream>
 #include "LoLAlign.h"
 #include "Fwbw.h"
 #include "Debug.h"
@@ -161,11 +162,11 @@ void lolAlign::computeForwardScoreMatrix(
     
 }
 
-void lolAlign::lol_fwbw(float** scoreForward, float** P, size_t queryLen, size_t targetLen, float go, float ge, float T, int length, int blocks) {
+void lolAlign::lol_fwbw(float** scoreForward, float** P, size_t queryLen, size_t targetLen, size_t assignTargetLen, float go, float ge, float T, int length, int blocks) {
     
-    float** scoreBackward = allocateMemory(queryLen, targetLen);
-    float** zmForward = allocateMemory(queryLen, targetLen);
-    float** zmBackward = allocateMemory(queryLen, targetLen);
+    float** scoreBackward = allocateMemory(queryLen, assignTargetLen);
+    float** zmForward = allocateMemory(queryLen, assignTargetLen);
+    float** zmBackward = allocateMemory(queryLen, assignTargetLen);
     float** zmBlock = allocateMemory(queryLen + 1, length + 1);
     float** zmaxForward = allocateMemory(blocks, queryLen);
     float** zmaxBackward = allocateMemory(blocks, queryLen);
@@ -173,17 +174,13 @@ void lolAlign::lol_fwbw(float** scoreForward, float** P, size_t queryLen, size_t
     float* zfBlock = new float[length + 1];
     
 
-
     for(size_t i = 0; i < queryLen; ++i){
-        for(size_t j = 0; j < targetLen; ++j){
+        for(size_t j = 0; j < assignTargetLen; ++j){
             scoreBackward[i][j] = scoreForward[(queryLen - 1 - i)] [targetLen - 1 - j];
         }
     }
+
     
-
-
-
-
 
     float* zInit[3];
     zInit[0] = new float[queryLen];
@@ -232,6 +229,20 @@ void lolAlign::lol_fwbw(float** scoreForward, float** P, size_t queryLen, size_t
     
     rescaleBlocks(zmForward, zmaxForward, queryLen, length, blocks, targetLen);
     rescaleBlocks(zmBackward, zmaxBackward, queryLen, length, blocks, targetLen);
+
+
+    /*std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
+    if (outfile.is_open()) {
+        for (size_t i = 0; i < queryLen; ++i) {
+            for (size_t j = 0; j < assignTargetLen; ++j) {
+                outfile << zmBackward[i][j] << " ";
+            }
+            outfile << "\n";
+        }
+        outfile.close();
+    } else {
+        std::cerr << "Unable to open file for writing P matrix." << std::endl;
+    }*/
     
 
     float max_zm = -std::numeric_limits<float>::max();
@@ -261,7 +272,10 @@ void lolAlign::lol_fwbw(float** scoreForward, float** P, size_t queryLen, size_t
             );
             
         }
+        
     }
+    
+
 
 
     free(scoreBackward);
@@ -280,7 +294,7 @@ void lolAlign::lol_fwbw(float** scoreForward, float** P, size_t queryLen, size_t
 
 void lolAlign::forwardBackwardSaveBlockMaxLocal(float** S, float** z_init,
                                                    float T, float go, float ge,
-                                                   size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen,
+                                                   size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen, 
                                                    float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock) {
     float exp_go = exp(go / T);
     float exp_ge = exp(ge / T);
@@ -563,9 +577,15 @@ int lolalign(int argc, const char **argv, const Command &command) {
                     float* tdata = tcoords.read(tcadata, targetLen, tCaLength);
                     char* target3diSeq = tdbr3Di.getData(targetId, thread_idx);
                     int length = 16;
-                    int blocks = (int)((targetLen/length));
                     size_t assignTargetLen = targetLen + (length - targetLen % length) % length;
-                    float ** scoreForward = malloc_matrix<float>(queryLen+1, assignTargetLen+1);
+                    int blocks = (int)((assignTargetLen/length));
+                    float ** scoreForward = malloc_matrix<float>(queryLen, assignTargetLen);
+                    for (size_t i = 0; i < queryLen; ++i) {
+                        for (size_t j = targetLen; j < assignTargetLen; ++j) {
+                            scoreForward[i][j] = 0;
+                        }
+                    }
+                    
                     lolaln.computeForwardScoreMatrix(
                         querySeq,
                         query3diSeq,
@@ -575,13 +595,27 @@ int lolalign(int argc, const char **argv, const Command &command) {
                         targetLen,
                         subMatAA,
                         subMat3Di,
-                        1.0,
+                        10.0,
                         scoreForward
                     );
                     
-                    float** P = malloc_matrix<float>(queryLen+1, assignTargetLen+1);
+                    float** P = malloc_matrix<float>(queryLen, assignTargetLen);
 
-                    lolaln.lol_fwbw(scoreForward, P, queryLen, assignTargetLen, -10.0, -1.0, 1.0, 16, blocks);
+                    lolaln.lol_fwbw(scoreForward, P, queryLen, targetLen, assignTargetLen, -10.0, -1.0, 2.0, length, blocks);
+
+                    /*std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/P_mat.txt");
+                    if (outfile.is_open()) {
+                        for (size_t i = 0; i < queryLen; ++i) {
+                            for (size_t j = 0; j < assignTargetLen; ++j) {
+                                outfile << P[i][j] << " ";
+                            }
+                            outfile << "\n";
+                        }
+                        outfile.close();
+                    } else {
+                        std::cerr << "Unable to open file for writing P matrix." << std::endl;
+                    }*/
+                    
                 }
             }
         }

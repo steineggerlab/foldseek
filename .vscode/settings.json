@@ -70,7 +70,12 @@
         "execution": "cpp",
         "ios": "cpp",
         "locale": "cpp",
-        "print": "cpp"
+        "print": "cpp",
+        "*.ipp": "cpp",
+        "fstream": "cpp",
+        "deque": "cpp",
+        "span": "cpp",
+        "queue": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
