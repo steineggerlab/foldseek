@@ -68,7 +68,10 @@ public:
                                  int normalizationLen);
 
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
-                            char * targetSeq, char* target3diSeq, unsigned int targetLen);
+                            char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
+
+    void calc_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target);
+
 
     static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
     void lol_fwbw(float** scoreForward, float** P,
@@ -81,6 +84,7 @@ public:
                                             float T, float go, float ge,
                                             size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen,
                                             float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock);
+    void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d);
 
 private:
 
@@ -98,6 +102,16 @@ private:
     char * targetSecStruc;
     float ** scoreForward;
     float ** P;
+    float ** d_ij;
+    float ** d_kl;
+    float start_anchor_go = -3.0;
+    float start_anchor_ge = -1.0;
+    float start_anchor_T = 2.0;
+    int start_anchor_length = 3;
+    float lol_go = -3.0;
+    float lol_ge = -1.0;
+    float lol_min_p = 0.4;
+    float lol_T = 2.5;
     float *mem;
     float w1[3][2] = {
         {-1.3584513e-04,  9.9329501e-01},
@@ -118,7 +132,7 @@ private:
     bool computeExactScore;
     int * invmap;
     void lolmatrix(int *anchor, int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G);
-    void lolscore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> d_seq, std::vector<float> score); 
+    void lolscore(float* d_ij, float* d_kl, float* d_seq, float* score, int length);
     float alignment_lolScore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> anchorpoints, size_t anchor_length);
 
     void align(char *targetSeq, char * target3diSeq);

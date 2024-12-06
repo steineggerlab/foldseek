@@ -75,7 +75,8 @@
         "fstream": "cpp",
         "deque": "cpp",
         "span": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "chrono": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
