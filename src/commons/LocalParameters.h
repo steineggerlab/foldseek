@@ -114,6 +114,7 @@ public:
     std::vector<MMseqsParameter *> expandmultimer;
     std::vector<MMseqsParameter *> convert2pdb;
     std::vector<MMseqsParameter *> makepaddeddb;
+    std::vector<MMseqsParameter *> createstructsubdb;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)

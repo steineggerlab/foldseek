@@ -14,6 +14,7 @@ set(COMPILED_RESOURCES
         main.js
         vendor.js.zst
         makepaddeddb.sh
+        createstructsubdb.sh
         multimersearch.sh
         easymultimersearch.sh
         multimercluster.sh

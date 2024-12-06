@@ -213,6 +213,11 @@ LocalParameters::LocalParameters() :
     makepaddeddb.push_back(&PARAM_WRITE_LOOKUP);
     makepaddeddb.push_back(&PARAM_THREADS);
     makepaddeddb.push_back(&PARAM_V);
+
+    //createstructsubdb
+    createstructsubdb.push_back(&PARAM_SUBDB_MODE);
+    createstructsubdb.push_back(&PARAM_ID_MODE);
+    createstructsubdb.push_back(&PARAM_V);
     
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);

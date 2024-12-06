@@ -19,6 +19,7 @@ set(strucclustutils_source_files
         strucclustutils/MultimerUtil.h
         strucclustutils/expandmultimer.cpp
         strucclustutils/makepaddeddb.cpp
+        strucclustutils/createstructsubdb.cpp
         PARENT_SCOPE
         )
 
