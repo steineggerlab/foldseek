@@ -17,5 +17,8 @@ fi
 # shellcheck disable=SC2086
 "$MMSEQS" base:createsubdb "${LIST}" "${IN}_ca" "${OUT}_ca" ${CREATESTRUCTSUBDB_PAR} \
     || fail "createsubdb died"
+# shellcheck disable=SC2086
+"$MMSEQS" base:createsubdb "${LIST}" "${IN}_h" "${OUT}_h" ${CREATESTRUCTSUBDB_PAR} \
+    || fail "createsubdb died"
 
 rm -f "${TMP_PATH}/createstructsubdb.sh"
