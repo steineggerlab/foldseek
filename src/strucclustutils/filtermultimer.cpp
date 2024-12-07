@@ -87,13 +87,15 @@ public:
     std::vector<double> tAlnChainTms;
 
     ComplexFilterCriteria() {}
-    ComplexFilterCriteria(unsigned int targetComplexId, double qTm, double tTm, float tstring[3], float ustring[3][3]) :
-                            targetComplexId(targetComplexId), qTotalAlnLen(0), tTotalAlnLen(0), interfaceLddt(0), qTm(qTm), tTm(tTm) {
-                                std::copy(tstring, tstring + 3, t);
-                                for (int i = 0; i < 3; i++) {
-                                    std::copy(ustring[i], ustring[i] + 3, u[i]);
-                                }
-                            }
+    ComplexFilterCriteria(
+        unsigned int targetComplexId, double qTm, double tTm, float tstring[3], float ustring[3][3]
+    ) :
+        targetComplexId(targetComplexId), qTotalAlnLen(0), tTotalAlnLen(0), qCov(0), tCov(0), interfaceLddt(0), qTm(qTm), tTm(tTm), avgTm(0) {
+        std::copy(tstring, tstring + 3, t);
+        for (int i = 0; i < 3; i++) {
+            std::copy(ustring[i], ustring[i] + 3, u[i]);
+        }
+    }
     ~ComplexFilterCriteria() {
         qAlnChainTms.clear();
         tAlnChainTms.clear();
