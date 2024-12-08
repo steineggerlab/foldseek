@@ -108,6 +108,12 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
     par.evalThr = prevEvalueThr;
     par.compBiasCorrectionScale = 0.5;
+
+    // GPU can only use the ungapped prefilter
+    if (par.gpu == 1 && par.PARAM_PREF_MODE.wasSet == false) {
+        par.prefMode = Parameters::PREF_MODE_UNGAPPED;
+    }
+    
     switch(par.prefMode){
         case LocalParameters::PREF_MODE_KMER:
             cmd.addVariable("PREFMODE", "KMER");

@@ -57,15 +57,15 @@ jobs:
           export CC=gcc-11 ; export CXX=g++-11
           if [ "${STATIC}" -eq "1" ]; then
               cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_SHARED_LIBS=OFF \
-                -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
-                -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+                -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++" \
+                -DPREFER_STATIC=1 -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
                 -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           else
               cmake -DHAVE_SANITIZER=1 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
                 -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           fi
 
-          make -j $(nproc --all)
+          make -j $(nproc --all) VERBOSE=1
         displayName: Build foldseek
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
@@ -110,8 +110,8 @@ jobs:
           CC=${CPREF}-linux-gnu-gcc CXX=${CPREF}-linux-gnu-g++ \
            cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DHAVE_TESTS=1 \
             -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
-            -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++" \
+            -DPREFER_STATIC=1 -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
             -DRust_CARGO_TARGET=${CPREF}-unknown-linux-gnu \
             -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 ..
           make -j $(nproc --all)
