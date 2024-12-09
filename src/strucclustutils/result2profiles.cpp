@@ -21,6 +21,7 @@ int result2profiles(int argc, const char **argv, const Command &command) {
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("RESULT2PROFILES_PAR", par.createParameterString(par.result2profiles).c_str());
+    cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here

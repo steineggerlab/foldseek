@@ -106,7 +106,7 @@ fi
 if notExists "${TMP_PATH}/multimer_rep_seqs.dbtype"; then
     mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${SOURCE}" "${TMP_PATH}/rep_seqs.list" 
     # shellcheck disable=SC2086
-    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list" "${SOURCE}" "${TMP_PATH}/multimer_rep_seqs" ${CREATESUBDB_PAR} \
+    "$MMSEQS" base:createsubdb "${TMP_PATH}/rep_seqs.list" "${SOURCE}" "${TMP_PATH}/multimer_rep_seqs" ${CREATESUBDB_PAR} \
         || fail "createsubdb died"
 fi
 
