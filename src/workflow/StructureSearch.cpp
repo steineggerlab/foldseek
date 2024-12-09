@@ -173,17 +173,6 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         par.scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("blosum62.out", "nucleotide.out"));
         cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2profiles).c_str());
-        par.pca = 1.4;
-        par.pcb = 1.5;
-        par.scoringMatrixFile = "3di.out";
-        par.seedScoringMatrixFile = "3di.out";
-        par.maskProfile = 0;
-        par.compBiasCorrection = 0;
-        if(par.PARAM_E_PROFILE.wasSet == false){
-            par.evalProfile = 0.1;
-            par.evalThr = 0.1;
-        }
-        cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2profile).c_str());
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
