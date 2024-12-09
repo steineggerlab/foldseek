@@ -19,5 +19,8 @@ fi
 # shellcheck disable=SC2086
 "$MMSEQS" lndb "${IN1}_ca"  "${OUT}_ca" ${VERBOSITY} \
     || fail "Create lndb died"
+# shellcheck disable=SC2086
+"$MMSEQS" lndb "${IN1}_h"  "${OUT}_h" ${VERBOSITY} \
+    || fail "Create lndb died"
 
 rm -f "${TMP_PATH}/result2profiles.sh"
