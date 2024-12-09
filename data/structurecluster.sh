@@ -232,6 +232,7 @@ if [ -n "$REASSIGN" ]; then
             # shellcheck disable=SC2086
             "$MMSEQS" createsubdb "${TMP_PATH}/clu_not_accepted_swap" "$SOURCE" "${TMP_PATH}/seq_wrong_assigned" "${TMP_PATH}" ${VERBOSITY} \
                      || fail "createsubdb1 reassign died"
+            fi
         fi
 
         # build seed sequences
@@ -240,6 +241,7 @@ if [ -n "$REASSIGN" ]; then
             # shellcheck disable=SC2086
             "$MMSEQS" createsubdb "${TMP_PATH}/clu" "$SOURCE" "${TMP_PATH}/seq_seeds" "${TMP_PATH}" ${VERBOSITY}   \
                      || fail "createsubdb2 reassign died"
+            fi
 
         fi
         PARAM=PREFILTER${STEP}_PAR
