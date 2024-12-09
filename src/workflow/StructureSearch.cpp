@@ -183,6 +183,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
             par.evalProfile = 0.1;
             par.evalThr = 0.1;
         }
+        cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2profile).c_str());
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
