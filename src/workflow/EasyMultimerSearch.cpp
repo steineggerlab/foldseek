@@ -115,6 +115,8 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
     cmd.addVariable("QUERY", par.filenames.back().c_str());
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
+    cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     par.filenames.pop_back();
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str());

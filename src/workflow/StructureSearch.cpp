@@ -11,7 +11,8 @@
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
-    p->maskMode = 0;
+    p->maskMode = 1;
+    p->maskNrepeats = 10;
     p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
@@ -108,6 +109,12 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
     par.evalThr = prevEvalueThr;
     par.compBiasCorrectionScale = 0.5;
+
+    // GPU can only use the ungapped prefilter
+    if (par.gpu == 1 && par.PARAM_PREF_MODE.wasSet == false) {
+        par.prefMode = Parameters::PREF_MODE_UNGAPPED;
+    }
+    
     switch(par.prefMode){
         case LocalParameters::PREF_MODE_KMER:
             cmd.addVariable("PREFMODE", "KMER");
@@ -166,18 +173,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
 
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         par.scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("blosum62.out", "nucleotide.out"));
-        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2profile).c_str());
-        par.pca = 1.4;
-        par.pcb = 1.5;
-        par.scoringMatrixFile = "3di.out";
-        par.seedScoringMatrixFile = "3di.out";
-        par.maskProfile = 0;
-        par.compBiasCorrection = 0;
-        if(par.PARAM_E_PROFILE.wasSet == false){
-            par.evalProfile = 0.1;
-            par.evalThr = 0.1;
-        }
-        cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2profile).c_str());
+        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2profiles).c_str());
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
