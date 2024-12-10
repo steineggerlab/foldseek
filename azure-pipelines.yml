@@ -16,7 +16,7 @@ jobs:
       matrix:
         avx2:
           SIMD: 'AVX2'
-          STATIC: 1
+          STATIC: 0
           MPI: 0
           BUILD_TYPE: RelWithDebInfo
         # sse41:
@@ -26,7 +26,7 @@ jobs:
         #   BUILD_TYPE: RelWithDebInfo
         sse2:
           SIMD: 'SSE2'
-          STATIC: 1
+          STATIC: 0
           MPI: 0
           BUILD_TYPE: RelWithDebInfo
         avx2_mpi:
