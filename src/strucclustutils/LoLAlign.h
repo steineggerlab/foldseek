@@ -104,6 +104,7 @@ private:
     float ** P;
     float ** d_ij;
     float ** d_kl;
+    float ** G;
     float start_anchor_go = -3.0;
     float start_anchor_ge = -1.0;
     float start_anchor_T = 2.0;
@@ -131,8 +132,11 @@ private:
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
-    void lolmatrix(int *anchor, int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G);
+    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G);
     void lolscore(float* d_ij, float* d_kl, float* d_seq, float* score, int length);
+    
+
+    void lolscore(float* d_dist, float* d_seq, float* score, int length);
     float alignment_lolScore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> anchorpoints, size_t anchor_length);
 
     void align(char *targetSeq, char * target3diSeq);

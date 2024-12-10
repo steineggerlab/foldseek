@@ -76,7 +76,9 @@
         "deque": "cpp",
         "span": "cpp",
         "queue": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "semaphore": "cpp",
+        "valarray": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
