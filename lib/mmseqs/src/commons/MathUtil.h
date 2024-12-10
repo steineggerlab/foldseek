@@ -257,7 +257,7 @@ public:
     }
 
     static float squareDist(const float xx, const float xy, const float xz,
-               const float yx, const float yy, const float yz){
+            const float yx, const float yy, const float yz){
         float d1 = xx - yx;
         float d2 = xy - yy;
         float d3 = xz - yz;
