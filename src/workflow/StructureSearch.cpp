@@ -32,6 +32,7 @@ void setStructureSearchMustPassAlong(LocalParameters *p) {
     p->PARAM_GAP_EXTEND.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
+    // p->maskLowerCaseMode = 0;
 }
 
 int structuresearch(int argc, const char **argv, const Command &command) {
