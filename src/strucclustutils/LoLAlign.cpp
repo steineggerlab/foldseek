@@ -120,7 +120,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
 
     calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
-    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, false);
+    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
     lolAlign::calc_startAnchors(anchor_query, anchor_target, maxIndexX, maxIndexY);
     float* anchor_dist_query = new float[2 * this->start_anchor_length + 1];
     float* anchor_dist_target = new float[2 * this->start_anchor_length + 1];
@@ -133,8 +133,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     int gaps[4] = {0, (int)queryLen, 0, (int)targetLen};
     
     
-    lolmatrix(anchor_query, anchor_target, 2 * this->start_anchor_length + 1, gaps, d_ij, d_kl, G);
-    std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
+    lolmatrix(anchor_query, anchor_target, 7, gaps, d_ij, d_kl, G);
+    /*std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
     if (outfile.is_open())
     {
         for (size_t i = 0; i < queryLen; ++i)
@@ -152,7 +152,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         std::cerr << "Unable to open file for writing P matrix." << std::endl;
     }
 
-    /*std::ofstream outfile2("/home/lasse/Desktop/Projects/FB_martin/P_mat.txt");
+    std::ofstream outfile2("/home/lasse/Desktop/Projects/FB_martin/P_mat.txt");
     if (outfile2.is_open())
     {
         for (size_t i = 0; i < queryLen; ++i)
@@ -176,7 +176,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         for (int j = 0; j < 2 * this->start_anchor_length + 1; j++) {
             anchor_dist_query[j] = d_ij[anchor_query[i]][anchor_query[j]];
             anchor_dist_target[j] = d_kl[anchor_target[i]][anchor_target[j]];
-            seq_distance[j] = (float)i-j; 
+            seq_distance[j] = (float)anchor_query[i]-anchor_query[j]; 
         }
         lolscore(anchor_dist_query, anchor_dist_target, seq_distance, lol_score, 2 * this->start_anchor_length + 1);   
 
@@ -291,7 +291,6 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
     int gap0_end = gaps[1];
     int gap1_start = gaps[2];
     int gap1_end = gaps[3];
-
     float *d_dist = new float[gap1_end - gap1_start];
     //float *seq_dist = new float[gap1_end - gap1_start];
     float seq_dist = 0.0;
@@ -302,9 +301,9 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
     for (int i = 0; i < anchor_length; i++){
         int anchor_q = anchor_query[i];
         int anchor_t = anchor_target[i];
-        for (int j = gap0_start; j < gap0_end; j++)
+        for (int j = 0; j < gap0_end; j++)
         {
-            memset(d_dist, 0, sizeof(float) * (gap1_end - gap1_start));
+            //memset(d_dist, 0, sizeof(float) * (gap1_end - gap1_start));
             //memset(seq_dist, 0, sizeof(float) * (gap1_end - gap1_start));
             if (d_ij[anchor_q][j] > 0)
             {
@@ -313,7 +312,7 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
                 seq_dist = std::copysign(1.0f, (anchor_q-j)) * std::log(1 + std::abs((float)(anchor_q-j)));
                 for(int l = gap1_start; l < gap1_end; l++)
                 {
-                    d_dist[l - gap1_start] = d_ij_row - d_kl_row[l];
+                    d_dist[l - gap1_start] = std::abs(d_ij_row - d_kl_row[l]);
 
                     //seq_dist[l - gap1_start] = std::copysign(1.0f, (anchor_q-j)) * std::log(1 + std::abs((float)(anchor_q-j)));
                 }
@@ -337,12 +336,12 @@ void lolAlign::lolscore(float* d_dist, float d_seq, float* score, int length)
 
    std::vector<std::vector<float>> hidden_layer(length, std::vector<float>(3, 0.0f));
     for (int i = 0; i < length; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            for (int k = 0; k < 2; ++k) {
-                hidden_layer[i][j] += x[i][k] * w1[j][k];
+        for (int k = 0; k < 3; ++k) {
+            for (int j = 0; j < 2; ++j) {
+                hidden_layer[i][k] += x[i][j] * w1[j][k];
             }
-            hidden_layer[i][j] += b1[j];
-            hidden_layer[i][j] = std::max(0.0f, hidden_layer[i][j]); // ReLU activation
+            hidden_layer[i][k] += b1[k];
+            hidden_layer[i][k] = std::max(0.0f, hidden_layer[i][k]); // ReLU activation
         }
     }
 
