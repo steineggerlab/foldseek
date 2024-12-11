@@ -82,7 +82,14 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         scoreForward);
 
     this->P = malloc_matrix<float>(queryLen, assignTargetLen);
-    G = malloc_matrix<float>(queryLen, assignTargetLen);
+    G = malloc_matrix<float>(queryLen, targetLen);
+    for (size_t i = 0; i < queryLen; ++i)
+    {
+        for (size_t j = 0; j < targetLen; ++j)
+        {
+            G[i][j] = 0;
+        }
+    }
 
     lolAlign::lol_fwbw(scoreForward, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, start_anchor_T, length, blocks);
 
@@ -112,8 +119,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
 
 
-    calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl);
-    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij);
+    calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
+    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, false);
     lolAlign::calc_startAnchors(anchor_query, anchor_target, maxIndexX, maxIndexY);
     float* anchor_dist_query = new float[2 * this->start_anchor_length + 1];
     float* anchor_dist_target = new float[2 * this->start_anchor_length + 1];
@@ -125,19 +132,38 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     }
     int gaps[4] = {0, (int)queryLen, 0, (int)targetLen};
     
+    
     lolmatrix(anchor_query, anchor_target, 2 * this->start_anchor_length + 1, gaps, d_ij, d_kl, G);
-    /*std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
+    std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
     if (outfile.is_open())
     {
         for (size_t i = 0; i < queryLen; ++i)
         {
-            for (size_t j = 0; j < assignTargetLen; ++j)
+            for (size_t j = 0; j < targetLen; ++j)
             {
                 outfile << G[i][j] << " ";
             }
             outfile << "\n";
         }
         outfile.close();
+    }
+    else
+    {
+        std::cerr << "Unable to open file for writing P matrix." << std::endl;
+    }
+
+    /*std::ofstream outfile2("/home/lasse/Desktop/Projects/FB_martin/P_mat.txt");
+    if (outfile2.is_open())
+    {
+        for (size_t i = 0; i < queryLen; ++i)
+        {
+            for (size_t j = 0; j < targetLen; ++j)
+            {
+                outfile2 << d_kl[i][j] << " ";
+            }
+            outfile2 << "\n";
+        }
+        outfile2.close();
     }
     else
     {
@@ -199,14 +225,14 @@ void lolAlign::calc_startAnchors(int *anchor_query, int *anchor_target, int max_
     }
 }
 
-void lolAlign::calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d)
+void lolAlign::calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff)
 {
     for (size_t i = 0; i < len; i++)
     {
         for (size_t j = 0; j < len; j++)
         {
             d[i][j] = sqrt(pow(x[i] - x[j], 2) + pow(y[i] - y[j], 2) + pow(z[i] - z[j], 2));
-            if (d[i][j] > 15.0)
+            if (d[i][j] > 15.0 && cutoff)
             {
                 d[i][j] = 0;
             }
@@ -267,9 +293,9 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
     int gap1_end = gaps[3];
 
     float *d_dist = new float[gap1_end - gap1_start];
-    float *seq_dist = new float[gap1_end - gap1_start];
-    memset(d_dist, 0, sizeof(float) * (gap1_end - gap1_start));
-    memset(seq_dist, 0, sizeof(float) * (gap1_end - gap1_start));
+    //float *seq_dist = new float[gap1_end - gap1_start];
+    float seq_dist = 0.0;
+
 
 
 
@@ -278,12 +304,18 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
         int anchor_t = anchor_target[i];
         for (int j = gap0_start; j < gap0_end; j++)
         {
-            if (d_ij[i][j] > 0)
+            memset(d_dist, 0, sizeof(float) * (gap1_end - gap1_start));
+            //memset(seq_dist, 0, sizeof(float) * (gap1_end - gap1_start));
+            if (d_ij[anchor_q][j] > 0)
             {
+                float d_ij_row = d_ij[anchor_q][j];
+                float * d_kl_row = d_kl[anchor_t];
+                seq_dist = std::copysign(1.0f, (anchor_q-j)) * std::log(1 + std::abs((float)(anchor_q-j)));
                 for(int l = gap1_start; l < gap1_end; l++)
                 {
-                    d_dist[l - gap1_start] = d_ij[anchor_q][j] - d_kl[anchor_t][l];
-                    seq_dist[l - gap1_start] = std::copysign(1.0f, (i-j)) * std::log(1 + std::abs((float)(j - i)));
+                    d_dist[l - gap1_start] = d_ij_row - d_kl_row[l];
+
+                    //seq_dist[l - gap1_start] = std::copysign(1.0f, (anchor_q-j)) * std::log(1 + std::abs((float)(anchor_q-j)));
                 }
                 lolscore(d_dist, seq_dist, G[j], gap1_end - gap1_start);
             }
@@ -294,16 +326,12 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
 }
 
 
-void lolAlign::lolscore(float* d_dist, float* d_seq, float* score, int length)
+void lolAlign::lolscore(float* d_dist, float d_seq, float* score, int length)
 {
-    std::vector<std::vector<float>> x(length, std::vector<float>(2));
+    std::vector<std::vector<float>> x(length, std::vector<float>(2));    
 
-    // Calculate seq_distance_feat
-    
-
-    // Fill x with seq_distance_feat and |d_ij - d_kl|
     for (int i = 0; i < length; ++i) {
-        x[i][0] = d_seq[i];
+        x[i][0] = d_seq;
         x[i][1] = d_dist[i];
     }
 

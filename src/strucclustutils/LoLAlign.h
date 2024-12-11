@@ -84,7 +84,7 @@ public:
                                             float T, float go, float ge,
                                             size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen,
                                             float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock);
-    void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d);
+    void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff);
 
 private:
 
@@ -119,9 +119,9 @@ private:
         { 7.6149112e-01,  5.7029408e-01},
         {-8.1348085e-01,  6.0702705e-01}
     };
-    float b1[3] = {0.7043129, 0.374659, 0.39905924};
+    float b1[3] = {0.7043129 , 0.374659  , 0.39905924};
 
-    float w2[3] = {-0.776632, 0.61055756, 0.5823986};
+    float w2[3] = {-0.776632  ,  0.61055756,  0.5823986};
     float b2 = -0.11200039;
 
     unsigned int queryLen;
@@ -136,7 +136,7 @@ private:
     void lolscore(float* d_ij, float* d_kl, float* d_seq, float* score, int length);
     
 
-    void lolscore(float* d_dist, float* d_seq, float* score, int length);
+    void lolscore(float* d_dist, float d_seq, float* score, int length);
     float alignment_lolScore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> anchorpoints, size_t anchor_length);
 
     void align(char *targetSeq, char * target3diSeq);
