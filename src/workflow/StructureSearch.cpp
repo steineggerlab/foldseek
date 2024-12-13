@@ -13,13 +13,14 @@ void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
     p->maskMode = 1;
     p->maskNrepeats = 10;
-    p->maskProb = 0.99995;
+    p->maskProb = 0.999995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
     p->gapOpen = 10;
     p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
+    
 }
 
 void setStructureSearchMustPassAlong(LocalParameters *p) {
@@ -32,7 +33,6 @@ void setStructureSearchMustPassAlong(LocalParameters *p) {
     p->PARAM_GAP_EXTEND.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
-    // p->maskLowerCaseMode = 0;
 }
 
 int structuresearch(int argc, const char **argv, const Command &command) {
