@@ -28,7 +28,13 @@ int makepaddeddb(int argc, const char **argv, const Command &command) {
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
-    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
+    if (par.clusterSearch == 1) {
+        cmd.addVariable("CLUSEARCH_PAR", "1");
+    } else {
+        cmd.addVariable("CLUSEARCH_PAR", "0");
+    }
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddedseqdb).c_str());
+
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here

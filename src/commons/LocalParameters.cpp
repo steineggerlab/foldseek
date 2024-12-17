@@ -213,6 +213,7 @@ LocalParameters::LocalParameters() :
     makepaddeddb.push_back(&PARAM_WRITE_LOOKUP);
     makepaddeddb.push_back(&PARAM_THREADS);
     makepaddeddb.push_back(&PARAM_V);
+    makepaddeddb.push_back(&PARAM_CLUSTER_SEARCH);
 
     //result2profiles
     result2profiles.push_back(&PARAM_SUB_MAT);
