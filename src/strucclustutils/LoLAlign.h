@@ -50,6 +50,7 @@ public:
         float T,
         float** scoreForward
     );
+    void calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int queryLen, int targetLen);
 
 
     unsigned char* seq2num(const std::string& seq, const unsigned char* aa2num) {
@@ -70,20 +71,20 @@ public:
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
                             char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
 
-    void calc_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target);
+    void calc_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length);
 
 
     static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
     void lol_fwbw(float** scoreForward, float** P,
         size_t queryLen, size_t targetLen,size_t assignTargetLen,
-        float go, float ge, float T, int length, int blocks);
+        float go, float ge, float T, int length, int blocks, int* gaps);
 
     float** allocateMemory(size_t queryLen, size_t targetLen);
     void rescaleBlocks(float **matrix, float **scale, size_t rows, size_t length, size_t blocks, size_t targetLen);
     void forwardBackwardSaveBlockMaxLocal(float** S, float** z_init,
                                             float T, float go, float ge,
                                             size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen,
-                                            float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock);
+                                            float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock, int* gaps);
     void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff);
 
 private:
@@ -98,13 +99,13 @@ private:
     float * target_x;
     float * target_y;
     float * target_z;
-    char * querySecStruc;
-    char * targetSecStruc;
     float ** scoreForward;
     float ** P;
     float ** d_ij;
     float ** d_kl;
     float ** G;
+    int * anchor_query;
+    int * anchor_target;
     float start_anchor_go = -3.0;
     float start_anchor_ge = -1.0;
     float start_anchor_T = 2.0;
@@ -135,7 +136,7 @@ private:
     void lolscore(float* d_ij, float* d_kl, float* d_seq, float* score, int length);
     
 
-    void lolscore(float* d_dist, float d_seq, float* score, int length);
+    void lolscore(float* d_dist, float d_seq, float* score, int length, int start);
     float alignment_lolScore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> anchorpoints, size_t anchor_length);
 
     void align(char *targetSeq, char * target3diSeq);
