@@ -115,5 +115,5 @@ fi
 
 # rm -f -- "${TMP_PATH}/${gpu_mapping1}"
 # rm -f -- "${TMP_PATH}/${gpu_mapping2}"
-rmdb "${TMP_PATH}/${OUT}_clutmp" 
+"$MMSEQS"  rmdb "${TMP_PATH}/${OUT}_clutmp" 
 rm -f "${TMP_PATH}/makepaddeddb.sh"
