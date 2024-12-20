@@ -106,8 +106,5 @@ if [ -n "${REMOVE_TMP}" ]; then
         fi
     fi
     rm -rf "${TMP_PATH}/search_tmp"
-    if [ -n "${GPU}" ]; then
-        rm -rf --"${TMP_PATH}/pad_tmp"
-    fi
     rm -f "${TMP_PATH}/easystructuresearch.sh"
 fi

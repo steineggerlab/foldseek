@@ -100,9 +100,15 @@ else
     rm "${OUT}_seq_ss"
     rm "${OUT}_seq_ca"
     rm "${OUT}_seq_h"
+    rm "${OUT}_seq_ss.0.lookup"
+    rm "${OUT}_seq_ss.0.index"
+    rm "${OUT}_seq_ss.0.dbtype"
+    rm "${OUT}_seq_ss.0_h"
+    rm "${OUT}_seq_ss.0_h.dbtype"
+    rm "${OUT}_seq_ss.0_h.index"
 
 fi
 
-rm -f -- "${TMP_PATH}/${gpu_mapping1}"
-rm -f -- "${TMP_PATH}/${gpu_mapping2}"
+# rm -f -- "${TMP_PATH}/${gpu_mapping1}"
+# rm -f -- "${TMP_PATH}/${gpu_mapping2}"
 rm -f "${TMP_PATH}/makepaddeddb.sh"
