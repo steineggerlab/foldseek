@@ -79,10 +79,6 @@ else
         --subdb-mode 1 ${THREADS_PAR} \
         || fail "renamedbkeys died"
 
-    # shellcheck disable=SC2086
-    "$MMSEQS" lndb "${OUT}_ss"  "${OUT}_seq_ss.0" ${VERBOSITY} \
-        || fail "lndb died"
-
     if exists "${IN}_clu.dbtype"; then
         # shellcheck disable=SC2086
         "$MMSEQS" filterdb "${IN}_clu" "${TMP_PATH}/${OUT}_clutmp" --mapping-file  "${TMP_PATH}/${gpu_mapping2}"  ${VERBOSITY} ${THREADS_PAR} \
@@ -104,16 +100,10 @@ else
     rm "${OUT}_seq_ss"
     rm "${OUT}_seq_ca"
     rm "${OUT}_seq_h"
-    rm "${OUT}_seq_ss.0.lookup"
-    rm "${OUT}_seq_ss.0.index"
-    rm "${OUT}_seq_ss.0.dbtype"
-    rm "${OUT}_seq_ss.0_h"
-    rm "${OUT}_seq_ss.0_h.dbtype"
-    rm "${OUT}_seq_ss.0_h.index"
 
 fi
 
 # rm -f -- "${TMP_PATH}/${gpu_mapping1}"
 # rm -f -- "${TMP_PATH}/${gpu_mapping2}"
-"$MMSEQS"  rmdb "${TMP_PATH}/${OUT}_clutmp" 
+"$MMSEQS" rmdb "${TMP_PATH}/${OUT}_clutmp" 
 rm -f "${TMP_PATH}/makepaddeddb.sh"
