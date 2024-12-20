@@ -85,9 +85,13 @@ else
 
     if exists "${IN}_clu.dbtype"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" renamedbkeys "${TMP_PATH}/${gpu_mapping1}" "${IN}_clu" "${OUT}_clu"  \
-            --subdb-mode 1 ${THREADS_PAR} \
+        "$MMSEQS" filterdb "${IN}_clu" "${TMP_PATH}/${OUT}_clutmp" --mapping-file  "${TMP_PATH}/${gpu_mapping2}"  ${VERBOSITY} ${THREADS_PAR} \
+            || fail "filterdb died"
+        # shellcheck disable=SC2086
+        "$MMSEQS" renamedbkeys "${TMP_PATH}/${gpu_mapping1}" "${TMP_PATH}/${OUT}_clutmp" "${OUT}_clu"  \
+            --subdb-mode 0 ${THREADS_PAR} \
             || fail "renamedbkeys died"
+        
     fi
 
     if exists "${IN}_aln.dbtype"; then
@@ -111,4 +115,5 @@ fi
 
 # rm -f -- "${TMP_PATH}/${gpu_mapping1}"
 # rm -f -- "${TMP_PATH}/${gpu_mapping2}"
+rmdb "${TMP_PATH}/${OUT}_clutmp" 
 rm -f "${TMP_PATH}/makepaddeddb.sh"
