@@ -495,7 +495,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "BFVD",
                 "BFVD Big fantastic virus database (predicted viral protein structures based on the viral sequence representatives of the UniRef30 clusters",
-                "Kim R et al. BFVD - a large repository of predicted viral protein structures. bioRxiv, 2024.09.08.611582v1 (2024)",
+                "Kim R et al. BFVD - a large repository of predicted viral protein structures. Nucleic Acids Research, gkae1119 (2024)",
                 "https://bfvd.steineggerlab.workers.dev",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
@@ -503,7 +503,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "ProstT5",
                 "Protein language model to predict 3Di directly from sequence.",
-                "Heinzinger et al. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, 2023.07.23.550085v2 (2024)",
+                "Heinzinger et al. Bilingual language model for protein sequence and structure. NAR Genomics and Bioinformatics, lqae150 (2024)",
                 "https://huggingface.co/Rostlab/ProstT5",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}

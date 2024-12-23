@@ -158,6 +158,7 @@ LocalParameters::LocalParameters() :
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
+    easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
     structureclusterworkflow = combineList(prefilter, structurealign);
@@ -283,7 +284,7 @@ LocalParameters::LocalParameters() :
     filtInterfaceLddtThr = 0.0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");
-    citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, doi:10.1101/2023.07.23.550085 (2024)");
+    citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
     
     //rewrite param vals.
     PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";

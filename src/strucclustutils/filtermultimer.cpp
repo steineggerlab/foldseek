@@ -87,13 +87,15 @@ public:
     std::vector<double> tAlnChainTms;
 
     ComplexFilterCriteria() {}
-    ComplexFilterCriteria(unsigned int targetComplexId, double qTm, double tTm, float tstring[3], float ustring[3][3]) :
-                            targetComplexId(targetComplexId), qTotalAlnLen(0), tTotalAlnLen(0), interfaceLddt(0), qTm(qTm), tTm(tTm) {
-                                std::copy(tstring, tstring + 3, t);
-                                for (int i = 0; i < 3; i++) {
-                                    std::copy(ustring[i], ustring[i] + 3, u[i]);
-                                }
-                            }
+    ComplexFilterCriteria(
+        unsigned int targetComplexId, double qTm, double tTm, float tstring[3], float ustring[3][3]
+    ) :
+        targetComplexId(targetComplexId), qTotalAlnLen(0), tTotalAlnLen(0), qCov(0), tCov(0), interfaceLddt(0), qTm(qTm), tTm(tTm), avgTm(0) {
+        std::copy(tstring, tstring + 3, t);
+        for (int i = 0; i < 3; i++) {
+            std::copy(ustring[i], ustring[i] + 3, u[i]);
+        }
+    }
     ~ComplexFilterCriteria() {
         qAlnChainTms.clear();
         tAlnChainTms.clear();
@@ -650,10 +652,10 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
 
                         unsigned int alnLen = cigarToAlignedLength(res.backtrace);
                         cmplfiltcrit.fillChainAlignment(qChainKey, tChainKey, alnLen, qdata, tdata, res.backtrace, res.qStartPos, res.dbStartPos, res.qLen, res.dbLen);
-                        if (par.filtChainTmThr > 0.0f) {
-                            double chainTm = computeChainTmScore(cmplfiltcrit.qAlnChains.back(), cmplfiltcrit.tAlnChains.back(), t, u, res.dbLen);
-                            cmplfiltcrit.updateChainTmScore(chainTm / res.qLen, chainTm / res.dbLen);
-                        }
+                        // if (par.filtChainTmThr > 0.0f) {
+                        double chainTm = computeChainTmScore(cmplfiltcrit.qAlnChains.back(), cmplfiltcrit.tAlnChains.back(), t, u, res.dbLen);
+                        cmplfiltcrit.updateChainTmScore(chainTm / res.qLen, chainTm / res.dbLen);
+                        // }
                     }
                 } // while end
             }

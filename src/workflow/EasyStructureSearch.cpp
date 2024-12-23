@@ -20,6 +20,7 @@ void setEasyStructureSearchDefaults(Parameters *p) {
     p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
+    p->reportMode = 2;
 }
 void setEasyStructureSearchMustPassAlong(Parameters *p) {
     p->PARAM_K.wasSet = true;
@@ -50,6 +51,8 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
+    par.overrideParameterDescription(par.PARAM_REPORT_MODE, "Taxonomy report mode 0: Kraken 1: Krona 2: Skip taxonomy report", "^[0-2]{1}$", 0);
+
     setEasyStructureSearchDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setEasyStructureSearchMustPassAlong(&par);
@@ -69,6 +72,10 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         bool needLDDT = false;
         LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
                                     needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT);
+        if (par.reportMode != 2) {
+            needTaxonomy = true;
+            needTaxonomyMapping = true;
+        }
     }
 
     if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM ||
@@ -128,6 +135,9 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("SUMMARIZE_PAR", par.createParameterString(par.summarizeresult).c_str());
+
+    cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
+    cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
 
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);

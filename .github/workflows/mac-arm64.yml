@@ -8,16 +8,20 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
 
+      - name: Dependencies
+        run: |
+          brew install -f --overwrite cmake libomp rustup
+          rustup-init --profile minimal -q -y
+
       - name: Build
         run: |
           mkdir -p build
-          rustup update
           cd build
           LIBOMP=$(brew --prefix libomp)
           cmake \
