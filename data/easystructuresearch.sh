@@ -53,7 +53,7 @@ fi
 
 if [ -n "${TAXONOMY}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" taxonomyreport "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${RESULTS}_report" ${TAXONOMYREPORT_PAR} \
+    "$MMSEQS" taxonomyreport "${TARGET}" "${INTERMEDIATE}" "${RESULTS}_report" ${TAXONOMYREPORT_PAR} \
         || fail "taxonomyreport died"
 fi
 
