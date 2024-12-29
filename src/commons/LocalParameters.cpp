@@ -215,35 +215,35 @@ LocalParameters::LocalParameters() :
     makepaddeddb.push_back(&PARAM_V);
     makepaddeddb.push_back(&PARAM_CLUSTER_SEARCH);
 
-    //result2profiles
-    result2profiles.push_back(&PARAM_SUB_MAT);
-    result2profiles.push_back(&PARAM_E);
-    result2profiles.push_back(&PARAM_MASK_PROFILE);
-    result2profiles.push_back(&PARAM_E_PROFILE);
-    result2profiles.push_back(&PARAM_NO_COMP_BIAS_CORR);
-    result2profiles.push_back(&PARAM_NO_COMP_BIAS_CORR_SCALE);
-    result2profiles.push_back(&PARAM_WG);
-    result2profiles.push_back(&PARAM_ALLOW_DELETION);
-    result2profiles.push_back(&PARAM_FILTER_MSA);
-    result2profiles.push_back(&PARAM_FILTER_MIN_ENABLE);
-    result2profiles.push_back(&PARAM_FILTER_MAX_SEQ_ID);
-    result2profiles.push_back(&PARAM_FILTER_QID);
-    result2profiles.push_back(&PARAM_FILTER_QSC);
-    result2profiles.push_back(&PARAM_FILTER_COV);
-    result2profiles.push_back(&PARAM_FILTER_NDIFF);
-    result2profiles.push_back(&PARAM_PC_MODE);
-    result2profiles.push_back(&PARAM_PCA);
-    result2profiles.push_back(&PARAM_PCB);
-    result2profiles.push_back(&PARAM_PRELOAD_MODE);
-    result2profiles.push_back(&PARAM_GAP_OPEN);
-    result2profiles.push_back(&PARAM_GAP_EXTEND);
+    //result2structprofile
+    result2structprofile.push_back(&PARAM_SUB_MAT);
+    result2structprofile.push_back(&PARAM_E);
+    result2structprofile.push_back(&PARAM_MASK_PROFILE);
+    result2structprofile.push_back(&PARAM_E_PROFILE);
+    result2structprofile.push_back(&PARAM_NO_COMP_BIAS_CORR);
+    result2structprofile.push_back(&PARAM_NO_COMP_BIAS_CORR_SCALE);
+    result2structprofile.push_back(&PARAM_WG);
+    result2structprofile.push_back(&PARAM_ALLOW_DELETION);
+    result2structprofile.push_back(&PARAM_FILTER_MSA);
+    result2structprofile.push_back(&PARAM_FILTER_MIN_ENABLE);
+    result2structprofile.push_back(&PARAM_FILTER_MAX_SEQ_ID);
+    result2structprofile.push_back(&PARAM_FILTER_QID);
+    result2structprofile.push_back(&PARAM_FILTER_QSC);
+    result2structprofile.push_back(&PARAM_FILTER_COV);
+    result2structprofile.push_back(&PARAM_FILTER_NDIFF);
+    result2structprofile.push_back(&PARAM_PC_MODE);
+    result2structprofile.push_back(&PARAM_PCA);
+    result2structprofile.push_back(&PARAM_PCB);
+    result2structprofile.push_back(&PARAM_PRELOAD_MODE);
+    result2structprofile.push_back(&PARAM_GAP_OPEN);
+    result2structprofile.push_back(&PARAM_GAP_EXTEND);
 #ifdef GAP_POS_SCORING
-    result2profiles.push_back(&PARAM_GAP_PSEUDOCOUNT);
+    result2structprofile.push_back(&PARAM_GAP_PSEUDOCOUNT);
 #endif
-    result2profiles.push_back(&PARAM_THREADS);
-    result2profiles.push_back(&PARAM_COMPRESSED);
-    result2profiles.push_back(&PARAM_V);
-    result2profiles.push_back(&PARAM_PROFILE_OUTPUT_MODE);
+    result2structprofile.push_back(&PARAM_THREADS);
+    result2structprofile.push_back(&PARAM_COMPRESSED);
+    result2structprofile.push_back(&PARAM_V);
+    result2structprofile.push_back(&PARAM_PROFILE_OUTPUT_MODE);
     //createstructsubdb
     createstructsubdb.push_back(&PARAM_SUBDB_MODE);
     createstructsubdb.push_back(&PARAM_ID_MODE);

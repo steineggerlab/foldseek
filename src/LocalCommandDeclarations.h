@@ -29,6 +29,6 @@ extern int createmultimerreport(int argc, const char **argv, const Command &comm
 extern int expandmultimer(int argc, const char **argv, const Command &command);
 extern int multimersearch(int argc, const char **argv, const Command &command);
 extern int makepaddeddb(int argc, const char **argv, const Command& command);
-extern int result2profiles(int argc, const char **argv, const Command& command);
+extern int result2structprofile(int argc, const char **argv, const Command& command);
 extern int createstructsubdb(int argc, const char **argv, const Command& command);
 #endif

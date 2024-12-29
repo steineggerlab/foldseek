@@ -79,7 +79,7 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
 
   if notExists "${TMP_PATH}/pref_filter1.dbtype"; then
       # shellcheck disable=SC2086
-      "$MMSEQS" base:createsubdb "${TMP_PATH}/order_redundancy" "${TMP_PATH}/pref" "${TMP_PATH}/pref_filter1" ${VERBOSITY} --subdb-mode 1 \
+      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${TMP_PATH}/pref" "${TMP_PATH}/pref_filter1" "${TMP_PATH}" ${VERBOSITY} --subdb-mode 1 \
           || fail "Createsubdb step died"
   fi
 
@@ -99,7 +99,7 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
 
   if notExists "${TMP_PATH}/pre_clustered_seqs.dbtype"; then
       # shellcheck disable=SC2086
-      "$MMSEQS" base:createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}" "${TMP_PATH}/pre_clustered_seqs" ${VERBOSITY} --subdb-mode 1 \
+      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}" "${TMP_PATH}/pre_clustered_seqs" "${TMP_PATH}" ${VERBOSITY} --subdb-mode 1 \
           || fail "Createsubdb pre_clustered_seqs step died"
   fi
 

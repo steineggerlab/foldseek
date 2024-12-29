@@ -9,17 +9,11 @@
 int createstructsubdb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    std::string tmpDir = par.filenames.back(); 
-    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
-    if (par.reuseLatest) {
-        hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
-    }
-    tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
-    par.filenames.pop_back();
-    std::string program = tmpDir + "/createstructsubdb.sh";
+
+    std::string program = par.db3 + ".sh";
     FileUtil::writeFile(program, createstructsubdb_sh, createstructsubdb_sh_len);
+
     CommandCaller cmd;
-    cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("CREATESTRUCTSUBDB_PAR", par.createParameterString(par.createstructsubdb).c_str());
     cmd.execProgram(program.c_str(), par.filenames);
 
