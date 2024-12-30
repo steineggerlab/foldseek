@@ -1,14 +1,11 @@
 #!/bin/sh -e
 
-IN="$1"
-OUT="$2"
-
 exists() {
 	[ -f "$1" ]
 }
 
 if [ "${CLUSEARCH_PAR}" = 0 ]; then
-    if [ -e "${IN}_ss.dbtype" ]; then
+    if exists "${IN}_ss.dbtype"; then
         # shellcheck disable=SC2086
         "$MMSEQS" lndb "${IN}_h"  "${OUT}_tmp_ss_h" ${VERBOSITY} \
             || fail "lndb died"
@@ -31,14 +28,15 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
 
         awk '{ print $3"\t"$1; }' "${OUT}_ss.lookup" > "${OUT}_ss.gpu_mapping1"
 
-        if [ -e "${IN}.dbtype" ]; then
+
+        if exists "${IN}.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}" "${OUT}" \
                 --subdb-mode 1 ${THREADS_PAR} \
                 || fail "renamedbkeys died"
         fi
 
-        if [ -e "${IN}_ca.dbtype" ]; then
+        if exists "${IN}_ca.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}_ca" "${OUT}_ca" \
                 --subdb-mode 1 ${THREADS_PAR} \
@@ -46,21 +44,21 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
         fi
         rm -f -- "${OUT}_ss.gpu_mapping1"
     else
-        if [ -e "${IN}.dbtype" ]; then
+        if exists "${IN}.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" base:makepaddedseqdb "${IN}" "${OUT}" ${MAKEPADDEDSEQDB_PAR} \
                 || fail "mmseqs makepaddedseqdb died"
         fi
 
-        if [ -e "${IN}_ca.dbtype" ]; then
+        if exists "${IN}_ca.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" base:makepaddedseqdb "${IN}_ca" "${OUT}_ca" ${MAKEPADDEDSEQDB_PAR} \
                 || fail "mmseqs makepaddedseqdb died"
         fi
     fi
 else
-    if [ -e "${IN}_ss.dbtype" ]; then
-        # shellcheck disable=SC2086
+    if exists "${IN}_ss.dbtype"; then
+        # # shellcheck disable=SC2086
         "$MMSEQS" lndb "${IN}_h"  "${OUT}_tmp_ss_h" ${VERBOSITY} \
             || fail "lndb died"
 
@@ -150,7 +148,7 @@ else
         rm "${OUT}_seq_h"
 
     else
-        if [ -e "${IN}.dbtype" ]; then
+        if exists "${IN}.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" base:makepaddedseqdb "${IN}" "${OUT}" ${MAKEPADDEDSEQDB_PAR} \
                 || fail "mmseqs makepaddedseqdb died"
