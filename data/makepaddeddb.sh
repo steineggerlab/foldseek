@@ -61,7 +61,6 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
 else
     if [ -e "${IN}_ss.dbtype" ]; then
         # shellcheck disable=SC2086
-        # shellcheck disable=SC2086
         "$MMSEQS" lndb "${IN}_h"  "${OUT}_tmp_ss_h" ${VERBOSITY} \
             || fail "lndb died"
 
