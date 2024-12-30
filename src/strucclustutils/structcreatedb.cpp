@@ -18,7 +18,7 @@
 #include "MathUtil.h"
 
 #ifdef HAVE_PROSTT5
-#include "prostt5.h"
+#include "ProstT5.h"
 #endif
 
 #include <iostream>
@@ -572,15 +572,15 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         Debug::Progress progress(reader.getSize());
 
         std::vector<std::string> prefix = { "", "/model" };
-        std::vector<std::string> suffix = { "/model.safetensors", "/model.gguf" };
-        bool quantized = false;
+        std::vector<std::string> suffix = { "", "/model.gguf" };
+        // bool quantized = false;
         std::string modelWeights;
         for (size_t i = 0; i < prefix.size(); ++i) {
             for (size_t j = 0; j < suffix.size(); ++j) {
                 std::string tensorPath = par.prostt5Model + prefix[i] + suffix[j];
                 if (FileUtil::fileExists(tensorPath.c_str())) {
                     modelWeights = par.prostt5Model + prefix[i];
-                    quantized = suffix[j].find("safetensors") == std::string::npos;
+                    // quantized = suffix[j].find("safetensors") == std::string::npos;
                     break;
                 }
             }
@@ -589,43 +589,32 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
             return EXIT_FAILURE;
         }
-        ProstT5 *model = prostt5_load(modelWeights.c_str(), false, par.gpu == 0, false, quantized);
-        if (model == NULL) {
-            // error message is already printed by prostt5_load
-            return EXIT_FAILURE;
-        }
-#ifdef OPENMP
-        size_t localThreads = par.gpu != 0 ? 1 : par.threads;
-#endif
-#pragma omp parallel num_threads(localThreads)
+        ProstT5 model(modelWeights.c_str());
+// #ifdef OPENMP
+//         size_t localThreads = par.gpu != 0 ? 1 : par.threads;
+// #endif
+// #pragma omp parallel num_threads(localThreads)
         {
             int thread_idx = 0;
-#ifdef OPENMP
-            thread_idx = omp_get_thread_num();
-#endif
+// #ifdef OPENMP
+            // thread_idx = omp_get_thread_num();
+// #endif
             const char newline = '\n';
-#pragma omp for schedule(dynamic, 1)
+// #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
                 unsigned int key = reader.getDbKey(i);
                 char* seq = reader.getData(i, thread_idx);
                 size_t length = reader.getSeqLen(i);
-                const char *result = prostt5_predict_slice(model, seq, length);
-                if (result != NULL) {
-                    writer.writeStart(thread_idx);
-                    writer.writeAdd(result, length, thread_idx);
-                    writer.writeAdd(&newline, 1, thread_idx);
-                    writer.writeEnd(key, thread_idx);
-                    free((void*)result);
-                } else {
-                    Debug(Debug::ERROR) << "Prediction failed\n";
-                    EXIT(EXIT_FAILURE);
-                }
+                std::string result = model.predict(std::string(seq, length));
+                writer.writeStart(thread_idx);
+                writer.writeAdd(result.c_str(), result.length(), thread_idx);
+                writer.writeAdd(&newline, 1, thread_idx);
+                writer.writeEnd(key, thread_idx);
                 progress.updateProgress();
             }
         }
         writer.close(true);
         reader.close();
-        prostt5_free(model);
 
         DBReader<unsigned int> resultReader(ssDb.c_str(), (ssDb+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
         resultReader.open(DBReader<unsigned int>::NOSORT);

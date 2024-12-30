@@ -34,6 +34,11 @@ set_target_properties(gemmiwrapper PROPERTIES COMPILE_FLAGS "${COMPILE_TMP} -w" 
 set_property(TARGET gemmiwrapper APPEND PROPERTY COMPILE_DEFINITIONS ${DEF_TMP})
 set_property(TARGET gemmiwrapper APPEND PROPERTY INCLUDE_DIRECTORIES ${INCL_TMP})
 restore_exceptions(gemmiwrapper)
-target_link_libraries(gemmiwrapper foldcomp)
+target_link_libraries(gemmiwrapper foldcomp z)
 target_include_directories(gemmiwrapper PRIVATE ../../lib/gemmi)
 target_include_directories(gemmiwrapper PRIVATE ../../lib/foldcomp/src)
+
+set(prostt5_source_files
+    strucclustutils/ProstT5.h
+    strucclustutils/ProstT5.cpp
+    PARENT_SCOPE)
