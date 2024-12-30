@@ -43,6 +43,8 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
                 || fail "renamedbkeys died"
         fi
         rm -f -- "${OUT}_ss.gpu_mapping1"
+
+        awk '{print $1"\t"$2"\t"int($1/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
     else
         if exists "${IN}.dbtype"; then
             # shellcheck disable=SC2086
@@ -139,6 +141,7 @@ else
             "$MMSEQS" rmdb "${OUT}_alntmp" ${VERBOSITY} \
                 || fail "rmdb died"
         fi
+        awk '{print $1"\t"$2"\t"int($1/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
         rm -f -- "${OUT}_ss.gpu_mapping2"
 
