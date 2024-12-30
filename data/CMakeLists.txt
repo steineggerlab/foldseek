@@ -14,7 +14,7 @@ set(COMPILED_RESOURCES
         main.js
         vendor.js.zst
         makepaddeddb.sh
-        result2profiles.sh
+        result2structprofile.sh
         createstructsubdb.sh
         multimersearch.sh
         easymultimersearch.sh

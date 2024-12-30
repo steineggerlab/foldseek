@@ -174,7 +174,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
 
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         par.scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("blosum62.out", "nucleotide.out"));
-        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2profiles).c_str());
+        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());

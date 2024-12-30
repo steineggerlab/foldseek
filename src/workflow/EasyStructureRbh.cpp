@@ -29,8 +29,8 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     for (size_t i = 0; i < par.translatenucs.size(); i++){
         par.translatenucs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
-    for (size_t i = 0; i < par.result2profiles.size(); i++){
-        par.result2profiles[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    for (size_t i = 0; i < par.result2structprofile.size(); i++){
+        par.result2structprofile[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
     par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
