@@ -1,4 +1,0 @@
-[package]
-name = "rayon"
-version = "1.10.0"
-edition = "2021"
