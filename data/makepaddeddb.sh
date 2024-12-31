@@ -43,6 +43,13 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
                 || fail "renamedbkeys died"
         fi
 
+        if exists "${IN}_h.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}_h" "${OUT}_h" \
+                --subdb-mode 1 ${THREADS_PAR} \
+                || fail "renamedbkeys died"
+        fi
+
         rm -f -- "${OUT}.lookup"
         awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
@@ -87,15 +94,26 @@ else
         awk 'BEGIN{i=0} FNR==NR{name[$3]=1;print $3"\t"$1;i++; next} {if (!($1 in name)){print $1"\t"i; i++}}' \
         "${OUT}_ss.lookup" "${IN}.lookup" > "${OUT}_ss.gpu_mapping2"
 
-        # shellcheck disable=SC2086
-        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}" "${OUT}" \
-            --subdb-mode 1 ${THREADS_PAR} \
-            || fail "renamedbkeys died"
+        if exists "${IN}.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}" "${OUT}" \
+                --subdb-mode 1 ${THREADS_PAR} \
+                || fail "renamedbkeys died"
+        fi
 
-        # shellcheck disable=SC2086
-        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}_ca" "${OUT}_ca" \
-            --subdb-mode 1 ${THREADS_PAR} \
-            || fail "renamedbkeys died"
+        if exists "${IN}_ca.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}_ca" "${OUT}_ca" \
+                --subdb-mode 1 ${THREADS_PAR} \
+                || fail "renamedbkeys died"
+        fi
+
+        if exists "${IN}_h.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${IN}_h" "${OUT}_h" \
+                --subdb-mode 1 ${THREADS_PAR} \
+                || fail "renamedbkeys died"
+        fi
 
         # shellcheck disable=SC2086
         "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq" "${OUT}_seq" \
