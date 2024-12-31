@@ -2,6 +2,9 @@
 
 #include "llama.h"
 
+#include <limits>
+#include <vector>
+
 static char number_to_char(unsigned int n) {
     switch(n) {
         case 0:  return 'A';
@@ -90,7 +93,8 @@ static std::vector<ggml_backend_dev_t> parse_device_list(const std::string & val
     std::vector<ggml_backend_dev_t> devices;
     auto dev_names = string_split(value, ',');
     if (dev_names.empty()) {
-        throw std::invalid_argument("no devices specified");
+        // throw std::invalid_argument("no devices specified");
+        return {};
     }
     if (dev_names.size() == 1 && dev_names[0] == "none") {
         devices.push_back(nullptr);
