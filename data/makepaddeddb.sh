@@ -42,9 +42,11 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
                 --subdb-mode 1 ${THREADS_PAR} \
                 || fail "renamedbkeys died"
         fi
+
+        rm -f -- "${OUT}.lookup"
+        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
 
-        awk '{print $1"\t"$2"\t"int($1/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
     else
         if exists "${IN}.dbtype"; then
             # shellcheck disable=SC2086
@@ -141,7 +143,9 @@ else
             "$MMSEQS" rmdb "${OUT}_alntmp" ${VERBOSITY} \
                 || fail "rmdb died"
         fi
-        awk '{print $1"\t"$2"\t"int($1/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
+
+        rm -f -- "${OUT}.lookup"
+        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
         rm -f -- "${OUT}_ss.gpu_mapping2"
 
@@ -161,4 +165,4 @@ fi
 
 if [ -e "${OUT}.sh" ]; then
   rm -f -- "${OUT}.sh"
-fi
+fi 
