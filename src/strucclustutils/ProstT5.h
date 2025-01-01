@@ -8,7 +8,7 @@ struct llama_context;
 
 class ProstT5 {
 public:
-    ProstT5(const std::string& model_file);
+    ProstT5(const std::string& model_file, bool gpu);
     ~ProstT5();
     
     std::string predict(const std::string& aa);
