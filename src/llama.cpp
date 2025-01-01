@@ -7458,7 +7458,7 @@ static const std::map<llm_tensor, llm_tensor_info> llm_tensor_info_mapping = {
     {LLM_TENSOR_FFN_UP_EXPS,                {LLM_TENSOR_LAYER_REPEATING, GGML_OP_MUL_MAT_ID}},
     // this tensor is loaded for T5, but never used
     {LLM_TENSOR_DEC_CROSS_ATTN_REL_B,       {LLM_TENSOR_LAYER_REPEATING, GGML_OP_NONE}},
-    {LLM_TENSOR_CONV1D,                     {LLM_TENSOR_LAYER_INPUT,     GGML_OP_IM2COL}},
+    {LLM_TENSOR_CONV1D,                     {LLM_TENSOR_LAYER_OUTPUT,     GGML_OP_IM2COL}},
     {LLM_TENSOR_POS_NET_NORM,               {LLM_TENSOR_LAYER_REPEATING, GGML_OP_MUL}},
     {LLM_TENSOR_POS_NET_NORM1,              {LLM_TENSOR_LAYER_REPEATING, GGML_OP_MUL}},
     {LLM_TENSOR_POS_NET_NORM2,              {LLM_TENSOR_LAYER_REPEATING, GGML_OP_MUL}},
@@ -7633,11 +7633,11 @@ static llama_model::buft_list_t make_cpu_buft_list(llama_model & model) {
     auto ggml_backend_dev_get_extra_bufts_fn = (ggml_backend_dev_get_extra_bufts_t)
         ggml_backend_reg_get_proc_address(cpu_reg, "ggml_backend_dev_get_extra_bufts");
     if (ggml_backend_dev_get_extra_bufts_fn) {
-        ggml_backend_buffer_type_t * extra_bufts = ggml_backend_dev_get_extra_bufts_fn(cpu_dev);
-        while (extra_bufts && *extra_bufts) {
-            buft_list.emplace_back(cpu_dev, *extra_bufts);
-            ++extra_bufts;
-        }
+        // ggml_backend_buffer_type_t * extra_bufts = ggml_backend_dev_get_extra_bufts_fn(cpu_dev);
+        // while (extra_bufts && *extra_bufts) {
+        //     buft_list.emplace_back(cpu_dev, *extra_bufts);
+        //     ++extra_bufts;
+        // }
     }
 
     // add a host buffer type
@@ -11210,10 +11210,16 @@ struct llm_build_context {
 
         cb(cur, "result_embd_pooled", -1);
         ggml_build_forward_expand(gf, cur);
+
+#if 1
+        // ggml_graph_print(gf);
         // The shape of the raw embeddings is [enc_input_size, n_embd], or conceptually (S, H).
         // If we want a 3D tensor shape [B=1, S=enc_input_size, H=n_embd], we can do:
         //int B = cur->ne[2];
         //int H = cur->ne[0];
+
+#define PRINT_TENSOR_DIMS(name, tensor) \
+    std::cout << name << " " << (tensor)->ne[0] << "\t" << (tensor)->ne[1] << "\t" << (tensor)->ne[2] << "\t" << (tensor)->ne[3] << std::endl;
 
         // 1) Slicing: skip first row in dim1
         //std::cout << "n_tokens " << n_tokens << std::endl;
@@ -11233,14 +11239,19 @@ struct llm_build_context {
                 /* nb2   */ cur->nb[2],
                 /* offset*/ offset_bytes
                 );
+        cb(cur_sliced, "cur_sliced", -1);
         //std::cout << "cur_sliced " << cur_sliced->ne[0] << "\t" << cur_sliced->ne[1] << "\t" << cur_sliced->ne[2] << std::endl;
         //ggml_tensor * cur_contiguous = ggml_cont_3d(ctx0, cur_sliced, H, new_seq_len, B);
+
         ggml_tensor * cur_padded = ggml_pad(ctx0, cur_sliced,
                 /*p0=*/0, /*p1=*/1,  // no pad on the n_embd dimension
                 /*p2=*/0, /*p3=*/0   // pad +1 at the end of the tokens dimension
                );
-        cb(cur_padded, "result_embd_pooled_old", -1);
+        cb(cur_padded, "cur_padded", -1);
+
         ggml_tensor* permuted_tensor = ggml_permute(ctx0, cur_padded,  2, 1, 0, 3); // New order: 0 -> 0, 1 -> 2, 2 -> 1, 3 remains unchanged
+        cb(permuted_tensor, "permuted_tensor", -1);\
+
         ggml_tensor* unsqueezed_tensor = ggml_reshape_4d(
             ctx0, ggml_cont(ctx0, permuted_tensor),
             permuted_tensor->ne[0],   // Dimension 0 (unchanged)
@@ -11248,32 +11259,41 @@ struct llm_build_context {
             permuted_tensor->ne[2],   // Dimension 2 (unchanged)
             1                    // New singleton dimension
         );
-         
-        // Check the new dimensions
-#define PRINT_TENSOR_DIMS(name, tensor) \
-    std::cout << name << " " << (tensor)->ne[0] << "\t" << (tensor)->ne[1] << "\t" << (tensor)->ne[2] << "\t" << (tensor)->ne[3] << std::endl;
-        
+        cb(unsqueezed_tensor, "unsqueezed_tensor", -1);
         //PRINT_TENSOR_DIMS("unsqueezed_tensor", unsqueezed_tensor)
         //std::cout << "cur_padded " << cur_padded->ne[0] << "\t" << cur_padded->ne[1] << "\t" << cur_padded->ne[2] << std::endl;
         //PRINT_TENSOR_DIMS("permuted_tensor", permuted_tensor)
         //PRINT_TENSOR_DIMS("conv0", model.conv0)
-        ggml_tensor* cur_conv0 = ggml_conv_2d(ctx0, model.conv0, unsqueezed_tensor, 1, 1, 0, 3, 1, 1);
+        ggml_tensor* cur_conv0 = ggml_conv_2d(ctx0, ggml_cont(ctx0, model.conv0), unsqueezed_tensor, 1, 1, 0, 3, 1, 1);
+        cb(cur_conv0, "cur_conv0", -1);
+        // ggml_build_forward_expand(gf, cur_conv0);
+        // ggml_graph_print(gf);
+
         //PRINT_TENSOR_DIMS("cur_conv0", cur_conv0)
         //PRINT_TENSOR_DIMS("model.conv0_b", model.conv0_b)
         ggml_tensor* cur_conv0b = ggml_add(ctx0, cur_conv0, ggml_reshape_4d(ctx0, model.conv0_b, 1, 1, 32, 1));
+        cb(cur_conv0b, "cur_conv0b", -1);
+
         ggml_build_forward_expand(gf, cur_conv0b);
 
         //cb(cur_conv0b, "result_embd_pooled", -1);
         //PRINT_TENSOR_DIMS("cur_conv0b", cur_conv0b)
         ggml_tensor* cur_relu = ggml_relu(ctx0, cur_conv0b);
+        cb(cur_relu, "cur_relu", -1);
+
         //PRINT_TENSOR_DIMS("cur_relu", cur_relu)
         ggml_tensor* cur_conv3 = ggml_conv_2d(ctx0, model.conv3, cur_relu, 1, 1, 0, 3, 1, 1);
+        cb(cur_conv3, "cur_conv3", -1);
+
         //PRINT_TENSOR_DIMS("cur_conv3", cur_conv3)
         ggml_tensor* cur_conv3b = ggml_add(ctx0, cur_conv3, ggml_reshape_4d(ctx0, model.conv3_b, 1, 1, 20, 1));
         //PRINT_TENSOR_DIMS("cur_conv3b", cur_conv3b)
         ggml_build_forward_expand(gf, cur_conv3b);
         cb(cur_conv3b, "result_embd_pooled", -1);
 
+        //PRINT_TENSOR_DIMS("cur_conv3b", cur_conv3b)
+        ggml_build_forward_expand(gf, cur_conv3b);
+#endif
         return gf;
     }
 
