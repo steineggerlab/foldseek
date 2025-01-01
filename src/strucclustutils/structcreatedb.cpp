@@ -589,7 +589,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
             return EXIT_FAILURE;
         }
-        ProstT5 model(modelWeights.c_str());
+        ProstT5 model(modelWeights.c_str(), par.gpu);
 // #ifdef OPENMP
 //         size_t localThreads = par.gpu != 0 ? 1 : par.threads;
 // #endif

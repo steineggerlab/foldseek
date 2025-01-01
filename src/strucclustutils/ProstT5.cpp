@@ -291,7 +291,7 @@ static struct init_result init_from_params(common_params & params) {
 struct llama_model;
 struct llama_context;
 
-ProstT5::ProstT5(const std::string& model_file) {
+ProstT5::ProstT5(const std::string& model_file, bool gpu) {
     llama_log_set([](ggml_log_level, const char *, void *) {}, NULL);
 
     ggml_backend_load_all();
@@ -302,7 +302,22 @@ ProstT5::ProstT5(const std::string& model_file) {
     params.model = model_file;
     params.cpuparams.n_threads = 1;
     params.use_mmap = false;
-    params.devices = parse_device_list("none");
+
+    std::string device = "none";
+    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+        auto * dev = ggml_backend_dev_get(i);
+        std::string name = ggml_backend_dev_name(dev);
+        if (name == "Metal") {
+            device = name;
+            break;
+        }
+
+        if (gpu && ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_GPU) {
+            device = ggml_backend_dev_name(dev);
+            break;
+        }
+    }
+    params.devices = parse_device_list(device);
 
     llama_backend_init();
     llama_numa_init(params.numa);
@@ -327,9 +342,10 @@ std::string ProstT5::predict(const std::string& aa) {
     std::vector<llama_token> embd_inp;
     embd_inp.reserve(aa.length() + 2);
     embd_inp.emplace_back(llama_token_get_token(model, "<AA2fold>"));
-    llama_token unk_aa = llama_token_get_token(model, "x");
+    llama_token unk_aa = llama_token_get_token(model, "▁X");
     for (size_t i = 0; i < aa.length(); ++i) {
-        std::string current_char(1, aa[i] | 0x20);
+        std::string current_char("▁");
+        current_char.append(1, toupper(aa[i]));
         llama_token token = llama_token_get_token(model, current_char.c_str());
         if (token == LLAMA_TOKEN_NULL) {
             embd_inp.emplace_back(unk_aa);
@@ -338,6 +354,7 @@ std::string ProstT5::predict(const std::string& aa) {
         }
     }
     embd_inp.emplace_back(llama_token_get_token(model, "</s>"));
+
 
     encode(ctx, embd_inp, result);
     return result;
