@@ -288,7 +288,9 @@ if [ -n "$REASSIGN" ]; then
             if notExists "${TMP_PATH}/seq_seeds.merged.dbtype"; then
                 buildMergedDb "${TMP_PATH}/seq_wrong_assigned" "${TMP_PATH}/seq_seeds" "${TMP_PATH}/seq_seeds.merged"
                 buildMergedDb "${TMP_PATH}/seq_wrong_assigned_ss" "${TMP_PATH}/seq_seeds_ss" "${TMP_PATH}/seq_seeds.merged_ss"
-                buildMergedDb "${TMP_PATH}/seq_wrong_assigned_ca" "${TMP_PATH}/seq_seeds_ca" "${TMP_PATH}/seq_seeds.merged_ca"
+                if exists "${TMP_PATH}/seq_seeds_ca.dbtype"; then
+                     buildMergedDb "${TMP_PATH}/seq_wrong_assigned_ca" "${TMP_PATH}/seq_seeds_ca" "${TMP_PATH}/seq_seeds.merged_ca"
+                fi
             fi
             # shellcheck disable=SC2086
             $RUNNER "$MMSEQS" prefilter "${TMP_PATH}/seq_wrong_assigned_ss" "${TMP_PATH}/seq_seeds.merged_ss" "${TMP_PATH}/seq_wrong_assigned_pref" ${PREFILTER_REASSIGN_PAR} \
