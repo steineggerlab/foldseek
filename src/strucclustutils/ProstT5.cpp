@@ -189,7 +189,7 @@ struct common_params {
     ggml_type cache_type_k = GGML_TYPE_F16; // KV cache data type for the K
     ggml_type cache_type_v = GGML_TYPE_F16; // KV cache data type for the V
 
-    bool embedding         = false; // get only sentence embedding
+    bool embedding         = true; // get only sentence embedding
 };
 
 static struct init_result init_from_params(common_params & params) {
@@ -209,6 +209,7 @@ static struct init_result init_from_params(common_params & params) {
     mparams.use_mmap        = params.use_mmap;
     mparams.use_mlock       = params.use_mlock;
     mparams.check_tensors   = params.check_tensors;
+    mparams.n_gpu_layers = 24;
     mparams.kv_overrides = NULL;
 
     llama_model * model = nullptr;
@@ -291,7 +292,7 @@ static struct init_result init_from_params(common_params & params) {
 struct llama_model;
 struct llama_context;
 
-ProstT5::ProstT5(const std::string& model_file, bool gpu) {
+ProstT5::ProstT5(const std::string& model_file, std::string & device) {
     llama_log_set([](ggml_log_level, const char *, void *) {}, NULL);
 
     ggml_backend_load_all();
@@ -301,23 +302,9 @@ ProstT5::ProstT5(const std::string& model_file, bool gpu) {
     params.warmup = false;
     params.model = model_file;
     params.cpuparams.n_threads = 1;
-    params.use_mmap = false;
-
-    std::string device = "none";
-    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
-        auto * dev = ggml_backend_dev_get(i);
-        std::string name = ggml_backend_dev_name(dev);
-        if (name == "Metal") {
-            device = name;
-            break;
-        }
-
-        if (gpu && ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_GPU) {
-            device = ggml_backend_dev_name(dev);
-            break;
-        }
-    }
+    params.use_mmap = true;
     params.devices = parse_device_list(device);
+
 
     llama_backend_init();
     llama_numa_init(params.numa);
@@ -340,6 +327,7 @@ ProstT5::~ProstT5() {
 std::string ProstT5::predict(const std::string& aa) {
     std::string result;
     std::vector<llama_token> embd_inp;
+
     embd_inp.reserve(aa.length() + 2);
     embd_inp.emplace_back(llama_token_get_token(model, "<AA2fold>"));
     llama_token unk_aa = llama_token_get_token(model, "▁X");
@@ -358,6 +346,16 @@ std::string ProstT5::predict(const std::string& aa) {
 
     encode(ctx, embd_inp, result);
     return result;
+}
+
+std::vector<std::string > ProstT5::getDevices() {
+    std::vector<std::string> devices;
+    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+        ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+        std::string name = ggml_backend_dev_name(dev);
+        devices.push_back(name);
+    }
+    return devices;
 }
 
 void ProstT5::perf() {

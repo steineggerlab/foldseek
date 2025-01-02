@@ -589,23 +589,80 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
             return EXIT_FAILURE;
         }
-        ProstT5 model(modelWeights.c_str(), par.gpu);
-// #ifdef OPENMP
-//         size_t localThreads = par.gpu != 0 ? 1 : par.threads;
-// #endif
-// #pragma omp parallel num_threads(localThreads)
+        std::vector<std::string> devices = ProstT5::getDevices();
+        if (par.gpu == 1 && !devices.empty()) {
+            for (std::vector<std::string>::iterator it = devices.begin(); it != devices.end();) {
+                if (it->find("CUDA") == std::string::npos) {
+                    it = devices.erase(it); // Erase returns the next iterator
+                } else {
+                    ++it; // Move to the next element
+                }
+            }
+            if(devices.size() == 0) {
+                Debug(Debug::ERROR) << "No GPU devices found\n";
+                return EXIT_FAILURE;
+            }
+        } else {
+            for(size_t i = 0; i < devices.size(); i++){
+                if(devices[i] == "Metal"){
+                    par.gpu = 1;
+                    devices.clear();
+                    devices.push_back("Metal");
+                    break;
+                }
+            }
+        }
+
+
+ #ifdef OPENMP
+         size_t localThreads = (par.gpu != 0) ? devices.size() : par.threads;
+ #endif
+ #pragma omp parallel num_threads(localThreads)
         {
             int thread_idx = 0;
-// #ifdef OPENMP
-            // thread_idx = omp_get_thread_num();
-// #endif
+#ifdef OPENMP
+            thread_idx = omp_get_thread_num();
+#endif
+            std::string device = "none";
+            if(par.gpu == 1){
+                device = devices[thread_idx];
+            }
+            ProstT5 model(modelWeights.c_str(), device);
             const char newline = '\n';
-// #pragma omp for schedule(dynamic, 1)
+            unsigned const int MIN_SPLIT_LENGTH = 2;
+            std::string result;
+ #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
+                std::cout << i << std::endl;
                 unsigned int key = reader.getDbKey(i);
-                char* seq = reader.getData(i, thread_idx);
                 size_t length = reader.getSeqLen(i);
-                std::string result = model.predict(std::string(seq, length));
+                std::string seq = std::string(reader.getData(i, thread_idx), length);
+                result.clear();
+                // splitting input sequences longer than ProstT5 attention (current cutoff 6000 AAs)
+                unsigned int split_length = par.prostt5SplitLength;
+
+                // split lenght of 0 will deactivate splitting
+                if (split_length > 0 && length > split_length) {
+                    unsigned int n_splits, overlap_length;
+                    n_splits = int(length / split_length) + 1;
+                    overlap_length = length % split_length;
+
+                    // ensure minimum overlap length; adjustment length was not computed properly with ceil/ceilf now using simple int cast
+                    if (overlap_length < MIN_SPLIT_LENGTH) {
+                        split_length -= int((MIN_SPLIT_LENGTH - overlap_length) / (n_splits - 1)) + 1;
+                    }
+
+                    // loop over splits and predict
+                    for (unsigned int i = 0; i < n_splits; i++){
+                        unsigned int split_start = i * split_length;
+                        std::vector<std::string> split_input(split_length);
+                        result.append(model.predict(std::string(seq.substr(split_start, split_length))));
+                    }
+                } else {
+                    result.append( model.predict(seq));
+                }
+
+
                 writer.writeStart(thread_idx);
                 writer.writeAdd(result.c_str(), result.length(), thread_idx);
                 writer.writeAdd(&newline, 1, thread_idx);
