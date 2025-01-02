@@ -589,6 +589,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
             return EXIT_FAILURE;
         }
+
+        LlamaInitGuard guard(false);
         std::vector<std::string> devices = ProstT5::getDevices();
         if (par.gpu == 1 && !devices.empty()) {
             for (std::vector<std::string>::iterator it = devices.begin(); it != devices.end();) {
@@ -613,7 +615,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
         }
 
-
  #ifdef OPENMP
          size_t localThreads = (par.gpu != 0) ? devices.size() : par.threads;
  #endif
@@ -633,7 +634,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             std::string result;
  #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < reader.getSize(); ++i) {
-                std::cout << i << std::endl;
                 unsigned int key = reader.getDbKey(i);
                 size_t length = reader.getSeqLen(i);
                 std::string seq = std::string(reader.getData(i, thread_idx), length);

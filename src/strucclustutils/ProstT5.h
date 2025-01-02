@@ -7,6 +7,15 @@
 struct llama_model;
 struct llama_context;
 
+class LlamaInitGuard {
+public:
+    explicit LlamaInitGuard(bool verbose = false);
+    ~LlamaInitGuard();
+
+    LlamaInitGuard(const LlamaInitGuard&) = delete;
+    LlamaInitGuard& operator=(const LlamaInitGuard&) = delete;
+};
+
 class ProstT5 {
 public:
     ProstT5(const std::string& model_file, std::string & device);

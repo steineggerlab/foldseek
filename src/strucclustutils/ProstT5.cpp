@@ -35,8 +35,8 @@ static int encode(llama_context * ctx, std::vector<llama_token> & enc_input, std
     const struct llama_model * model = llama_get_model(ctx);
 
     // clear previous kv_cache values (irrelevant for embeddings)
-    llama_kv_cache_clear(ctx);
-    llama_set_embeddings(ctx, true);
+    // llama_kv_cache_clear(ctx);
+    // llama_set_embeddings(ctx, true);
     // run model
     if (llama_model_has_encoder(model) && !llama_model_has_decoder(model)) {
         if (llama_encode(ctx, llama_batch_get_one(enc_input.data(), enc_input.size())) < 0) {
@@ -56,7 +56,7 @@ static int encode(llama_context * ctx, std::vector<llama_token> & enc_input, std
     }
     int * arg_max_idx = new int[enc_input.size()];
     float * arg_max = new float[enc_input.size()];
-    std::fill(arg_max, arg_max + enc_input.size(), std::numeric_limits<float>::min());
+    std::fill(arg_max, arg_max + enc_input.size(), std::numeric_limits<float>::lowest());
     int seq_len = enc_input.size() - 1;
     for (int i = 0; i < 20; ++i) {
         for (int j = 0; j < seq_len; ++j) {
@@ -69,7 +69,6 @@ static int encode(llama_context * ctx, std::vector<llama_token> & enc_input, std
     for (int i = 0; i < seq_len - 1; ++i) {
         result.push_back(number_to_char(arg_max_idx[i]));
     }
-    // printf("\n");
     delete [] arg_max_idx;
     delete [] arg_max;
     return 0;
@@ -209,7 +208,7 @@ static struct init_result init_from_params(common_params & params) {
     mparams.use_mmap        = params.use_mmap;
     mparams.use_mlock       = params.use_mlock;
     mparams.check_tensors   = params.check_tensors;
-    mparams.n_gpu_layers = 24;
+    mparams.n_gpu_layers    = params.n_gpu_layers;
     mparams.kv_overrides = NULL;
 
     llama_model * model = nullptr;
@@ -292,42 +291,44 @@ static struct init_result init_from_params(common_params & params) {
 struct llama_model;
 struct llama_context;
 
-ProstT5::ProstT5(const std::string& model_file, std::string & device) {
-    llama_log_set([](ggml_log_level, const char *, void *) {}, NULL);
-
+LlamaInitGuard::LlamaInitGuard(bool verbose) {
+    if (!verbose) {
+        llama_log_set([](ggml_log_level, const char *, void *) {}, nullptr);
+    }
     ggml_backend_load_all();
+    llama_backend_init();
+    llama_numa_init(GGML_NUMA_STRATEGY_DISABLED);
+}
 
+LlamaInitGuard::~LlamaInitGuard() {
+    llama_backend_free();
+}
+
+ProstT5::ProstT5(const std::string& model_file, std::string & device) {
     common_params params;
     params.n_ubatch = params.n_batch;
     params.warmup = false;
     params.model = model_file;
     params.cpuparams.n_threads = 1;
     params.use_mmap = true;
+    params.n_gpu_layers = 24;
     params.devices = parse_device_list(device);
-
-
-    llama_backend_init();
-    llama_numa_init(params.numa);
 
     // load the model
     init_result llama_init = init_from_params(params);
 
     model = llama_init.model;
     ctx = llama_init.context;
-
 };
 
 ProstT5::~ProstT5() {
-    // clean up
     llama_free(ctx);
     llama_free_model(model);
-    llama_backend_free();
 }
 
 std::string ProstT5::predict(const std::string& aa) {
     std::string result;
     std::vector<llama_token> embd_inp;
-
     embd_inp.reserve(aa.length() + 2);
     embd_inp.emplace_back(llama_token_get_token(model, "<AA2fold>"));
     llama_token unk_aa = llama_token_get_token(model, "▁X");
@@ -343,12 +344,11 @@ std::string ProstT5::predict(const std::string& aa) {
     }
     embd_inp.emplace_back(llama_token_get_token(model, "</s>"));
 
-
     encode(ctx, embd_inp, result);
     return result;
 }
 
-std::vector<std::string > ProstT5::getDevices() {
+std::vector<std::string> ProstT5::getDevices() {
     std::vector<std::string> devices;
     for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
         ggml_backend_dev_t dev = ggml_backend_dev_get(i);
