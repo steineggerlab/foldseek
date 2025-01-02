@@ -578,9 +578,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < prefix.size(); ++i) {
             for (size_t j = 0; j < suffix.size(); ++j) {
                 std::string tensorPath = par.prostt5Model + prefix[i] + suffix[j];
-                if (FileUtil::fileExists(tensorPath.c_str())) {
-                    modelWeights = par.prostt5Model + prefix[i];
-                    // quantized = suffix[j].find("safetensors") == std::string::npos;
+                if (FileUtil::fileExists(tensorPath.c_str()) && FileUtil::directoryExists(tensorPath.c_str()) == false) {
+                    modelWeights = tensorPath;
                     break;
                 }
             }
