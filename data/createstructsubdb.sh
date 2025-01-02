@@ -22,11 +22,11 @@ if [ -e "${IN}_ca.dbtype" ]; then
         || fail "createsubdb died"
 fi
 
-if [ -e "${IN}_h.dbtype" ]; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" base:createsubdb "${LIST}" "${IN}_h" "${OUT}_h" ${CREATESTRUCTSUBDB_PAR} \
-        || fail "createsubdb died"
-fi
+# if [ -e "${IN}_h.dbtype" ]; then
+#     # shellcheck disable=SC2086
+#     "$MMSEQS" base:createsubdb "${LIST}" "${IN}_h" "${OUT}_h" ${CREATESTRUCTSUBDB_PAR} \
+#         || fail "createsubdb died"
+# fi
 
 if [ -e "${OUT}.sh" ]; then
   rm -f -- "${OUT}.sh"
