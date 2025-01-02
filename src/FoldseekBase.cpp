@@ -46,7 +46,18 @@ std::vector<Command> foldseekCommands = {
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:3didescriptor>",
                 CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
                                            {"3didescriptor", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
-
+        {"createsubdb",          createstructsubdb,          &localPar.createstructsubdb,          COMMAND_SET,
+                "Create a subset of a DB from list of DB keys",
+                "# Create a new sequence, 3di, c-alpha DB with keys 1, 2 and 3\n"
+                "foldseek createsubdb <(printf '1\n2\n3\n') sequenceDB oneTwoThreeDB\n\n"
+                "# Create a new sequence, 3di, c-alpha database with representatives of clusterDB\n"
+                "foldseek cluster sequenceDB clusterDB tmp\n"
+                "foldseek createsubdb clusterDB sequenceDB representativesDB\n",
+                "Milot Mirdita <milot@mirdita.de> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:subsetFile|DB> <i:DB> <o:DB>",
+                CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"subsetFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
+                                          {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"easy-search",          easystructuresearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
                 "Structual search",
                 "# Search a single/multiple PDB file against a set of PDB files\n"
@@ -112,6 +123,22 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"makepaddedseqdb",               makepaddeddb,              &localPar.makepaddeddb,              COMMAND_HIDDEN,
+                "Generate a padded sequence, 3di, c-alpha DB",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:sequenceDB> <o:sequenceDB>",
+                CITATION_GPU, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                          {"sequenceIndexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
+        {"result2profile",       result2structprofile,       &localPar.result2structprofile,       COMMAND_PROFILE,
+                "Compute profile DB from a result DB for both amino acid and 3di",
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:queryDB> <i:targetDB> <i:resultDB> <o:profileDB>",
+                CITATION_FOLDSEEK|CITATION_MMSEQS2,{{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                                           {"profileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::profileDb }}},
         {"cluster",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_MAIN,
                 "Slower, sensitive clustering",
                 "# Cascaded clustering of FASTA file\n"

@@ -26,6 +26,15 @@ if notExists "${TARGET}.dbtype"; then
             || fail "target createdb died"
     fi
     TARGET="${TMP_PATH}/target"
+
+    if [ -n "${GPU}" ]; then
+        if notExists "${TMP_PATH}/target_pad"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" makepaddedseqdb "${TMP_PATH}/target" "${TMP_PATH}/target_pad" "${TMP_PATH}/pad_tmp" ${MAKEPADDEDSEQDB_PAR} \
+                || fail "makepaddedseqdb died"
+        fi
+        TARGET="${TMP_PATH}/target_pad"
+    fi
 fi
 
 
@@ -74,6 +83,16 @@ if [ -n "${REMOVE_TMP}" ]; then
             "$MMSEQS" rmdb "${TMP_PATH}/target_ca" ${VERBOSITY}
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${TMP_PATH}/target_ss" ${VERBOSITY}
+        fi
+        if [ -f "${TMP_PATH}/target_pad" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad_h" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad_ss" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/target_pad_ss_h" ${VERBOSITY}
         fi
         if [ -f "${TMP_PATH}/query.dbtype" ]; then
             # shellcheck disable=SC2086
