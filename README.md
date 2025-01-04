@@ -52,7 +52,7 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
   - [Main Modules](#main-modules)
   - [Examples](#examples)
     - [Faster Search with GPU Acceleration](#faster-search-with-gpu-acceleration)
-    - [Structure search from FASTA input](#structure-search-from-fasta-input)
+    - [Fast Structure Search from FASTA input](#fast-structure-search-from-fasta-input)
     - [Rescore aligments using TMscore](#rescore-aligments-using-tmscore)
     - [Query centered multiple sequence alignment](#query-centered-multiple-sequence-alignment)
 
@@ -361,15 +361,15 @@ The query and target coverages here represent the sum of the coverages of all al
 
 #### Important multimer cluster parameters
 
-| Option            | Category        | Description                                                                                               |
-|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
-| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
-| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
-| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
-| --cov-mode      | Alignment  | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query |
-| --multimer-tm-threshold      | Alignment  | accept alignments with multimer alignment TMscore > thr |
-| --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr |
-| --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr |
+| Option                     | Category    | Description                                                                                                                             |
+|----------------------------|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| -e                         | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                          |
+| --alignment-type           | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default)        |
+| -c                         | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode                 | Alignment   | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query           |
+| --multimer-tm-threshold    | Alignment   | accept alignments with multimer alignment TMscore > thr                                                                                 |
+| --chain-tm-threshold       | Alignment   | accept alignments if every single chain TMscore > thr                                                                                   |
+| --interface-lddt-threshold | Alignment   | accept alignments with an interface LDDT score > thr                                                                                    |
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
@@ -389,8 +389,8 @@ foldseek easy-search example/d1asha_ example/ aln tmp --gpu 1 --prefilter-mode 1
   - `CUDA_VISIBLE_DEVICES=0` to use GPU 0.
   - `CUDA_VISIBLE_DEVICES=0,1` to use GPUs 0 and 1.
 
-#### Structure search from FASTA input
-Protein sequences can directly be searched without the need for existing protein structures useing [ProstT5](https://academic.oup.com/nargab/article/6/4/lqae150/7901286).
+#### Fast structure search from FASTA input
+Protein sequences can be directly searched without requiring existing protein structures by using [ProstT5](https://academic.oup.com/nargab/article/6/4/lqae150/7901286), which is approximately 400–4000x faster than predicting structures with ColabFold.
 Read more [here](#create-custom-database-from-protein-sequence-fasta).
 ```
 foldseek databases ProstT5 weights tmp
