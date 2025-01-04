@@ -2,6 +2,10 @@
 	path = lib/mmseqs/util/regression
 	url = https://github.com/soedinglab/MMseqs2-Regression.git
 	update = none
+[submodule "lib/prostt5/ggml/src/ggml-kompute/kompute"]
+	path = lib/prostt5/ggml/src/ggml-kompute/kompute
+	url =
+	update = none
 [submodule "regression"]
 	path = regression
 	url = https://github.com/steineggerlab/foldseek-regression
