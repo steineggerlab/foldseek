@@ -68,6 +68,9 @@ jobs:
           make -j $(nproc --all)
         displayName: Build foldseek
       - script: |
+          if [ "${SIMD}" = "SSE2" ]; then
+            export SKIP_PROSTT5=1
+          fi
           cd ${BUILD_SOURCESDIRECTORY}
           ./regression/run_regression.sh ./build/src/foldseek examples 
         displayName: Run Regression Suite

@@ -23,7 +23,7 @@ if [ ! -d "$REPO" ]; then
     exit 1
 fi
 
-export MACOSX_DEPLOYMENT_TARGET=10.12
+export MACOSX_DEPLOYMENT_TARGET=10.15
 
 mkdir -p "$BUILD/build_libomp" && cd "$BUILD/build_libomp"
 wget -qO- http://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/openmp-11.0.0.src.tar.xz | tar xvf -
@@ -47,7 +47,7 @@ cmake \
     -DCMAKE_C_FLAGS="-arch x86_64" -DCMAKE_CXX_FLAGS="-arch x86_64" \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_C_LIB_NAMES=omp -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=${LIBOMP_AMD64}/libomp.a \
-    -DRust_CARGO_TARGET=x86_64-apple-darwin \
+    -DRust_CARGO_TARGET=x86_64-apple-darwin -DGGML_METAL=OFF \
     "$REPO"
 make -j${CPUS}
 
@@ -64,7 +64,7 @@ cmake \
     -DCMAKE_C_FLAGS="-arch x86_64h" -DCMAKE_CXX_FLAGS="-arch x86_64h" \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_C_LIB_NAMES=omp -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AMD64}" -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=${LIBOMP_AMD64}/libomp.a \
-    -DRust_CARGO_TARGET=x86_64-apple-darwin \
+    -DRust_CARGO_TARGET=x86_64-apple-darwin -DGGML_METAL=OFF \
     "$REPO"
 make -j${CPUS}
 
