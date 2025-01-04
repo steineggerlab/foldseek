@@ -90,7 +90,7 @@ mkdir -p "$BUILD/build_arm64" && cd "$BUILD/build_arm64"
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DHAVE_TESTS=0 -DHAVE_MPI=0 -DHAVE_ARM8=1 \
-    -DCMAKE_C_FLAGS="-arch arm64" -DCMAKE_CXX_FLAGS="-arch arm64" \
+    -DCMAKE_C_FLAGS="-arch arm64" -DCMAKE_CXX_FLAGS="-arch arm64" -DCMAKE_ASM_FLAGS="-arch arm64" \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64}" -DOpenMP_C_LIB_NAMES=omp -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64}" -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=${LIBOMP_AARCH64}/libomp.a \
     -DRust_CARGO_TARGET=aarch64-apple-darwin \
