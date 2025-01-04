@@ -165,7 +165,7 @@ This feature uses the [ProstT5](https://www.biorxiv.org/content/10.1101/2023.07.
 ```
 foldseek databases ProstT5 weights tmp
 foldseek databases PDB pdb tmp
-foldseek easy-search QUERY.fasta pdb result.m8 tmp --prostt5-model weights
+foldseek easy-search QUERY.fasta pdb res.m8 tmp --prostt5-model weights
 ```
 
 Or create your a structural database from a fasta files.
@@ -174,7 +174,12 @@ Or create your a structural database from a fasta files.
 foldseek createdb db.fasta db --prostt5-model weights
 ```
 
-Faster inference using GPU/CUDA is also supported. Compile from source with `cmake -DCMAKE_BUILD_TYPE=Release  -DENABLE_CUDA=1 -DCUDAToolkit_ROOT=Path-To-Cuda-Toolkit` and call with `createdb/easy-search --prostt5-model weights --gpu 1`.
+Accelerate Inference using GPU(s) (`--gpu 1`) 
+
+```
+foldseek createdb --prostt5-model weights --gpu 1
+```
+- Use the `CUDA_VISIBLE_DEVICES` variable to select the GPU device(s).
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
