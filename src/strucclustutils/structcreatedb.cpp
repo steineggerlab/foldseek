@@ -572,7 +572,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         Debug::Progress progress(reader.getSize());
 
         std::vector<std::string> prefix = { "", "/model" };
-        std::vector<std::string> suffix = { "", "/model.gguf" };
+        std::vector<std::string> suffix = { "", "/prostt5-f16.gguf" };
         // bool quantized = false;
         std::string modelWeights;
         for (size_t i = 0; i < prefix.size(); ++i) {
@@ -585,8 +585,25 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
         }
         if (modelWeights.empty()) {
-            Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
-            return EXIT_FAILURE;
+            std::vector<std::string> prefix = { "", "/model" };
+            std::vector<std::string> suffix = { "/model.safetensors" };
+            std::string modelWeights;
+            for (size_t i = 0; i < prefix.size(); ++i) {
+                for (size_t j = 0; j < suffix.size(); ++j) {
+                    std::string tensorPath = par.prostt5Model + prefix[i] + suffix[j];
+                    if (FileUtil::fileExists(tensorPath.c_str())) {
+                        modelWeights = par.prostt5Model + prefix[i];
+                        break;
+                    }
+                }
+            }
+            if (modelWeights.empty()) {
+                Debug(Debug::ERROR) << "Could not find ProstT5 model weights. Download with `foldseek databases ProstT5 prostt5_out tmp`\n";
+                return EXIT_FAILURE;
+            } else {
+                Debug(Debug::ERROR) << "Found ProstT5 model weights for previous Foldseek release. Download new weights with `foldseek databases ProstT5 prostt5_out tmp`\n";
+                return EXIT_FAILURE;
+            }
         }
 
         LlamaInitGuard guard(false);
