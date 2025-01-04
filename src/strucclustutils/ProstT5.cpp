@@ -295,7 +295,6 @@ LlamaInitGuard::LlamaInitGuard(bool verbose) {
     if (!verbose) {
         llama_log_set([](ggml_log_level, const char *, void *) {}, nullptr);
     }
-    ggml_backend_load_all();
     llama_backend_init();
     llama_numa_init(GGML_NUMA_STRATEGY_DISABLED);
 }
