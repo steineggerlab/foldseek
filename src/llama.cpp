@@ -11231,25 +11231,13 @@ struct llm_build_context {
 
 #if 1
         // ggml_graph_print(gf);
-        // The shape of the raw embeddings is [enc_input_size, n_embd], or conceptually (S, H).
-        // If we want a 3D tensor shape [B=1, S=enc_input_size, H=n_embd], we can do:
-        //int B = cur->ne[2];
-        //int H = cur->ne[0];
-
-#define PRINT_TENSOR_DIMS(name, tensor) \
-    std::cout << name << " " << (tensor)->ne[0] << "\t" << (tensor)->ne[1] << "\t" << (tensor)->ne[2] << "\t" << (tensor)->ne[3] << std::endl;
+        // #define PRINT_TENSOR_DIMS(name, tensor) std::cout << name << " " << (tensor)->ne[0] << "\t" << (tensor)->ne[1] << "\t" << (tensor)->ne[2] << "\t" << (tensor)->ne[3] << std::endl;
 
         // 1) Slicing: skip first row in dim1
-        //std::cout << "n_tokens " << n_tokens << std::endl;
-        //int new_seq_len = std::max(n_tokens, (int)2) - 2;  // if skipping only the very first row
-        //int new_seq_len = n_tokens - 2;  // if skipping only the very first row
         size_t offset_bytes = cur->nb[1] * 1ULL;  // skip one row in the dim1 direction
-
-        //std::cout << "cur " << cur->ne[0] << "\t" << cur->ne[1] << "\t" << cur->ne[2] << std::endl;
-        // create a sub-view with 8-argument ggml_view_3d()
         ggml_tensor * cur_sliced = ggml_view_3d(
             ctx0,
-            cur,          // the original tensor
+            cur,
             /* ne0   */ cur->ne[0],
             /* ne1   */ cur->ne[1] - 2,
             /* ne2   */ cur->ne[2],
@@ -11259,10 +11247,10 @@ struct llm_build_context {
         );
         cb(cur_sliced, "cur_sliced", -1);
 
-        ggml_tensor * cur_padded = ggml_cont(ctx0, ggml_pad(ctx0, cur_sliced,
+        ggml_tensor * cur_padded = ggml_pad(ctx0, cur_sliced,
             /*p0=*/0, /*p1=*/1,  // no pad on the n_embd dimension
             /*p2=*/0, /*p3=*/0   // pad +1 at the end of the tokens dimension
-        ));
+        );
         cb(cur_padded, "cur_padded", -1);
         // PRINT_TENSOR_DIMS("cur_padded", cur_padded)
 
@@ -11277,34 +11265,29 @@ struct llm_build_context {
         // ggml_tensor* cur_conv0 = ggml_conv_2d(ctx0, cw0, permuted_tensor, 1, 1, 3, 0, 1, 1);
         ggml_tensor* cur_conv0 = ggml_conv_2d(ctx0, model.conv0, permuted_tensor, 1, 1, 3, 0, 1, 1);
         cb(cur_conv0, "cur_conv0", -1);
-        // ggml_build_forward_expand(gf, cur_conv0);
+        //PRINT_TENSOR_DIMS("cur_conv0", cur_conv0)
         // ggml_graph_print(gf);
 
-        //PRINT_TENSOR_DIMS("cur_conv0", cur_conv0)
-        //PRINT_TENSOR_DIMS("model.conv0_b", model.conv0_b)
-        ggml_tensor* cur_conv0b = ggml_add(ctx0, cur_conv0, ggml_reshape_4d(ctx0, model.conv0_b, 1, 1, 32, 1));
+        ggml_tensor* cur_conv0b = ggml_add_inplace(ctx0, cur_conv0, ggml_reshape_4d(ctx0, model.conv0_b, 1, 1, 32, 1));
         cb(cur_conv0b, "cur_conv0b", -1);
-
-        // ggml_build_forward_expand(gf, cur_conv0b);
-
-        //cb(cur_conv0b, "result_embd_pooled", -1);
         //PRINT_TENSOR_DIMS("cur_conv0b", cur_conv0b)
-        ggml_tensor* cur_relu = ggml_relu(ctx0, cur_conv0b);
+
+        ggml_tensor* cur_relu = ggml_relu_inplace(ctx0, cur_conv0b);
         cb(cur_relu, "cur_relu", -1);
+        //PRINT_TENSOR_DIMS("cur_relu", cur_relu)
 
         // ggml_tensor* cw3 = ggml_cont(ctx0, ggml_permute(ctx0, model.conv3, 1, 0, 2, 3));
         // cb(cw3, "cw3", -1);
 
-        //PRINT_TENSOR_DIMS("cur_relu", cur_relu)
         // ggml_tensor* cur_conv3 = ggml_conv_2d(ctx0, cw3, cur_relu, 1, 1, 3, 0, 1, 1);
         ggml_tensor* cur_conv3 = ggml_conv_2d(ctx0, model.conv3, cur_relu, 1, 1, 3, 0, 1, 1);
         cb(cur_conv3, "cur_conv3", -1);
-
         //PRINT_TENSOR_DIMS("cur_conv3", cur_conv3)
-        ggml_tensor* cur_conv3b = ggml_add(ctx0, cur_conv3, ggml_reshape_4d(ctx0, model.conv3_b, 1, 1, 20, 1));
-        cb(cur_conv3b, "result_embd_pooled", -1);
 
+        ggml_tensor* cur_conv3b = ggml_add_inplace(ctx0, cur_conv3, ggml_reshape_4d(ctx0, model.conv3_b, 1, 1, 20, 1));
+        cb(cur_conv3b, "result_embd_pooled", -1);
         //PRINT_TENSOR_DIMS("cur_conv3b", cur_conv3b)
+
         ggml_build_forward_expand(gf, cur_conv3b);
         // ggml_graph_print(gf);
 #endif
