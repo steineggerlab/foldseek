@@ -80,27 +80,21 @@ if(EMSCRIPTEN)
     corrosion_add_target_local_rustflags(block_aligner_c "-Clink-args=--no-entry -sRELOCATABLE=1")
 endif()
 
-set(CANDLE_FEATURE "")
-if(ENABLE_CUDA)
-    if(NOT DEFINED CUDAToolkit_ROOT)
-        message(FATAL_ERROR "please set -DCUDAToolkit_ROOT=path-to-cuda")
-    endif()
-    set(CANDLE_FEATURE cuda)
-endif()
-
 if(ENABLE_PROSTT5)
-    corrosion_import_crate(
-        MANIFEST_PATH lib/prostt5/c/Cargo.toml
-        CRATE_TYPES staticlib
-        FEATURES "${CANDLE_FEATURE}"
-    )
+    set(GGML_STATIC ON)
+    set(BUILD_SHARED_LIBS OFF)
+    if(NOT NATIVE_ARCH)
+        set(GGML_NATIVE OFF)
+    endif()
     if(ENABLE_CUDA)
-        corrosion_set_env_vars(cprostt5 CUDA_ROOT=${CUDAToolkit_ROOT})
+        set(GGML_CUDA ON)
+        set(GGML_CUDA_F16 ON)
+        set(GGML_CUDA_NO_VMM ON)
     endif()
-    include_directories(lib/prostt5/c)
-    if(EMSCRIPTEN)
-        corrosion_add_target_local_rustflags(cprostt5 "-Clink-args=--no-entry -sRELOCATABLE=1")
+    if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(GGML_METAL OFF)
     endif()
+    add_subdirectory(lib/prostt5 EXCLUDE_FROM_ALL)
 endif()
 
 add_subdirectory(src)

@@ -275,6 +275,7 @@ LocalParameters::LocalParameters() :
     indexExclude = 0;
     multimerReportMode = 1;
     eValueThrExpandMultimer = 10000.0;
+    prostt5SplitLength = 1024;
     prostt5Model = "";
     gpu = 0;
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;

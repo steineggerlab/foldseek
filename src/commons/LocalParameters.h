@@ -183,6 +183,7 @@ public:
     int gpu;
     int dbExtractionMode;
     float distanceThreshold;
+    int prostt5SplitLength;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
