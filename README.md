@@ -29,9 +29,9 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
         - [Interactive HTML](#interactive-html)
       - [Important search parameters](#important-search-parameters)
       - [Alignment Mode](#alignment-mode)
-      - [Structure search from FASTA input](#structure-search-from-fasta-input)
     - [Databases](#databases)
       - [Create custom databases and indexes](#create-custom-databases-and-indexes)
+      - [Create custom database from protein sequence (FASTA)](#create-custom-database-from-protein-sequence-fasta)
     - [Cluster](#cluster)
       - [Output Cluster](#output-cluster)
         - [Tab-separated cluster](#tab-separated-cluster)
@@ -51,6 +51,8 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
       - [Important multimer cluster parameters](#important-multimer-cluster-parameters)
   - [Main Modules](#main-modules)
   - [Examples](#examples)
+    - [Faster Search with GPU Acceleration](#faster-search-with-gpu-acceleration)
+    - [Structure search from FASTA input](#structure-search-from-fasta-input)
     - [Rescore aligments using TMscore](#rescore-aligments-using-tmscore)
     - [Query centered multiple sequence alignment](#query-centered-multiple-sequence-alignment)
 
@@ -89,10 +91,7 @@ For optimal software performance, consider three options based on your RAM and s
    Use the `--prefilter-mode 1`, which isn't memory-limited and computes all ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries.
 
 ## Tutorial Video
-We presented a Foldseek tutorial at the SBGrid where we demonstrated Foldseek's webserver and command line interface. 
-Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
-
-<a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
+We presented a Foldseek tutorial at SBGrid showcasing both the webserver and command-line interface—watch it [here](https://www.youtube.com/watch?v=k5Rbi22TtOA) <a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>
 
 ## Documentation
 Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information about these modules, refer to the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki). For documentation specific to Foldseek, checkout the Foldseek wiki [here](https://github.com/steineggerlab/foldseek/wiki).
@@ -100,7 +99,7 @@ Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information a
 ## Quick start
 
 ### Search
-The `easy-search` module allows to query one or more single-chain proteins, formatted in as protein structures in PDB/mmCIF format (flat or gzipped) or as protein sequnece in [fasta](#Structure-search-from-FASTA-input), against a target database, folder or individual single-chain protein structures (for multi-chain proteins see [complexsearch](#complexsearch)). The default alignment information output is a [tab-separated file](#tab-separated) but Foldseek also supports [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) and [HTML](#interactive-html).
+The `easy-search` module allows to query one or more single-chain proteins, formatted in as protein structures in PDB/mmCIF format (flat or gzipped) or as protein sequnece in [fasta](#create-custom-database-from-protein-sequence-fasta), against a target database, folder or individual single-chain protein structures (for multi-chain proteins see [complexsearch](#complexsearch)). The default alignment information output is a [tab-separated file](#tab-separated) but Foldseek also supports [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) and [HTML](#interactive-html).
 
     foldseek easy-search example/d1asha_ example/ aln tmpFolder
     
@@ -160,29 +159,6 @@ By default, Foldseek uses its local 3Di+AA structural alignment but it also supp
 
 If alignment type is set to tmalign (`--alignment-type 1`), the results will be sorted by the TMscore normalized by query length. The TMscore is used for reporting two fields: the e-value=(qTMscore+tTMscore)/2 and the score=(qTMscore*100). All output fields (e.g., pident, fident, and alnlen) are calculated based on the TMalign alignment.
 
-#### Structure search from FASTA input
-Search by predicting 3Di directly from amino acid sequences without the need for existing protein structures. 
-This feature uses the [ProstT5](https://www.biorxiv.org/content/10.1101/2023.07.23.550085v2) protein language model and runs by default on CPU and is about 400-4000x compared to predicted structures by [ColabFold](https://github.com/sokrypton/ColabFold).
-
-```
-foldseek databases ProstT5 weights tmp
-foldseek databases PDB pdb tmp
-foldseek easy-search QUERY.fasta pdb res.m8 tmp --prostt5-model weights
-```
-
-Or create your a structural database from a fasta files.
-
-```
-foldseek createdb db.fasta db --prostt5-model weights
-```
-
-Accelerate Inference using GPU(s) (`--gpu 1`) 
-
-```
-foldseek createdb --prostt5-model weights --gpu 1
-```
-- Use the `CUDA_VISIBLE_DEVICES` variable to select the GPU device(s).
-
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
     
@@ -209,8 +185,26 @@ The target database can be pre-processed by `createdb`. This is useful when sear
     foldseek createindex targetDB tmp  #OPTIONAL generates and stores the index on disk
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
 
+#### Create custom database from protein sequence (FASTA)
+Create a structural database from FASTA files using the [ProstT5](https://academic.oup.com/nargab/article/6/4/lqae150/7901286) protein language model. It runs by default on CPU and is about 400-4000x compared to predicted structures by [ColabFold](https://github.com/sokrypton/ColabFold).
+However, this database will contain only the predicted 3Di structural sequences without additional structural details.
+As a result, it supports monomer search and clustering, but does not enable features requiring Cα information, such as `--alignment-type 1`, TM-score or LDDT output.
+```
+foldseek databases ProstT5 weights tmp
+foldseek createdb db.fasta db --prostt5-model weights
+```
+
+Accelerate inference by one to two magnitudes using GPU(s) (`--gpu 1`) 
+
+```
+foldseek createdb db.fasta db --prostt5-model weights --gpu 1
+```
+- Use the `CUDA_VISIBLE_DEVICES` variable to select the GPU device(s).
+  - `CUDA_VISIBLE_DEVICES=0` to use GPU 0.
+  - `CUDA_VISIBLE_DEVICES=0,1` to use GPUs 0 and 1.
+
 ### Cluster
-The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein structure using structural alignment. It accepts input in either as protein structures as PDB/mmCIF or protein sequences as [fasta](#Structure-search-from-FASTA-input) format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
+The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein structure using structural alignment. It accepts input in either as protein structures as PDB/mmCIF or protein sequences as [fasta](#create-custom-database-from-protein-sequence-fasta) format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
 
     foldseek easy-cluster example/ res tmp -c 0.9 
     
@@ -245,8 +239,6 @@ MAGA....R
 MVGA....R
 >D6KVP9
 MVGA....R
->D1Y890
-MVGV....R
 >E3HQM9	
 >E3HQM9
 MCAT...Q
@@ -396,6 +388,17 @@ foldseek easy-search example/d1asha_ example/ aln tmp --gpu 1 --prefilter-mode 1
 - Use the `CUDA_VISIBLE_DEVICES` variable to select the GPU device(s).
   - `CUDA_VISIBLE_DEVICES=0` to use GPU 0.
   - `CUDA_VISIBLE_DEVICES=0,1` to use GPUs 0 and 1.
+
+#### Structure search from FASTA input
+Protein sequences can directly be searched without the need for existing protein structures useing [ProstT5](https://academic.oup.com/nargab/article/6/4/lqae150/7901286).
+Read more [here](#create-custom-database-from-protein-sequence-fasta).
+```
+foldseek databases ProstT5 weights tmp
+foldseek databases PDB pdb tmp
+foldseek easy-search QUERY.fasta pdb res.m8 tmp --prostt5-model weights
+```
+The translation with ProstT5 can be accelerated by using GPU(s) (`--gpu 1`) and multiple GPUs can be used by setting the `CUDA_VISIBLE_DEVICES` variable.
+
 
 ### Rescore aligments using TMscore
 The easiest way to get the alignment TMscore normalized by min(alnLen,qLen,targetLen) as well as a rotation matrix is through the following command:
