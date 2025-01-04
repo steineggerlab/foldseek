@@ -23,7 +23,7 @@ if [ ! -d "$REPO" ]; then
     exit 1
 fi
 
-export MACOSX_DEPLOYMENT_TARGET=10.12
+export MACOSX_DEPLOYMENT_TARGET=10.15
 
 mkdir -p "$BUILD/build_libomp" && cd "$BUILD/build_libomp"
 wget -qO- http://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/openmp-11.0.0.src.tar.xz | tar xvf -
