@@ -551,8 +551,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, false, 0, MMseqsParameter::COMMAND_COMMON);
     std::string outputName = par.filenames.back();
-#ifdef HAVE_PROSTT5
     if (par.prostt5Model != "") {
+#ifdef HAVE_PROSTT5
         // reset set parameters
         for (size_t i = 0; i < command.params->size(); ++i) {
             command.params->at(i)->wasSet = false;
@@ -658,9 +658,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         result.append(model.predict(std::string(seq.substr(split_start, split_length))));
                     }
                 } else {
-                    result.append( model.predict(seq));
+                    result.append(model.predict(seq));
                 }
-
 
                 writer.writeStart(thread_idx);
                 writer.writeAdd(result.c_str(), result.length(), thread_idx);
@@ -684,11 +683,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int>::removeDb(ssDb);
         DBReader<unsigned int>::moveDb(tempDb.first, ssDb);
 
-        return EXIT_SUCCESS;
+        EXIT(EXIT_SUCCESS);
+#else
+        Debug(Debug::ERROR) << "Foldseek was compiled without ProstT5 support\n";
+        EXIT(EXIT_FAILURE);
+#endif
     } else {
         par.printParameters(command.cmd, argc, argv, *command.params);
     }
-#endif
     par.filenames.pop_back();
 
     PatternCompiler include(par.fileInclude.c_str());
