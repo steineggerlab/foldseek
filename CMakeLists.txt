@@ -38,6 +38,7 @@ set(ENV{CARGO_NET_OFFLINE} true)
 add_subdirectory(lib/corrosion)
 # don't try to link to gcc_s, its not needed anyway
 list(REMOVE_ITEM Rust_CARGO_TARGET_LINK_NATIVE_LIBS "gcc_s")
+set(Rust_CARGO_TARGET_LINK_NATIVE_LIBS ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS} CACHE INTERNAL "")
 
 if(Rust_VERSION VERSION_LESS "1.68.0" AND NOT IGNORE_RUST_VERSION)
     message(FATAL_ERROR "Rust >= 1.68.0 is required")
