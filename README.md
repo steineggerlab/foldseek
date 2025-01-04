@@ -63,11 +63,11 @@ Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.a
 # Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
 wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
-# Linux SSE2 build (check using: cat /proc/cpuinfo | grep sse2)
-wget https://mmseqs.com/foldseek/foldseek-linux-sse2.tar.gz; tar xvzf foldseek-linux-sse2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-
 # Linux ARM64 build
 wget https://mmseqs.com/foldseek/foldseek-linux-arm64.tar.gz; tar xvzf foldseek-linux-arm64.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+
+# Linux AVX2 & GPU build (req. glibc >= 2.29 and nvidia driver >=525.60.13)
+wget https://mmseqs.com/foldseek/foldseek-linux-gpu.tar.gz; tar xvfz foldseek-linux-gpu.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
 # MacOS
 wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
@@ -75,7 +75,10 @@ wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldsee
 # Conda installer (Linux and macOS)
 conda install -c conda-forge -c bioconda foldseek
 ```
-Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
+Other precompiled binaries are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
+
+> [!NOTE]
+> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Tesla-generation GPUs.
 
 ## Memory requirements 
 For optimal software performance, consider three options based on your RAM and search requirements:
@@ -87,10 +90,10 @@ For optimal software performance, consider three options based on your RAM and s
    By disabling `--sort-by-structure-bits 0`, RAM requirement reduces to 35GB. However, this alters hit rankings and final scores but not E-values. Structure bits are mostly relevant for hit ranking for E-value > 10^-1.
 
 3. **Single query searches.** 
-   Use the `--prefilter-mode 1`, which isn't memory-limited and computes all ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries.
+   Use the `--prefilter-mode 1`, which isn't memory-limited and computes all optimal ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries and supports GPU acceleration.
 
 ## Tutorial Video
-We presented a Foldseek tutorial at SBGrid showcasing both the webserver and command-line interface—watch it [here](https://www.youtube.com/watch?v=k5Rbi22TtOA) <a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>
+A Foldseek tutorial covering the webserver and command-line usage is available [here](https://www.youtube.com/watch?v=k5Rbi22TtOA). <a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>
 
 ## Documentation
 Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information about these modules, refer to the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki). For documentation specific to Foldseek, checkout the Foldseek wiki [here](https://github.com/steineggerlab/foldseek/wiki).
