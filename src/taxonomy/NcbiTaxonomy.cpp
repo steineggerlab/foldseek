@@ -616,8 +616,8 @@ WeightedTaxResult NcbiTaxonomy::weightedMajorityLCA(const std::vector<WeightedTa
         }
         TaxonNode const *node = taxonNode(currTaxId, false);
         if (node == NULL) {
-            Debug(Debug::ERROR) << "taxonid: " << currTaxId << " does not match a legal taxonomy node.\n";
-            EXIT(EXIT_FAILURE);
+            unassignedSeqs++;
+            continue;
         }
         totalAssignedSeqsWeights += currWeight;
         assignedSeqs++;
@@ -707,6 +707,9 @@ WeightedTaxResult NcbiTaxonomy::weightedMajorityLCA(const std::vector<WeightedTa
             continue;
         }
         TaxonNode const *node = taxonNode(currTaxId, false);
+        if (node == NULL) {
+            continue;
+        }
 
         // iterate all ancestors up to the root
         TaxID currParentTaxId = node->parentTaxId;
