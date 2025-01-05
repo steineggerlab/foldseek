@@ -11,7 +11,7 @@
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
-    p->maskMode = 1;
+    p->maskMode = 0;
     p->maskNrepeats = 10;
     p->maskProb = 0.999995;
     p->sensitivity = 9.5;
@@ -27,6 +27,7 @@ void setStructureSearchMustPassAlong(LocalParameters *p) {
     p->PARAM_K.wasSet = true;
     p->PARAM_MASK_RESIDUES.wasSet = true;
     p->PARAM_MASK_PROBABILTY.wasSet = true;
+    p->PARAM_MASK_N_REPEAT.wasSet = true;
     p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
     p->PARAM_S.wasSet = true;
     p->PARAM_GAP_OPEN.wasSet = true;

@@ -14,6 +14,8 @@ int result2structprofile(int argc, const char **argv, const Command &command) {
     FileUtil::writeFile(program, result2structprofile_sh, result2structprofile_sh_len);
 
     CommandCaller cmd;
+    par.scoringMatrixFile = "blosum62.out";
+    par.seedScoringMatrixFile = "blosum62.out";
     cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());
         par.pca = 1.4;
         par.pcb = 1.5;
