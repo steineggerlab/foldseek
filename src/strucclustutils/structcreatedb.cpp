@@ -606,7 +606,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
         }
 
-        LlamaInitGuard guard(false);
+        LlamaInitGuard guard(par.verbosity > 3);
         std::vector<std::string> devices = ProstT5::getDevices();
         if (par.gpu == 1 && !devices.empty()) {
             for (std::vector<std::string>::iterator it = devices.begin(); it != devices.end();) {
