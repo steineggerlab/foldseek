@@ -51,7 +51,7 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
         fi
 
         rm -f -- "${OUT}.lookup"
-        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
+        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" | sort -nk3 > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
 
     else
@@ -163,7 +163,7 @@ else
         fi
 
         rm -f -- "${OUT}.lookup"
-        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" > "${OUT}.lookup"
+        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" | sort -nk3  > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
         rm -f -- "${OUT}_ss.gpu_mapping2"
 
