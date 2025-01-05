@@ -86,13 +86,32 @@ if notExists "${TMP_PATH}/query.dbtype"; then
         || fail "query createdb died"
 fi
 
+QUERY="${INPUT}"
+if notExists "${INPUT}.dbtype"; then
+    if notExists "${TMP_PATH}/query"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/query" ${CREATEDB_PAR} \
+            || fail "query createdb died"
+    fi
+    QUERY="${TMP_PATH}/query"
+
+    if [ -n "${GPU}" ]; then
+        if notExists "${TMP_PATH}/query_pad"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" makepaddedseqdb "${TMP_PATH}/query" "${TMP_PATH}/query_pad" ${MAKEPADDEDSEQDB_PAR} \
+                || fail "makepaddedseqdb died"
+        fi
+        QUERY="${TMP_PATH}/query_pad"
+    fi
+fi
+
 if notExists "${TMP_PATH}/multimer_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimercluster "${TMP_PATH}/query" "${TMP_PATH}/multimer_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
+    "$MMSEQS" multimercluster "${QUERY}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
         || fail "Multimercluster died"
 fi
 
-SOURCE="${TMP_PATH}/query"
+SOURCE="${QUERY}"
 INPUT="${TMP_PATH}/latest/multimer_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
