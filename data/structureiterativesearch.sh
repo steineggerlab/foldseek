@@ -85,7 +85,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
     if [ $STEP -ne $((NUM_IT  - 1)) ]; then
         if notExists "$TMP_PATH/profile_${STEP}.dbtype"; then
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" result2profile "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}" "${TMP_PATH}" ${PROFILE_PAR} \
+            $RUNNER "$MMSEQS" result2profile "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}" ${PROFILE_PAR} \
                 || fail "Create profile died"
         fi
     fi
