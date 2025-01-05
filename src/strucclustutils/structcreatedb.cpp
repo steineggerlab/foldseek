@@ -621,8 +621,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 return EXIT_FAILURE;
             }
         } else {
-            for(size_t i = 0; i < devices.size(); i++){
-                if(devices[i] == "Metal"){
+            for (size_t i = 0; i < devices.size(); i++) {
+                if (devices[i] == "Metal") {
                     par.gpu = 1;
                     devices.clear();
                     devices.push_back("Metal");
@@ -641,7 +641,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             thread_idx = omp_get_thread_num();
 #endif
             std::string device = "none";
-            if(par.gpu == 1){
+            if (par.gpu == 1) {
                 device = devices[thread_idx];
             }
             ProstT5 model(modelWeights.c_str(), device);
@@ -700,10 +700,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int>::removeDb(ssDb);
         DBReader<unsigned int>::moveDb(tempDb.first, ssDb);
 
-        EXIT(EXIT_SUCCESS);
+        return EXIT_SUCCESS;
 #else
         Debug(Debug::ERROR) << "Foldseek was compiled without ProstT5 support\n";
-        EXIT(EXIT_FAILURE);
+        return EXIT_FAILURE;
 #endif
     } else {
         par.printParameters(command.cmd, argc, argv, *command.params);

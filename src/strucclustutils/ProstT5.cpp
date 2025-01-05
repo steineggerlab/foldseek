@@ -92,8 +92,8 @@ static std::vector<ggml_backend_dev_t> parse_device_list(const std::string & val
     std::vector<ggml_backend_dev_t> devices;
     auto dev_names = string_split(value, ',');
     if (dev_names.empty()) {
-        // throw std::invalid_argument("no devices specified");
-        return {};
+        devices.push_back(nullptr);
+        return devices;
     }
     if (dev_names.size() == 1 && dev_names[0] == "none") {
         devices.push_back(nullptr);
@@ -101,8 +101,7 @@ static std::vector<ggml_backend_dev_t> parse_device_list(const std::string & val
         for (const auto & device : dev_names) {
             auto * dev = ggml_backend_dev_by_name(device.c_str());
             if (!dev || ggml_backend_dev_type(dev) != GGML_BACKEND_DEVICE_TYPE_GPU) {
-                // throw std::invalid_argument(string_format("invalid device: %s", device.c_str()));
-                return {};
+                continue;
             }
             devices.push_back(dev);
         }
@@ -310,8 +309,19 @@ ProstT5::ProstT5(const std::string& model_file, std::string & device) {
     params.model = model_file;
     params.cpuparams.n_threads = 1;
     params.use_mmap = true;
-    params.n_gpu_layers = 24;
     params.devices = parse_device_list(device);
+    int gpus = 0;
+    for (const auto& dev : params.devices) {
+        if (!dev) {
+            continue;
+        }
+        gpus += ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_GPU;
+    }
+    if (gpus > 0) {
+        params.n_gpu_layers = 24;
+    } else {
+        params.n_gpu_layers = 0;
+    }
 
     // load the model
     init_result llama_init = init_from_params(params);
