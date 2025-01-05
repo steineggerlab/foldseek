@@ -362,6 +362,11 @@ std::vector<std::string> ProstT5::getDevices() {
     for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
         ggml_backend_dev_t dev = ggml_backend_dev_get(i);
         std::string name = ggml_backend_dev_name(dev);
+        std::string description = ggml_backend_dev_name(dev);
+        // ignore Metal in CI
+        if (name == "Metal" && description.find("Paravirtual") != std::string::npos) {
+            continue;
+        }
         devices.push_back(name);
     }
     return devices;
