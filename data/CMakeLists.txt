@@ -13,6 +13,9 @@ set(COMPILED_RESOURCES
         evalue_nn.kerasify
         main.js
         vendor.js.zst
+        makepaddeddb.sh
+        result2structprofile.sh
+        createstructsubdb.sh
         multimersearch.sh
         easymultimersearch.sh
         multimercluster.sh

@@ -79,7 +79,7 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
 
   if notExists "${TMP_PATH}/pref_filter1.dbtype"; then
       # shellcheck disable=SC2086
-      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${TMP_PATH}/pref" "${TMP_PATH}/pref_filter1" ${VERBOSITY} --subdb-mode 1 \
+      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${TMP_PATH}/pref" "${TMP_PATH}/pref_filter1" "${TMP_PATH}" ${VERBOSITY} --subdb-mode 1 \
           || fail "Createsubdb step died"
   fi
 
@@ -99,7 +99,7 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
 
   if notExists "${TMP_PATH}/pre_clustered_seqs.dbtype"; then
       # shellcheck disable=SC2086
-      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}" "${TMP_PATH}/pre_clustered_seqs" ${VERBOSITY} --subdb-mode 1 \
+      "$MMSEQS" createsubdb "${TMP_PATH}/order_redundancy" "${INPUT}" "${TMP_PATH}/pre_clustered_seqs" "${TMP_PATH}" ${VERBOSITY} --subdb-mode 1 \
           || fail "Createsubdb pre_clustered_seqs step died"
   fi
 
@@ -126,18 +126,8 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
   if [ "${RUN_LINCLUST}" = "1" ]; then
       if notExists "${TMP_PATH}/input_step_redundancy_ss.dbtype"; then
          # shellcheck disable=SC2086
-         "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ss" "${TMP_PATH}/input_step_redundancy_ss" ${VERBOSITY} --subdb-mode 1 \
+         "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" "${TMP_PATH}" ${VERBOSITY} --subdb-mode 1 \
             || fail "createsubdb died"
-      fi
-      if exists "${INPUT}_ca.dbtype"; then
-        # shellcheck disable=SC2086
-         "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}_ca" "${TMP_PATH}/input_step_redundancy_ca" ${VERBOSITY} --subdb-mode 1 \
-            || fail "createsubdb died"
-      fi
-      if notExists "${TMP_PATH}/input_step_redundancy.dbtype"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" createsubdb "${TMP_PATH}/clu_redundancy" "${INPUT}" "${TMP_PATH}/input_step_redundancy" ${VERBOSITY} --subdb-mode 1 \
-                || fail "createsubdb died"
       fi
       INPUT="${TMP_PATH}/input_step_redundancy"
   fi
@@ -185,16 +175,7 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       else
           if notExists "$NEXTINPUT.dbtype"; then
               # shellcheck disable=SC2086
-              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ss" "${NEXTINPUT}_ss" ${VERBOSITY} --subdb-mode 1 \
-                  || fail "Order step $STEP died"
-
-              if exists "${INPUT}_ca.dbtype"; then
-                  # shellcheck disable=SC2086
-                 "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}_ca" "${NEXTINPUT}_ca" ${VERBOSITY} --subdb-mode 1 \
-                                || fail "Order step $STEP died"
-              fi
-              # shellcheck disable=SC2086
-              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}" "${NEXTINPUT}" ${VERBOSITY} --subdb-mode 1 \
+              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}" "${NEXTINPUT}" "${TMP_PATH}" ${VERBOSITY} --subdb-mode 1 \
                                 || fail "Order step $STEP died"
           fi
       fi
@@ -248,37 +229,19 @@ if [ -n "$REASSIGN" ]; then
         # create sequences database that were wrong assigned
         if notExists "${TMP_PATH}/seq_wrong_assigned.dbtype"; then
             if notExists "${TMP_PATH}/seq_wrong_assigned_ss.dbtype"; then
-                # shellcheck disable=SC2086
-                "$MMSEQS" createsubdb "${TMP_PATH}/clu_not_accepted_swap" "${SOURCE}_ss" "${TMP_PATH}/seq_wrong_assigned_ss" ${VERBOSITY} \
-                              || fail "createsubdb1 reassign died"
-            fi
-            if exists "${SOURCE}_ca.dbtype"; then
-                # shellcheck disable=SC2086
-               "$MMSEQS" createsubdb "${TMP_PATH}/clu_not_accepted_swap" "${SOURCE}_ca" "${TMP_PATH}/seq_wrong_assigned_ca" ${VERBOSITY} \
-                              || fail "createsubdb1 reassign died"
-            fi
-
             # shellcheck disable=SC2086
-            "$MMSEQS" createsubdb "${TMP_PATH}/clu_not_accepted_swap" "$SOURCE" "${TMP_PATH}/seq_wrong_assigned" ${VERBOSITY} \
+            "$MMSEQS" createsubdb "${TMP_PATH}/clu_not_accepted_swap" "$SOURCE" "${TMP_PATH}/seq_wrong_assigned" "${TMP_PATH}" ${VERBOSITY} \
                      || fail "createsubdb1 reassign died"
+            fi
         fi
 
         # build seed sequences
         if notExists "${TMP_PATH}/seq_seeds.dbtype"; then
             if notExists "${TMP_PATH}/seq_seeds_ss.dbtype"; then
-                # shellcheck disable=SC2086
-                "$MMSEQS" createsubdb "${TMP_PATH}/clu" "${SOURCE}_ss" "${TMP_PATH}/seq_seeds_ss" ${VERBOSITY} \
-                              || fail "createsubdb2 reassign died"
-            fi
-            if exists "${SOURCE}_ca.dbtype"; then
-                # shellcheck disable=SC2086
-               "$MMSEQS" createsubdb "${TMP_PATH}/clu" "${SOURCE}_ca" "${TMP_PATH}/seq_seeds_ca" ${VERBOSITY}  \
-                              || fail "createsubdb2 reassign died"
-            fi
-
             # shellcheck disable=SC2086
-            "$MMSEQS" createsubdb "${TMP_PATH}/clu" "$SOURCE" "${TMP_PATH}/seq_seeds" ${VERBOSITY}   \
+            "$MMSEQS" createsubdb "${TMP_PATH}/clu" "$SOURCE" "${TMP_PATH}/seq_seeds" "${TMP_PATH}" ${VERBOSITY}   \
                      || fail "createsubdb2 reassign died"
+            fi
 
         fi
         PARAM=PREFILTER${STEP}_PAR

@@ -37,10 +37,6 @@ public:
     static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
     static const int TMSCORE_THRESHOLD_MODE_MIN = 3;
 
-    static const int PREF_MODE_KMER = 0;
-    static const int PREF_MODE_UNGAPPED = 1;
-    static const int PREF_MODE_EXHAUSTIVE = 2;
-
     static const int TMALIGN_HIT_ORDER_AVG = 0;
     static const int TMALIGN_HIT_ORDER_QUERY = 1;
     static const int TMALIGN_HIT_ORDER_TARGET = 2;
@@ -117,8 +113,10 @@ public:
     std::vector<MMseqsParameter *> createmultimerreport;
     std::vector<MMseqsParameter *> expandmultimer;
     std::vector<MMseqsParameter *> convert2pdb;
+    std::vector<MMseqsParameter *> makepaddeddb;
+    std::vector<MMseqsParameter *> result2structprofile;
+    std::vector<MMseqsParameter *> createstructsubdb;
 
-    PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
@@ -145,14 +143,12 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
-    PARAMETER(PARAM_GPU)
     PARAMETER(PARAM_DB_EXTRACTION_MODE)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
 
-    int prefMode;
     float tmScoreThr;
     int tmScoreThrMode;
     int tmAlignHitOrder;
@@ -180,7 +176,6 @@ public:
     float filtChainTmThr;
     float filtInterfaceLddtThr;
     std::string prostt5Model;
-    int gpu;
     int dbExtractionMode;
     float distanceThreshold;
     int prostt5SplitLength;
