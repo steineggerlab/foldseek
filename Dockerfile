@@ -13,7 +13,7 @@ RUN dpkg --add-architecture $TARGETARCH \
     if [ "$GPU" = "1" ]; then \
       curl -O https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb; \
       dpkg -i cuda-keyring_1.1-1_all.deb; \
-      apt-get update && apt-get install -y cuda-nvcc-12-6 cuda-cudart-dev libcublas-dev ninja-build; \
+      apt-get update && apt-get install -y cuda-nvcc-12-6 cuda-cudart-dev-12-6 libcublas-dev-12-6 ninja-build; \
     fi; \
     rm -rf /var/lib/apt/lists/*;
 
