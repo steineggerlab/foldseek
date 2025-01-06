@@ -43,7 +43,6 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
         cd /opt/build/build_avx2; \
         LIBGOMP=/usr/lib/gcc/x86_64-linux-gnu/12/; \
         cmake -GNinja -DHAVE_AVX2=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DFORCE_STATIC_DEPS=1 \
-          -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
           -DENABLE_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90" \
           -DOpenMP_C_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_C_LIB_NAMES=gomp -DOpenMP_CXX_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_CXX_LIB_NAMES=gomp -DOpenMP_gomp_LIBRARY=${LIBGOMP}/libgomp.a \
           -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=. ..; \
