@@ -94,7 +94,7 @@ jobs:
           wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
           sudo dpkg -i cuda-keyring_1.1-1_all.deb
           sudo apt-get update
-          sudo apt-get install -y gcc-10 g++-10 cuda-nvcc-12-6 build-essential libgcc-10-dev ninja-build
+          sudo apt-get install -y gcc-10 g++-10 cuda-nvcc-12-6 cuda-cudart-dev libcublas-dev build-essential libgcc-10-dev ninja-build
           sudo apt-get purge -y cmake
           wget https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-x86_64.sh
           chmod +x cmake-3.31.0-linux-x86_64.sh
