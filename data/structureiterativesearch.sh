@@ -13,7 +13,9 @@ QUERYDB="$1"
 
 STEP=0
 # processing
-[ -z "$NUM_IT" ] && NUM_IT=3;
+if [ -z "$NUM_IT" ]; then
+    NUM_IT=3
+fi
 while [ "$STEP" -lt "$NUM_IT" ]; do
     # call prefilter module
     if notExists "$TMP_PATH/pref_tmp_${STEP}.done"; then
@@ -68,21 +70,21 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
     if [ $STEP -gt 0 ]; then
         if notExists "$TMP_PATH/aln_$STEP.done"; then
             STEPONE=$((STEP-1))
-            if [ $STEP -ne $((NUM_IT  - 1)) ]; then
+            if [ $STEP -ne $((NUM_IT - 1)) ]; then
                 "$MMSEQS" mergedbs "${QUERYDB}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" \
                     || fail "Alignment died"
             else
                 "$MMSEQS" mergedbs "${QUERYDB}" "${RESULTS}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" \
                     || fail "Alignment died"
             fi
-            "$MMSEQS" rmdb "$TMP_PATH/aln_${STEPONE}"
-            "$MMSEQS" rmdb "$TMP_PATH/aln_tmp_${STEP}"
+            "$MMSEQS" rmdb "$TMP_PATH/aln_${STEPONE}" ${VERBOSITY}
+            "$MMSEQS" rmdb "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY}
             touch "$TMP_PATH/aln_${STEP}.done"
         fi
     fi
 
-# create profiles
-    if [ $STEP -ne $((NUM_IT  - 1)) ]; then
+    # create profiles
+    if [ $STEP -ne $((NUM_IT - 1)) ]; then
         if notExists "$TMP_PATH/profile_${STEP}.dbtype"; then
             # shellcheck disable=SC2086
             $RUNNER "$MMSEQS" result2profile "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}" ${PROFILE_PAR} \

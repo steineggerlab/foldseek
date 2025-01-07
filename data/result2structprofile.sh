@@ -14,16 +14,16 @@ fi
 
 if [ -e "${IN1}_ca.dbtype" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" lndb "${IN1}_ca"  "${OUT}_ca" ${VERBOSITY} \
+    "$MMSEQS" lndb "${IN1}_ca" "${OUT}_ca" ${VERBOSITY} \
         || fail "Create lndb died"
 fi
 
 if [ -e "${IN1}_h.dbtype" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" lndb "${IN1}_h"  "${OUT}_h" ${VERBOSITY} \
+    "$MMSEQS" lndb "${IN1}_h" "${OUT}_h" ${VERBOSITY} \
         || fail "Create lndb died"
 fi
 
 if [ -e "${OUT}.sh" ]; then
-  rm -f -- "${OUT}.sh"
+    rm -f -- "${OUT}.sh"
 fi

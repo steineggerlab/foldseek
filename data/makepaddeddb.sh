@@ -7,11 +7,11 @@ exists() {
 if [ "${CLUSEARCH_PAR}" = 0 ]; then
     if exists "${IN}_ss.dbtype"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" lndb "${IN}_h"  "${OUT}_tmp_ss_h" ${VERBOSITY} \
+        "$MMSEQS" lndb "${IN}_h" "${OUT}_tmp_ss_h" ${VERBOSITY} \
             || fail "lndb died"
 
         # shellcheck disable=SC2086
-        "$MMSEQS" lndb "${IN}_ss"  "${OUT}_tmp_ss" ${VERBOSITY} \
+        "$MMSEQS" lndb "${IN}_ss" "${OUT}_tmp_ss" ${VERBOSITY} \
             || fail "lndb died"
 
         # shellcheck disable=SC2086
@@ -53,7 +53,6 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
         rm -f -- "${OUT}.lookup"
         awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" | sort -nk3 > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
-
     else
         if exists "${IN}.dbtype"; then
             # shellcheck disable=SC2086
@@ -70,11 +69,11 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
 else
     if exists "${IN}_ss.dbtype"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" lndb "${IN}_h"  "${OUT}_tmp_ss_h" ${VERBOSITY} \
+        "$MMSEQS" lndb "${IN}_h" "${OUT}_tmp_ss_h" ${VERBOSITY} \
             || fail "lndb died"
 
         # shellcheck disable=SC2086
-        "$MMSEQS" lndb "${IN}_ss"  "${OUT}_tmp_ss" ${VERBOSITY} \
+        "$MMSEQS" lndb "${IN}_ss" "${OUT}_tmp_ss" ${VERBOSITY} \
             || fail "lndb died"
 
         # shellcheck disable=SC2086
@@ -92,7 +91,7 @@ else
         awk '{ print $3"\t"$1; }' "${OUT}_ss.lookup" > "${OUT}_ss.gpu_mapping1"
 
         awk 'BEGIN{i=0} FNR==NR{name[$3]=1;print $3"\t"$1;i++; next} {if (!($1 in name)){print $1"\t"i; i++}}' \
-        "${OUT}_ss.lookup" "${IN}.lookup" > "${OUT}_ss.gpu_mapping2"
+            "${OUT}_ss.lookup" "${IN}.lookup" > "${OUT}_ss.gpu_mapping2"
 
         if exists "${IN}.dbtype"; then
             # shellcheck disable=SC2086
@@ -121,28 +120,29 @@ else
             || fail "renamedbkeys died"
 
         # shellcheck disable=SC2086
-        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_ca" "${OUT}_seq_ca"  \
+        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_ca" "${OUT}_seq_ca" \
             --subdb-mode 1 ${THREADS_PAR} \
             || fail "renamedbkeys died"
 
         # shellcheck disable=SC2086
-        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_h" "${OUT}_seq_h"  \
+        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_h" "${OUT}_seq_h" \
             --subdb-mode 1 ${THREADS_PAR} \
             || fail "renamedbkeys died"
-        
+
         # shellcheck disable=SC2086
-        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_ss" "${OUT}_seq_ss"  \
+        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_ss" "${OUT}_seq_ss" \
             --subdb-mode 1 ${THREADS_PAR} \
             || fail "renamedbkeys died"
 
         if exists "${IN}_clu.dbtype"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" filterdb "${IN}_clu" "${OUT}_clutmp" --mapping-file  "${OUT}_ss.gpu_mapping2"  ${VERBOSITY} ${THREADS_PAR} \
+            "$MMSEQS" filterdb "${IN}_clu" "${OUT}_clutmp" --mapping-file "${OUT}_ss.gpu_mapping2" ${VERBOSITY} ${THREADS_PAR} \
                 || fail "filterdb died"
+
             # shellcheck disable=SC2086
-            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${OUT}_clutmp" "${OUT}_clu"  \
+            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${OUT}_clutmp" "${OUT}_clu" \
                 --subdb-mode 0 ${THREADS_PAR} \
-                || fail "renamedbkeys died"  
+                || fail "renamedbkeys died"
 
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${OUT}_clutmp" ${VERBOSITY} \
@@ -151,26 +151,26 @@ else
 
         if exists "${IN}_aln.dbtype"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" filterdb "${IN}_aln" "${OUT}_alntmp" --mapping-file  "${OUT}_ss.gpu_mapping2"  ${VERBOSITY} ${THREADS_PAR} \
+            "$MMSEQS" filterdb "${IN}_aln" "${OUT}_alntmp" --mapping-file "${OUT}_ss.gpu_mapping2" ${VERBOSITY} ${THREADS_PAR} \
                 || fail "filterdb died"
             # shellcheck disable=SC2086
-            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${OUT}_alntmp" "${OUT}_aln"  \
+            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping1" "${OUT}_alntmp" "${OUT}_aln" \
                 --subdb-mode 0 ${THREADS_PAR} \
-                || fail "renamedbkeys died"  
+                || fail "renamedbkeys died"
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${OUT}_alntmp" ${VERBOSITY} \
                 || fail "rmdb died"
         fi
 
         rm -f -- "${OUT}.lookup"
-        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" | sort -nk3  > "${OUT}.lookup"
+        awk '{print $1"\t"$2"\t"int($3/2)}' "${OUT}_ss.lookup" \
+            | sort -nk3 > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
         rm -f -- "${OUT}_ss.gpu_mapping2"
-
-        rm "${OUT}_seq"
-        rm "${OUT}_seq_ss"
-        rm "${OUT}_seq_ca"
-        rm "${OUT}_seq_h"
+        rm -f -- "${OUT}_seq"
+        rm -f -- "${OUT}_seq_ss"
+        rm -f -- "${OUT}_seq_ca"
+        rm -f -- "${OUT}_seq_h"
 
     else
         if exists "${IN}.dbtype"; then
@@ -182,5 +182,6 @@ else
 fi
 
 if [ -e "${OUT}.sh" ]; then
-  rm -f -- "${OUT}.sh"
-fi 
+    rm -f -- "${OUT}.sh"
+fi
+

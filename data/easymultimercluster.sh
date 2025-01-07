@@ -77,7 +77,7 @@ postprocessFasta() {
         }
     }
     {print $0}
-    ' "${1}" > "${1}.tmp" && mv "${1}.tmp" "${1}"
+    ' "${1}" > "${1}.tmp" && mv -f -- "${1}.tmp" "${1}"
 }
 
 if notExists "${TMP_PATH}/query.dbtype"; then
@@ -115,11 +115,11 @@ SOURCE="${QUERY}"
 INPUT="${TMP_PATH}/latest/multimer_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR}   \
-        || fail "Convert Alignments died"
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
+        || fail "createtsv died"
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu_filt_info" "${TMP_PATH}/cluster_report" ${THREADS_PAR}  \
-        || fail "Convert Alignments died"
+    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu_filt_info" "${TMP_PATH}/cluster_report" ${THREADS_PAR} \
+        || fail "createtsv died"
 fi
 
 if notExists "${TMP_PATH}/multimer_rep_seqs.dbtype"; then
@@ -131,8 +131,8 @@ fi
 
 if notExists "${TMP_PATH}/multimer_rep_seq.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}"  "${TMP_PATH}/multimer_rep_seqs" "${TMP_PATH}/multimer_rep_seq.fasta" ${VERBOSITY_PAR} \
-            || fail "result2flat died"
+    "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}" "${TMP_PATH}/multimer_rep_seqs" "${TMP_PATH}/multimer_rep_seq.fasta" ${VERBOSITY_PAR} \
+        || fail "result2flat died"
     postprocessFasta "${TMP_PATH}/multimer_rep_seq.fasta"
 fi
 
@@ -140,17 +140,17 @@ fi
 # if notExists "${TMP_PATH}/multimer_all_seqs.fasta"; then
 #     # shellcheck disable=SC2086
 #     "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/multimer_clust_seqs" ${THREADS_PAR} \
-#             || fail "Result2repseq  died"
+#             || fail "createseqfiledb died"
 
 #     # shellcheck disable=SC2086
 #     "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clust_seqs" "${TMP_PATH}/multimer_all_seqs.fasta" ${VERBOSITY_PAR} \
 #             || fail "result2flat died"
 # fi
 
-# mv "${TMP_PATH}/multimer_all_seqs.fasta"  "${RESULT}_all_seqs.fasta"
-mv "${TMP_PATH}/multimer_rep_seq.fasta"  "${RESULT}_rep_seq.fasta"
-mv "${TMP_PATH}/cluster.tsv"  "${RESULT}_cluster.tsv"
-mv "${TMP_PATH}/cluster_report"  "${RESULT}_cluster_report"
+# mv "${TMP_PATH}/multimer_all_seqs.fasta" "${RESULT}_all_seqs.fasta"
+mv -f -- "${TMP_PATH}/multimer_rep_seq.fasta" "${RESULT}_rep_seq.fasta"
+mv -f -- "${TMP_PATH}/cluster.tsv" "${RESULT}_cluster.tsv"
+mv -f -- "${TMP_PATH}/cluster_report" "${RESULT}_cluster_report"
 
 if [ -n "${REMOVE_TMP}" ]; then
     rm "${INPUT}.0"
@@ -176,7 +176,7 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
-    rm "${TMP_PATH}/rep_seqs.list"
-    rm -rf "${TMP_PATH}/latest"
-    rm -f "${TMP_PATH}/easymultimercluster.sh"
+    rm -rf -- "${TMP_PATH}/latest"
+    rm -f -- "${TMP_PATH}/rep_seqs.list"
+    rm -f --"${TMP_PATH}/easymultimercluster.sh"
 fi

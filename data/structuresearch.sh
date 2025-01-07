@@ -96,7 +96,7 @@ else
             # shellcheck disable=SC2086
             "$MMSEQS" mergeresultsbyset "${TMP_PATH}/strualn" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
                 || fail "Expand died"
-            "$MMSEQS" setextendeddbtype "${TMP_PATH}/strualn_expanded" --extended-dbtype 2
+            "$MMSEQS" setextendeddbtype "${TMP_PATH}/strualn_expanded" --extended-dbtype 2 ${VERBOSITY}
         fi
         INTERMEDIATE="${TMP_PATH}/strualn_expanded"
         if notExists "${TMP_PATH}/aln.dbtype"; then
@@ -105,7 +105,7 @@ else
                 || fail "Alignment step died"
         fi
     else
-      "$MMSEQS" mvdb "${TMP_PATH}/strualn" "${TMP_PATH}/aln"
+      "$MMSEQS" mvdb "${TMP_PATH}/strualn" "${TMP_PATH}/aln" ${VERBOSITY}
     fi
 fi
 

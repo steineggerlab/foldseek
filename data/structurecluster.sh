@@ -93,8 +93,8 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
   if notExists "${TMP_PATH}/aln.linclust.dbtype"; then
       # shellcheck disable=SC2086
       $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${INPUT}${ALN_EXTENSION}" \
-              "${INPUT}${ALN_EXTENSION}" "${TMP_PATH}/pref_filter2" \
-              "${TMP_PATH}/aln.linclust" ${ALIGNMENT_PAR} || fail "Alignment step died"
+          "${INPUT}${ALN_EXTENSION}" "${TMP_PATH}/pref_filter2" \
+          "${TMP_PATH}/aln.linclust" ${ALIGNMENT_PAR} || fail "Alignment step died"
   fi
 
   if notExists "${TMP_PATH}/pre_clustered_seqs.dbtype"; then
@@ -111,12 +111,13 @@ if [ "${RUN_LINCLUST}" = "1" ]; then
   fi
 
   if notExists "${TMP_PATH}/clu_redundancy.dbtype"; then
-      # shellcheck disable=SC2086
       if [ "${RUN_ITERATIVE}" = "1" ]; then
-         "$MMSEQS" mergeclusters "$SOURCE" "${TMP_PATH}/clu_redundancy" "${TMP_PATH}/pre_clust" "${TMP_PATH}/clust.linclust" $MERGECLU_PAR \
+        # shellcheck disable=SC2086
+         "$MMSEQS" mergeclusters "$SOURCE" "${TMP_PATH}/clu_redundancy" "${TMP_PATH}/pre_clust" "${TMP_PATH}/clust.linclust" ${MERGECLU_PAR} \
             || fail "mergeclusters died"
       else
-         "$MMSEQS" mergeclusters "$SOURCE" "$2" "${TMP_PATH}/pre_clust" "${TMP_PATH}/clust.linclust" $MERGECLU_PAR \
+         # shellcheck disable=SC2086
+         "$MMSEQS" mergeclusters "$SOURCE" "$2" "${TMP_PATH}/pre_clust" "${TMP_PATH}/clust.linclust" ${MERGECLU_PAR} \
             || fail "mergeclusters died"
       fi
   fi
@@ -175,8 +176,8 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       else
           if notExists "$NEXTINPUT.dbtype"; then
               # shellcheck disable=SC2086
-              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}" "${NEXTINPUT}"  ${VERBOSITY} --subdb-mode 1 \
-                                || fail "Order step $STEP died"
+              "$MMSEQS" createsubdb "${TMP_PATH}/clu_step$STEP" "${INPUT}" "${NEXTINPUT}" ${VERBOSITY} --subdb-mode 1 \
+              || fail "Order step $STEP died"
           fi
       fi
 
@@ -230,7 +231,7 @@ if [ -n "$REASSIGN" ]; then
         if notExists "${TMP_PATH}/seq_wrong_assigned.dbtype"; then
             if notExists "${TMP_PATH}/seq_wrong_assigned_ss.dbtype"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" createsubdb "${TMP_PATH}/clu_not_accepted_swap" "$SOURCE" "${TMP_PATH}/seq_wrong_assigned"  ${VERBOSITY} \
+            "$MMSEQS" createsubdb "${TMP_PATH}/clu_not_accepted_swap" "$SOURCE" "${TMP_PATH}/seq_wrong_assigned" ${VERBOSITY} \
                      || fail "createsubdb1 reassign died"
             fi
         fi
@@ -239,8 +240,8 @@ if [ -n "$REASSIGN" ]; then
         if notExists "${TMP_PATH}/seq_seeds.dbtype"; then
             if notExists "${TMP_PATH}/seq_seeds_ss.dbtype"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" createsubdb "${TMP_PATH}/clu" "$SOURCE" "${TMP_PATH}/seq_seeds" ${VERBOSITY}   \
-                     || fail "createsubdb2 reassign died"
+            "$MMSEQS" createsubdb "${TMP_PATH}/clu" "$SOURCE" "${TMP_PATH}/seq_seeds" ${VERBOSITY} \
+                || fail "createsubdb2 reassign died"
             fi
 
         fi
@@ -252,17 +253,17 @@ if [ -n "$REASSIGN" ]; then
                 buildMergedDb "${TMP_PATH}/seq_wrong_assigned" "${TMP_PATH}/seq_seeds" "${TMP_PATH}/seq_seeds.merged"
                 buildMergedDb "${TMP_PATH}/seq_wrong_assigned_ss" "${TMP_PATH}/seq_seeds_ss" "${TMP_PATH}/seq_seeds.merged_ss"
                 if exists "${TMP_PATH}/seq_seeds_ca.dbtype"; then
-                     buildMergedDb "${TMP_PATH}/seq_wrong_assigned_ca" "${TMP_PATH}/seq_seeds_ca" "${TMP_PATH}/seq_seeds.merged_ca"
+                    buildMergedDb "${TMP_PATH}/seq_wrong_assigned_ca" "${TMP_PATH}/seq_seeds_ca" "${TMP_PATH}/seq_seeds.merged_ca"
                 fi
             fi
             # shellcheck disable=SC2086
             $RUNNER "$MMSEQS" prefilter "${TMP_PATH}/seq_wrong_assigned_ss" "${TMP_PATH}/seq_seeds.merged_ss" "${TMP_PATH}/seq_wrong_assigned_pref" ${PREFILTER_REASSIGN_PAR} \
-                     || fail "Prefilter reassign died"
+                || fail "Prefilter reassign died"
         fi
         if notExists "${TMP_PATH}/seq_wrong_assigned_pref_swaped.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" swapdb "${TMP_PATH}/seq_wrong_assigned_pref" "${TMP_PATH}/seq_wrong_assigned_pref_swaped" ${THREADSANDCOMPRESS} \
-                     || fail "swapdb2 reassign died"
+                || fail "swapdb2 reassign died"
         fi
         if notExists "${TMP_PATH}/seq_wrong_assigned_pref_swaped_aln.dbtype"; then
             # shellcheck disable=SC2086
@@ -274,7 +275,7 @@ if [ -n "$REASSIGN" ]; then
         if notExists "${TMP_PATH}/seq_wrong_assigned_pref_swaped_aln_ocol.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" filterdb "${TMP_PATH}/seq_wrong_assigned_pref_swaped_aln" "${TMP_PATH}/seq_wrong_assigned_pref_swaped_aln_ocol" --trim-to-one-column ${THREADSANDCOMPRESS} \
-                        || fail "filterdb2 reassign died"
+                || fail "filterdb2 reassign died"
         fi
 
         if notExists "${TMP_PATH}/clu_accepted_plus_wrong.dbtype"; then
@@ -289,7 +290,7 @@ if [ -n "$REASSIGN" ]; then
              awk 'FNR==NR{if($3 > 1){ f[$1]=1; }next} !($1 in f){print $1"\t"$1}' "${TMP_PATH}/clu_accepted_plus_wrong.index" "${SOURCE}.index" > "${TMP_PATH}/missing.single.seqs"
             # shellcheck disable=SC2086
             "$MMSEQS" tsv2db "${TMP_PATH}/missing.single.seqs" "${TMP_PATH}/missing.single.seqs.db" --output-dbtype 6 ${VERBCOMPRESS} \
-                                || fail "tsv2db reassign died"
+                || fail "tsv2db reassign died"
         fi
 
         if notExists "${TMP_PATH}/clu_accepted_plus_wrong_plus_single.dbtype"; then
@@ -304,7 +305,7 @@ if [ -n "$REASSIGN" ]; then
         eval TMP="\$$PARAM"
         # shellcheck disable=SC2086
         "$MMSEQS" clust "${SOURCE}" "${TMP_PATH}/clu_accepted_plus_wrong_plus_single" "${2}" ${TMP} \
-                || fail "Clustering step $STEP died"
+            || fail "Clustering step $STEP died"
 
         if [ -n "$REMOVE_TMP" ]; then
             # shellcheck disable=SC2086
@@ -383,7 +384,7 @@ if [ -n "$REMOVE_TMP" ]; then
       "$MMSEQS" rmdb "${TMP_PATH}/input_step_redundancy" ${VERBOSITY}
       # shellcheck disable=SC2086
       "$MMSEQS" rmdb "${TMP_PATH}/input_step_redundancy_h" ${VERBOSITY}
-      rm -f "${TMP_PATH}/order_redundancy"
+      rm -f -- "${TMP_PATH}/order_redundancy"
       # shellcheck disable=SC2086
       "$MMSEQS" rmdb "${TMP_PATH}/pref_filter2" ${VERBOSITY}
       # shellcheck disable=SC2086
