@@ -10,10 +10,25 @@ int result2structprofile(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
-    std::string program = par.db4 + ".sh";
+    std::string program;
+    if (par.db4.find('/') == std::string::npos) {
+        program = "./" + par.db4 + ".sh";
+    } else {
+        program = par.db4 + ".sh";
+    }
+
     FileUtil::writeFile(program, result2structprofile_sh, result2structprofile_sh_len);
 
     CommandCaller cmd;
+    cmd.addVariable("OUT", par.filenames.back().c_str());
+    par.filenames.pop_back();
+    cmd.addVariable("RESULT", par.filenames.back().c_str());
+    par.filenames.pop_back();
+    cmd.addVariable("IN2", par.filenames.back().c_str());
+    par.filenames.pop_back();
+    cmd.addVariable("IN1", par.filenames.back().c_str());
+    par.filenames.pop_back();
+
     par.scoringMatrixFile = "blosum62.out";
     par.seedScoringMatrixFile = "blosum62.out";
     cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());

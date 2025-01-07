@@ -1,9 +1,5 @@
 #!/bin/sh -e
 
-LIST="$1"
-IN="$2"
-OUT="$3"
-
 if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" base:createsubdb "${LIST}" "${IN}" "${OUT}" ${CREATESTRUCTSUBDB_PAR} \
