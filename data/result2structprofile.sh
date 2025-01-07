@@ -1,10 +1,5 @@
 #!/bin/sh -e
 
-IN1="$1"
-IN2="$2"
-RESULT="$3"
-OUT="$4"
-
 if [ -e "${IN1}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" base:result2profile "${IN1}" "${IN2}" "${RESULT}" "${OUT}" ${PROFILE_PAR} \

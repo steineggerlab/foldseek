@@ -10,7 +10,14 @@ int makepaddeddb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    std::string program = par.db2 + ".sh";
+
+    std::string program;
+    if (par.db2.find('/') == std::string::npos) {
+        program = "./" + par.db2 + ".sh";
+    } else {
+        program = par.db2 + ".sh";
+    }
+
     FileUtil::writeFile(program, makepaddeddb_sh, makepaddeddb_sh_len);
     CommandCaller cmd;
 
