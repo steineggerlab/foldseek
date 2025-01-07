@@ -4,6 +4,10 @@ fail() {
     exit 1
 }
 
+exists() {
+	[ -f "$1" ]
+}
+
 notExists() {
 	[ ! -f "$1" ]
 }
@@ -60,8 +64,10 @@ if [ -n "${REMOVE_TMP}" ]; then
             "$MMSEQS" rmdb "${TMP_PATH}/target" ${VERBOSITY}
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${TMP_PATH}/target_h" ${VERBOSITY}
-            # shellcheck disable=SC2086
-            "$MMSEQS" rmdb "${TMP_PATH}/target_ca" ${VERBOSITY}
+            if exists "${TMP_PATH}/target_ca.dbtype"; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" rmdb "${TMP_PATH}/target_ca" ${VERBOSITY}
+            fi
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${TMP_PATH}/target_ss" ${VERBOSITY}
         fi
@@ -69,8 +75,10 @@ if [ -n "${REMOVE_TMP}" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/query" ${VERBOSITY}
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/query_h" ${VERBOSITY}
-        # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY}
+        if exists "${TMP_PATH}/target_ca.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY}
+        fi
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY}
     fi

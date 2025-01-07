@@ -119,10 +119,12 @@ else
             --subdb-mode 1 ${THREADS_PAR} \
             || fail "renamedbkeys died"
 
-        # shellcheck disable=SC2086
-        "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_ca" "${OUT}_seq_ca" \
-            --subdb-mode 1 ${THREADS_PAR} \
-            || fail "renamedbkeys died"
+        if exists "${IN}_seq_ca.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_ca" "${OUT}_seq_ca" \
+                --subdb-mode 1 ${THREADS_PAR} \
+                || fail "renamedbkeys died"
+        fi
 
         # shellcheck disable=SC2086
         "$MMSEQS" renamedbkeys "${OUT}_ss.gpu_mapping2" "${IN}_seq_h" "${OUT}_seq_h" \

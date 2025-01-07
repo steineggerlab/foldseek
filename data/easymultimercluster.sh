@@ -172,8 +172,10 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY_PAR}
+    if exists "${TMP_PATH}/query_ca.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY_PAR}
+    fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
     rm -rf -- "${TMP_PATH}/latest"
