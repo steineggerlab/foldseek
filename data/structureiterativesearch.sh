@@ -71,13 +71,17 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         if notExists "$TMP_PATH/aln_$STEP.done"; then
             STEPONE=$((STEP-1))
             if [ $STEP -ne $((NUM_IT - 1)) ]; then
-                "$MMSEQS" mergedbs "${QUERYDB}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" \
+                # shellcheck disable=SC2086
+                "$MMSEQS" mergedbs "${QUERYDB}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
                     || fail "Alignment died"
             else
-                "$MMSEQS" mergedbs "${QUERYDB}" "${RESULTS}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" \
+                # shellcheck disable=SC2086
+                "$MMSEQS" mergedbs "${QUERYDB}" "${RESULTS}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
                     || fail "Alignment died"
             fi
+            # shellcheck disable=SC2086
             "$MMSEQS" rmdb "$TMP_PATH/aln_${STEPONE}" ${VERBOSITY}
+            # shellcheck disable=SC2086
             "$MMSEQS" rmdb "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY}
             touch "$TMP_PATH/aln_${STEP}.done"
         fi
