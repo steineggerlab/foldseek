@@ -45,7 +45,8 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
             # shellcheck disable=SC2086
             "$MMSEQS" subtractdbs "$TMP_PATH/pref_tmp_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/pref_${STEP}" $SUBSTRACT_PAR \
                 || fail "Substract died"
-            "$MMSEQS" rmdb "$TMP_PATH/pref_tmp_${STEP}"
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "$TMP_PATH/pref_tmp_${STEP}" ${VERBOSITY}
         fi
         touch "$TMP_PATH/pref_${STEP}.done"
     fi

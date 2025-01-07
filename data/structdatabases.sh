@@ -212,10 +212,10 @@ case "${INPUT_TYPE}" in
         for SUFFIX in "" "_ss" "_h" "_ca"; do
             if [ -e "${IN}_seq${SUFFIX}.dbtype" ]; then
                 # shellcheck disable=SC2086
-                "${MMSEQS}" mvdb "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}" || fail "mv died"
+                "${MMSEQS}" mvdb "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}" ${VERB_PAR} || fail "mv died"
             fi
             # shellcheck disable=SC2086
-            "${MMSEQS}" mvdb "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}" || fail "mv died"
+            "${MMSEQS}" mvdb "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}" ${VERB_PAR} || fail "mv died"
         done
 
         if [ -e "${IN}_clu.dbtype" ]; then
@@ -229,7 +229,7 @@ case "${INPUT_TYPE}" in
             done
 
             # shellcheck disable=SC2086
-            "${MMSEQS}" mvdb "${IN}_clu" "${OUTDB}_clu" || fail "mv died"
+            "${MMSEQS}" mvdb "${IN}_clu" "${OUTDB}_clu" ${VERB_PAR} || fail "mv died"
         fi
     ;;
 esac

@@ -125,7 +125,7 @@ BASEIN=$(basename "${INPUT}")
 # Shift _h, _h.dbtype
 if notExists "${TMP_PATH}/multimer_db_h.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" lndb "${INPUT}" "${TMP_PATH}/${BASEIN}tmp" ${VERBOSITY} \
+    "$MMSEQS" lndb "${INPUT}" "${TMP_PATH}/${BASEIN}tmp" ${VERBOSITY_PAR} \
         || fail "lndb died"
 
     # shellcheck disable=SC2086
