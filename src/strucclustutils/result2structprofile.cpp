@@ -10,12 +10,7 @@ int result2structprofile(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
-    std::string program;
-    if (par.db4.find('/') == std::string::npos) {
-        program = "./" + par.db4 + ".sh";
-    } else {
-        program = par.db4 + ".sh";
-    }
+    std::string program = par.db4 + ".sh";
 
     FileUtil::writeFile(program, result2structprofile_sh, result2structprofile_sh_len);
 
@@ -44,7 +39,7 @@ int result2structprofile(int argc, const char **argv, const Command &command) {
         }
     cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2structprofile).c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-    cmd.execProgram(program.c_str(), par.filenames);
+    cmd.execProgram(FileUtil::getRealPathFromSymLink(program).c_str(), par.filenames);
 
     // Should never get here
     assert(false);

@@ -10,12 +10,7 @@ int createstructsubdb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
-    std::string program;
-    if (par.db3.find('/') == std::string::npos) {
-        program = "./" + par.db3 + ".sh";
-    } else {
-        program = par.db3 + ".sh";
-    }
+    std::string program = par.db3 + ".sh";
 
     FileUtil::writeFile(program, createstructsubdb_sh, createstructsubdb_sh_len);
 
@@ -28,7 +23,7 @@ int createstructsubdb(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("CREATESTRUCTSUBDB_PAR", par.createParameterString(par.createstructsubdb).c_str());
-    cmd.execProgram(program.c_str(), par.filenames);
+    cmd.execProgram(FileUtil::getRealPathFromSymLink(program).c_str(), par.filenames);
 
     // Should never get here
     assert(false);
