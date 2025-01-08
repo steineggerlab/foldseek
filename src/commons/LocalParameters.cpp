@@ -78,8 +78,8 @@ LocalParameters::LocalParameters() :
     PARAM_ALPH_SIZE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_INCLUDE_IDENTITY.category = MMseqsParameter::COMMAND_HIDDEN;
 
-    scoringMatrixFile = "3di.out";
-    seedScoringMatrixFile = "3di.out";
+    scoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("3di.out", "3di.out"));
+    seedScoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("3di.out", "3di.out"));
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
 
     // structurecreatedb
@@ -406,7 +406,7 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
     return formatCodes;
 }
 
-LocalParameters& instance = LocalParameters::getLocalInstance();
+
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
 std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};
 std::vector<int> FoldSeekDbValidator::flatfileStdinAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_STDIN,LocalParameters::DBTYPE_DIRECTORY};
