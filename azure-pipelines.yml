@@ -89,22 +89,19 @@ jobs:
     steps:
       - checkout: self
         submodules: false
-        steps:
-          - checkout: self
-            submodules: false
-          - script: |
-              mkdir -p ${BUILD_SOURCESDIRECTORY}/output
-              docker build -t manylinux-builder \
-                -f .github/workflows/Dockerfile.GPU-manylinux2014 .
-              docker run --rm \
-                -v ${BUILD_SOURCESDIRECTORY}/output:/output \
-                manylinux-builder \
-                /bin/bash -c "cp /work/build/src/foldseek /output/"
-            displayName: Run Docker Container and Copy Binary
-          - task: PublishPipelineArtifact@0
-            inputs:
-              targetPath: $(Build.SourcesDirectory)/output/foldseek
-              artifactName: foldseek-linux-gpu
+      - script: |
+          mkdir -p ${BUILD_SOURCESDIRECTORY}/output
+          docker build -t manylinux-builder \
+            -f .github/workflows/Dockerfile.GPU-manylinux2014 .
+          docker run --rm \
+            -v ${BUILD_SOURCESDIRECTORY}/output:/output \
+            manylinux-builder \
+            /bin/bash -c "cp /work/build/src/foldseek /output/"
+        displayName: Run Docker Container and Copy Binary
+      - task: PublishPipelineArtifact@0
+        inputs:
+          targetPath: $(Build.SourcesDirectory)/output/foldseek
+          artifactName: foldseek-linux-gpu
 
   - job: build_ubuntu_cross_2004
     displayName: Ubuntu 2004 Cross-Compile
