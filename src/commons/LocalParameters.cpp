@@ -406,7 +406,7 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
     return formatCodes;
 }
 
-
+LocalParameters& instance = LocalParameters::getLocalInstance();
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
 std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};
 std::vector<int> FoldSeekDbValidator::flatfileStdinAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_STDIN,LocalParameters::DBTYPE_DIRECTORY};
