@@ -89,44 +89,22 @@ jobs:
     steps:
       - checkout: self
         submodules: false
-      - script: |
-          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
-          sudo dpkg -i cuda-keyring_1.1-1_all.deb
-          sudo apt-get update
-          sudo apt-get install -y gcc-10 g++-10 cuda-nvcc-12-6 cuda-cudart-dev-12-6 libcublas-dev-12-6 build-essential libgcc-10-dev ninja-build
-          sudo apt-get purge -y cmake
-          wget https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-x86_64.sh
-          chmod +x cmake-3.31.0-linux-x86_64.sh
-          sudo ./cmake-3.31.0-linux-x86_64.sh --skip-license --prefix=/usr/local
-        displayName: Install newer G++
-      - script: |
-          mkdir build && cd build
-          export CC=gcc-10 ; export CXX=g++-10; export CUDAHOSTCXX=$CXX; export CUDACXX=/usr/local/cuda/bin/nvcc;
-          LIBGCC=/usr/lib/gcc/x86_64-linux-gnu/10;
-          /usr/local/bin/cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_TESTS=0 -DENABLE_WERROR=1 -DHAVE_AVX2=1 \
-            -DFORCE_STATIC_DEPS=1 -DATOMIC_LIB_OVERRIDE=${LIBGCC}/libatomic.a \
-            -DOpenMP_C_FLAGS="-fopenmp -I${LIBGCC}" -DOpenMP_C_LIB_NAMES=gomp -DOpenMP_CXX_FLAGS="-fopenmp -I${LIBGCC}" -DOpenMP_CXX_LIB_NAMES=gomp -DOpenMP_gomp_LIBRARY=${LIBGCC}/libgomp.a \
-            -DENABLE_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90" ..
-          cmake --build . -j$(nproc --all) -v
-          # fail if GLIBC_PRIVATE or too new GLIBC is present
-          if readelf -Ws src/foldseek | grep -q GLIBC_PRIVATE; then
-            echo "Error: binary contains private glibc symbols"
-            exit 1
-          fi
-          LIBC_V=$(readelf -V src/foldseek | awk '$3 ~ /^GLIBC_/ { print $3 }' | sort -V | tail -n1)
-          if [[ "$LIBC_V" > "GLIBC_2.29" ]]; then
-            echo "Error: glibc too new"
-            exit 1
-          fi
-          if readelf -d src/foldseek | grep -q "libatomic.so"; then
-            echo "Error: libatomic.so is present as a dependency"
-            exit 1
-          fi
-        displayName: Build GPU
-      - task: PublishPipelineArtifact@0
-        inputs:
-          targetPath: $(Build.SourcesDirectory)/build/src/foldseek
-          artifactName: foldseek-linux-gpu
+        steps:
+          - checkout: self
+            submodules: false
+          - script: |
+              mkdir -p ${BUILD_SOURCESDIRECTORY}/output
+              docker build -t manylinux-builder \
+                -f .github/workflows/Dockerfile.GPU-manylinux2014 .
+              docker run --rm \
+                -v ${BUILD_SOURCESDIRECTORY}/output:/output \
+                manylinux-builder \
+                /bin/bash -c "cp /work/build/src/foldseek /output/"
+            displayName: Run Docker Container and Copy Binary
+          - task: PublishPipelineArtifact@0
+            inputs:
+              targetPath: $(Build.SourcesDirectory)/output/foldseek
+              artifactName: foldseek-linux-gpu
 
   - job: build_ubuntu_cross_2004
     displayName: Ubuntu 2004 Cross-Compile
