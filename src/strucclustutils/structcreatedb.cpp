@@ -632,7 +632,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
 
  #ifdef OPENMP
-         size_t localThreads = (par.gpu != 0) ? devices.size() : par.threads;
+        size_t localThreads = (par.gpu != 0) ? devices.size() : par.threads;
+        localThreads = std::max(std::min(localThreads, reader.getSize()), (size_t)1);
  #endif
  #pragma omp parallel num_threads(localThreads)
         {
