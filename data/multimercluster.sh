@@ -30,69 +30,22 @@ abspath() {
 # $1: input db
 # $2: output db
 buildCmplDb() {
-    awk -F"\t" 'FNR==NR{
-        split($2,parts,"_")
-        multname=parts[1]
-        for (j = 2; j < length(parts); j++) {
-            if (j < length(parts)){
-                multname=multname"_"
+    touch "${2}"
+    awk -F"\t" 'BEGIN {OFFSET=0}
+        FNR==NR{chain_len[$1]=$3;next}
+        {
+            if (!($3 in off_arr)) {
+                off_arr[$3]=OFFSET
             }
-            multname = multname parts[j]
+            cmpl_len[$3]+=chain_len[$1];OFFSET+=chain_len[$1]
         }
-        multnameidx[multname]=$3; next
-    } {
-        split($1,words," ")
-        split(words[1],part,"_")
-        output_string=part[1]
-        for (j = 2; j < length(part); j++) {
-            if (j < length(part)){
-                output_string=output_string"_"
+        END {
+            for (cmpl in off_arr) {
+                print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
             }
-            output_string = output_string part[j]
-        }
-        if (output_string != current_key) {
-            if (current_key != "") {
-                print multnameidx[current_key] "\t" concatenated;
-            }
-            current_key = output_string;
-            concatenated = $2;
-        } else {
-            concatenated = concatenated $2;
-        }
-    } END {
-        if (current_key != "") {
-            print multnameidx[current_key] "\t" concatenated;
-        }
-    }' "${2}.lookup" "${1}" > "${3}"
-}
-
-buldCmplhDb(){
-    awk -F"\t" 'FNR==NR{
-        split($2,parts,"_")
-        multname=parts[1]
-        for (j = 2; j < length(parts); j++) {
-            if (j < length(parts)){
-                multname=multname"_"
-            }
-            multname = multname parts[j]
-        }
-        multnameidx[multname]=$3; next
-    }{
-        split($2,words," ")
-        split(words[1],part,"_")
-        output_string=part[1]
-        for (j = 2; j < length(part); j++) {
-            if (j < length(part)){
-                output_string=output_string"_"
-            }
-            output_string = output_string part[j]
-        }
-        headerstring=""
-        for (k = 2; k < length(words)+1; k++) {
-            headerstring = headerstring words[k]" "
-        }
-        print multnameidx[output_string]"\t"output_string" "headerstring
-    }' "${2}.lookup" "${1}" | sort | uniq > "${3}"
+        }' "${1}.index" "${1}.lookup" > "${2}.index"
+    ln -s "$(abspath "${1}")" "${2}.0"
+    cp "${1}.dbtype" "${2}.dbtype"
 }
 
 
@@ -111,40 +64,13 @@ fi
 # shift query DB, .index, .dbtype
 if notExists "${TMP_PATH}/multimer_db.dbtype"; then
     # build complex db as output
-    # buildCmplDb "${INPUT}" "${TMP_PATH}/multimer_db"
-    # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/chain_db.tsv" --threads 1 ${VERBOSITY_PAR} \
-        || fail "createtsv died"
-    buildCmplDb "${TMP_PATH}/chain_db.tsv" "${INPUT}" "${TMP_PATH}/multimer.tsv"
-    # shellcheck disable=SC2086
-    "$MMSEQS" tsv2db "${TMP_PATH}/multimer.tsv" "${TMP_PATH}/multimer_db" --output-dbtype 0 ${VERBOSITY_PAR} \
-        || fail "tsv2db died"
+    buildCmplDb "${INPUT}" "${TMP_PATH}/multimer_db"
 fi
 
-BASEIN=$(basename "${INPUT}")
 # Shift _h, _h.dbtype
 if notExists "${TMP_PATH}/multimer_db_h.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" lndb "${INPUT}" "${TMP_PATH}/${BASEIN}tmp" ${VERBOSITY_PAR} \
-        || fail "lndb died"
-
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/${BASEIN}tmp_h" ${VERBOSITY_PAR} \
-        || fail "rmdb died"
-
-    # shellcheck disable=SC2086
-    "$MMSEQS" base:createsubdb "${INPUT}.index" "${INPUT}_h" "${TMP_PATH}/${BASEIN}tmp_h" --subdb-mode 0 ${VERBOSITY_PAR} \
-        || fail "createsubdb died"
-
-    # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${TMP_PATH}/${BASEIN}tmp" "${TMP_PATH}/${BASEIN}tmp_h" "${TMP_PATH}/chain_db_h.tsv" --threads 1 ${VERBOSITY_PAR} \
-        || fail "createtsv died"
-
-    sort "${TMP_PATH}/chain_db_h.tsv" > "${TMP_PATH}/chain_db_h.tsvtmp"
-    mv -f -- "${TMP_PATH}/chain_db_h.tsvtmp" "${TMP_PATH}/chain_db_h.tsv"
-    buldCmplhDb "${TMP_PATH}/chain_db_h.tsv" "${INPUT}" "${TMP_PATH}/multimer_header.tsv"
-    # shellcheck disable=SC2086
-    "$MMSEQS" tsv2db "${TMP_PATH}/multimer_header.tsv" "${TMP_PATH}/multimer_db_h" --output-dbtype 12 ${VERBOSITY_PAR} \
+    "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/multimer_db_h" --output-dbtype 12 ${VERBOSITY_PAR} \
         || fail "tsv2db died"
 fi
 
