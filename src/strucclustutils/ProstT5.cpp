@@ -287,9 +287,6 @@ static struct init_result init_from_params(common_params & params) {
     return iparams;
 }
 
-struct llama_model;
-struct llama_context;
-
 LlamaInitGuard::LlamaInitGuard(bool verbose) {
     if (!verbose) {
         llama_log_set([](ggml_log_level, const char *, void *) {}, nullptr);
