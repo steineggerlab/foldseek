@@ -85,8 +85,8 @@ if notExists "${INPUT}.dbtype"; then
     if notExists "${TMP_PATH}/query"; then
         # shellcheck disable=SC2086
         "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/query" ${CREATEDB_PAR} \
-            || fail "query createdb died" 
-    fi   
+            || fail "query createdb died"
+    fi
     QUERY="${TMP_PATH}/query"
 
     if [ -n "${GPU}" ]; then
