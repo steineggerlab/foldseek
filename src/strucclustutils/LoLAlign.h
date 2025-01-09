@@ -71,7 +71,7 @@ public:
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
                             char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
 
-    void calc_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length);
+    void align_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length, float** P, float** G);
 
 
     static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
@@ -93,6 +93,7 @@ private:
 
 
     std::string backtrace;
+    int num_sa = 10;
     float * query_x;
     float * query_y;
     float * query_z;
@@ -104,8 +105,8 @@ private:
     float ** d_ij;
     float ** d_kl;
     float ** G;
-    int * anchor_query;
-    int * anchor_target;
+    int ** anchor_query;
+    int ** anchor_target;
     float start_anchor_go = -3.0;
     float start_anchor_ge = -1.0;
     float start_anchor_T = 2.0;
@@ -132,7 +133,7 @@ private:
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
-    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G);
+    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen);
     void lolscore(float* d_ij, float* d_kl, float* d_seq, float* score, int length);
     
 

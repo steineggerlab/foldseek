@@ -76,14 +76,12 @@ void lolAlign::calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int 
         if (index_q == queryLen || index_t == targetLen)
         {
             gaps[0] = -1;
-            return ;
+            return;
         }
-        
-
     }
     gaps[0] = index_q;
     gaps[2] = index_t;
-    while(anchor_query[index_q] == 0 && anchor_target[index_t] == 0){
+    while(anchor_query[index_q] == 0 || anchor_target[index_t] == 0){
 
         if(anchor_query[index_q] == 0 && anchor_target[index_t] == 0){
             index_q++;
@@ -96,6 +94,8 @@ void lolAlign::calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int 
             index_t++;
         }
         if (index_q == queryLen || index_t == targetLen){
+            index_q = queryLen;
+            index_t = targetLen;
             break;
         }
     }
@@ -104,6 +104,8 @@ void lolAlign::calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int 
     return ;
     
 }
+
+
 
 
 Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
@@ -133,8 +135,27 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         start_anchor_T,
         scoreForward);
 
-    this->P = malloc_matrix<float>(queryLen, targetLen + length);
+    int maxIndexX = 0;
+    int maxIndexY = 0;
+
+    P = malloc_matrix<float>(queryLen, targetLen + length);
     G = malloc_matrix<float>(queryLen, targetLen + length);
+    anchor_query = malloc_matrix<int>(num_sa, queryLen);
+    anchor_target = malloc_matrix<int>(num_sa, targetLen);
+    int* anchor_length = new int[num_sa];
+    int* new_anchor_length = new int[num_sa];
+    for(int sa = 0; sa < 10; sa++){
+        anchor_length[sa] = 0;
+        new_anchor_length[sa] = 0;
+        for (int i = 0; i < queryLen; i++) {
+
+            anchor_query[sa][i] = 0;
+        }
+        for (int i = 0; i < targetLen; i++) {
+            anchor_target[sa][i] = 0;
+        }
+    }
+    
 
     for (size_t i = 0; i < queryLen; ++i)
     {
@@ -145,24 +166,48 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     }
     int gaps_start[4] = {0, queryLen, 0, targetLen};
 
+    for(int sa = 0; sa < 10; sa++){
 
-    lolAlign::lol_fwbw(scoreForward, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, start_anchor_T, length, blocks, gaps_start);
+        if(sa % 5 == 0){
+            lolAlign::lol_fwbw(scoreForward, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, start_anchor_T, length, blocks, gaps_start);
+        }
+        maxIndexX = 0;
+        maxIndexY = 0;
+        
+        float maxScore = P[0][0];
 
 
-    int maxIndexX = 0;
-    int maxIndexY = 0;
-    float maxScore = P[0][0];
-
-    for (int i = this->start_anchor_length+1; i < queryLen - this->start_anchor_length -1; ++i) {
-        for (int j = this->start_anchor_length+1; j < targetLen - this->start_anchor_length -1; ++j) {
-            
-            if (P[i][j] > maxScore) {
-                maxScore = P[i][j];
-                maxIndexX = i;
-                maxIndexY = j;
+        for (int i = this->start_anchor_length+1; i < queryLen - this->start_anchor_length -1; ++i) {
+            for (int j = this->start_anchor_length+1; j < targetLen - this->start_anchor_length -1; ++j) {
+                
+                if (P[i][j] > maxScore) {
+                    maxScore = P[i][j];
+                    maxIndexX = i;
+                    maxIndexY = j;
+                }
             }
         }
+        
+
+        lolAlign::align_startAnchors(anchor_query[sa], anchor_target[sa], maxIndexX, maxIndexY, &new_anchor_length[sa], P, scoreForward);
+        /*for(int i = 0; i < queryLen; i++){
+            if(anchor_query[sa][i] != 0){
+                std::cout << "anchor_query[" << i << "] = " << anchor_query[sa][i] << std::endl;
+            }
+        }
+        for(int i = 0; i < targetLen; i++){
+            if(anchor_target[sa][i] != 0){
+                std::cout << "anchor_target[" << i << "] = " << anchor_target[sa][i] << std::endl;
+            }
+        }*/
+
+        anchor_length[sa] = new_anchor_length[sa];
+
     }
+
+
+
+    
     /*int anchor_query[2 * this->start_anchor_length + 1];
     int anchor_target[2 * this->start_anchor_length + 1];
     for (int i = 0; i < 2 * this->start_anchor_length + 1; i++) {
@@ -170,27 +215,9 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         anchor_target[i] = -1.0;
         //std::cout << anchor_query[i] << " " << anchor_target[i] << std::endl;
     }*/
-    anchor_query = new int[queryLen];
-    anchor_target = new int[targetLen];
-    int anchor_length = 0;
-    int new_anchor_length = 0;
-    for (int i = 0; i < queryLen; i++) {
-        anchor_query[i] = 0;
-    }
-    for (int i = 0; i < targetLen; i++) {
-        anchor_target[i] = 0;
-    }
+
+
     
-
-
-
-
-
-    calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
-    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
-
-    lolAlign::calc_startAnchors(anchor_query, anchor_target, maxIndexX, maxIndexY, &new_anchor_length);
-    anchor_length = new_anchor_length;
 
     /*for (int i = 0; i < queryLen; i++) {
         std::cout << "anchor_query[" << i << "] = " << anchor_query[i] << std::endl;
@@ -198,6 +225,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     for (int i = 0; i < targetLen; i++) {
         std::cout << "anchor_target[" << i << "] = " << anchor_target[i] << std::endl;
     }*/
+    calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
+    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
 
     float* anchor_dist_query = new float[2 * this->start_anchor_length + 1];
     float* anchor_dist_target = new float[2 * this->start_anchor_length + 1];
@@ -213,131 +242,197 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     //int gaps[8] = {0, maxIndexX - start_anchor_length, 0, maxIndexY -start_anchor_length,
     //                maxIndexX + start_anchor_length};
+    for(int i = 0 ; i < queryLen; i++){
+        for(int j = 0; j < targetLen; j++){
+            P[i][j] = 0;
+        }
+    }
     
+    int* gaps = new int[4]{0, 0, 0, 0};
 
-    
-    for(int iteration = 0; iteration < 20; iteration++){
-        int* gaps = new int[4]{0, 0, 0, 0};
-        float maxP = 0.0;
+    for (int sa = 0; sa < 3; sa++){
+        //std::cout << "sa: " << sa << std::endl;
+        for(int iteration = 0; iteration < 10; iteration++){
+            //std::cout << "iteration: " << iteration << " " << new_anchor_length[sa] << std::endl;
 
-        while(gaps[1] < queryLen && gaps[3] < targetLen && gaps[0] != -1){
-
-            calc_gap(anchor_query, anchor_target, gaps, queryLen, targetLen);
-            //std::cout << "gaps[0]: " << gaps[0] << " gaps[1]: " << gaps[1] << " gaps[2]: " << gaps[2] << " gaps[3]: " << gaps[3] << std::endl;
-            if (gaps[0] != -1){
-                lolmatrix(anchor_query, anchor_target, new_anchor_length, gaps, d_ij, d_kl, G);
-            }
+            gaps[0] = 0;
+            gaps[1] = 0;
+            gaps[2] = 0;
+            gaps[3] = 0;
             
-        }
-        new_anchor_length = 0;
-        /*for(int i = 0; i < queryLen; i++){
-            for(int j = 0; j < targetLen; j++){
-                G[i][j] = exp(G[i][j]);
+
+            while((gaps[1] < queryLen && gaps[3] < targetLen)){
+
+                calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
+                
+                if (gaps[0] != -1){
+                    lolmatrix(anchor_query[sa], anchor_target[sa], new_anchor_length[sa], gaps, d_ij, d_kl, G, queryLen, targetLen);
+                }
+                else{
+                    break;
+                }
+                //std::cout << "gaps[0]: " << gaps[0] << " gaps[1]: " << gaps[1] << " gaps[2]: " << gaps[2] << " gaps[3]: " << gaps[3] << std::endl;
+                //std::cout << "queryLen: " << queryLen << " targetLen: " << targetLen << std::endl;
+                
             }
-        }
-        gaps[0] = 0;
-        gaps[1] = queryLen;
-        gaps[2] = 0;
-        gaps[3] = targetLen;*/
+            for(int i = 0; i <queryLen; i++){
+                if(anchor_query[sa][i] == 2){
+                    anchor_query[sa][i] = 1;
+                }
+            }
+            for(int i = 0; i <targetLen; i++){
+                if(anchor_target[sa][i] == 2){
+                    anchor_target[sa][i] = 1;
+                }
+            }
+            new_anchor_length[0] = 0;
+            /*for(int i = 0; i < queryLen; i++){
+                for(int j = 0; j < targetLen; j++){
+                    G[i][j] = exp(G[i][j]);
+                }
+            }
+            gaps[0] = 0;
+            gaps[1] = queryLen;
+            gaps[2] = 0;
+            gaps[3] = targetLen;*/
 
-        gaps[0] = 0;
-        gaps[1] = 0;
-        gaps[2] = 0;
-        gaps[3] = 0;
-        while(gaps[1] < queryLen && gaps[3] < targetLen && gaps[0] != -1){
-            calc_gap(anchor_query, anchor_target, gaps, queryLen, targetLen);
-            if(gaps[0] != -1){
-                lolAlign::lol_fwbw(G, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, 2, length, blocks, gaps);
+            gaps[0] = 0;
+            gaps[1] = 0;
+            gaps[2] = 0;
+            gaps[3] = 0;
+            float maxP = 0.5;
+
+            while((gaps[1] < queryLen && gaps[3] < targetLen)){
+                calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
+                if(gaps[0] != -1){
+                    lolAlign::lol_fwbw(G, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, 2, length, blocks, gaps);
+
+                }
+                //std::cout << "gaps[0]: " << gaps[0] << " gaps[1]: " << gaps[1] << " gaps[2]: " << gaps[2] << " gaps[3]: " << gaps[3] << std::endl;
+
+
+                if (gaps[0] != -1){
+                    for (int i = gaps[0]; i < gaps[1]; i++){
+                        for (int j = gaps[2]; j < gaps[3]; j++){
+                            if (P[i][j] > maxP){
+                                maxIndexX = i;
+                                maxIndexY = j;
+                                maxP = P[i][j];
+                                //std::cout << "maxP: " << maxP <<   std::endl;
+                                //std::cout << "maxIndexX: " << maxIndexX << " maxIndexY: " << maxIndexY << std::endl;
+                            }
+                        }
+                    }
+                }
+                else{
+                    break;
+                }
 
             }
 
-            if (gaps[0] != -1){
-                for (int i = gaps[0]; i < gaps[1]; i++){
-                    for (int j = gaps[2]; j < gaps[3]; j++){
-                        if (P[i][j] > maxP){
-                            maxP = P[i][j];
+            new_anchor_length[sa] = 0;
+            //std::cout << "maxP: " << maxP << " " << anchor_length[sa] << std::endl;
+            //std::cout << "maxIndexX: " << maxIndexX << " maxIndexY: " << maxIndexY << std::endl;
+            /*for(int i = 0; i < queryLen; i++){
+                for(int j = 0; j < targetLen; j++){
+                    G[i][j] = log(G[i][j]);
+                }
+            }*/
+
+            
+            
+
+            for(int i = 0; i < queryLen; i++){
+                for(int j = 0; j < targetLen; j++){
+                    if(P[i][j] > maxP -0.1){
+                        if(anchor_query[sa][i] == 0 && anchor_target[sa][j] == 0){
+                            anchor_query[sa][i] = 2;
+                            anchor_target[sa][j] = 2;
+                            anchor_length[sa] +=1;
+                            new_anchor_length[sa] += 1;
+                            //std::cout << "anchor_query[" << i << "]" << "anchor_target[" << j << "] " << P[i][j] << " " << maxP << std::endl;
                         }
                     }
                 }
             }
-        }
-        //std::cout << "###################iteration: " << maxP << " " << maxP << std::endl;
+            if (new_anchor_length[sa] == 0){
+                break;
 
-        new_anchor_length = 0;
-        /*for(int i = 0; i < queryLen; i++){
-            for(int j = 0; j < targetLen; j++){
-                G[i][j] = log(G[i][j]);
-            }
-        }*/
-
-        
-        
-
-        for(int i = 0; i < queryLen; i++){
-            for(int j = 0; j < targetLen; j++){
-                if(P[i][j] > maxP -0.1){
-                    if(anchor_query[i] == 0 && anchor_target[j] == 0){
-                        anchor_query[i] = 2;
-                        anchor_target[j] = 2;
-                        anchor_length++;
-                        new_anchor_length++;
-                        //std::cout << "anchor_query[" << i << "]" << "anchor_target[" << j << "]" << std::endl;
-                    }
-                }
             }
         }
-        if (new_anchor_length == 0){
-            break;
-
-        }
-    }
-    /*std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
-    if (outfile.is_open())
-    {
-        for (size_t i = 0; i < queryLen; ++i)
-        {
-            for (size_t j = 0; j < targetLen; ++j)
+        if(sa == 10){
+        
+            std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
+            if (outfile.is_open())
             {
-                outfile << log(G[i][j]) << " ";
-            }
-            outfile << "\n";
-        }
-        outfile.close();
-    }
-    else
-    {
-        std::cerr << "Unable to open file for writing P matrix." << std::endl;
-    }
-
-    std::ofstream outfile2("/home/lasse/Desktop/Projects/FB_martin/P_mat.txt");
-    if (outfile2.is_open())
-    {
-        for (size_t i = 0; i < queryLen; ++i)
-        {
-            for (size_t j = 0; j < targetLen; ++j)
-            if(i==j && anchor_query[i] != 0 && anchor_target[j] != 0){
-                outfile2 << 1 << " ";
+                for (size_t i = 0; i < queryLen; ++i)
+                {
+                    for (size_t j = 0; j < targetLen; ++j)
+                    {
+                        outfile << log(G[i][j]) << " ";
+                    }
+                    outfile << "\n";
+                }
+                outfile.close();
             }
             else
             {
-                outfile2 << 0 << " ";
+                std::cerr << "Unable to open file for writing P matrix." << std::endl;
             }
-            outfile2 << "\n";
+
+            std::ofstream outfile2("/home/lasse/Desktop/Projects/FB_martin/P_mat.txt");
+            if (outfile2.is_open())
+            {
+                for (size_t i = 0; i < queryLen; ++i)
+                {
+                    if(anchor_query[sa][i] != 0){
+                        outfile2 << i  << " ";
+                    }
+
+                    /*for (size_t j = 0; j < targetLen; ++j){
+                        outfile2 <<  P[i][j] << " ";
+                        if(i==j && anchor_query[i] != 0 && anchor_target[j] != 0){
+                            outfile2 << 1  << " ";
+                        }
+                        else
+                        {
+                            outfile2 << 0 << " ";
+                        }
+                   }
+                    outfile2 << "\n";*/
+                }
+                outfile2 << "\n";
+                for (size_t j = 0; j < targetLen; ++j)
+                {
+                    if(anchor_target[sa][j] != 0){
+                        outfile2 << j  << " ";
+                    }
+                }
+                outfile2.close();
+            }
+            else
+            {
+                std::cerr << "Unable to open file for writing P matrix." << std::endl;
+            }
         }
-        outfile2.close();
+    for (size_t i = 0; i < queryLen; ++i)
+        {
+            for (size_t j = 0; j < targetLen +length; ++j)
+            {
+                G[i][j] = 0.5;
+                P[i][j] = 0;
+            }
+        }
+
     }
-    else
-    {
-        std::cerr << "Unable to open file for writing P matrix." << std::endl;
-    }*/
     
 
 
     for (int i = 0; i < 2 * this->start_anchor_length + 1; i++) {
         for (int j = 0; j < 2 * this->start_anchor_length + 1; j++) {
-            anchor_dist_query[j] = d_ij[anchor_query[i]][anchor_query[j]];
-            anchor_dist_target[j] = d_kl[anchor_target[i]][anchor_target[j]];
-            seq_distance[j] = (float)anchor_query[i]-anchor_query[j]; 
+            anchor_dist_query[j] = d_ij[anchor_query[0][i]][anchor_query[0][j]];
+            anchor_dist_target[j] = d_kl[anchor_target[0][i]][anchor_target[0][j]];
+            seq_distance[j] = (float)anchor_query[0][i]-anchor_query[0][j]; 
         }
         lolscore(anchor_dist_query, anchor_dist_target, seq_distance, lol_score, 2 * this->start_anchor_length + 1);   
 
@@ -365,22 +460,33 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     return Matcher::result_t();
 
 }
-void lolAlign::calc_startAnchors(int *anchor_query, int *anchor_target, int max_query, int max_target, int *anchor_length){
+void lolAlign::align_startAnchors(int *anchor_query, int *anchor_target, int max_query, int max_target, int *anchor_length, float** P, float** G){
     //int idx = 0;
-    for (int i = max_query - this->start_anchor_length; i <= max_query + this->start_anchor_length; i++)
+
+
+
+    for (int i = max_query - this->start_anchor_length; i <= max_query + this->start_anchor_length; ++i)
     {
-        float max_row = -1;
-        int max_ind = -1;
-        for (int j = max_target-this->start_anchor_length; j <= max_target + this->start_anchor_length; j++)
+        //float max_row = -1;
+        int max_ind = max_target + i - max_query;
+        /*for (int j = max_target-this->start_anchor_length; j <= max_target + this->start_anchor_length; ++j)
         {
             if(P[i][j] > max_row){
                 max_row = P[i][j];
                 max_ind = j; 
                
             }
-        }
+        }*/
+
         anchor_query[i] = 2;
         anchor_target[max_ind] = 2;
+        //std::cout << "anchor_query[" << i << "]" << "anchor_target[" << max_ind << "] " << this->start_anchor_length << " " << max_query << std::endl;
+
+
+        
+
+        P[i][max_ind] = .01;
+        G[i][max_ind] = .01;
         *anchor_length = *anchor_length + 1;
         //idx++;
 
@@ -446,7 +552,7 @@ float lolAlign::alignment_lolScore(std::vector<float> d_ij, std::vector<float> d
 
 }
 
-void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G)
+void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen)
 {
     int gap0_start = gaps[0];
     int gap0_end = gaps[1];
@@ -464,15 +570,17 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
     for (int i = 0; i < anchor_length; i++){
         for(int aq = anchor_q+1; aq < queryLen; aq++){
             if(anchor_query[aq] == 2){
-                anchor_query[aq] = 1;
+                //anchor_query[aq] = 1;
                 anchor_q = aq;
+                //std::cout << "anchor_q: " << anchor_q << std::endl;
                 break;
             }
         }
-        for(int at = anchor_t+1; at < queryLen; at++){
+        for(int at = anchor_t+1; at < targetLen; at++){
             if(anchor_target[at] == 2){
-                anchor_target[at] = 1;
+                //anchor_target[at] = 1;
                 anchor_t = at;
+                //std::cout << "anchor_t: " << anchor_t << std::endl;
                 break;
             }
         }
@@ -526,6 +634,7 @@ void lolAlign::lolscore(float* d_dist, float d_seq, float* score, int length, in
             log_score[i] += hidden_layer[i][j] * w2[j];
         }
         score[i+start] *= exp(log_score[i] + b2);
+        
     }
 }
 
@@ -1032,8 +1141,9 @@ int lolalign(int argc, const char **argv, const Command &command)
                     size_t tCaLength = tcadbr->sequenceReader->getEntryLen(targetId);
                     float *tdata = tcoords.read(tcadata, targetLen, tCaLength);
                     char *target3diSeq = tdbr3Di.getData(targetId, thread_idx);
+
                     lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetSeq, target3diSeq, targetLen, subMatAA, subMat3Di);
-                    
+                    std::cout << "Alignment done " << queryKey << std::endl;
 
                     /*std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/P_mat.txt");
                     if (outfile.is_open()) {
