@@ -80,25 +80,19 @@ postprocessFasta() {
     ' "${1}" > "${1}.tmp" && mv -f -- "${1}.tmp" "${1}"
 }
 
-if notExists "${TMP_PATH}/query.dbtype"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/query" ${CREATEDB_PAR} \
-        || fail "query createdb died"
-fi
-
 QUERY="${INPUT}"
 if notExists "${INPUT}.dbtype"; then
     if notExists "${TMP_PATH}/query"; then
         # shellcheck disable=SC2086
         "$MMSEQS" createdb "${INPUT}" "${TMP_PATH}/query" ${CREATEDB_PAR} \
-            || fail "query createdb died"
-    fi
+            || fail "query createdb died" 
+    fi   
     QUERY="${TMP_PATH}/query"
 
     if [ -n "${GPU}" ]; then
         if notExists "${TMP_PATH}/query_pad"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" makepaddedseqdb "${TMP_PATH}/query" "${TMP_PATH}/query_pad" ${MAKEPADDEDSEQDB_PAR} \
+            "$MMSEQS" makepaddedseqdb "${QUERY}" "${TMP_PATH}/query_pad" ${MAKEPADDEDSEQDB_PAR} \
                 || fail "makepaddedseqdb died"
         fi
         QUERY="${TMP_PATH}/query_pad"
@@ -180,5 +174,5 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
     rm -rf -- "${TMP_PATH}/latest"
     rm -f -- "${TMP_PATH}/rep_seqs.list"
-    rm -f --"${TMP_PATH}/easymultimercluster.sh"
+    rm -f -- "${TMP_PATH}/easymultimercluster.sh"
 fi
