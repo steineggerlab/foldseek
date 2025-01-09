@@ -101,12 +101,12 @@ fi
 
 if notExists "${TMP_PATH}/multimer_clu.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" multimercluster "${QUERY}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}" ${MULTIMERCLUSTER_PAR} \
+    "$MMSEQS" multimercluster "${QUERY}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/multimercluster_tmp" ${MULTIMERCLUSTER_PAR} \
         || fail "Multimercluster died"
 fi
 
 SOURCE="${QUERY}"
-INPUT="${TMP_PATH}/latest/multimer_db"
+INPUT="${TMP_PATH}/multimercluster_tmp/latest/multimer_db"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
@@ -149,7 +149,9 @@ mv -f -- "${TMP_PATH}/cluster_report" "${RESULT}_cluster_report"
 if [ -n "${REMOVE_TMP}" ]; then
     rm "${INPUT}.0"
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimer_db" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimercluster_tmp/latest/multimer_db" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/multimercluster_tmp/latest/multimer_db_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     # "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
@@ -172,7 +174,7 @@ if [ -n "${REMOVE_TMP}" ]; then
     fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
-    rm -rf -- "${TMP_PATH}/latest"
+    rm -rf -- "${TMP_PATH}/multimercluster_tmp"
     rm -f -- "${TMP_PATH}/rep_seqs.list"
     rm -f -- "${TMP_PATH}/easymultimercluster.sh"
 fi
