@@ -104,6 +104,18 @@ void lolAlign::calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int 
     return ;
     
 }
+float lolAlign::maxSubArray(float* nums, int numsSize) {
+
+    float currentMax = nums[0];
+    float globalMax = nums[0];
+
+    for (size_t i = 1; i < numsSize; ++i) {
+        currentMax = std::max(nums[i], currentMax + nums[i]);
+        globalMax = std::max(globalMax, currentMax);
+    }
+
+    return globalMax;
+}
 
 
 
@@ -137,6 +149,10 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     int maxIndexX = 0;
     int maxIndexY = 0;
+    float* sa_scores = new float[num_sa];
+    int* sa_scores_index = new int[num_sa]; 
+    calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
+    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
 
     P = malloc_matrix<float>(queryLen, targetLen + length);
     G = malloc_matrix<float>(queryLen, targetLen + length);
@@ -155,6 +171,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             anchor_target[sa][i] = 0;
         }
     }
+
+
     
 
     for (size_t i = 0; i < queryLen; ++i)
@@ -177,8 +195,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         float maxScore = P[0][0];
 
 
-        for (int i = this->start_anchor_length+1; i < queryLen - this->start_anchor_length -1; ++i) {
-            for (int j = this->start_anchor_length+1; j < targetLen - this->start_anchor_length -1; ++j) {
+        for (int i = this->start_anchor_length; i < queryLen - this->start_anchor_length ; ++i) {
+            for (int j = this->start_anchor_length; j < targetLen - this->start_anchor_length ; ++j) {
                 
                 if (P[i][j] > maxScore) {
                     maxScore = P[i][j];
@@ -187,9 +205,39 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 }
             }
         }
+        int start_row = maxIndexX - std::min(maxIndexX, maxIndexY);
+        int start_col = maxIndexY - std::min(maxIndexX, maxIndexY);
+        int diag_length = std::min(queryLen - start_row, targetLen - start_col);
+        int* diag_row = new int[diag_length];
+        int* diag_col = new int[diag_length];
+        float* diag_row_dist = new float[diag_length];
+        float* diag_col_dist = new float[diag_length];
+        float* diag_seq_dist = new float[diag_length];
+        float* diag_score = new float[diag_length];
+        for(int i = 0; i < diag_length; i++){
+            diag_row[i] = start_row + i;
+            diag_col[i] = start_col + i;
+            diag_score[i] = log(scoreForward[start_row + i][start_col + i]);
+
+        }
+        for(int i = -start_anchor_length; i < start_anchor_length; i++){
+            for(int j=0; j<diag_length; j++){
+                diag_row_dist[j] = d_ij[maxIndexX-i][diag_row[j]];
+                diag_col_dist[j] = d_kl[diag_col[maxIndexY-i]][diag_col[j]];
+                diag_seq_dist[j] = maxIndexX-i -diag_row[j];
+            }
+            lolscore(diag_row_dist, diag_col_dist, diag_seq_dist, diag_score, diag_length);
+
+        }
+        float sa_score = 0.0;   
+        sa_score = maxSubArray(diag_score, diag_length);
+
+        
+        std::cout << sa_score << std::endl;
         
 
         lolAlign::align_startAnchors(anchor_query[sa], anchor_target[sa], maxIndexX, maxIndexY, &new_anchor_length[sa], P, scoreForward);
+
         /*for(int i = 0; i < queryLen; i++){
             if(anchor_query[sa][i] != 0){
                 std::cout << "anchor_query[" << i << "] = " << anchor_query[sa][i] << std::endl;
@@ -225,8 +273,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     for (int i = 0; i < targetLen; i++) {
         std::cout << "anchor_target[" << i << "] = " << anchor_target[i] << std::endl;
     }*/
-    calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
-    calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
+  
 
     float* anchor_dist_query = new float[2 * this->start_anchor_length + 1];
     float* anchor_dist_target = new float[2 * this->start_anchor_length + 1];
@@ -662,21 +709,22 @@ void lolAlign::lolscore(float* d_ij, float* d_kl, float* d_seq, float* score, in
 
    std::vector<std::vector<float>> hidden_layer(length, std::vector<float>(3, 0.0f));
     for (int i = 0; i < length; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            for (int k = 0; k < 2; ++k) {
-                hidden_layer[i][j] += x[i][k] * w1[j][k];
+        for (int k = 0; k < 3; ++k) {
+            for (int j = 0; j < 2; ++j) {
+                hidden_layer[i][k] += x[i][j] * w1[j][k];
             }
-            hidden_layer[i][j] += b1[j];
-            hidden_layer[i][j] = std::max(0.0f, hidden_layer[i][j]); // ReLU activation
+            hidden_layer[i][k] += b1[k];
+            hidden_layer[i][k] = std::max(0.0f, hidden_layer[i][k]); // ReLU activation
         }
     }
-
+    std::vector<float> log_score(length, 0.0f);
     // Calculate score for each input
     for (int i = 0; i < length; ++i) {
         for (int j = 0; j < 3; ++j) {
-            score[i] += hidden_layer[i][j] * w2[j];
+            log_score[i] += hidden_layer[i][j] * w2[j];
         }
-        score[i] += b2;
+        score[i] += log_score[i] +b2;
+        
     }
 }
 
