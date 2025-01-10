@@ -24,6 +24,7 @@
 #define FORK_RUNNER 1
 #else
 #define FORK_RUNNER 0
+#define prostt5Forking(...)
 #endif
 #endif
 
