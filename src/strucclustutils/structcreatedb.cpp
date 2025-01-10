@@ -19,6 +19,12 @@
 
 #ifdef HAVE_PROSTT5
 #include "ProstT5.h"
+#if !defined(__CYGWIN__) && !defined(__EMSCRIPTEN__) && !defined(__APPLE__)
+#include "ProstT5ForkRunner.h"
+#define FORK_RUNNER 1
+#else
+#define FORK_RUNNER 0
+#endif
 #endif
 
 #include <iostream>
@@ -546,6 +552,7 @@ void sortDatafileByIdOrder(DBWriter & dbw,
         }
     }
 }
+
 extern int createdb(int argc, const char **argv, const Command& command);
 int structcreatedb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
@@ -557,19 +564,13 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < command.params->size(); ++i) {
             command.params->at(i)->wasSet = false;
         }
+        par.shuffleDatabase = true;
+        par.PARAM_SHUFFLE.wasSet = true;
         int status = createdb(argc, argv, command);
         if (status != EXIT_SUCCESS) {
             return status;
         }
         fflush(stdout);
-
-        DBReader<unsigned int> reader(outputName.c_str(), (outputName+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-        reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
-
-        std::string ssDb = outputName + "_ss";
-        DBWriter writer(ssDb.c_str(), (ssDb + ".index").c_str(), par.threads, par.compressed, reader.getDbtype());
-        writer.open();
-        Debug::Progress progress(reader.getSize());
 
         std::vector<std::string> prefix = { "", "/model" };
         std::vector<std::string> suffix = { "", "/prostt5-f16.gguf" };
@@ -608,6 +609,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
         LlamaInitGuard guard(par.verbosity > 3);
         std::vector<std::string> devices = ProstT5::getDevices();
+        for (std::vector<std::string>::iterator it = devices.begin(); it != devices.end(); ++it) {
+            Debug(Debug::INFO) << *it << "\n";
+        }
         if (par.gpu == 1 && !devices.empty()) {
             for (std::vector<std::string>::iterator it = devices.begin(); it != devices.end();) {
                 if (it->find("CUDA") == std::string::npos) {
@@ -616,7 +620,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     ++it; // Move to the next element
                 }
             }
-            if(devices.size() == 0) {
+            if (devices.size() == 0) {
                 Debug(Debug::ERROR) << "No GPU devices found\n";
                 return EXIT_FAILURE;
             }
@@ -631,62 +635,77 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
         }
 
- #ifdef OPENMP
-        size_t localThreads = (par.gpu != 0) ? devices.size() : par.threads;
-        localThreads = std::max(std::min(localThreads, reader.getSize()), (size_t)1);
- #endif
- #pragma omp parallel num_threads(localThreads)
-        {
-            int thread_idx = 0;
+        bool useForkRunner = FORK_RUNNER && par.gpu == 0;
+        DBReader<unsigned int> reader(outputName.c_str(), (outputName+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        reader.open(useForkRunner ? DBReader<unsigned int>::SORT_BY_LENGTH : DBReader<unsigned int>::LINEAR_ACCCESS);
+
+        unsigned const int MIN_SPLIT_LENGTH = 2;
+        std::string ssDb = outputName + "_ss";
+        std::string ssIndex = ssDb + ".index"; 
+        if (useForkRunner) {
+            prostt5Forking(modelWeights, par.prostt5SplitLength, MIN_SPLIT_LENGTH, reader, ssDb, ssIndex, par.threads, par.compressed);
+        } else {
+            DBWriter writer(ssDb.c_str(), ssIndex.c_str(), par.threads, par.compressed, reader.getDbtype());
+            writer.open();
+
+            Debug::Progress progress(reader.getSize());
 #ifdef OPENMP
-            thread_idx = omp_get_thread_num();
+            size_t localThreads = par.gpu == 1 ? devices.size() : 1;
 #endif
-            std::string device = "none";
-            if (par.gpu == 1) {
-                device = devices[thread_idx];
-            }
-            ProstT5 model(modelWeights.c_str(), device);
-            const char newline = '\n';
-            unsigned const int MIN_SPLIT_LENGTH = 2;
-            std::string result;
- #pragma omp for schedule(dynamic, 1)
-            for (size_t i = 0; i < reader.getSize(); ++i) {
-                unsigned int key = reader.getDbKey(i);
-                size_t length = reader.getSeqLen(i);
-                std::string seq = std::string(reader.getData(i, thread_idx), length);
-                result.clear();
-                // splitting input sequences longer than ProstT5 attention (current cutoff 6000 AAs)
-                unsigned int split_length = par.prostt5SplitLength;
-
-                // split lenght of 0 will deactivate splitting
-                if (split_length > 0 && length > split_length) {
-                    unsigned int n_splits, overlap_length;
-                    n_splits = int(length / split_length) + 1;
-                    overlap_length = length % split_length;
-
-                    // ensure minimum overlap length; adjustment length was not computed properly with ceil/ceilf now using simple int cast
-                    if (overlap_length < MIN_SPLIT_LENGTH) {
-                        split_length -= int((MIN_SPLIT_LENGTH - overlap_length) / (n_splits - 1)) + 1;
-                    }
-
-                    // loop over splits and predict
-                    for (unsigned int i = 0; i < n_splits; i++){
-                        unsigned int split_start = i * split_length;
-                        std::vector<std::string> split_input(split_length);
-                        result.append(model.predict(std::string(seq.substr(split_start, split_length))));
-                    }
-                } else {
-                    result.append(model.predict(seq));
+#pragma omp parallel num_threads(localThreads)
+            {
+                int thread_idx = 0;
+#ifdef OPENMP
+                thread_idx = omp_get_thread_num();
+#endif
+                std::string device = "none";
+                int localThreads = par.threads;
+                if (par.gpu == 1) {
+                    device = devices[thread_idx];
+                    localThreads = 1;
                 }
+                ProstT5Model model(modelWeights.c_str(), device);
+                ProstT5 context(model, localThreads);
+                const char newline = '\n';
+                std::string result;
+#pragma omp for schedule(dynamic, 1)
+                for (size_t i = 0; i < reader.getSize(); ++i) {
+                    unsigned int key = reader.getDbKey(i);
+                    size_t length = reader.getSeqLen(i);
+                    std::string seq = std::string(reader.getData(i, thread_idx), length);
+                    result.clear();
 
-                writer.writeStart(thread_idx);
-                writer.writeAdd(result.c_str(), result.length(), thread_idx);
-                writer.writeAdd(&newline, 1, thread_idx);
-                writer.writeEnd(key, thread_idx);
-                progress.updateProgress();
+                    // splitting input sequences longer than ProstT5 attention (current cutoff 6000 AAs)
+                    unsigned int split_length = par.prostt5SplitLength;
+                    // split lenght of 0 will deactivate splitting
+                    if (split_length > 0 && length > split_length) {
+                        unsigned int n_splits, overlap_length;
+                        n_splits = int(length / split_length) + 1;
+                        overlap_length = length % split_length;
+
+                        // ensure minimum overlap length; adjustment length was not computed properly with ceil/ceilf now using simple int cast
+                        if (overlap_length < MIN_SPLIT_LENGTH) {
+                            split_length -= int((MIN_SPLIT_LENGTH - overlap_length) / (n_splits - 1)) + 1;
+                        }
+
+                        // loop over splits and predict
+                        for (unsigned int i = 0; i < n_splits; i++){
+                            unsigned int split_start = i * split_length;
+                            result.append(context.predict(seq.substr(split_start, split_length)));
+                        }
+                    } else {
+                        result.append(context.predict(seq));
+                    }
+
+                    writer.writeStart(thread_idx);
+                    writer.writeAdd(result.c_str(), result.length(), thread_idx);
+                    writer.writeAdd(&newline, 1, thread_idx);
+                    writer.writeEnd(key, thread_idx);
+                    progress.updateProgress();
+                }
             }
+            writer.close(true);
         }
-        writer.close(true);
         reader.close();
 
         DBReader<unsigned int> resultReader(ssDb.c_str(), (ssDb+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);

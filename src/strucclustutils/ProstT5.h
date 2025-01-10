@@ -16,9 +16,17 @@ public:
     LlamaInitGuard& operator=(const LlamaInitGuard&) = delete;
 };
 
+class ProstT5Model {
+public:
+    ProstT5Model(const std::string& model_file, std::string& device);
+    ~ProstT5Model();
+
+    llama_model* model;
+};
+
 class ProstT5 {
 public:
-    ProstT5(const std::string& model_file, std::string & device);
+    ProstT5(ProstT5Model& model, int threads);
     ~ProstT5();
 
     static std::vector<std::string> getDevices();
@@ -26,8 +34,8 @@ public:
     std::string predict(const std::string& aa);
     void perf();
 
-    llama_model * model;
-    llama_context * ctx;
+    ProstT5Model& model;
+    llama_context* ctx;
 };
 
 
