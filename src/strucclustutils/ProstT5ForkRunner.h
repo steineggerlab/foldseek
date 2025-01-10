@@ -108,7 +108,7 @@ void prostt5Forking(
                     writer.writeAdd(result.c_str(), result.length(), 0);
                     writer.writeAdd(&newline, 1, 0);
                     writer.writeEnd(key, 0);
-                    progress.updateProgress();
+                    progress.updateProgress(i);
                 }
 
                 std::cout.setstate(std::ios_base::failbit);
