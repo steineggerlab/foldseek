@@ -286,6 +286,24 @@ LocalParameters::LocalParameters() :
     convert2pdb.push_back(&PARAM_THREADS);
     convert2pdb.push_back(&PARAM_V);
 
+    // set masking
+    maskMode = 0;
+    maskNrepeats = 10;
+    maskProb = 0.999995;
+    maskLowerCaseMode = 1;
+
+    // createdb
+    maskBfactorThreshold = 0;
+    chainNameMode = 0;
+    writeMapping = 0;
+    coordStoreMode = COORD_STORE_MODE_CA_DIFF;
+    inputFormat = 0; // auto detect
+    fileInclude = ".*";
+    fileExclude = "^$";
+    prostt5SplitLength = 1024;
+    prostt5Model = "";
+
+    // search parameter
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
     tmScoreThrMode = TMSCORE_THRESHOLD_MODE_ALIGNMENT;
@@ -293,29 +311,21 @@ LocalParameters::LocalParameters() :
     lddtThr = 0.0;
     evalThr = 10;
     sortByStructureBits = 1;
+    clusterSearch = 0;
     minDiagScoreThr = 30;
-    maskBfactorThreshold = 0;
-    chainNameMode = 0;
     minAssignedChainsThreshold = 0.0;
     monomerIncludeMode = 0;
-    writeMapping = 0;
     tmAlignFast = 1;
     exactTMscore = 0;
     gapOpen = 10;
     gapExtend = 1;
     nsample = 5000;
-    maskLowerCaseMode = 1;
-    coordStoreMode = COORD_STORE_MODE_CA_DIFF;
-    clusterSearch = 0;
-    inputFormat = 0; // auto detect
-    fileInclude = ".*";
-    fileExclude = "^$";
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
-    multimerReportMode = 1;
+
+    // multimer
     eValueThrExpandMultimer = 10000.0;
-    prostt5SplitLength = 1024;
-    prostt5Model = "";
+    multimerReportMode = 1;
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
     distanceThreshold = 8.0;
     filtMultimerTmThr = 0.0;
