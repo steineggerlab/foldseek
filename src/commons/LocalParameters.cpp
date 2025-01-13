@@ -288,7 +288,7 @@ LocalParameters::LocalParameters() :
 
     // set masking
     maskMode = 0;
-    maskNrepeats = 10;
+    maskNrepeats = 6;
     maskProb = 0.999995;
     maskLowerCaseMode = 1;
 
