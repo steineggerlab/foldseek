@@ -73,6 +73,7 @@ public:
     float maxSubArray(float* nums, int numsSize);
 
     void align_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length, float** P, float** G);
+    void index_sort(float* nums, int* index, int numsSize);
 
 
     static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
@@ -89,9 +90,6 @@ public:
     void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff);
 
 private:
-
-
-
 
     std::string backtrace;
     int num_sa = 10;
@@ -110,7 +108,7 @@ private:
     int ** anchor_target;
     float start_anchor_go = -3.0;
     float start_anchor_ge = -1.0;
-    float start_anchor_T = 2.0;
+    float start_anchor_T = 4.0;
     int start_anchor_length = 3;
     float lol_go = -3.0;
     float lol_ge = -1.0;
@@ -139,7 +137,6 @@ private:
     
 
     void lolscore(float* d_dist, float d_seq, float* score, int length, int start);
-    float alignment_lolScore(std::vector<float> d_ij, std::vector<float> d_kl, std::vector<float> anchorpoints, size_t anchor_length);
 
     void align(char *targetSeq, char * target3diSeq);
 
