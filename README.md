@@ -67,7 +67,7 @@ wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-l
 # Linux ARM64 build
 wget https://mmseqs.com/foldseek/foldseek-linux-arm64.tar.gz; tar xvzf foldseek-linux-arm64.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
-# Linux AVX2 & GPU build (req. glibc >= 2.29 and nvidia driver >=525.60.13)
+# Linux AVX2 & GPU build (req. glibc >= 2.17 and nvidia driver >=525.60.13)
 wget https://mmseqs.com/foldseek/foldseek-linux-gpu.tar.gz; tar xvfz foldseek-linux-gpu.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
 # MacOS
