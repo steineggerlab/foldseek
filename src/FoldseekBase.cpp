@@ -397,7 +397,7 @@ std::vector<Command> foldseekCommands = {
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
-        {"easy-complexsearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
+        {"easy-complexsearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"createmultimerreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
@@ -418,7 +418,7 @@ std::vector<Command> foldseekCommands = {
                                            {"complexFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
                                    }
         },
-        {"createcomplexreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
+        {"createcomplexreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"expandmultimer", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
@@ -433,7 +433,7 @@ std::vector<Command> foldseekCommands = {
                                         {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
                                 }
         },
-        {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
+        {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
