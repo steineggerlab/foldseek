@@ -18,12 +18,12 @@ TMaligner::TMaligner(unsigned int maxSeqLen, bool tmAlignFast, bool tmScoreOnly,
     if(tmScoreOnly == false){
         affineNW = new AffineNeedlemanWunsch(maxSeqLen, 20);
     }
-    query_x = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
-    query_y = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
-    query_z = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
-    target_x = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
-    target_y = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
-    target_z = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float) );
+    query_x = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
+    query_y = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
+    query_z = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
+    target_x = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
+    target_y = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
+    target_z = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
     mem = (float*)mem_align(ALIGN_FLOAT,6*maxSeqLen*4*sizeof(float));
     querySecStruc  = new char[maxSeqLen];
     targetSecStruc = new char[maxSeqLen];

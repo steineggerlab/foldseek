@@ -61,6 +61,7 @@ public:
         return idx;
     }
 
+
     void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, unsigned int queryLen);
     
     TMscoreResult computeTMscore(float *x, float *y, float *z,
@@ -91,6 +92,7 @@ public:
 
 private:
 
+
     std::string backtrace;
     int num_sa = 10;
     float * query_x;
@@ -102,7 +104,7 @@ private:
     float ** scoreForward;
     float ** P;
     float ** d_ij;
-    float ** d_kl;
+    //float ** d_kl;
     float ** G;
     int ** anchor_query;
     int ** anchor_target;
@@ -133,7 +135,7 @@ private:
     bool computeExactScore;
     int * invmap;
     void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen);
-    void lolscore(float* d_ij, float* d_kl, float* d_seq, float* score, int length);
+    void lolscore(float* dist, float* d_seq, float* score, int length);
     
 
     void lolscore(float* d_dist, float d_seq, float* score, int length, int start);
