@@ -1,5 +1,4 @@
 #include "DBReader.h"
-#include "IndexReader.h"
 #include "DBWriter.h"
 #include "Debug.h"
 #include "Util.h"
@@ -51,6 +50,14 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
         DBReader<unsigned int>::USE_INDEX
     );
 
+    IndexReader qDbr(
+        par.db1,
+        par.threads,
+        needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+        touch ? IndexReader::PRELOAD_INDEX : 0,
+        DBReader<unsigned int>::USE_INDEX
+    );
+
     std::vector<unsigned int> qComplexIndices;
     std::vector<unsigned int> dbComplexIndices;
     chainKeyToComplexId_t qChainKeyToComplexIdMap;
@@ -59,8 +66,8 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
     complexIdToChainKeys_t dbComplexIdToChainKeysMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
-    getKeyToIdMapIdToKeysMapIdVec(dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec_index(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec_index(tDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
     dbComplexIndices.clear();
     qChainKeyToComplexIdMap.clear();
 

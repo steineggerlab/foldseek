@@ -1,12 +1,9 @@
 #include "DBReader.h"
-#include "IndexReader.h"
 #include "DBWriter.h"
 #include "Debug.h"
 #include "Util.h"
 #include "LocalParameters.h"
-#include "Matcher.h"
 #include "StructureUtil.h"
-#include "TMaligner.h"
 #include "Coordinate16.h"
 #include "MultimerUtil.h"
 #include "set"
@@ -721,8 +718,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     complexIdToChainKeys_t qComplexIdToChainKeysMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
-    getKeyToIdMapIdToKeysMapIdVec(dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec_indexpointer(q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec_index(t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
     qChainKeyToComplexIdMap.clear();
     dbComplexIndices.clear();
     Debug::Progress progress(qComplexIndices.size());

@@ -4,7 +4,6 @@
 #include "Debug.h"
 #include "DBReader.h"
 #include "DBWriter.h"
-#include "IndexReader.h"
 #include "FileUtil.h"
 #include "TranslateNucl.h"
 #include "MemoryMapped.h"
@@ -111,7 +110,7 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
     std::map<unsigned int, unsigned int> qChainKeyToComplexIdMap;
     std::map<unsigned int, std::vector<unsigned int>> qComplexIdToChainKeyMap;
     std::vector<unsigned int> qComplexIdVec;
-    getKeyToIdMapIdToKeysMapIdVec(qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeyMap, qComplexIdVec);
+    getKeyToIdMapIdToKeysMapIdVec_index(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeyMap, qComplexIdVec);
     qChainKeyToComplexIdMap.clear();
     Debug::Progress progress(qComplexIdVec.size());
 
