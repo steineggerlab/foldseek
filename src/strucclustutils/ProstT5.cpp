@@ -168,9 +168,9 @@ ProstT5::ProstT5(ProstT5Model& model, int threads) : model(model) {
     auto cparams = llama_context_default_params();
     cparams.n_threads = threads;
     cparams.n_threads_batch = threads;
-    cparams.n_ubatch = 4096;
-    cparams.n_batch = 4096;
-    cparams.n_ctx = 4096;
+    cparams.n_ubatch = 2048;
+    cparams.n_batch = 2048;
+    cparams.n_ctx = 2048;
     cparams.embeddings = true;
     cparams.attention_type = LLAMA_ATTENTION_TYPE_NON_CAUSAL;
 
