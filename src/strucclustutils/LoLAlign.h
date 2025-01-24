@@ -89,6 +89,7 @@ public:
                                             size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen,
                                             float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock, int* gaps);
     void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff);
+    void reallocate_target(size_t newColsCapacity);
 
 private:
 
@@ -104,7 +105,7 @@ private:
     float ** scoreForward;
     float ** P;
     float ** d_ij;
-    //float ** d_kl;
+    float ** d_kl;
     float ** G;
     int ** anchor_query;
     int ** anchor_target;
@@ -135,10 +136,10 @@ private:
     bool computeExactScore;
     int * invmap;
     void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen);
-    void lolscore(float* dist, float* d_seq, float* score, int length);
+    void lolscore(float* dist, float* d_seq, float* score, int length, float** hidden_layer);
     
 
-    void lolscore(float* d_dist, float d_seq, float* score, int length, int start);
+    void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer, float* log_score);
 
     void align(char *targetSeq, char * target3diSeq);
 
