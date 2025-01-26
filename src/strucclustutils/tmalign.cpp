@@ -76,7 +76,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
 
     int dbtype =  Parameters::DBTYPE_ALIGNMENT_RES;
     if(alignmentIsExtended){
-	dbtype = DBReader<unsigned int>::setExtendedDbtype(dbtype, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
+	    dbtype = DBReader<unsigned int>::setExtendedDbtype(dbtype, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
     }
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbtype);
     dbw.open();

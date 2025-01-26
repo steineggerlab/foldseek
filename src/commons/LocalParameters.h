@@ -116,6 +116,7 @@ public:
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
+    std::vector<MMseqsParameter *> fwbw;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
@@ -149,6 +150,13 @@ public:
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
 
+    // fwbw
+    PARAMETER(PARAM_MACT)
+    PARAMETER(PARAM_FWBW_GAPOPEN)
+    PARAMETER(PARAM_FWBW_GAPEXTEND)
+    PARAMETER(PARAM_TEMPERATURE)
+
+    int prefMode;
     float tmScoreThr;
     int tmScoreThrMode;
     int tmAlignHitOrder;
@@ -179,6 +187,12 @@ public:
     int dbExtractionMode;
     float distanceThreshold;
     int prostt5SplitLength;
+    
+    // fwbw
+    float mact;
+    float fwbw_gapopen;
+    float fwbw_gapextend;
+    float temperature;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,

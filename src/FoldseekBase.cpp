@@ -15,6 +15,25 @@ void updateValdiation() {
 void (*validatorUpdate)(void) = updateValdiation;
 
 std::vector<Command> foldseekCommands = {
+        {"lolalign",                lolalign,                &localPar.tmalign,        COMMAND_ALIGNMENT,
+                "Compute tm-score ",
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:prefilterDB> <o:resultDB>",
+                CITATION_FOLDSEEK, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                {"alnDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::alignmentDb }}},
+
+        {"fwbw",                fwbw,                &localPar.fwbw,        COMMAND_ALIGNMENT,
+                "Forward-Backward realignment",
+                "Re-align alignment result DB using Forward-Backward algorithm",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:alignmentDB>",
+                CITATION_FOLDSEEK, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                    {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                    {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                    {"fwbwAlignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
         {"createdb",             structcreatedb,                &localPar.structurecreatedb,    COMMAND_MAIN,
                 "Convert PDB/mmCIF/tar[.gz]/DB files or directory/TSV to a structure DB",
                 "# Process multiple files\n"
