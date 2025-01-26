@@ -156,7 +156,6 @@ public:
     PARAMETER(PARAM_FWBW_GAPEXTEND)
     PARAMETER(PARAM_TEMPERATURE)
 
-    int prefMode;
     float tmScoreThr;
     int tmScoreThrMode;
     int tmAlignHitOrder;
