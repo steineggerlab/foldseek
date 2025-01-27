@@ -5,3 +5,4 @@ target*
 output
 tmp
 scope
+.gitignore
