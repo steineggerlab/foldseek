@@ -37,7 +37,7 @@ if [ -f "${DB}_aln.dbtype" ]; then
 fi
 
 # shellcheck disable=SC2086
-"$MMSEQS" mmcreateindex "${DB}_ss" "${TMP_PATH}" ${CREATEINDEX_PAR} --index-subset ${SS_SUBSET_MODE}  --index-dbsuffix "_ss" \
+"$MMSEQS" mmcreateindex "${DB}_ss" "${TMP_PATH}" ${CREATEINDEX_PAR} --index-subset ${SS_SUBSET_MODE} --index-dbsuffix "_ss" \
     || fail "createindex died"
 
 if [ -n "$INCLUDE_CA" ]; then

@@ -695,6 +695,20 @@ R"html(<!DOCTYPE html>
                                 }
                             }
                             for(size_t i = 0; i < outcodes.size(); i++) {
+                                bool computed = false;
+                                switch (outcodes[i]) {
+                                    case LocalParameters::OUTFMT_U:
+                                    case LocalParameters::OUTFMT_T:
+                                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                                          res.qStartPos, res.dbStartPos, tmpBt, res.dbLen);
+                                        computed = true;
+                                        break;
+                                }
+                                if(computed){
+                                    break;
+                                }
+                            }
+                            for(size_t i = 0; i < outcodes.size(); i++) {
                                 switch (outcodes[i]) {
                                     case Parameters::OUTFMT_QUERY:
                                         result.append(queryId);
@@ -1022,6 +1036,8 @@ R"html(<!DOCTYPE html>
                         result.append(" ");
                         result.append(targetId);
                         result.append("\n");
+                        tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
+                                                          res.qStartPos, res.dbStartPos, tmpBt, res.dbLen);
                         for(unsigned int tpos = 0; tpos < res.dbLen; tpos++){
                             size_t tId = tDbr->sequenceReader->getId(res.dbKey);
                             char* targetSeqData  = (char*) tDbr->sequenceReader->getData(tId, thread_idx);

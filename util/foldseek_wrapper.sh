@@ -5,6 +5,6 @@ case "${FLAGS}" in
     exec /usr/local/bin/foldseek_avx2 "$@"
     ;;
   *)
-    exec /usr/local/bin/foldseek_sse2 "$@"
+    exec /usr/local/bin/foldseek_sse41 "$@"
     ;;
 esac

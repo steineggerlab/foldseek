@@ -169,12 +169,7 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "ProstT5")
-        MODEL=prostt5-f16-safetensors.tar.gz
-        if [ -n "${PROSTT5_QUANTIZED}" ]; then
-            # quantized weights are worse and slower
-            # they were only added to reduce download size in continous integration
-            MODEL=prostt5-q4_0-gguf.tar.gz
-        fi
+        MODEL=prostt5-f16-gguf.tar.gz
         if notExists "${TMP_PATH}/${MODEL}"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/${MODEL}" "${TMP_PATH}/${MODEL}"
         fi
@@ -217,10 +212,10 @@ case "${INPUT_TYPE}" in
         for SUFFIX in "" "_ss" "_h" "_ca"; do
             if [ -e "${IN}_seq${SUFFIX}.dbtype" ]; then
                 # shellcheck disable=SC2086
-                "${MMSEQS}" mvdb "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}" || fail "mv died"
+                "${MMSEQS}" mvdb "${IN}_seq${SUFFIX}" "${OUTDB}_seq${SUFFIX}" ${VERB_PAR} || fail "mv died"
             fi
             # shellcheck disable=SC2086
-            "${MMSEQS}" mvdb "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}" || fail "mv died"
+            "${MMSEQS}" mvdb "${IN}${SUFFIX}" "${OUTDB}${SUFFIX}" ${VERB_PAR} || fail "mv died"
         done
 
         if [ -e "${IN}_clu.dbtype" ]; then
@@ -234,7 +229,7 @@ case "${INPUT_TYPE}" in
             done
 
             # shellcheck disable=SC2086
-            "${MMSEQS}" mvdb "${IN}_clu" "${OUTDB}_clu" || fail "mv died"
+            "${MMSEQS}" mvdb "${IN}_clu" "${OUTDB}_clu" ${VERB_PAR} || fail "mv died"
         fi
     ;;
 esac
