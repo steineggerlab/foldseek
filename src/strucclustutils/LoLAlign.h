@@ -51,6 +51,7 @@ public:
         float** scoreForward
     );
     void calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int queryLen, int targetLen);
+    void free_memory(); 
 
 
     unsigned char* seq2num(const std::string& seq, const unsigned char* aa2num) {
@@ -111,7 +112,7 @@ private:
     int ** anchor_target;
     float start_anchor_go = -3.0;
     float start_anchor_ge = -1.0;
-    float start_anchor_T = 4.0;
+    float start_anchor_T = 1.0;
     int start_anchor_length = 3;
     float lol_go = -3.0;
     float lol_ge = -1.0;
@@ -135,7 +136,7 @@ private:
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
-    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen);
+    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen, float ** hidden_layer);
     void lolscore(float* dist, float* d_seq, float* score, int length, float** hidden_layer);
     
 

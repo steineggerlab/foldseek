@@ -60,7 +60,27 @@ lolAlign::~lolAlign()
     free(mem);
     free(d_ij);
     free(d_kl);
+    free(P);
+    free(G);
+    free(anchor_query);
+
     delete[] invmap;
+}
+
+void lolAlign::free_memory(){
+    //free(query_x);
+    //free(query_y);
+    //free(query_z);
+    //free(target_x);
+    //free(target_y);
+    //free(target_z);
+    //free(mem);
+    //free(d_ij);
+    //free(d_kl);
+    free(P);
+    free(G);
+    free(anchor_query);
+
 }
 
 void lolAlign::reallocate_target(size_t newColsCapacity){
@@ -70,7 +90,7 @@ void lolAlign::reallocate_target(size_t newColsCapacity){
     G = malloc_matrix<float>(queryLen, newColsCapacity);
     free(P);
     P = malloc_matrix<float>(queryLen, newColsCapacity);
-    std::cout << "Reallocating target" << std::endl;
+    //std::cout << "Reallocating target" << std::endl;
     
 
 }
@@ -154,6 +174,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     int length = 16;
     size_t assignTargetLen = targetLen + (length - targetLen % length) % length;
     int blocks = (int)((assignTargetLen / length));
+    float** hidden_layer = allocateMemory(std::max(queryLen, targetLen), 3);
     //float **G = malloc_matrix<float>(queryLen, targetLen + length);
     for (size_t i = 0; i < queryLen; ++i)
     {
@@ -227,7 +248,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     int gaps_start[4] = {0, queryLen, 0, targetLen};
 
-    for(int sa = 0; sa < 5; sa++){
+    for(int sa = 0; sa < 10; sa++){
 
         if(sa % 5 == 0){
             lolAlign::lol_fwbw(G, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, start_anchor_T, length, blocks, gaps_start);
@@ -249,6 +270,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 }
             }
         }
+        std::cout << "maxIndexX: " << maxIndexX << " maxIndexY: " << maxIndexY << " " << maxScore << std::endl;
 
 
 
@@ -260,7 +282,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         int* diag_col = new int[diag_length];
         float* diag_dist = new float[diag_length];
         //float* diag_col_dist = new float[diag_length];
-        float** hidden_layer = allocateMemory(diag_length, 3);
+        //float** hidden_layer = allocateMemory(diag_length, 3);
         float* diag_seq_dist = new float[diag_length];
         float* diag_score = new float[diag_length];
         for(int i = 0; i < diag_length; i++){
@@ -315,12 +337,12 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
 
         anchor_length[sa] = new_anchor_length[sa];
-        free(hidden_layer);
-        free(diag_row);
-        free(diag_col);
-        free(diag_dist);
-        free(diag_seq_dist);
-        free(diag_score);
+        
+        delete diag_row;
+        delete diag_col;
+        delete diag_dist;
+        delete diag_seq_dist;
+        delete diag_score;
 
     }
     for (size_t i = 0; i < queryLen; ++i)
@@ -362,7 +384,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
                 
                 if (gaps[0] != -1){
-                    lolmatrix(anchor_query[sa], anchor_target[sa], new_anchor_length[sa], gaps, d_ij, d_kl, G, queryLen, targetLen);
+                    lolmatrix(anchor_query[sa], anchor_target[sa], new_anchor_length[sa], gaps, d_ij, d_kl, G, queryLen, targetLen, hidden_layer);
 
                 }
 
@@ -443,7 +465,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
             }
         }
-        /*if(true){
+        if(false){
         
             std::ofstream outfile("/home/lasse/Desktop/Projects/FB_martin/zmForward.txt");
             if (outfile.is_open())
@@ -488,7 +510,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             {
                 std::cerr << "Unable to open file for writing P matrix." << std::endl;
             }
-        }*/
+        }
     for (size_t i = 0; i < queryLen; ++i)
         {
             for (size_t j = 0; j < targetLen +length; ++j)
@@ -505,7 +527,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     float max_lol_score = 0.0;
     int max_lol_idx = 0;
-    for (int sa_it = 0; sa_it < 3; sa_it++){
+    
+    for (int sa_it = 0; sa_it < 9; sa_it++){
 
         
         sa = sa_index[9 - sa_it];
@@ -534,7 +557,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 sa_idx++;
             }
         }
-        float** hidden_layer = allocateMemory(anchor_length[sa], 3);
+        
 
 
         
@@ -567,7 +590,15 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             max_lol_idx = sa;
         }
 
-        free(hidden_layer);
+        //free(hidden_layer);
+        delete lol_score;
+        delete seq_distance;
+        delete anchor_dist;
+        //delete anchor_dist_target;
+        delete final_anchor_query;
+        delete final_anchor_target;
+
+        
 
 
     }
@@ -601,7 +632,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         
         
     }
-
     //free(G);
     //free(P);
 
@@ -609,7 +639,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     result.score = max_lol_score;
     result.eval = max_lol_score;
     result.dbKey = dbKey;
-    //result.backtrace = Matcher::compressAlignment(backtrace);
+    result.backtrace = Matcher::compressAlignment(backtrace);
     //std::cout << fwbw_time.count() << " " << lol_score_time.count() << std::endl;
     return result;
 
@@ -674,7 +704,7 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
 
 
 
-void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen)
+void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen, float ** hidden_layer)
 {
     int gap0_start = gaps[0];
     int gap0_end = gaps[1];
@@ -685,7 +715,7 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
     float seq_dist = 0.0;
     int anchor_q = 0;  
     int anchor_t = 0;
-    float** hidden_layer = allocateMemory(gap1_end - gap1_start, 3);
+    //float** hidden_layer = allocateMemory(gap1_end - gap1_start, 3);
     float* log_score = new float[gap1_end - gap1_start];
 
 
@@ -1223,7 +1253,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                 size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
                 float *qdata = qcoords.read(qcadata, queryLen, qCaLength);
                 lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen);
-                std::cout << "Query start: " << queryId << std::endl;
+                //std::cout << "Query start: " << queryId << std::endl;
 
                 int passedNum = 0;
                 int rejected = 0;
@@ -1293,7 +1323,8 @@ int lolalign(int argc, const char **argv, const Command &command)
                 }
                 std::cout << "Query end: " << queryId << " " << num_targets << std::endl;
                 std::cout << queryLen << std::endl;
-                //lolaln.~lolAlign();
+
+                //lolaln.free_memory();
             }
         }
     }
