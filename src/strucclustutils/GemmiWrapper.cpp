@@ -13,29 +13,162 @@
 #include <algorithm>
 
 GemmiWrapper::GemmiWrapper(){
-    threeAA2oneAA = {{"ALA",'A'},  {"ARG",'R'},  {"ASN",'N'}, {"ASP",'D'},
-                     {"CYS",'C'},  {"GLN",'Q'},  {"GLU",'E'}, {"GLY",'G'},
-                     {"HIS",'H'},  {"ILE",'I'},  {"LEU",'L'}, {"LYS",'K'},
-                     {"MET",'M'},  {"PHE",'F'},  {"PRO",'P'}, {"SER",'S'},
-                     {"THR",'T'},  {"TRP",'W'},  {"TYR",'Y'}, {"VAL",'V'},
-                     // modified res
-                     {"MSE",'M'}, {"MLY",'K'}, {"FME",'M'}, {"HYP",'P'},
-                     {"TPO",'T'}, {"CSO",'C'}, {"SEP",'S'}, {"M3L",'K'},
-                     {"HSK",'H'}, {"SAC",'S'}, {"PCA",'E'}, {"DAL",'A'},
-                     {"CME",'C'}, {"CSD",'C'}, {"OCS",'C'}, {"DPR",'P'},
-                     {"B3K",'K'}, {"ALY",'K'}, {"YCM",'C'}, {"MLZ",'K'},
-                     {"4BF",'Y'}, {"KCX",'K'}, {"B3E",'E'}, {"B3D",'D'},
-                     {"HZP",'P'}, {"CSX",'C'}, {"BAL",'A'}, {"HIC",'H'},
-                     {"DBZ",'A'}, {"DCY",'C'}, {"DVA",'V'}, {"NLE",'L'},
-                     {"SMC",'C'}, {"AGM",'R'}, {"B3A",'A'}, {"DAS",'D'},
-                     {"DLY",'K'}, {"DSN",'S'}, {"DTH",'T'}, {"GL3",'G'},
-                     {"HY3",'P'}, {"LLP",'K'}, {"MGN",'Q'}, {"MHS",'H'},
-                     {"TRQ",'W'}, {"B3Y",'Y'}, {"PHI",'F'}, {"PTR",'Y'},
-                     {"TYS",'Y'}, {"IAS",'D'}, {"GPL",'K'}, {"KYN",'W'},
-                     {"CSD",'C'}, {"SEC",'C'},
-                     // unknown
-                     {"UNK",'X'}};
     fixupBuffer = NULL;
+}
+
+// adapted from Gemmi find_tabulated_residue
+char threeToOneAA(const std::string& three) {
+    if (three.size() != 3) {
+        return 'X';
+    }
+#define ID(s) (s[0] << 16 | s[1] << 8 | s[2])
+    switch (ID(three.c_str())) {
+        case ID("ALA"): return 'A';
+        case ID("ARG"): return 'R';
+        case ID("ASN"): return 'N';
+        case ID("ABA"): return 'A';
+        case ID("ASP"): return 'D';
+        case ID("ASX"): return 'B';
+        case ID("CYS"): return 'C';  // also BUF
+        case ID("CSH"): return 'S';
+        case ID("GLN"): return 'Q';
+        case ID("GLU"): return 'E';
+        case ID("GLX"): return 'Z';
+        case ID("GLY"): return 'G';  // also BUF
+        case ID("HIS"): return 'H';
+        case ID("ILE"): return 'I';
+        case ID("LEU"): return 'L';
+        case ID("LYS"): return 'K';
+        case ID("MET"): return 'M';
+        case ID("MSE"): return 'M';
+        case ID("ORN"): return 'A';
+        case ID("PHE"): return 'F';
+        case ID("PRO"): return 'P';
+        case ID("SER"): return 'S';
+        case ID("THR"): return 'T';
+        case ID("TRY"): // fall-through - synonym for TRP
+        case ID("TRP"): return 'W';
+        case ID("TYR"): return 'Y';
+        case ID("UNK"): return 'X';
+        case ID("VAL"): return 'V';
+        case ID("SEC"): return 'C'; // mapped to U in gemmi, C in previous FS
+        case ID("PYL"): return 'O';
+        case ID("SEP"): return 'S';
+        case ID("TPO"): return 'T';
+        case ID("PCA"): return 'E';
+        case ID("CSO"): return 'C';
+        case ID("PTR"): return 'Y';
+        case ID("KCX"): return 'K';
+        case ID("CSD"): return 'C';
+        case ID("LLP"): return 'K';
+        case ID("CME"): return 'C';
+        case ID("MLY"): return 'K';
+        case ID("DAL"): return 'A';
+        case ID("TYS"): return 'Y';
+        case ID("OCS"): return 'C';
+        case ID("M3L"): return 'K';
+        case ID("FME"): return 'M';
+        case ID("ALY"): return 'K';
+        case ID("HYP"): return 'P';
+        case ID("CAS"): return 'C';
+        case ID("CRO"): return 'T';
+        case ID("CSX"): return 'C';
+        case ID("DPR"): return 'P';  // also BUF
+        case ID("DGL"): return 'E';
+        case ID("DVA"): return 'V';
+        case ID("CSS"): return 'C';
+        case ID("DPN"): return 'F';
+        case ID("DSN"): return 'S';
+        case ID("DLE"): return 'L';
+        case ID("HIC"): return 'H';
+        case ID("NLE"): return 'L';
+        case ID("MVA"): return 'V';
+        case ID("MLZ"): return 'K';
+        case ID("CR2"): return 'G';
+        case ID("SAR"): return 'G';
+        case ID("DAR"): return 'R';
+        case ID("DLY"): return 'K';
+        case ID("YCM"): return 'C';
+        case ID("NRQ"): return 'M';
+        case ID("CGU"): return 'E';
+        case ID("0TD"): return 'D';
+        case ID("MLE"): return 'L';
+        case ID("DAS"): return 'D';
+        case ID("DTR"): return 'W';
+        case ID("CXM"): return 'M';
+        case ID("TPQ"): return 'Y';
+        case ID("DCY"): return 'C';
+        case ID("DSG"): return 'N';
+        case ID("DTY"): return 'Y';
+        case ID("DHI"): return 'H';
+        case ID("MEN"): return 'N';
+        case ID("DTH"): return 'T';
+        case ID("SAC"): return 'S';
+        case ID("DGN"): return 'Q';
+        case ID("AIB"): return 'A';
+        case ID("SMC"): return 'C';
+        case ID("IAS"): return 'D';
+        case ID("CIR"): return 'R';
+        case ID("BMT"): return 'T';
+        case ID("DIL"): return 'I';
+        case ID("FGA"): return 'E';
+        case ID("PHI"): return 'F';
+        case ID("CRQ"): return 'Q';
+        case ID("SME"): return 'M';
+        case ID("GHP"): return 'G';
+        case ID("MHO"): return 'M';
+        case ID("NEP"): return 'H';
+        case ID("TRQ"): return 'W';
+        case ID("TOX"): return 'W';
+        case ID("ALC"): return 'A';
+        //   case ID("3FG"): return ' ';
+        case ID("SCH"): return 'C';
+        case ID("MDO"): return 'A';
+        case ID("MAA"): return 'A';
+        case ID("GYS"): return 'S';
+        case ID("MK8"): return 'L';
+        case ID("CR8"): return 'H';
+        case ID("KPI"): return 'K';
+        case ID("SCY"): return 'C';
+        case ID("DHA"): return 'S';
+        case ID("OMY"): return 'Y';
+        case ID("CAF"): return 'C';
+        case ID("0AF"): return 'W';
+        case ID("SNN"): return 'N';
+        case ID("MHS"): return 'H';
+        //   case ID("MLU"): return ' ';
+        case ID("SNC"): return 'C';
+        case ID("PHD"): return 'D';
+        case ID("B3E"): return 'E';
+        case ID("MEA"): return 'F';
+        case ID("MED"): return 'M';
+        case ID("OAS"): return 'S';
+        case ID("GL3"): return 'G';
+        case ID("FVA"): return 'V';
+        case ID("PHL"): return 'F';
+        case ID("CRF"): return 'T';
+        //   case ID("OMZ"): return ' ';
+        case ID("BFD"): return 'D';
+        case ID("MEQ"): return 'Q';
+        case ID("DAB"): return 'A';
+        case ID("AGM"): return 'R';
+        // added from previous FS code
+        case ID("4BF"): return 'Y';
+        case ID("B3A"): return 'A';
+        case ID("B3D"): return 'D';
+        case ID("B3K"): return 'K';
+        case ID("B3Y"): return 'Y';
+        case ID("BAL"): return 'A';
+        case ID("DBZ"): return 'A';
+        case ID("GPL"): return 'K';
+        case ID("HSK"): return 'H';
+        case ID("HY3"): return 'P';
+        case ID("HZP"): return 'P';
+        case ID("KYN"): return 'W';
+        case ID("MGN"): return 'Q';
+    }
+    return 'X';
+#undef ID
 }
 
 std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document& doc) {
@@ -303,11 +436,7 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
                 c_atom  = {NAN, NAN, NAN};
                 ca_atom_bfactor = 0.0;
             }
-            if (threeAA2oneAA.find(atom.residue) == threeAA2oneAA.end()) {
-                ami.push_back('X');
-            } else {
-                ami.push_back(threeAA2oneAA[atom.residue]);
-            }
+            ami.push_back(threeToOneAA(atom.residue));
             residueIndex = atom.residue_index;
         }
 
@@ -370,39 +499,23 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
 
             names.push_back(name);
             int taxId = -1;
-            for (gemmi::Residue &res : ch.first_conformer()) {
-                if (taxId == -1) {
-                    auto it = entity_to_tax_id.find(res.entity_id);
-                    if (it != entity_to_tax_id.end()) {
-                        taxId = it->second;
-                    }
-                }
-                bool isHetAtomInList = res.het_flag == 'H' && threeAA2oneAA.find(res.name) != threeAA2oneAA.end();
-                if (isHetAtomInList == false && res.het_flag != 'A')
+            for (const gemmi::Residue &res : ch.first_conformer()) {
+                // only consider polymers and unknowns
+                if (res.entity_type != gemmi::EntityType::Polymer && res.entity_type != gemmi::EntityType::Unknown) {
                     continue;
-                if (isHetAtomInList) {
-                    bool notPolymer = res.entity_type != gemmi::EntityType::Polymer;
-                    if (notPolymer == true) {
-                        continue;
-                    }
-                    bool hasCA = false;
-                    for (gemmi::Atom &atom : res.atoms) {
-                        if (atom.name == "CA") {
-                            hasCA = true;
-                            break;
-                        }
-                    }
-                    if (hasCA == false) {
-                        continue;
-                    }
                 }
+                // only consider ATOM and HETATM
+                if (res.het_flag == '\0') {
+                    continue;
+                }
+
                 Vec3 ca_atom = {NAN, NAN, NAN};
                 Vec3 cb_atom = {NAN, NAN, NAN};
                 Vec3 n_atom  = {NAN, NAN, NAN};
                 Vec3 c_atom  = {NAN, NAN, NAN};
-                float ca_atom_bfactor;
+                float ca_atom_bfactor = 0.0f;
                 bool hasCA = false;
-                for (gemmi::Atom &atom : res.atoms) {
+                for (const gemmi::Atom &atom : res.atoms) {
                     if (atom.name == "CA") {
                         ca_atom.x = atom.pos.x;
                         ca_atom.y = atom.pos.y;
@@ -423,7 +536,7 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                         c_atom.z = atom.pos.z;
                     }
                 }
-                if(hasCA == false){
+                if (hasCA == false) {
                     continue;
                 }
                 ca_bfactor.push_back(ca_atom_bfactor);
@@ -431,12 +544,16 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 cb.push_back(cb_atom);
                 n.push_back(n_atom);
                 c.push_back(c_atom);
-                currPos++;
-                if (threeAA2oneAA.find(res.name) == threeAA2oneAA.end()) {
-                    ami.push_back('X');
-                } else {
-                    ami.push_back(threeAA2oneAA[res.name]);
+                
+                ami.push_back(threeToOneAA(res.name));
+
+                if (taxId == -1) {
+                    auto it = entity_to_tax_id.find(res.entity_id);
+                    if (it != entity_to_tax_id.end()) {
+                        taxId = it->second;
+                    }
                 }
+                currPos++;
             }
             taxIds.push_back(taxId == -1 ? 0 : taxId);
             chain.push_back(std::make_pair(chainStartPos, currPos));

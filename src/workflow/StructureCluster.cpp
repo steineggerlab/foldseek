@@ -16,10 +16,7 @@ void setStructureClusterWorkflowDefaults(LocalParameters *p) {
     p->maxResListLen = 1000;
     p->kmersPerSequence = 300;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
-    p->maskMode = 0;
     p->compBiasCorrection = 0;
-    p->gapOpen = 10;
-    p->gapExtend = 1;
 }
 
 //TODO this makes no sense for structures
@@ -184,7 +181,11 @@ int structurecluster(int argc, const char **argv, const Command& command) {
         par.covMode = swapedCovMode;
         cmd.addVariable("PREFILTER_REASSIGN_PAR", par.createParameterString(par.prefilter).c_str());
         par.covMode = tmpCovMode;
-        cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.structurealign).c_str());
+        if (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN) {
+            cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.tmalign).c_str());
+        } else if (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI) {
+            cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.structurealign).c_str());
+        }
         cmd.addVariable("MERGEDBS_PAR", par.createParameterString(par.mergedbs).c_str());
 
         std::string program = tmpDir + "/clustering.sh";

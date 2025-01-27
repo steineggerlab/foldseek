@@ -13,7 +13,9 @@ QUERYDB="$1"
 
 STEP=0
 # processing
-[ -z "$NUM_IT" ] && NUM_IT=3;
+if [ -z "$NUM_IT" ]; then
+    NUM_IT=3
+fi
 while [ "$STEP" -lt "$NUM_IT" ]; do
     # call prefilter module
     if notExists "$TMP_PATH/pref_tmp_${STEP}.done"; then
@@ -43,7 +45,8 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
             # shellcheck disable=SC2086
             "$MMSEQS" subtractdbs "$TMP_PATH/pref_tmp_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/pref_${STEP}" $SUBSTRACT_PAR \
                 || fail "Substract died"
-            "$MMSEQS" rmdb "$TMP_PATH/pref_tmp_${STEP}"
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "$TMP_PATH/pref_tmp_${STEP}" ${VERBOSITY}
         fi
         touch "$TMP_PATH/pref_${STEP}.done"
     fi
@@ -68,31 +71,29 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
     if [ $STEP -gt 0 ]; then
         if notExists "$TMP_PATH/aln_$STEP.done"; then
             STEPONE=$((STEP-1))
-            if [ $STEP -ne $((NUM_IT  - 1)) ]; then
-                "$MMSEQS" mergedbs "${QUERYDB}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" \
+            if [ $STEP -ne $((NUM_IT - 1)) ]; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" mergedbs "${QUERYDB}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
                     || fail "Alignment died"
             else
-                "$MMSEQS" mergedbs "${QUERYDB}" "${RESULTS}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" \
+                # shellcheck disable=SC2086
+                "$MMSEQS" mergedbs "${QUERYDB}" "${RESULTS}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
                     || fail "Alignment died"
             fi
-            "$MMSEQS" rmdb "$TMP_PATH/aln_${STEPONE}"
-            "$MMSEQS" rmdb "$TMP_PATH/aln_tmp_${STEP}"
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "$TMP_PATH/aln_${STEPONE}" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY}
             touch "$TMP_PATH/aln_${STEP}.done"
         fi
     fi
 
-# create profiles
-    if [ $STEP -ne $((NUM_IT  - 1)) ]; then
+    # create profiles
+    if [ $STEP -ne $((NUM_IT - 1)) ]; then
         if notExists "$TMP_PATH/profile_${STEP}.dbtype"; then
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" result2profile "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}" ${PROFILE_PAR} \
+            "$MMSEQS" result2profile "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}" ${PROFILE_PAR} \
                 || fail "Create profile died"
-            # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" result2profile "${QUERYDB}_ss" "${TARGET_PREFILTER}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}_ss" ${PROFILE_SS_PAR} \
-                || fail "Create profile ss died"
-            # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" lndb "${QUERYDB}_ca"  "$TMP_PATH/profile_${STEP}_ca" ${VERBOSITY} \
-                || fail "Create lndb died"
         fi
     fi
 	QUERYDB="$TMP_PATH/profile_${STEP}"

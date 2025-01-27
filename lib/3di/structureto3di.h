@@ -86,7 +86,9 @@ public:
 
     struct Feature{
         double f[Alphabet3Di::FEATURE_CNT];
-        Feature(){}
+        Feature(){
+            memset(f, 0, sizeof(double) * Alphabet3Di::FEATURE_CNT);
+        }
         Feature(double param_f[Alphabet3Di::FEATURE_CNT]){
             memcpy(f, param_f, sizeof(double) * Alphabet3Di::FEATURE_CNT);
         }
@@ -94,7 +96,9 @@ public:
 
     struct Embedding{
         double f[Alphabet3Di::EMBEDDING_DIM];
-        Embedding(){}
+        Embedding(){
+            memset(f, 0, sizeof(double) * Alphabet3Di::EMBEDDING_DIM);
+        }
         Embedding(double param_f[Alphabet3Di::EMBEDDING_DIM]){
             memcpy(f, param_f, sizeof(double) * Alphabet3Di::EMBEDDING_DIM);
         }

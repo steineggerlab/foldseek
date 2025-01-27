@@ -35,7 +35,7 @@ int structureindex(int argc, const char **argv, const Command& command) {
 
     par.parseParameters(argc, argv, command, true, 0, 0);
     setStructureSearchMustPassAlong(&par);
-
+    par.PARAM_MASK_RESIDUES.wasSet = true;
     std::string tmpDir = par.db2;
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.createindex));
     if (par.reuseLatest) {

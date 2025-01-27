@@ -53,7 +53,6 @@ public:
     size_t fixupBufferSize;
 
 private:
-    std::unordered_map<std::string,char> threeAA2oneAA;
     int modelIt;
     int chainIt;
 

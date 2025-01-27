@@ -12,23 +12,15 @@
 void setEasyStructureSearchDefaults(Parameters *p) {
     // TODO: 7-mer sensitivity is not optimized yet
     p->kmerSize = 6;
-    p->maskMode = 0;
-    p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
-    p->gapOpen = 10;
-    p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
+    p->reportMode = 2;
 }
 void setEasyStructureSearchMustPassAlong(Parameters *p) {
     p->PARAM_K.wasSet = true;
-    p->PARAM_MASK_RESIDUES.wasSet = true;
-    p->PARAM_MASK_PROBABILTY.wasSet = true;
-    p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
     p->PARAM_S.wasSet = true;
-    p->PARAM_GAP_OPEN.wasSet = true;
-    p->PARAM_GAP_EXTEND.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
@@ -50,6 +42,8 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
+    par.overrideParameterDescription(par.PARAM_REPORT_MODE, "Taxonomy report mode 0: Kraken 1: Krona 2: Skip taxonomy report", "^[0-2]{1}$", 0);
+
     setEasyStructureSearchDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setEasyStructureSearchMustPassAlong(&par);
@@ -69,6 +63,10 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         bool needLDDT = false;
         LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
                                     needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT);
+        if (par.reportMode != 2) {
+            needTaxonomy = true;
+            needTaxonomyMapping = true;
+        }
     }
 
     if (par.formatAlignmentMode == Parameters::FORMAT_ALIGNMENT_SAM ||
@@ -119,8 +117,10 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("GREEDY_BEST_HITS", par.greedyBestHits ? "TRUE" : NULL);
-
+    cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
+    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
     cmd.addVariable("CREATEDB_QUERY_PAR", par.createParameterString(par.structurecreatedb).c_str());
@@ -128,6 +128,9 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("SUMMARIZE_PAR", par.createParameterString(par.summarizeresult).c_str());
+    
+    cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
+    cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
 
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);
