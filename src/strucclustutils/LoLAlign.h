@@ -3,6 +3,7 @@
 #include "SubstitutionMatrix.h"
 #include "IndexReader.h"
 #include "DBReader.h"
+#include "Fwbw.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -71,7 +72,7 @@ public:
                                  int normalizationLen);
 
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
-                            char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
+                            char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner fwbwaln);
     float maxSubArray(float* nums, int numsSize);
 
     void align_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length, float** P, float** G);
@@ -142,7 +143,6 @@ private:
 
     void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer, float* log_score);
 
-    void align(char *targetSeq, char * target3diSeq);
 
 };
 

@@ -29,122 +29,81 @@ public:
         int word;
     } s_align;
 
-    FwBwAligner(size_t maxQueryLen, size_t maxTargetLen, size_t length, size_t blocks);
+    FwBwAligner(size_t length, SubstitutionMatrix &subMat, float gapOpen, float gapExtend, float mact, float T, size_t rowsCapacity, size_t colsCapacity);
+    FwBwAligner(size_t length, float gapOpen, float gapExtend, float temperature, size_t rowsCapacity, size_t colsCapacity);
     ~FwBwAligner();
 
-    s_align align(
-        const std::string& querySeqAA,
-        const std::string& querySeq3Di,
-        const std::string& targetSeqAA,
-        const std::string& targetSeq3Di,
-        size_t queryLen,
-        size_t targetLen,
-        size_t length,
-        size_t blocks,
-        SubstitutionMatrix & subMatAA,
-        SubstitutionMatrix & subMat3Di,
-        float mact,
-        float go,
-        float ge,
-        float T
-    );
+    s_align computeAlignment();
+    size_t getRowsCapacity() const { return rowsCapacity; }
+    size_t getColsCapacity() const { return colsCapacity; }
+    size_t getBlockLength() const { return length; }
+    void resizeMatrix(size_t newRowsCapacity, size_t newColsCapacity);
 
-    void computeForwardScoreMatrix(const unsigned char* queryNum, const unsigned char* targetNum,
-                                   unsigned int queryLen, unsigned int targetLen,
-                                   float** blosum, float T, float ** scoreForward);
-    void computeForwardScoreMatrix(
-        const unsigned char* queryNumAA,
-        const unsigned char* queryNum3Di,
-        const unsigned char* targetNumAA,
-        const unsigned char* targetNum3Di,
-        unsigned int queryLen,
-        unsigned int targetLen,
-        SubstitutionMatrix &subMatAA,
-        SubstitutionMatrix &subMat3Di,
-        float T,
-        float** scoreForward
-    );
+    void initQueryProfile(unsigned char* queryNum, size_t queryLen);
+    void initAlignment(unsigned char* targetNum, size_t targetLen);
+    float** getZm() {return zm;}
+    void computeProbabilityMatrix(bool has_Profile);
+    void initScoreMatrix(float** inputScoreMatrix, size_t queryLen, size_t targetLen, int * gaps);
 
-    unsigned char* seq2num(const std::string& seq, const unsigned char* aa2num) {
-        unsigned char* idx = static_cast<unsigned char*>(malloc(seq.size() * sizeof(unsigned char)));
-        for (size_t i = 0; i < seq.size(); ++i) {
-            idx[i] = aa2num[static_cast<unsigned char>(seq[i])];
-        }
-        return idx;
-    }
-
-    template <typename T>
-    T** malloc_matrix(int dim1, int dim2) {
-// #define ALIGN_FLOAT 16
-#define ICEIL(x_int, fac_int) ((x_int + fac_int - 1) / fac_int) * fac_int
-        // Compute mem sizes rounded up to nearest multiple of ALIGN_FLOAT
-        size_t size_pointer_array = ICEIL(dim1 * sizeof(T*), ALIGN_FLOAT);
-        size_t dim2_padded = ICEIL(dim2 * sizeof(T), ALIGN_FLOAT) / sizeof(T);
-
-        T** matrix = (T**) mem_align(ALIGN_FLOAT, size_pointer_array + dim1 * dim2_padded * sizeof(T));
-        if (matrix == NULL)
-            return matrix;
-
-        T* ptr = (T*) (matrix + (size_pointer_array / sizeof(T*)));
-        for (int i = 0; i < dim1; ++i) {
-            matrix[i] = ptr;
-            ptr += dim2_padded;
-        }
-#undef ICEIL
-        return matrix;
-    }
-
-    inline void* mem_align(size_t boundary, size_t size) {
-        void* pointer;
-        if (posix_memalign(&pointer, boundary, size) != 0) {
-#define MEM_ALIGN_ERROR "mem_align could not allocate memory.\n"
-            fwrite(MEM_ALIGN_ERROR, sizeof(MEM_ALIGN_ERROR), 1, stderr);
-#undef MEM_ALIGN_ERROR
-            exit(3);
-        }
-        return pointer;
-    }
+    unsigned char* queryNum = nullptr;
+    unsigned char* targetNum = nullptr;
 
 private:
 
-    float** zmForward;
-    float** zeForward;
-    float** zfForward;
-    float** zmBackward;
-    float** zeBackward;
-    float** zfBackward;
-    float** scoreForward;
-    float** scoreBackward;
+    float** zm;
     float** P;
-    // uint8_t* btMatrix;
-    uint8_t** btMatrix;
+    float* zmFirst;
+    float* zeFirst;
+    float* zfFirst;
+    float* zmBlockPrev;
+    float* zmBlockCurr;
+    float* zeBlock;
+    float* zfBlock;
+    float* vj;
+    float* wj;
+    float** zInit;
+    float* exp_ge_arr;
 
+    float** scoreForward = nullptr;
+    float** scoreForwardProfile = nullptr;
+    float** scoreForwardProfile_exp = nullptr;
+    float** scoreBackwardProfile_exp = nullptr;
+    
+    uint8_t** btMatrix = nullptr;
+    float** blosum = nullptr;
+    float* S_prev = nullptr;
+    float* S_curr = nullptr;    
 
-    float** zmaxBlocksMaxForward;
-    float** zmaxBlocksMaxBackward;
+    // float** zmaxBlocksMaxForward;
+    // float** zmaxBlocksMaxBackward;
 
-    float* zmaxForward;
-    float* zmaxBackward;
-    float *vj;
-    float *wj;
-    // float** mat3di;
-    float** blosum;
-
-    // float gapOpen;
-    // float gapExtend;
-    // float T;
-
-    // const SubstitutionMatrix & subMat3Di;
+    size_t length;
     // const SubstitutionMatrix & subMat;
+    // static SubstitutionMatrix & defaultSubMat;
+    float gapOpen;
+    float gapExtend;
+    float mact;
+    float temperature;
+    size_t rowsCapacity;
+    size_t colsCapacity;
 
-    void forwardBackwardSaveBlockMaxLocal(float** S, float** z_init, float* vj, float* wj,
-                                          float T, float go, float ge,
-                                          size_t rows, size_t start, size_t end, size_t memcpy_cols,
-            // output is zm, ze, ze, zmax
-                                          float** zm, float** ze, float** zf, float* zmax);
+    size_t blockCapacity;
+    size_t blocks;
+    size_t qlen;
+    size_t tlen;
 
-    void rescaleBlocks(float **matrix, float **scale, size_t rows, size_t length, size_t blocks, size_t targetLen);
 
+    simd_float exp_go;
+    simd_float exp_ge;
+    float max_zm;
+    float maxP = 0;
+    
+    simd_float vMax_zm;
+    size_t qlen_padding;
+    void forward(bool has_Profile);
+    void backward(bool has_Profile);
+    // void forwardBackwardSaveBlockMaxLocal(bool isForward, size_t start, size_t memcpy_cols);
+    void reallocateScoreProfile(size_t newColsCapacity);
 };
 
 
