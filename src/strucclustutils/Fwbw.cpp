@@ -163,9 +163,9 @@ FwBwAligner::~FwBwAligner(){
 
 
     // matrices used in only one case
-    if (scoreForward != nullptr) {
-        free(scoreForward);
-    }
+    //if (scoreForward != nullptr) {
+    //    free(scoreForward);
+    //}
     if (scoreForwardProfile != nullptr) {
         free(scoreForwardProfile);
     }
@@ -187,7 +187,6 @@ FwBwAligner::~FwBwAligner(){
     if (S_curr != nullptr) {
         free(S_curr);
     }
-    std::cout << "FwBwAligner destructor called" << std::endl;
 
     // free(btMatrix);
     // free(blosum);
@@ -228,7 +227,7 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
             float score = inputScoreMatrix[i+gaps[0]][j+gaps[2]]/temperature;
             scoreForward[i][j] = score;
         }
-        for(size_t j = colsCapacity; j < qlen_padding; ++j){
+        for(size_t j = queryLen; j < qlen_padding; ++j){
             scoreForward[i][j] = FLT_MIN_EXP;
         }
         //std::fill(&scoreForward[i][queryLen], &scoreForward[i][qlen_padding], FLT_MIN_EXP);

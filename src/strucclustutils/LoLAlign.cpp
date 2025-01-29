@@ -63,30 +63,15 @@ lolAlign::~lolAlign()
 
 }
 
-void lolAlign::free_memory(){
-    //free(query_x);
-    //free(query_y);
-    //free(query_z);
-    //free(target_x);
-    //free(target_y);
-    //free(target_z);
-    //free(mem);
-    //free(d_ij);
-    //free(d_kl);
-    free(P);
-    free(G);
-    free(anchor_query);
-
-}
 
 void lolAlign::reallocate_target(size_t newColsCapacity){
     free(d_kl);
     d_kl = malloc_matrix<float>(newColsCapacity, newColsCapacity);
-    std::cout << "Reallocating d_kl" << std::endl;
     free(G);
     G = malloc_matrix<float>(queryLen, newColsCapacity);
     free(P);
     P = malloc_matrix<float>(queryLen, newColsCapacity);
+
 
     //std::cout << "Reallocating target" << std::endl;
     
@@ -166,7 +151,7 @@ void lolAlign::index_sort(float* nums, int* index, int numsSize) {
 
 
 Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
-                                  char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner fwbwaln)
+                                  char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln)
 {
 
     int length = 16;
@@ -205,15 +190,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         sa_index[i] = i;
         sa_scores[i] = 0;
     }
-    //float ** d_kl = malloc_matrix<float>(targetLen, targetLen);
     calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
-
-
-
-
-
-    //P = malloc_matrix<float>(queryLen, targetLen + length);
-    //G = malloc_matrix<float>(queryLen, targetLen + length);
 
     anchor_target = malloc_matrix<int>(num_sa, targetLen);
     int* anchor_length = new int[num_sa];
@@ -237,14 +214,14 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     for(int sa = 0; sa < 10; sa++){
 
         if(sa % 5 == 0){
-            fwbwaln.initScoreMatrix(G, targetLen, queryLen, gaps_start);
-            fwbwaln.computeProbabilityMatrix(false);
+            fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps_start);
+            fwbwaln->computeProbabilityMatrix(false);
             //float** fwbwaln_zm = fwbwaln.getZm();
             for (size_t i = 0; i < queryLen; ++i)
             {
                 for (size_t j = 0; j < targetLen; ++j)
                 {
-                    P[i][j] = fwbwaln.zm[i][j];
+                    P[i][j] = fwbwaln->zm[i][j];
                 }
             }
             //lolAlign::lol_fwbw(G, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, start_anchor_T, length, blocks, gaps_start);
@@ -334,7 +311,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     }
     for (size_t i = 0; i < queryLen; ++i)
     {
-        for (size_t j = 0; j < targetLen +length; ++j)
+        for (size_t j = 0; j < targetLen; ++j)
         {
             G[i][j] = 0;
         }
@@ -402,16 +379,16 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 if(gaps[0] != -1){
                     float* elementPtr = &G[gaps[0]][gaps[2]];
                     float** elementPtrPtr = &elementPtr;
-                    fwbwaln.initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
+                    fwbwaln->initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
 
 
-                    fwbwaln.computeProbabilityMatrix(false);
+                    fwbwaln->computeProbabilityMatrix(false);
                     //float** fwbwaln_zm = fwbwaln.getZm();
                     for (size_t i = gaps[0]; i < gaps[1]; ++i)
                     {
                         for (size_t j = gaps[2]; j < gaps[3]; ++j)
                         {
-                            P[i][j] = fwbwaln.zm[i - gaps[0]][j - gaps[2]];
+                            P[i][j] = fwbwaln->zm[i - gaps[0]][j - gaps[2]];
                         }
                     }
                     //lolAlign::lol_fwbw(G, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, 2, length, blocks, gaps);
@@ -507,7 +484,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         }*/
     for (size_t i = 0; i < queryLen; ++i)
         {
-            for (size_t j = 0; j < targetLen +length; ++j)
+            for (size_t j = 0; j < targetLen ; ++j)
             {
                 G[i][j] = 0;
                 P[i][j] = 0;
@@ -656,10 +633,11 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             tLeftSkip++;
         }
     }
-    if(firstM == targetLen){
+    /*if(firstM == targetLen){
         Debug(Debug::ERROR) << "No 'M' in backtrace.\n";
+        std::cout << backtrace << std::endl;
         EXIT(EXIT_FAILURE);
-    }
+    }*/
 
     result.qStartPos  += qLeftSkip;
     result.dbStartPos += tLeftSkip;
@@ -814,8 +792,6 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
 
 void lolAlign::lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer, float* log_score)
 {
-
-
     for (int i = 0; i < length; ++i) {
         for (int k = 0; k < 3; ++k) {
             hidden_layer[i][k] = 0.0;
@@ -1255,11 +1231,8 @@ int lolalign(int argc, const char **argv, const Command &command)
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        std::cout << "fwbwaln  " << std::endl;
         lolAlign lolaln(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1, tdbr->sequenceReader->getMaxSeqLen() + 1), false);
         FwBwAligner fwbwaln(16, -5, -2, 1, 1, 1);
-        
-
         std::vector<Matcher::result_t> swResults;
         swResults.reserve(300);
         std::string backtrace;
@@ -1272,24 +1245,22 @@ int lolalign(int argc, const char **argv, const Command &command)
 #pragma omp for schedule(dynamic, 1)
         for (size_t id = 0; id < resultReader.getSize(); id++)
         {
-            std::cout << "id: " << id << std::endl;
             //progress.updateProgress();
             char *data = resultReader.getData(id, thread_idx);
             if (*data != '\0')
             {
                 size_t queryKey = resultReader.getDbKey(id);
-
                 unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
-                int max_targetLen = queryLen*2;
+                int max_targetLen = ((queryLen*2)/16)*16;
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
                 size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
                 float *qdata = qcoords.read(qcadata, queryLen, qCaLength);
                 lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen);
-                fwbwaln.resizeMatrix(max_targetLen, max_targetLen);
-                std::cout << "queryLen: " << queryLen << std::endl;
+                fwbwaln.resizeMatrix(queryLen, max_targetLen);
+                std::cout << "Start Query: " << queryKey << std::endl;
 
                 
 
@@ -1308,15 +1279,16 @@ int lolalign(int argc, const char **argv, const Command &command)
                     int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
                     if (targetLen > max_targetLen)
                     {
-                        max_targetLen = targetLen*2;
-                        fwbwaln.resizeMatrix(queryLen, max_targetLen);
-
+                        max_targetLen = ((targetLen*2)/16)*16;
+                        
                         lolaln.reallocate_target(max_targetLen);
+                        fwbwaln.resizeMatrix(queryLen, max_targetLen);
                     }
                     if (Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen) == false)
                     {
                         continue;
                     }
+
 
                     
 
@@ -1325,18 +1297,20 @@ int lolalign(int argc, const char **argv, const Command &command)
                     float *tdata = tcoords.read(tcadata, targetLen, tCaLength);
                     char *target3diSeq = tdbr3Di.getData(targetId, thread_idx);
 
-                    Matcher::result_t result = lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetSeq, target3diSeq, targetLen, subMatAA, subMat3Di, fwbwaln);
+                    Matcher::result_t result = lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetSeq, target3diSeq, targetLen, subMatAA, subMat3Di, &fwbwaln);
                     
 
 
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
                     bool hasSeqId = result.seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
                     //bool hasTMscore = (TMscore >= par.tmScoreThr);
+
                     if(hasCov && hasSeqId) {
                         swResults.emplace_back(result);
                     }
                 
                 }
+
 
                 
                 SORT_SERIAL(swResults.begin(), swResults.end(), compareHitsBylolScore);
@@ -1349,8 +1323,11 @@ int lolalign(int argc, const char **argv, const Command &command)
                 dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, thread_idx);
                 resultBuffer.clear();
                 swResults.clear();
+                std::cout << "End Query: " << queryKey << std::endl;
+
             }
-        }   
+        }
+
     }
     dbw.close();
     resultReader.close();
