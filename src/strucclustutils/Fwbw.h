@@ -47,10 +47,11 @@ public:
 
     unsigned char* queryNum = nullptr;
     unsigned char* targetNum = nullptr;
+    float** zm;
+
 
 private:
 
-    float** zm;
     float** P;
     float* zmFirst;
     float* zeFirst;

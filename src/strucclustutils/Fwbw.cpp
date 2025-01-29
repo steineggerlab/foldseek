@@ -148,7 +148,7 @@ FwBwAligner::FwBwAligner(size_t length, float gapOpen, float gapExtend, float te
 
 FwBwAligner::~FwBwAligner(){
     // matrices used both in lolalign and general cases
-    /*free(zm);
+    free(zm);
     free(zmBlockPrev);
     free(zmBlockCurr);
     free(zeBlock);
@@ -187,12 +187,13 @@ FwBwAligner::~FwBwAligner(){
     if (S_curr != nullptr) {
         free(S_curr);
     }
+    std::cout << "FwBwAligner destructor called" << std::endl;
 
     // free(btMatrix);
     // free(blosum);
     // free(S_prev);
     // free(S_curr);
-    std::cout << "lol Freeing memory" << std::endl;*/
+    
 }
 
 
@@ -236,6 +237,7 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
 }
 
 void FwBwAligner::resizeMatrix(size_t newRowsCapacity, size_t newColsCapacity) {
+    std::cout << "Resizing matrix to " << newRowsCapacity << " x " << newColsCapacity << std::endl;
     rowsCapacity = newRowsCapacity;
     colsCapacity = newColsCapacity;
     // blockCapacity = newColsCapacity / length;
