@@ -1231,7 +1231,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                 FwBwAligner fwbwaln(16, -2, -2, 1, 1, 1);
                 size_t queryKey = resultReader.getDbKey(id);
                 unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
-                std::cout << "start Query " << queryId << std::endl;
+                //std::cout << "start Query " << queryId << std::endl;
 
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
@@ -1312,7 +1312,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                 dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, thread_idx);
                 resultBuffer.clear();
                 swResults.clear();
-                std::cout << "end Query " << queryId << std::endl;
+                //std::cout << "end Query " << queryId << std::endl;
 
             }
         }
