@@ -16,7 +16,7 @@ void (*validatorUpdate)(void) = updateValdiation;
 
 std::vector<Command> foldseekCommands = {
         {"lolalign",                lolalign,                &localPar.tmalign,        COMMAND_ALIGNMENT,
-                "Compute tm-score ",
+                "LoLalign. creating structure alignmetns by optimizing the Local distance log odds (LoL) score ",
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <i:prefilterDB> <o:resultDB>",
@@ -24,7 +24,7 @@ std::vector<Command> foldseekCommands = {
                                 {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                 {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                 {"alnDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::alignmentDb }}},
-                                
+
         {"createdb",             structcreatedb,                &localPar.structurecreatedb,    COMMAND_MAIN,
                 "Convert PDB/mmCIF/tar[.gz]/DB files or directory/TSV to a structure DB",
                 "# Process multiple files\n"

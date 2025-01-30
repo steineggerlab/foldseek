@@ -146,6 +146,8 @@ FwBwAligner::FwBwAligner(size_t length, float gapOpen, float gapExtend, float te
 
 }
 
+
+
 FwBwAligner::~FwBwAligner(){
     // matrices used both in lolalign and general cases
     free(zm);
@@ -202,6 +204,24 @@ void FwBwAligner::reallocateScoreProfile(size_t newColsCapacity) {
     free(scoreBackwardProfile_exp); scoreBackwardProfile_exp = malloc_matrix<float>(21, newColsCapacity);
 }
 
+void FwBwAligner::setParams(float go, float ge, float t, size_t l) {
+    gapOpen = go;
+    gapExtend = ge;
+    temperature = t;
+    exp_go = simdf32_set(static_cast<float>(exp(go / t))); 
+    exp_ge = simdf32_set(static_cast<float>(exp(ge / t)));
+    for (size_t i = 0; i < l; ++i) { 
+        vj[i] = exp(((l - 1) * gapExtend + gapOpen - i * gapExtend) / t);
+        wj[i] = exp(((l - 1) * gapExtend - i * gapExtend) / t);
+    }
+    for (size_t i = 0; i < l; ++i) {
+        exp_ge_arr[i] = exp((i * gapExtend + gapExtend) / temperature);
+    }
+    // Gap open and extend
+    exp_go = simdf32_set(static_cast<float>(exp(gapOpen / temperature))); 
+    exp_ge = simdf32_set(static_cast<float>(exp(gapExtend / temperature)));
+}
+
 // lolalign
 void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, size_t targetLen, int * gaps) {
     tlen = targetLen; qlen = queryLen;
@@ -232,11 +252,11 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
         }
         //std::fill(&scoreForward[i][queryLen], &scoreForward[i][qlen_padding], FLT_MIN_EXP);
     }
+
     
 }
 
 void FwBwAligner::resizeMatrix(size_t newRowsCapacity, size_t newColsCapacity) {
-    std::cout << "Resizing matrix to " << newRowsCapacity << " x " << newColsCapacity << std::endl;
     rowsCapacity = newRowsCapacity;
     colsCapacity = newColsCapacity;
     // blockCapacity = newColsCapacity / length;
@@ -723,6 +743,9 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
         }
     }
     sum_exp += simdf32_hadd(vSum_exp);
+    
+
+    
 
     //// Backward
     backward(has_Profile);
@@ -762,6 +785,7 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
     for (size_t k = 0; k < VECSIZE_FLOAT; ++k) {
         maxP = std::max(maxP, vMaxP[k]);
     }
+    
 }
 
 FwBwAligner::s_align FwBwAligner::computeAlignment() {

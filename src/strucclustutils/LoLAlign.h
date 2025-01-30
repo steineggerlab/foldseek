@@ -90,7 +90,8 @@ public:
                                             size_t rows, size_t start, size_t end, size_t memcpy_cols, size_t targetlen,
                                             float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock, int* gaps);
     void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff);
-    void reallocate_target(size_t newColsCapacity);
+    void reallocate_target(size_t targetL);
+    float calc_discore(int * anchor_query, int * anchor_target, int anchor_length);
 
 private:
 
@@ -110,15 +111,27 @@ private:
     float ** G;
     int ** anchor_query;
     int ** anchor_target;
-    float start_anchor_go = -3.0;
-    float start_anchor_ge = -1.0;
-    float start_anchor_T = 1.0;
+    float start_anchor_go = -5.0;
+    float start_anchor_ge = -2.0;
+    float start_anchor_T = 2.0;
     int start_anchor_length = 3;
     float lol_go = -3.0;
-    float lol_ge = -1.0;
-    float lol_min_p = 0.4;
-    float lol_T = 2.5;
-    float *mem;
+    float lol_ge = -0.0;
+    float lol_min_p = 0.5;
+    float lol_T = 1;
+    float** hidden_layer;
+    int* sa_index = new int[num_sa];
+    float* sa_scores = new float[num_sa];
+    int* anchor_length = new int[num_sa];
+    int* new_anchor_length = new int[num_sa];
+    int* gaps = new int[4]{0, 0, 0, 0};
+    float* lol_dist;
+    float* lol_seq_dist;
+    float* lol_score_vec;
+    int* final_anchor_query;
+    int* final_anchor_target;
+    
+
     float w1[2][3] = {
         {-1.3584513e-04,7.6149112e-01,-8.1348085e-01 },
         {9.9329501e-01 , 5.7029408e-01, 6.0702705e-01}
@@ -136,11 +149,11 @@ private:
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
-    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen, float ** hidden_layer);
+    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen, float ** hidden_layer, float * d_dist, float * log_score);
     void lolscore(float* dist, float* d_seq, float* score, int length, float** hidden_layer);
     
 
-    void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer, float* log_score);
+    void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer);
 
 
 };

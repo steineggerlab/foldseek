@@ -44,10 +44,12 @@ public:
     float** getZm() {return zm;}
     void computeProbabilityMatrix(bool has_Profile);
     void initScoreMatrix(float** inputScoreMatrix, size_t queryLen, size_t targetLen, int * gaps);
+    void setParams(float go, float ge, float t, size_t l);
 
     unsigned char* queryNum = nullptr;
     unsigned char* targetNum = nullptr;
     float** zm;
+    float** scoreForward = nullptr;
 
 
 private:
@@ -65,7 +67,7 @@ private:
     float** zInit;
     float* exp_ge_arr;
 
-    float** scoreForward = nullptr;
+    
     float** scoreForwardProfile = nullptr;
     float** scoreForwardProfile_exp = nullptr;
     float** scoreBackwardProfile_exp = nullptr;
