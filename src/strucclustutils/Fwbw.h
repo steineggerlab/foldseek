@@ -1,4 +1,4 @@
-../src/strucclustutils/Fwbw.h #ifndef FWBW
+#ifndef FWBW
 #define FWBW
 
 #include "SubstitutionMatrix.h"
