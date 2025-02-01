@@ -1,4 +1,4 @@
-../src/strucclustutils/Fwbw.cpp #include "Fwbw.h"
+#include "Fwbw.h"
 #include "Debug.h"
 #include "DBReader.h"
 #include "DBWriter.h"
@@ -756,7 +756,8 @@ void FwBwAligner::computeProbabilityMatrix() {
     //// Backward
     backward<profile>();
 
-    float logsumexp_zm = max_zm + log(sum_exp); simd_float vLogsumexp_zm = simdf32_set(logsumexp_zm);
+    float logsumexp_zm = max_zm + log(sum_exp);
+    simd_float vLogsumexp_zm = simdf32_set(logsumexp_zm);
     size_t qLoopCount = qlen / VECSIZE_FLOAT; size_t qLoopEndPos = qLoopCount * VECSIZE_FLOAT;
     P = zm;
     simd_float vMaxP = simdf32_setzero();
