@@ -1,4 +1,4 @@
-#ifndef FWBW
+../src/strucclustutils/Fwbw.h #ifndef FWBW
 #define FWBW
 
 #include "SubstitutionMatrix.h"
@@ -33,6 +33,7 @@ public:
     FwBwAligner(size_t length, float gapOpen, float gapExtend, float temperature, size_t rowsCapacity, size_t colsCapacity);
     ~FwBwAligner();
 
+    template<int profile>
     s_align computeAlignment();
     size_t getRowsCapacity() const { return rowsCapacity; }
     size_t getColsCapacity() const { return colsCapacity; }
@@ -42,7 +43,9 @@ public:
     void initQueryProfile(unsigned char* queryNum, size_t queryLen);
     void initAlignment(unsigned char* targetNum, size_t targetLen);
     float** getZm() {return zm;}
-    void computeProbabilityMatrix(bool has_Profile);
+
+    template <int profile>
+    void computeProbabilityMatrix();
     void initScoreMatrix(float** inputScoreMatrix, size_t queryLen, size_t targetLen, int * gaps);
     void setParams(float go, float ge, float t, size_t l);
 
@@ -103,8 +106,10 @@ private:
     
     simd_float vMax_zm;
     size_t qlen_padding;
-    void forward(bool has_Profile);
-    void backward(bool has_Profile);
+    template <int profile>
+    void forward();
+    template <int profile>
+    void backward();
     // void forwardBackwardSaveBlockMaxLocal(bool isForward, size_t start, size_t memcpy_cols);
     void reallocateScoreProfile(size_t newColsCapacity);
 };

@@ -1,4 +1,4 @@
-#include "Fwbw.h"
+../src/strucclustutils/Fwbw.cpp #include "Fwbw.h"
 #include "Debug.h"
 #include "DBReader.h"
 #include "DBWriter.h"
@@ -318,7 +318,8 @@ void FwBwAligner::initQueryProfile(unsigned char* queryAANum, size_t queryLen) {
     }
 }
 
-void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then it is lolalign
+template <int profile>
+void FwBwAligner::forward() {   // if has_Profile = false, then it is lolalign
     //Init zInit
     for (size_t i = 0 ; i < 3; ++i) {
         std::fill(zInit[i], zInit[i] + rowsCapacity, FLT_MIN_EXP); // rowsCapacity -> tlen
@@ -360,7 +361,7 @@ void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then 
                 simd_float vZe = simdf32_load(&zeBlock[j-1]);
                 simd_float vZf = simdf32_load(&zfBlock[j-1]);
                 simd_float vScoreMatrix;
-                if (has_Profile) {
+                if (profile) {
                     vScoreMatrix = simdf32_exp(simdf32_load(&scoreForwardProfile[targetNum[i-1]][start + j - 1]));
                 } else {
                     vScoreMatrix = simdf32_exp(simdf32_load(&scoreForward[i-1][start + j - 1]));
@@ -506,7 +507,8 @@ void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then 
     }
 }
 
-void FwBwAligner::backward(bool has_Profile) {
+template <int profile>
+void FwBwAligner::backward() {
     //Init zInit
     // Debug(Debug::INFO) << "backward function called with has_Profile: " << has_Profile << '\n';
     size_t vecsize_float = static_cast<size_t>(VECSIZE_FLOAT);
@@ -551,7 +553,7 @@ void FwBwAligner::backward(bool has_Profile) {
                 simd_float vZe = simdf32_load(&zeBlock[j-1]);
                 simd_float vZf = simdf32_load(&zfBlock[j-1]);
                 simd_float vScoreMatrix;
-                if (has_Profile) {
+                if (profile) {
                     vScoreMatrix = simdf32_load(&scoreBackwardProfile_exp[targetNum[tlen - i]][start + j - 1]);
                 } else {
                     size_t reverse_i = tlen - i;
@@ -723,9 +725,15 @@ void FwBwAligner::backward(bool has_Profile) {
         free(zmMaxData); 
     }
 }
-void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
+
+
+template void FwBwAligner::computeProbabilityMatrix<0>();
+template void FwBwAligner::computeProbabilityMatrix<1>();
+
+template<int profile>
+void FwBwAligner::computeProbabilityMatrix() {
     //// Run Forward
-    forward(has_Profile);
+    forward<profile>();
     //Calculate max_zm
     for (size_t i = 0; i < VECSIZE_FLOAT; ++i) {
         max_zm = std::max(max_zm, vMax_zm[i]);
@@ -745,10 +753,8 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
     sum_exp += simdf32_hadd(vSum_exp);
     
 
-    
-
     //// Backward
-    backward(has_Profile);
+    backward<profile>();
 
     float logsumexp_zm = max_zm + log(sum_exp); simd_float vLogsumexp_zm = simdf32_set(logsumexp_zm);
     size_t qLoopCount = qlen / VECSIZE_FLOAT; size_t qLoopEndPos = qLoopCount * VECSIZE_FLOAT;
@@ -760,7 +766,7 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
         for (size_t j = 0; j < qLoopEndPos; j += VECSIZE_FLOAT) {
             simd_float vZmForward_Backward = simdf32_load(&zm[i][j]);
             simd_float scoreForwardVal;
-            if (has_Profile) {
+            if (profile) {
                 scoreForwardVal = simdf32_load(&scoreForwardProfile[targetNum[i]][j]);
             } else {
                 scoreForwardVal = simdf32_load(&scoreForward[i][j]);
@@ -771,7 +777,7 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
             vMaxP = simdf32_max(vMaxP, P_val);
         }    
         for (size_t j = qLoopEndPos; j < qlen; ++j) {
-            if (has_Profile) {
+            if (profile) {
                 P[i][j] = exp(zm[i][j] - scoreForwardProfile[targetNum[i]][j] - logsumexp_zm);
             } else {
                 P[i][j] = exp(zm[i][j] - scoreForward[i][j] - logsumexp_zm);
@@ -788,9 +794,9 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
     
 }
 
+template<int profile>
 FwBwAligner::s_align FwBwAligner::computeAlignment() {
-    bool has_Profile = true;
-    computeProbabilityMatrix(has_Profile);
+    computeProbabilityMatrix<profile>();
 
     // MAC algorithm from HH-suite
     size_t qLoopCount = qlen / VECSIZE_FLOAT; size_t qLoopEndPos = qLoopCount * VECSIZE_FLOAT;
@@ -901,6 +907,7 @@ FwBwAligner::s_align FwBwAligner::computeAlignment() {
     return result;
 }
 
+template<int profile>
 float** fwbw(float** inputScoreForward, size_t queryLen, size_t targetLen, float gapOpen, float gapExtend, float temperature) {
     size_t length = 16; // AVX2, need to check
     size_t assignSeqLen = VECSIZE_FLOAT * sizeof(float) * 20; 
@@ -923,7 +930,7 @@ float** fwbw(float** inputScoreForward, size_t queryLen, size_t targetLen, float
     }
     
     bool has_Profile = false;
-    subfwbwaligner.computeProbabilityMatrix(has_Profile);
+    subfwbwaligner.computeProbabilityMatrix<profile>();
     float** P = subfwbwaligner.getZm();
     // copy P to return_P with memcpy
     for (size_t i = 0; i < targetLen; ++i) {

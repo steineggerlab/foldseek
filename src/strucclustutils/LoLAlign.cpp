@@ -96,10 +96,6 @@ void lolAlign::reallocate_target(size_t targetL){
     final_anchor_target = new int[targetL];
     free(final_anchor_query);
     final_anchor_query = new int[queryLen];
-
-
-
-
 }
 
 void lolAlign::calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int queryLen, int targetLen)
@@ -229,7 +225,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
         if(sa % 5 == 0){
             fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
-            fwbwaln->computeProbabilityMatrix(false);
+            fwbwaln->computeProbabilityMatrix<false>();
             //float** fwbwaln_zm = fwbwaln.getZm();
             for (size_t i = 0; i < queryLen; ++i)
             {
@@ -363,7 +359,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
                 if(gaps[0] != -1){
                     fwbwaln->initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
-                    fwbwaln->computeProbabilityMatrix(false);
+                    fwbwaln->computeProbabilityMatrix<false>();
                     //float** fwbwaln_zm = fwbwaln.getZm();
                     for (size_t i = gaps[0]; i < gaps[1]; ++i)
                     {
@@ -1304,7 +1300,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                 
                 SORT_SERIAL(swResults.begin(), swResults.end(), compareHitsBylolScore);
                 for(size_t i = 0; i < swResults.size(); i++){
-                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], par.addBacktrace, false);
+                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], par.addBacktrace, true);
                     resultBuffer.append(buffer, len);
                 }
 
