@@ -149,6 +149,6 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
     qComplexIdToChainKeysMap.clear();
     dbComplexIdToChainKeysMap.clear();
     alnDbr.close();
-    resultWriter.close(true);
+    resultWriter.close(false);
     return EXIT_SUCCESS;
 }

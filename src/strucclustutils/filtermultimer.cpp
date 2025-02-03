@@ -774,8 +774,8 @@ localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t
         } // for end
     } // MP end
     
-    resultWriter.close(true);
-    resultWrite5.close(true);
+    resultWriter.close(false);
+    resultWrite5.close(false);
     qStructDbr.close();
     alnDbr.close();
     delete qDbr;
