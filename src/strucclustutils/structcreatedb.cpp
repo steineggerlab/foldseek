@@ -142,7 +142,7 @@ void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pul
 }
 
 void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t> res1, std::pair<size_t, size_t> res2,
-                           std::vector<size_t> & resIdx1, float distanceThreshold)
+                           std::vector<size_t> & resIdx1, float distanceThreshold, int intExtractionMode)
 {
     std::vector<Vec3> coord1, coord2;
     size_t sameRes = 0;
@@ -151,7 +151,7 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
     const float squareThreshold = distanceThreshold * distanceThreshold;
     for (size_t res1Idx = res1.first; res1Idx < res1.second; res1Idx++) {
         float x1, y1, z1;
-        if (readStructure.ami[res1Idx] == 'G') {
+        if (readStructure.ami[res1Idx] == 'G' || intExtractionMode == LocalParameters::INT_EXTRACT_MODE_CA) {
             x1 = readStructure.ca[res1Idx].x;
             y1 = readStructure.ca[res1Idx].y;
             z1 = readStructure.ca[res1Idx].z;
@@ -163,7 +163,7 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
         }
         for (size_t res2Idx = res2.first; res2Idx < res2.second; res2Idx++) {
             float x2, y2, z2;
-            if (readStructure.ami[res2Idx] == 'G') {
+            if (readStructure.ami[res2Idx] == 'G' || intExtractionMode == LocalParameters::INT_EXTRACT_MODE_CA) {
                 x2 = readStructure.ca[res2Idx].x;
                 y2 = readStructure.ca[res2Idx].y;
                 z2 = readStructure.ca[res2Idx].z;
@@ -192,7 +192,7 @@ void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t
     }
 }
 
-void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, int chainNameMode, float distanceThreshold) {
+void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, int chainNameMode, float distanceThreshold, int intExtractionMode) {
     size_t prevInterfaceChainLen = 0;
     std::vector<char> interfaceSeq3di, interfaceAmi;
     std::vector<size_t> resIdx1, resIdx2;
@@ -223,8 +223,8 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, 
                 continue;
             }
             if (readStructure.modelIndices[ch1] == readStructure.modelIndices[ch2]) {
-                findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1, distanceThreshold);
-                findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2, distanceThreshold);
+                findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1, distanceThreshold, intExtractionMode);
+                findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2, distanceThreshold, intExtractionMode);
                 if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
                     modelToInterfaceNum[readStructure.modelIndices[ch2]]++;
                     for (size_t i = 0; i < resIdx1.size(); i++) {
@@ -347,7 +347,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     DBWriter* mappingWriter) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
-        compute3DiInterfaces(readStructure, pulchra, structureTo3Di, mat, chainNameMode, par.distanceThreshold);
+        compute3DiInterfaces(readStructure, pulchra, structureTo3Di, mat, chainNameMode, par.distanceThreshold, par.intExtractionMode);
     }
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
     size_t entriesAdded = 0;
