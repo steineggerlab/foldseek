@@ -159,97 +159,38 @@ struct ComplexDataHandler {
     bool isValid;
 };
 
-void getKeyToIdMapIdToKeysMapIdVec(
-        IndexReader &dbr,
-        const std::string &file,
-        std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
-        std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
-        std::vector<unsigned int> &complexIdVec
-) {
-    if (file.length() == 0) {
-        return;
-    }
-    MemoryMapped lookupDB(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
-    char *data = (char *) lookupDB.getData();
-    char *end = data + lookupDB.mappedSize();
-    const char *entry[255];
-    int prevComplexId =  -1;
-    while (data < end && *data != '\0') {
-        const size_t columns = Util::getWordsOfLine(data, entry, 255);
-        if (columns < 3) {
-            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
-            continue;
-        }
-        auto chainKey = Util::fast_atoi<int>(entry[0]);
-        unsigned int chainDbId = dbr.sequenceReader->getId(chainKey);
-        if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
-            chainKeyToComplexIdLookup.emplace(chainKey, complexId);
-            if (complexId != prevComplexId) {
-                complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
-                complexIdVec.emplace_back(complexId);
-                prevComplexId = complexId;
-            }
-            complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
-        }
-        data = Util::skipLine(data);
-    }
-    lookupDB.close();
+template <typename ReaderType>
+auto getChainId(ReaderType &dbr, unsigned int chainKey) -> decltype(dbr.getId(chainKey)) {
+    return dbr.getId(chainKey);
 }
 
-void getKeyToIdMapIdToKeysMapIdVec(
-        IndexReader* dbr,
-        const std::string &file,
-        std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
-        std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
-        std::vector<unsigned int> &complexIdVec
-) {
-    if (file.length() == 0) {
-        return;
-    }
-    MemoryMapped lookupDB(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
-    char *data = (char *) lookupDB.getData();
-    char *end = data + lookupDB.mappedSize();
-    const char *entry[255];
-    int prevComplexId =  -1;
-    while (data < end && *data != '\0') {
-        const size_t columns = Util::getWordsOfLine(data, entry, 255);
-        if (columns < 3) {
-            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
-            continue;
-        }
-        auto chainKey = Util::fast_atoi<int>(entry[0]);
-        unsigned int chainDbId = dbr->sequenceReader->getId(chainKey);
-        if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
-            chainKeyToComplexIdLookup.emplace(chainKey, complexId);
-            if (complexId != prevComplexId) {
-                complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
-                complexIdVec.emplace_back(complexId);
-                prevComplexId = complexId;
-            }
-            complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
-        }
-        data = Util::skipLine(data);
-    }
-    lookupDB.close();
+template <typename ReaderType>
+auto getChainId(ReaderType *dbr, unsigned int chainKey) -> decltype(dbr->sequenceReader->getId(chainKey)) {
+    return dbr->sequenceReader->getId(chainKey);
 }
 
-void getKeyToIdMapIdToKeysMapIdVec(
-        DBReader<unsigned int> &dbr,
-        const std::string &file,
-        std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
-        std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
-        std::vector<unsigned int> &complexIdVec
+template <typename ReaderType>
+auto getChainId(ReaderType &dbr, unsigned int chainKey) -> decltype(dbr.sequenceReader->getId(chainKey)) {
+    return dbr.sequenceReader->getId(chainKey);
+}
+
+template <typename ReaderType>
+static void getKeyToIdMapIdToKeysMapIdVec(
+    ReaderType &dbr,
+    const std::string &file,
+    std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
+    std::map<unsigned int, std::vector<unsigned int>> &complexIdToChainKeysLookup,
+    std::vector<unsigned int> &complexIdVec
 ) {
-    if (file.length() == 0) {
+    if (file.empty()) {
         return;
     }
     MemoryMapped lookupDB(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-    int prevComplexId =  -1;
+    int prevComplexId = -1;
+
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -257,7 +198,9 @@ void getKeyToIdMapIdToKeysMapIdVec(
             continue;
         }
         auto chainKey = Util::fast_atoi<int>(entry[0]);
-        unsigned int chainDbId = dbr.getId(chainKey);
+
+        unsigned int chainDbId = getChainId(dbr, chainKey);
+        
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
             auto complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);

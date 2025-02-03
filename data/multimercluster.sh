@@ -96,9 +96,9 @@ if notExists "${TMP_PATH}/multimer_db.dbtype"; then
         || fail "createsubdb died"
     buildIndex "${TMP_PATH}/multimer_db"
     # shellcheck disable=SC2086
-    # "$MMSEQS" tsv2db "${TMP_PATH}/multimer_db.sourcetmp" "${TMP_PATH}/multimer_db_h" --output-dbtype 12 ${VERBOSITY_PAR} \
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_db_h" \
+        || fail "rmdb died"
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimer_db_h"
     "$MMSEQS" tsv2db "${INPUT}.source" "${TMP_PATH}/multimer_db_h" --output-dbtype 12 ${VERBOSITY_PAR} \
         || fail "tsv2db died"
 fi
