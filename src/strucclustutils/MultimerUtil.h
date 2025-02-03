@@ -159,7 +159,7 @@ struct ComplexDataHandler {
     bool isValid;
 };
 
-static void getKeyToIdMapIdToKeysMapIdVec_index(
+void getKeyToIdMapIdToKeysMapIdVec(
         IndexReader &dbr,
         const std::string &file,
         std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -197,7 +197,7 @@ static void getKeyToIdMapIdToKeysMapIdVec_index(
     lookupDB.close();
 }
 
-static void getKeyToIdMapIdToKeysMapIdVec_indexpointer(
+void getKeyToIdMapIdToKeysMapIdVec(
         IndexReader* dbr,
         const std::string &file,
         std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -235,7 +235,7 @@ static void getKeyToIdMapIdToKeysMapIdVec_indexpointer(
     lookupDB.close();
 }
 
-static void getKeyToIdMapIdToKeysMapIdVec_db(
+void getKeyToIdMapIdToKeysMapIdVec(
         DBReader<unsigned int> &dbr,
         const std::string &file,
         std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,

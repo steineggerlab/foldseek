@@ -66,8 +66,8 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
     complexIdToChainKeys_t dbComplexIdToChainKeysMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getKeyToIdMapIdToKeysMapIdVec_index(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
-    getKeyToIdMapIdToKeysMapIdVec_index(tDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec(tDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
     dbComplexIndices.clear();
     qChainKeyToComplexIdMap.clear();
 
