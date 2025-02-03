@@ -204,6 +204,8 @@ void FwBwAligner::reallocateScoreProfile(size_t newColsCapacity) {
     free(scoreBackwardProfile_exp); scoreBackwardProfile_exp = malloc_matrix<float>(21, newColsCapacity);
 }
 
+
+
 void FwBwAligner::setParams(float go, float ge, float t, size_t l) {
     gapOpen = go;
     gapExtend = ge;

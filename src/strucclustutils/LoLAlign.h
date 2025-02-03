@@ -118,7 +118,7 @@ private:
     float lol_go = -3.0;
     float lol_ge = -0.0;
     float lol_min_p = 0.5;
-    float lol_T = 1;
+    float lol_T = 3;
     float** hidden_layer;
     int* sa_index = new int[num_sa];
     float* sa_scores = new float[num_sa];

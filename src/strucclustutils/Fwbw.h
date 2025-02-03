@@ -50,6 +50,7 @@ public:
     unsigned char* targetNum = nullptr;
     float** zm;
     float** scoreForward = nullptr;
+    float temperature;
 
 
 private:
@@ -86,7 +87,7 @@ private:
     float gapOpen;
     float gapExtend;
     float mact;
-    float temperature;
+    
     size_t rowsCapacity;
     size_t colsCapacity;
 
