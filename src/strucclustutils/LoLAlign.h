@@ -152,6 +152,27 @@ private:
     float w2[3] = {-0.776632  ,  0.61055756, 0.5823986};
     float b2 = -0.11200039;
 
+    // Load weights and biases into SIMD registers
+    simd_float w1_0 = simdf32_set(w1[0][0]); // Broadcast w1[0][0] to all 8 elements
+    simd_float w1_1 = simdf32_set(w1[0][1]); // Broadcast w1[0][1] to all 8 elements
+    simd_float w1_2 = simdf32_set(w1[0][2]); // Broadcast w1[0][2] to all 8 elements
+
+    simd_float w1_d0 = simdf32_set(w1[1][0]); // Broadcast w1[1][0] to all 8 elements
+    simd_float w1_d1 = simdf32_set(w1[1][1]); // Broadcast w1[1][1] to all 8 elements
+    simd_float w1_d2 = simdf32_set(w1[1][2]); // Broadcast w1[1][2] to all 8 elements
+
+    simd_float b1_0 = simdf32_set(b1[0]); // Broadcast b1[0] to all 8 elements
+    simd_float b1_1 = simdf32_set(b1[1]); // Broadcast b1[1] to all 8 elements
+    simd_float b1_2 = simdf32_set(b1[2]); // Broadcast b1[2] to all 8 elements
+
+    simd_float w2_0 = simdf32_set(w2[0]); // Broadcast w2[0] to all 8 elements
+    simd_float w2_1 = simdf32_set(w2[1]); // Broadcast w2[1] to all 8 elements
+    simd_float w2_2 = simdf32_set(w2[2]); // Broadcast w2[2] to all 8 elements
+
+    simd_float b2_vec = simdf32_set(b2); // Broadcast b2 to all 8 elements
+
+    simd_float zero = simdf32_setzero();
+
     unsigned int queryLen;
     char * querySeq;
     char * query3diSeq;

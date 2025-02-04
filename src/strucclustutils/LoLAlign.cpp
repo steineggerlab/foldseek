@@ -808,57 +808,38 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
 
 void lolAlign::lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer)
 {
-    // Load weights and biases into SIMD registers
-    __m256 w1_0 = _mm256_set1_ps(w1[0][0]); // Broadcast w1[0][0] to all 8 elements
-    __m256 w1_1 = _mm256_set1_ps(w1[0][1]); // Broadcast w1[0][1] to all 8 elements
-    __m256 w1_2 = _mm256_set1_ps(w1[0][2]); // Broadcast w1[0][2] to all 8 elements
-
-    __m256 w1_d0 = _mm256_set1_ps(w1[1][0]); // Broadcast w1[1][0] to all 8 elements
-    __m256 w1_d1 = _mm256_set1_ps(w1[1][1]); // Broadcast w1[1][1] to all 8 elements
-    __m256 w1_d2 = _mm256_set1_ps(w1[1][2]); // Broadcast w1[1][2] to all 8 elements
-
-    __m256 b1_0 = _mm256_set1_ps(b1[0]); // Broadcast b1[0] to all 8 elements
-    __m256 b1_1 = _mm256_set1_ps(b1[1]); // Broadcast b1[1] to all 8 elements
-    __m256 b1_2 = _mm256_set1_ps(b1[2]); // Broadcast b1[2] to all 8 elements
-
-    __m256 w2_0 = _mm256_set1_ps(w2[0]); // Broadcast w2[0] to all 8 elements
-    __m256 w2_1 = _mm256_set1_ps(w2[1]); // Broadcast w2[1] to all 8 elements
-    __m256 w2_2 = _mm256_set1_ps(w2[2]); // Broadcast w2[2] to all 8 elements
-
-    __m256 b2_vec = _mm256_set1_ps(b2); // Broadcast b2 to all 8 elements
-
-    __m256 zero = _mm256_setzero_ps(); // Zero vector for ReLU
+     // Zero vector for ReLU
 
     // Process 8 elements at a time
     int i = 0;
-    for (; i <= length - 8; i += 8) {
+    for (; i <= length - VECSIZE_FLOAT; i += VECSIZE_FLOAT) {
         // Load d_dist[i..i+7] into a SIMD register
-        __m256 d_dist_vec = _mm256_loadu_ps(&d_dist[i]);
+        simd_float d_dist_vec = simdf32_loadu(&d_dist[i]);
 
         // Compute hidden_layer[i][k] for k = 0, 1, 2
-        __m256 hl_0 = _mm256_fmadd_ps(_mm256_set1_ps(d_seq), w1_0, _mm256_fmadd_ps(d_dist_vec, w1_d0, b1_0));
-        __m256 hl_1 = _mm256_fmadd_ps(_mm256_set1_ps(d_seq), w1_1, _mm256_fmadd_ps(d_dist_vec, w1_d1, b1_1));
-        __m256 hl_2 = _mm256_fmadd_ps(_mm256_set1_ps(d_seq), w1_2, _mm256_fmadd_ps(d_dist_vec, w1_d2, b1_2));
+        simd_float hl_0 = simdf32_fmadd(simdf32_set(d_seq), w1_0, simdf32_fmadd(d_dist_vec, w1_d0, b1_0));
+        simd_float hl_1 = simdf32_fmadd(simdf32_set(d_seq), w1_1, simdf32_fmadd(d_dist_vec, w1_d1, b1_1));
+        simd_float hl_2 = simdf32_fmadd(simdf32_set(d_seq), w1_2, simdf32_fmadd(d_dist_vec, w1_d2, b1_2));
 
         // Apply ReLU (max(0, x))
-        hl_0 = _mm256_max_ps(hl_0, zero);
-        hl_1 = _mm256_max_ps(hl_1, zero);
-        hl_2 = _mm256_max_ps(hl_2, zero);
+        hl_0 = simdf32_max(hl_0, zero);
+        hl_1 = simdf32_max(hl_1, zero);
+        hl_2 = simdf32_max(hl_2, zero);
 
         // Store hidden_layer[i][k] back to memory
-        _mm256_storeu_ps(&hidden_layer[i][0], hl_0);
-        _mm256_storeu_ps(&hidden_layer[i][1], hl_1);
-        _mm256_storeu_ps(&hidden_layer[i][2], hl_2);
+        simdf32_storeu(&hidden_layer[i][0], hl_0);
+        simdf32_storeu(&hidden_layer[i][1], hl_1);
+        simdf32_storeu(&hidden_layer[i][2], hl_2);
 
         // Compute score[i+start] += hidden_layer[i][k] * w2[k] for k = 0, 1, 2
-        __m256 score_vec = _mm256_loadu_ps(&score[i + start]);
-        score_vec = _mm256_fmadd_ps(hl_0, w2_0, score_vec);
-        score_vec = _mm256_fmadd_ps(hl_1, w2_1, score_vec);
-        score_vec = _mm256_fmadd_ps(hl_2, w2_2, score_vec);
-        score_vec = _mm256_add_ps(score_vec, b2_vec);
+        simd_float score_vec = simdf32_loadu(&score[i + start]);
+        score_vec = simdf32_fmadd(hl_0, w2_0, score_vec);
+        score_vec = simdf32_fmadd(hl_1, w2_1, score_vec);
+        score_vec = simdf32_fmadd(hl_2, w2_2, score_vec);
+        score_vec = simdf32_add(score_vec, b2_vec);
 
         // Store the updated score back to memory
-        _mm256_storeu_ps(&score[i + start], score_vec);
+        simdf32_storeu(&score[i + start], score_vec);
     }
 
     // Process remaining elements (if length is not a multiple of 8)
