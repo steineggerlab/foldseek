@@ -83,7 +83,6 @@ public:
         size_t queryLen, size_t targetLen,size_t assignTargetLen,
         float go, float ge, float T, int length, int blocks, int* gaps);
 
-    float** allocateMemory(size_t queryLen, size_t targetLen);
     void rescaleBlocks(float **matrix, float **scale, size_t rows, size_t length, size_t blocks, size_t targetLen);
     void forwardBackwardSaveBlockMaxLocal(float** S, float** z_init,
                                             float T, float go, float ge,
@@ -92,6 +91,17 @@ public:
     void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff);
     void reallocate_target(size_t targetL);
     float calc_discore(int * anchor_query, int * anchor_target, int anchor_length);
+    void computeDi_score(
+        char *querySeqAA,
+        char *querySeq3Di,
+        char *targetSeqAA,
+        char *targetSeq3Di,
+        int anchorLen,
+        int* final_anchor_query,
+        int* final_anchor_target,
+        SubstitutionMatrix &subMatAA,
+        SubstitutionMatrix &subMat3Di,
+        float *scoreForward);
 
 private:
 
@@ -130,6 +140,7 @@ private:
     float* lol_score_vec;
     int* final_anchor_query;
     int* final_anchor_target;
+
     
 
     float w1[2][3] = {

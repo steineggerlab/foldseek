@@ -236,15 +236,15 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
         free(scoreForward); scoreForward = malloc_matrix<float>(targetLen, newColsCapacity);
     }
     
-    /*for (size_t i=0; i<targetLen; ++i){
+    for (size_t i=0; i<targetLen; ++i){
         for (size_t j = 0; j < qlen_padding; j += VECSIZE_FLOAT) {
-            simd_float vScoreForward = simdf32_loadu(&inputScoreMatrix[i][j]);
+            simd_float vScoreForward = simdf32_loadu(&inputScoreMatrix[i+gaps[0]][j+gaps[2]]);
             vScoreForward = simdf32_div(vScoreForward, vTemp);
             simdf32_store(&scoreForward[i][j], vScoreForward);
         }
         std::fill(&scoreForward[i][queryLen], &scoreForward[i][qlen_padding], FLT_MIN_EXP);
-    }*/
-    for (size_t i=0; i<targetLen; ++i){
+    }
+    /*for (size_t i=0; i<targetLen; ++i){
         for (size_t j = 0; j < queryLen; ++j) {
             float score = inputScoreMatrix[i+gaps[0]][j+gaps[2]]/temperature;
             scoreForward[i][j] = score;
@@ -253,7 +253,7 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
             scoreForward[i][j] = FLT_MIN_EXP;
         }
         //std::fill(&scoreForward[i][queryLen], &scoreForward[i][qlen_padding], FLT_MIN_EXP);
-    }
+    }*/
 
     
 }
