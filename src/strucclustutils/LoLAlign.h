@@ -48,7 +48,6 @@ public:
         int targetLen,
         SubstitutionMatrix &subMatAA,
         SubstitutionMatrix &subMat3Di,
-        float T,
         float** scoreForward
     );
     void calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int queryLen, int targetLen);
@@ -91,6 +90,11 @@ public:
     void calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff);
     void reallocate_target(size_t targetL);
     float calc_discore(int * anchor_query, int * anchor_target, int anchor_length);
+    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen, float ** hidden_layer, float * d_dist);
+    void lolscore(float* dist, float* d_seq, float* score, int length, float** hidden_layer);
+    
+
+    void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer);
     void computeDi_score(
         char *querySeqAA,
         char *querySeq3Di,
@@ -140,6 +144,9 @@ private:
     float* lol_score_vec;
     int* final_anchor_query;
     int* final_anchor_target;
+    int SeedNumber = 3;
+
+
 
     
 
@@ -181,11 +188,7 @@ private:
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
-    void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen, float ** hidden_layer, float * d_dist, float * log_score);
-    void lolscore(float* dist, float* d_seq, float* score, int length, float** hidden_layer);
-    
 
-    void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer);
 
 
 };
