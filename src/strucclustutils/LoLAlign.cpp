@@ -347,58 +347,74 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             gaps[2] = 0;
             gaps[3] = 0;
             float maxP = 0.5;
+            //float max_temp = 0.5;
 
             while((gaps[1] < queryLen && gaps[3] < targetLen)){
                 calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
                 if(gaps[0] != -1){
                     fwbwaln->initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
                     fwbwaln->computeProbabilityMatrix(false);
+                    maxP = std::max(maxP, fwbwaln->maxP);
                     for (size_t i = 0; i < gaps[1] -gaps[0]; ++i) {
                        
                         std::copy(&fwbwaln->zm[i][0], &fwbwaln->zm[i][(gaps[3] - gaps[2])], &P[i + gaps[0]][gaps[2]]);
                     }
 
                     //lolAlign::lol_fwbw(G, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, 2, length, blocks, gaps);
-                }                
-                
-                if (gaps[0] != -1){
-                    for (int i = gaps[0]; i < gaps[1]; i++){
-                        for (int j = gaps[2]; j < gaps[3]; j++){
-                            if (std::isnan(P[i][j])) {
-                                fwbwaln->temperature += 1;
-                                gaps[0] = 0;
-                                gaps[1] = 0;
-                                gaps[2] = 0;
-                                gaps[3] = 0;
-                                found_nan = true;
-                                break;
-                            }
-                            if (P[i][j] > maxP){
-                                maxIndexX = i;
-                                maxIndexY = j;
-                                maxP = P[i][j];
-
-                                //std::cout << "maxP: " << maxP <<   std::endl;
-                                //std::cout << "maxIndexX: " << maxIndexX << " maxIndexY: " << maxIndexY << std::endl;
-                            }
-                        }
-                        if(found_nan){
-                            break;
-                        }
-                    }
-                    
                 }
                 else{
                     break;
+                } 
+                if(fwbwaln->maxP == 0){
+                    fwbwaln->temperature += 1;
+                    gaps[0] = 0;
+                    gaps[1] = 0;
+                    gaps[2] = 0;
+                    gaps[3] = 0;
+                    //found_nan = true;
+                    
                 }
+
+                
+                
+                /*for (int i = gaps[0]; i < gaps[1]; i++){
+                    for (int j = gaps[2]; j < gaps[3]; j++){
+                        if (std::isnan(P[i][j])) {
+                            fwbwaln->temperature += 1;
+                            gaps[0] = 0;
+                            gaps[1] = 0;
+                            gaps[2] = 0;
+                            gaps[3] = 0;
+                            found_nan = true;
+                            maxP = 0.5;
+                            max_temp = 0.5;
+                            break;
+                        }
+                        if (P[i][j] > maxP){
+                            //maxIndexX = i;
+                            //maxIndexY = j;
+                            maxP = P[i][j];
+
+                            //std::cout << "maxP: " << maxP <<   std::endl;
+                            //std::cout << "maxIndexX: " << maxIndexX << " maxIndexY: " << maxIndexY << std::endl;
+                        }
+                    }
+                    if(found_nan){
+                        break;
+                    }
+                }
+                    
                 if(found_nan){
                     found_nan = false;
                     break;
-                }
-                fwbwaln->temperature = lol_T;
+                }*/
+                
+                
                 
 
             }
+            fwbwaln->temperature = lol_T;
+
 
             new_anchor_length[sa] = 0;
 

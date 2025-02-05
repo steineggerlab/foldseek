@@ -727,6 +727,7 @@ void FwBwAligner::backward(bool has_Profile) {
 }
 void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
     //// Run Forward
+    maxP = 0;
     forward(has_Profile);
     //Calculate max_zm
     for (size_t i = 0; i < VECSIZE_FLOAT; ++i) {
