@@ -84,15 +84,15 @@ void lolAlign::reallocate_target(size_t targetL){
     hidden_layer = malloc_matrix<float>(targetL, 3);
     free(anchor_target);
     anchor_target = malloc_matrix<int>(num_sa, targetL);
-    free(lol_dist);
+    delete lol_dist;
     lol_dist = new float[targetL];
-    free(lol_seq_dist);
+    delete lol_seq_dist;
     lol_seq_dist = new float[targetL];
-    free(lol_score_vec);
+    delete lol_score_vec;
     lol_score_vec = new float[targetL];  
-    free(final_anchor_target);
+    delete final_anchor_target;
     final_anchor_target = new int[targetL];
-    free(final_anchor_query);
+    delete final_anchor_query;
     final_anchor_query = new int[queryLen];
 }
 
@@ -276,13 +276,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     }
     
 
-    for (size_t i = 0; i < queryLen; ++i)
-    {
-        for (size_t j = 0; j < targetLen; ++j)
-        {
-            G[i][j] = 0;
-            P[i][j] = 0;
-        }
+    for (size_t i = 0; i < queryLen; ++i) {
+        std::memset(G[i], 0, targetLen * sizeof(G[0][0]));
     }
     
 
@@ -292,7 +287,10 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
 
 
-    int* gaps = new int[4]{0, 0, 0, 0};
+    gaps[0] = 0;
+    gaps[1] = 0;
+    gaps[2] = 0;
+    gaps[3] = 0;
     fwbwaln->setParams(lol_go, lol_ge, lol_T, 16);
     int sa;
     bool found_nan = false;
@@ -353,28 +351,14 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 if(gaps[0] != -1){
                     fwbwaln->initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
                     fwbwaln->computeProbabilityMatrix(false);
-                    //float** fwbwaln_zm = fwbwaln.getZm();
                     for (size_t i = 0; i < gaps[1] -gaps[0]; ++i) {
-                        // Copy entire row segment in one operation
-                        //for (size_t j = 0; j < (gaps[3] - gaps[2]) - VECSIZE_FLOAT;  j += VECSIZE_FLOAT)
-                        //{
-                        //    simd_float vScoreForward = simdf32_loadu(&fwbwaln->zm[i][j]);
-                        //    simdf32_store(&P[i+gaps[0]][j+gaps[2]], vScoreForward);
-                            //P[i][j] = fwbwaln->zm[i - gaps[0]][j - gaps[2]];
-                        //}
-                        //for(size_t j = std::max((gaps[3] - gaps[2]) - VECSIZE_FLOAT, 0); j < gaps[3]; j++){
-                        //    P[i+gaps[0]][j+gaps[2]] = fwbwaln->zm[i][j];
-                        //}
+                       
                         std::copy(&fwbwaln->zm[i][0], &fwbwaln->zm[i][(gaps[3] - gaps[2])], &P[i + gaps[0]][gaps[2]]);
                     }
 
                     //lolAlign::lol_fwbw(G, P, queryLen, targetLen, assignTargetLen, start_anchor_go, start_anchor_ge, 2, length, blocks, gaps);
-
-                }
-                //std::cout << "gaps[0]: " << gaps[0] << " gaps[1]: " << gaps[1] << " gaps[2]: " << gaps[2] << " gaps[3]: " << gaps[3] << std::endl;
+                }                
                 
-                
-
                 if (gaps[0] != -1){
                     for (int i = gaps[0]; i < gaps[1]; i++){
                         for (int j = gaps[2]; j < gaps[3]; j++){
@@ -450,30 +434,15 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             }
         }
 
-    for (size_t i = 0; i < queryLen; ++i)
-        {
-            for (size_t j = 0; j < targetLen ; ++j)
-            {
-                G[i][j] = 0;
-                //P[i][j] = 0;
-            }
+        for (size_t i = 0; i < queryLen; ++i) {
+            std::memset(G[i], 0, targetLen * sizeof(G[0][0]));
         }
 
     }
 
     float max_lol_score = 0.0;
     int max_lol_idx = 0;
-    lolAlign::computeForwardScoreMatrix(
-            querySeq,
-            query3diSeq,
-            targetSeq,
-            target3diSeq,
-            queryLen,
-            targetLen,
-            subMatAA,
-            subMat3Di,
-            start_anchor_T,
-            G);
+    
 
     for (int sa_it = 0; sa_it < 3; sa_it++){
         sa = sa_index[9 - sa_it];
@@ -518,16 +487,13 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             total_lol_score += lol_score_vec[i];
 
         }
-        //TODO add normalization to improve performance
-        total_lol_score = total_lol_score / std::sqrt((float)queryLen * (float)targetLen);
-        //total_lol_score *= 100;
+         total_lol_score = total_lol_score / std::sqrt((float)queryLen * (float)targetLen);
         
         if (total_lol_score > max_lol_score){
             max_lol_score = total_lol_score;
             max_lol_idx = sa;
         }
     }
-    //std::cout << "max_lol_score: " << max_lol_score << std::endl;
     std::string backtrace = "";
     int matches = 0;
     int q_count = 0;
@@ -638,18 +604,33 @@ void lolAlign::align_startAnchors(int *anchor_query, int *anchor_target, int max
 
 
 
-void lolAlign::calc_dist_matrix(float *x, float *y, float *z, size_t len, float **d, bool cutoff)
+void lolAlign::calc_dist_matrix(float* x, float* y, float* z, size_t len, float** d, bool cutoff)
 {
-    for (size_t i = 0; i < len; i++)
+    const float cutoff_distance = 15.0f;
+    const float cutoff_sq = cutoff_distance * cutoff_distance;
+
+    for (size_t i = 0; i < len; ++i)
     {
-        for (size_t j = 0; j < len; j++)
+        d[i][i] = 0.0f;
+        for (size_t j = i + 1; j < len; ++j)
         {
-            d[i][j] = sqrt(pow(x[i] - x[j], 2) + pow(y[i] - y[j], 2) + pow(z[i] - z[j], 2));
-            if (d[i][j] > 15.0 && cutoff)
+            float dx = x[i] - x[j];
+            float dy = y[i] - y[j];
+            float dz = z[i] - z[j];
+
+            float dist_sq = dx * dx + dy * dy + dz * dz;
+
+            if (cutoff && dist_sq > cutoff_sq)
             {
-                d[i][j] = 0;
+                d[i][j] = 0.0f;
+            }
+            else
+            {
+                float dist = std::sqrt(dist_sq);
+                d[i][j] = dist;
             }
 
+            d[j][i] = d[i][j]; 
         }
     }
 }

@@ -121,13 +121,13 @@ private:
     float ** G;
     int ** anchor_query;
     int ** anchor_target;
-    float start_anchor_go = -3.0;
-    float start_anchor_ge = -2.0;
+    float start_anchor_go = -6.0;
+    float start_anchor_ge = -3.0;
     float start_anchor_T = 2.0;
     int start_anchor_length = 3;
     float lol_go = -5.0;
     float lol_ge = -0.0;
-    float lol_min_p = 0.75;
+    float lol_min_p = 0.4;
     float lol_T = 3;
     float** hidden_layer;
     int* sa_index = new int[num_sa];
