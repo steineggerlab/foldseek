@@ -84,12 +84,12 @@ void lolAlign::reallocate_target(size_t targetL){
     hidden_layer = malloc_matrix<float>(targetL, 3);
     free(anchor_target);
     anchor_target = malloc_matrix<int>(num_sa, targetL);
-    delete lol_dist;
-    lol_dist = new float[targetL];
-    delete lol_seq_dist;
-    lol_seq_dist = new float[targetL];
-    delete lol_score_vec;
-    lol_score_vec = new float[targetL];  
+    free(lol_dist);
+    lol_dist = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
+    free(lol_seq_dist);
+    lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
+    free(lol_score_vec);
+    lol_score_vec = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
     delete final_anchor_target;
     final_anchor_target = new int[targetL];
     delete final_anchor_query;
@@ -215,15 +215,17 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     
     fwbwaln->setParams(start_anchor_go, start_anchor_ge, start_anchor_T, 16);
+    fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
+    fwbwaln->computeProbabilityMatrix(false);
     
 
     for(int sa = 0; sa < 10; sa++){
 
-        if(sa % 5 == 0){
-            fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
-            fwbwaln->computeProbabilityMatrix(false);
+        //if(sa % 5 == 0){
+        //    fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
+        //    fwbwaln->computeProbabilityMatrix(false);
 
-        }
+        //}
         maxIndexX = 0;
         maxIndexY = 0;
 
@@ -604,32 +606,26 @@ void lolAlign::align_startAnchors(int *anchor_query, int *anchor_target, int max
 
 
 
-void lolAlign::calc_dist_matrix(float* x, float* y, float* z, size_t len, float** d, bool cutoff)
-{
+void lolAlign::calc_dist_matrix(float* x, float* y, float* z, size_t len, float** d, bool cutoff){
     const float cutoff_distance = 15.0f;
     const float cutoff_sq = cutoff_distance * cutoff_distance;
 
-    for (size_t i = 0; i < len; ++i)
-    {
+    for (size_t i = 0; i < len; ++i){
         d[i][i] = 0.0f;
-        for (size_t j = i + 1; j < len; ++j)
-        {
+        for (size_t j = i + 1; j < len; ++j){
             float dx = x[i] - x[j];
             float dy = y[i] - y[j];
             float dz = z[i] - z[j];
 
             float dist_sq = dx * dx + dy * dy + dz * dz;
 
-            if (cutoff && dist_sq > cutoff_sq)
-            {
+            if (cutoff && dist_sq > cutoff_sq){
                 d[i][j] = 0.0f;
             }
-            else
-            {
+            else{
                 float dist = std::sqrt(dist_sq);
                 d[i][j] = dist;
             }
-
             d[j][i] = d[i][j]; 
         }
     }
@@ -683,9 +679,9 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     hidden_layer = malloc_matrix<float>(queryLen*2, 3);
     anchor_query = malloc_matrix<int>(num_sa, queryLen);
     anchor_target = malloc_matrix<int>(num_sa, queryLen*2);
-    lol_dist = new float[queryLen*2];
-    lol_seq_dist = new float[queryLen*2];
-    lol_score_vec = new float[queryLen*2];
+    lol_dist = (float *)mem_align(ALIGN_FLOAT, queryLen*2 * sizeof(float));
+    lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, queryLen*2 * sizeof(float));
+    lol_score_vec = (float *)mem_align(ALIGN_FLOAT, queryLen*2 * sizeof(float));
     final_anchor_query = new int[queryLen*2];
     final_anchor_target = new int[queryLen*2];
     calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
@@ -804,8 +800,6 @@ void lolAlign::lolscore(float* d_dist, float d_seq, float* score, int length, in
 
 void lolAlign::lolscore(float* dist, float* d_seq, float* score, int length, float** hidden_layer)
 {
-    //auto start_t = std::chrono::high_resolution_clock::now();
-
 
     for (int i = 0; i < length; ++i) {
         if(dist[i] >= 0){
