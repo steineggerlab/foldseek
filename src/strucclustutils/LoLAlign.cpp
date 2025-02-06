@@ -235,7 +235,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
         if(sa % 5 == 0){
             fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
-            fwbwaln->computeProbabilityMatrix(false);
+            fwbwaln->computeProbabilityMatrix<0>();
             //float** fwbwaln_zm = fwbwaln.getZm();
             //for (size_t i = 0; i < queryLen; ++i)
             //{
@@ -382,7 +382,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
                 if(gaps[0] != -1){
                     fwbwaln->initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
-                    fwbwaln->computeProbabilityMatrix(false);
+                    fwbwaln->computeProbabilityMatrix<0>();
                     //float** fwbwaln_zm = fwbwaln.getZm();
                     for (size_t i = 0; i < gaps[1] -gaps[0]; ++i) {
                         // Copy entire row segment in one operation
