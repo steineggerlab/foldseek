@@ -58,16 +58,17 @@ lolAlign::~lolAlign()
     free(anchor_query);
     free(anchor_target);
     free(hidden_layer);
-    free(sa_index);
-    free(sa_scores);
-    free(anchor_length);
-    free(new_anchor_length);
-    free(gaps);
+    delete[] sa_index;
+    delete[] sa_scores;
+    delete[] anchor_length;
+    delete[] new_anchor_length;
+    delete[] gaps;
     free(lol_dist);
     free(lol_seq_dist);
     free(lol_score_vec);
-    free(final_anchor_query);
-    free(final_anchor_target);
+    delete[] final_anchor_query;
+    delete[]final_anchor_target;
+
 
 
 }
@@ -90,9 +91,9 @@ void lolAlign::reallocate_target(size_t targetL){
     lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
     free(lol_score_vec);
     lol_score_vec = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
-    delete final_anchor_target;
+    delete[] final_anchor_target;
     final_anchor_target = new int[targetL];
-    delete final_anchor_query;
+    delete[] final_anchor_query;
     final_anchor_query = new int[queryLen];
 }
 
@@ -281,15 +282,9 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     gaps[2] = 0;
     gaps[3] = 0;
 
-
-
-
     fwbwaln->setParams(lol_go, lol_ge, lol_T, 16);
     int sa;
     //bool found_nan = false;
-
-
-
 
 
     for (int sa_it = 0; sa_it < SeedNumber; sa_it++){
@@ -351,7 +346,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                     }
                     
                     for (size_t i = 0; i < gaps[1] -gaps[0]; ++i) {
-                        
                         std::copy(&fwbwaln->zm[i][0], &fwbwaln->zm[i][(gaps[3] - gaps[2])], &P[i + gaps[0]][gaps[2]]);
                     }
                     
@@ -359,10 +353,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 else{
                     break;
                 } 
-                
-
-                
-                
+ 
                 /*for (int i = gaps[0]; i < gaps[1]; i++){
                     for (int j = gaps[2]; j < gaps[3]; j++){
                         if (std::isnan(P[i][j])) {
@@ -394,10 +385,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                     found_nan = false;
                     break;
                 }*/
-                
-                
-                
-
             }
             fwbwaln->temperature = lol_T;
 
@@ -660,7 +647,7 @@ void lolAlign::computeDi_score(
 
 
 
-void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *query3diSeq, unsigned int queryLen)
+void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *query3diSeq, unsigned int queryLen, int maxTLen)
 {
     memcpy(query_x, x, sizeof(float) * queryLen);
     memcpy(query_y, y, sizeof(float) * queryLen);
@@ -673,16 +660,16 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     queryCaCords.y = query_y;
     queryCaCords.z = query_z;
     anchor_query = malloc_matrix<int>(num_sa, queryLen);
-    G = malloc_matrix<float>(queryLen*2, queryLen*2);
-    P = malloc_matrix<float>(queryLen*2, queryLen*2);
-    hidden_layer = malloc_matrix<float>(queryLen*2, 3);
+    G = malloc_matrix<float>(queryLen, maxTLen);
+    P = malloc_matrix<float>(queryLen, maxTLen);
+    hidden_layer = malloc_matrix<float>(maxTLen, 3);
     anchor_query = malloc_matrix<int>(num_sa, queryLen);
-    anchor_target = malloc_matrix<int>(num_sa, queryLen*2);
-    lol_dist = (float *)mem_align(ALIGN_FLOAT, queryLen*2 * sizeof(float));
-    lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, queryLen*2 * sizeof(float));
-    lol_score_vec = (float *)mem_align(ALIGN_FLOAT, queryLen*2 * sizeof(float));
-    final_anchor_query = new int[queryLen*2];
-    final_anchor_target = new int[queryLen*2];
+    anchor_target = malloc_matrix<int>(num_sa,maxTLen);
+    lol_dist = (float *)mem_align(ALIGN_FLOAT, maxTLen * sizeof(float));
+    lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, maxTLen * sizeof(float));
+    lol_score_vec = (float *)mem_align(ALIGN_FLOAT, maxTLen * sizeof(float));
+    final_anchor_query = new int[maxTLen];
+    final_anchor_target = new int[maxTLen];
     calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
     return;
 }
@@ -944,18 +931,15 @@ int lolalign(int argc, const char **argv, const Command &command)
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
-                int max_targetLen = ((queryLen*2)/16)*16;
+                int max_targetLen = ((tdbr->sequenceReader->getMaxSeqLen() + 1)/16)*16 + 16;
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
                 size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
                 float *qdata = qcoords.read(qcadata, queryLen, qCaLength);
 
 
-                lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen);
+                lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen, max_targetLen);
                 fwbwaln.resizeMatrix(queryLen, max_targetLen);
                 
-
-                
-
 
                 int passedNum = 0;
                 int rejected = 0;
@@ -976,6 +960,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                         
                         lolaln.reallocate_target(max_targetLen);
                         fwbwaln.resizeMatrix(queryLen, max_targetLen);
+                        std::cout << "Reallocating target to: " << max_targetLen << std::endl;
                     }
                     if (Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen) == false)
                     {
@@ -1024,6 +1009,8 @@ int lolalign(int argc, const char **argv, const Command &command)
                 swResults.clear();
 
             }
+     
+
         }
 
     }

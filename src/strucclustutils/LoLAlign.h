@@ -62,7 +62,7 @@ public:
     }
 
 
-    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, unsigned int queryLen);
+    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, unsigned int queryLen, int maxTLen);
     
     TMscoreResult computeTMscore(float *x, float *y, float *z,
                                  unsigned int targetLen, int qStartPos,
