@@ -70,9 +70,6 @@ lolAlign::~lolAlign()
     delete[]final_anchor_target;
     free(queryNumAA);
     free(queryNum3Di);
-
-
-
 }
 
 
@@ -232,8 +229,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
         float maxScore = 0;
 
-        for (int i = this->start_anchor_length; i < static_cast<int>(queryLen) - this->start_anchor_length ; ++i) {
-            for (int j = this->start_anchor_length; j < static_cast<int>(targetLen) - this->start_anchor_length ; ++j) {
+        for (int i = start_anchor_length; i < queryLen - start_anchor_length ; ++i) {
+            for (int j = start_anchor_length; j < targetLen - start_anchor_length ; ++j) {
                 if (fwbwaln->zm[i][j] >= maxScore) {
                     maxScore = fwbwaln->zm[i][j];
                     maxIndexX = i;
@@ -652,6 +649,7 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     memcpy(query_x, x, sizeof(float) * queryLen);
     memcpy(query_y, y, sizeof(float) * queryLen);
     memcpy(query_z, z, sizeof(float) * queryLen);
+
     this->queryLen = queryLen;
     this->querySeq = querySeq;
     this->query3diSeq = query3diSeq;
@@ -661,7 +659,7 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     queryCaCords.x = query_x;
     queryCaCords.y = query_y;
     queryCaCords.z = query_z;
-    anchor_query = malloc_matrix<int>(num_sa, queryLen);
+    //anchor_query = malloc_matrix<int>(num_sa, queryLen);
     G = malloc_matrix<float>(queryLen, maxTLen);
     P = malloc_matrix<float>(queryLen, maxTLen);
     hidden_layer = malloc_matrix<float>(maxTLen, 3);
@@ -708,14 +706,15 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
 
         for (int j = gap0_start; j < gap0_end; j++)
         {
+            float dq = d_ij[anchor_q][j];
 
-            if (d_ij[anchor_q][j] > 0)
+            if (dq > 0)
             {
 
                 seq_dist = std::copysign(1.0f, (anchor_q-j)) * std::log(1 + std::abs((float)(anchor_q-j)));
                 for(int l = gap1_start; l < gap1_end; l++)
                 {
-                    d_dist[l - gap1_start] = std::abs(d_ij[anchor_q][j] - d_kl[anchor_t][l]);
+                    d_dist[l - gap1_start] = std::abs(dq- d_kl[anchor_t][l]);
 
                     //seq_dist[l - gap1_start] = std::copysign(1.0f, (anchor_q-j)) * std::log(1 + std::abs((float)(anchor_q-j)));
                 }
@@ -929,7 +928,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
-                int max_targetLen = ((tdbr->sequenceReader->getMaxSeqLen() + 1)/16)*16 + 16;
+                int max_targetLen = ((tdbr->sequenceReader->getMaxSeqLen() + 1)/16)*16 + 32;
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
                 size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
                 float *qdata = qcoords.read(qcadata, queryLen, qCaLength);
@@ -1008,7 +1007,6 @@ int lolalign(int argc, const char **argv, const Command &command)
 
             }
      
-
         }
 
     }
