@@ -236,6 +236,15 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
     
     for (size_t i=0; i<targetLen; ++i){
         for (size_t j = 0; j < qlen_padding; j += VECSIZE_FLOAT) {
+            // add a debug statement that prints i + gaps[0] and j + gaps[2] if indices are out of bounds and exit
+            if (i + gaps[0] >= targetLen) {
+                std::cerr << "Row Index out of bounds: " << i + gaps[0] << " " << j + gaps[2] << "original: " << targetLen << " " << qlen_padding << std::endl;
+                exit(1);
+            }
+            if (j + gaps[2] >= qlen_padding) {
+                std::cerr << "Col Index out of bounds: " << i + gaps[0] << " " << j + gaps[2] << "original: " << targetLen << " " << qlen_padding << std::endl;
+                exit(1);
+            }
             simd_float vScoreForward = simdf32_loadu(&inputScoreMatrix[i+gaps[0]][j+gaps[2]]);
             vScoreForward = simdf32_div(vScoreForward, vTemp);
             simdf32_store(&scoreForward[i][j], vScoreForward);

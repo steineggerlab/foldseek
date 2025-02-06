@@ -58,16 +58,16 @@ lolAlign::~lolAlign()
     free(anchor_query);
     free(anchor_target);
     free(hidden_layer);
-    free(sa_index);
-    free(sa_scores);
-    free(anchor_length);
-    free(new_anchor_length);
-    free(gaps);
+    delete[] sa_index;
+    delete[] sa_scores;
+    delete[] anchor_length;
+    delete[] new_anchor_length;
+    delete[] gaps;
     free(lol_dist);
     free(lol_seq_dist);
     free(lol_score_vec);
-    free(final_anchor_query);
-    free(final_anchor_target);
+    delete[] final_anchor_query;
+    delete[] final_anchor_target;
 
 
 }
@@ -90,9 +90,9 @@ void lolAlign::reallocate_target(size_t targetL){
     lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
     free(lol_score_vec);
     lol_score_vec = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
-    delete final_anchor_target;
+    delete[] final_anchor_target;
     final_anchor_target = new int[targetL];
-    delete final_anchor_query;
+    delete[] final_anchor_query;
     final_anchor_query = new int[queryLen];
 }
 
@@ -338,7 +338,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
                 if(gaps[0] != -1){
                     fwbwaln->initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
-                    fwbwaln->computeProbabilityMatrix(false);
+                    fwbwaln->computeProbabilityMatrix<0>();
                     maxP = std::max(maxP, fwbwaln->maxP);
                     if(fwbwaln->maxP == 0){
                         fwbwaln->temperature += 1;
