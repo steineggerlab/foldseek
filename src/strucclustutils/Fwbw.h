@@ -54,6 +54,7 @@ public:
     float** zm;
     float** scoreForward = nullptr;
     float temperature;
+    float maxP = 0;
 
 
 private:
@@ -103,7 +104,7 @@ private:
     simd_float exp_go;
     simd_float exp_ge;
     float max_zm;
-    float maxP = 0;
+    
     
     simd_float vMax_zm;
     size_t qlen_padding;

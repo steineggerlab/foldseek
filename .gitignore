@@ -6,3 +6,4 @@ output
 tmp
 scope
 .gitignore
+pref.data

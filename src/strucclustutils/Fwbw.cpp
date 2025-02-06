@@ -743,6 +743,7 @@ template void FwBwAligner::computeProbabilityMatrix<1>();
 template<int profile>
 void FwBwAligner::computeProbabilityMatrix() {
     //// Run Forward
+    maxP = 0;
     forward<profile>();
     //Calculate max_zm
     for (size_t i = 0; i < VECSIZE_FLOAT; ++i) {
