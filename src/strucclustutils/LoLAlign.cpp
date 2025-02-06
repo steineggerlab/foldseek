@@ -68,6 +68,8 @@ lolAlign::~lolAlign()
     free(lol_score_vec);
     delete[] final_anchor_query;
     delete[]final_anchor_target;
+    free(queryNumAA);
+    free(queryNum3Di);
 
 
 
@@ -171,11 +173,12 @@ void lolAlign::index_sort(float* nums, int* index, int numsSize) {
 Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
                                   char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln)
 {
+
+    unsigned char *targetNumAA = seq2num(targetSeq, subMatAA.aa2num);
+    unsigned char *targetNum3Di = seq2num(target3diSeq, subMat3Di.aa2num);   
     lolAlign::computeForwardScoreMatrix(
-            querySeq,
-            query3diSeq,
-            targetSeq,
-            target3diSeq,
+            targetNumAA,
+            targetNum3Di,
             queryLen,
             targetLen,
             subMatAA,
@@ -453,7 +456,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 sa_idx++;
             }
         }
-        computeDi_score(querySeq, query3diSeq, targetSeq, target3diSeq, anchor_length[sa], final_anchor_query, final_anchor_target, subMatAA, subMat3Di, lol_score_vec);
+        computeDi_score(targetNumAA, targetNum3Di, anchor_length[sa], final_anchor_query, final_anchor_target, subMatAA, subMat3Di, lol_score_vec);
 
         for (int i = 0; i < anchor_length[sa]; i++) {
             for (int j = 0;j < anchor_length[sa]; j++) {
@@ -573,6 +576,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     result.dbEndPos--;
     result.backtrace = backtrace.substr(firstM);
     result.alnLength = (int)result.backtrace.size();
+    free(targetNumAA);
+    free(targetNum3Di);
     
     return result;
 
@@ -618,10 +623,8 @@ void lolAlign::calc_dist_matrix(float* x, float* y, float* z, size_t len, float*
 }
 
 void lolAlign::computeDi_score(
-        char *querySeqAA,
-        char *querySeq3Di,
-        char *targetSeqAA,
-        char *targetSeq3Di,
+        unsigned char * targetNumAA,
+        unsigned char *targetNum3Di,
         int anchorLen,
         int* final_anchor_query,
         int* final_anchor_target,
@@ -629,10 +632,7 @@ void lolAlign::computeDi_score(
         SubstitutionMatrix &subMat3Di,
         float *scoreForward)
 {
-    unsigned char *queryNumAA = seq2num(querySeqAA, subMatAA.aa2num);
-    unsigned char *queryNum3Di = seq2num(querySeq3Di, subMat3Di.aa2num);
-    unsigned char *targetNumAA = seq2num(targetSeqAA, subMatAA.aa2num);
-    unsigned char *targetNum3Di = seq2num(targetSeq3Di, subMat3Di.aa2num);
+
 
     for (int i = 0; i < anchorLen; ++i)
     {
@@ -647,7 +647,7 @@ void lolAlign::computeDi_score(
 
 
 
-void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *query3diSeq, unsigned int queryLen, int maxTLen)
+void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *query3diSeq, unsigned int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di)
 {
     memcpy(query_x, x, sizeof(float) * queryLen);
     memcpy(query_y, y, sizeof(float) * queryLen);
@@ -655,6 +655,8 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     this->queryLen = queryLen;
     this->querySeq = querySeq;
     this->query3diSeq = query3diSeq;
+    queryNumAA = seq2num(querySeq, subMatAA.aa2num);
+    queryNum3Di = seq2num(query3diSeq, subMat3Di.aa2num);
     Coordinates queryCaCords;
     queryCaCords.x = query_x;
     queryCaCords.y = query_y;
@@ -730,15 +732,18 @@ void lolAlign::lolscore(float* d_dist, float d_seq, float* score, int length, in
      // Zero vector for ReLU
 
     // Process 8 elements at a time
+    simd_float seq0 = simdf32_mul(simdf32_set(d_seq), w1_0);
+    simd_float seq1 = simdf32_mul(simdf32_set(d_seq), w1_1);
+    simd_float seq2 = simdf32_mul(simdf32_set(d_seq), w1_2);
     int i = 0;
     for (; i <= length - VECSIZE_FLOAT; i += VECSIZE_FLOAT) {
         // Load d_dist[i..i+7] into a SIMD register
         simd_float d_dist_vec = simdf32_loadu(&d_dist[i]);
 
         // Compute hidden_layer[i][k] for k = 0, 1, 2
-        simd_float hl_0 = simdf32_fmadd(simdf32_set(d_seq), w1_0, simdf32_fmadd(d_dist_vec, w1_d0, b1_0));
-        simd_float hl_1 = simdf32_fmadd(simdf32_set(d_seq), w1_1, simdf32_fmadd(d_dist_vec, w1_d1, b1_1));
-        simd_float hl_2 = simdf32_fmadd(simdf32_set(d_seq), w1_2, simdf32_fmadd(d_dist_vec, w1_d2, b1_2));
+        simd_float hl_0 = simdf32_add(seq0, simdf32_fmadd(d_dist_vec, w1_d0, b1_0));
+        simd_float hl_1 = simdf32_add(seq1, simdf32_fmadd(d_dist_vec, w1_d1, b1_1));
+        simd_float hl_2 = simdf32_add(seq2, simdf32_fmadd(d_dist_vec, w1_d2, b1_2));
 
         // Apply ReLU (max(0, x))
         hl_0 = simdf32_max(hl_0, zero);
@@ -796,21 +801,14 @@ void lolAlign::lolscore(float* dist, float* d_seq, float* score, int length, flo
 
 
 void lolAlign::computeForwardScoreMatrix(
-        char *querySeqAA,
-        char *querySeq3Di,
-        char *targetSeqAA,
-        char *targetSeq3Di,
+        unsigned char * targetNumAA,
+        unsigned char *targetNum3Di,
         int queryLen,
         int targetLen,
         SubstitutionMatrix &subMatAA,
         SubstitutionMatrix &subMat3Di,
         float **scoreForward)
 {
-    unsigned char *queryNumAA = seq2num(querySeqAA, subMatAA.aa2num);
-    unsigned char *queryNum3Di = seq2num(querySeq3Di, subMat3Di.aa2num);
-    unsigned char *targetNumAA = seq2num(targetSeqAA, subMatAA.aa2num);
-    unsigned char *targetNum3Di = seq2num(targetSeq3Di, subMat3Di.aa2num);
-
     for (int i = 0; i < queryLen; ++i)
     {
         for (int j = 0; j < targetLen; ++j)
@@ -937,7 +935,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                 float *qdata = qcoords.read(qcadata, queryLen, qCaLength);
 
 
-                lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen, max_targetLen);
+                lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen, max_targetLen, subMatAA, subMat3Di);
                 fwbwaln.resizeMatrix(queryLen, max_targetLen);
                 
 
