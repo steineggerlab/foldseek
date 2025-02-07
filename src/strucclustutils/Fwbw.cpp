@@ -57,7 +57,7 @@ inline simd_float simdf32_prefixsum(simd_float a) {
 
 // FwBwAligner constructor for general use case
 FwBwAligner::FwBwAligner(size_t length, SubstitutionMatrix &subMat, float gapOpen, float gapExtend, float mact, float temperature, size_t rowsCapacity, size_t colsCapacity)
-                : length(length), gapOpen(gapOpen), gapExtend(gapExtend), mact(mact), temperature(temperature), rowsCapacity(rowsCapacity), colsCapacity(colsCapacity) {    
+                : temperature(temperature), length(length), gapOpen(gapOpen), gapExtend(gapExtend), mact(mact), rowsCapacity(rowsCapacity), colsCapacity(colsCapacity) {    
     // ZM
     zm = malloc_matrix<float>(rowsCapacity, colsCapacity);
     // Block
@@ -109,7 +109,7 @@ FwBwAligner::FwBwAligner(size_t length, SubstitutionMatrix &subMat, float gapOpe
 
 // FwBwAligner for lolalign
 FwBwAligner::FwBwAligner(size_t length, float gapOpen, float gapExtend, float temperature, size_t rowsCapacity, size_t colsCapacity)
-                    : length(length), gapOpen(gapOpen), gapExtend(gapExtend), temperature(temperature), rowsCapacity(rowsCapacity), colsCapacity(colsCapacity) {
+                    : temperature(temperature), length(length), gapOpen(gapOpen), gapExtend(gapExtend), rowsCapacity(rowsCapacity), colsCapacity(colsCapacity) {
     
     // scoreForward
     scoreForward = malloc_matrix<float>(rowsCapacity, colsCapacity);
@@ -208,8 +208,6 @@ void FwBwAligner::reallocateScoreProfile(size_t newColsCapacity) {
     free(scoreBackwardProfile_exp); scoreBackwardProfile_exp = malloc_matrix<float>(21, newColsCapacity);
 }
 
-
-
 void FwBwAligner::setParams(float go, float ge, float t, size_t l) {
     gapOpen = go;
     gapExtend = ge;
@@ -229,7 +227,7 @@ void FwBwAligner::setParams(float go, float ge, float t, size_t l) {
 }
 
 // lolalign
-void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, size_t targetLen, int * gaps) {
+void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, size_t targetLen, int* gaps) {
     tlen = targetLen; qlen = queryLen;
     max_zm = -std::numeric_limits<float>::max(); vMax_zm = simdf32_set(max_zm);
     qlen_padding = ((queryLen + VECSIZE_FLOAT - 1) / VECSIZE_FLOAT) * VECSIZE_FLOAT;
@@ -242,6 +240,15 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
     
     for (size_t i=0; i<targetLen; ++i){
         for (size_t j = 0; j < qlen_padding; j += VECSIZE_FLOAT) {
+            // add a debug statement that prints i + gaps[0] and j + gaps[2] if indices are out of bounds and exit
+            // if (i + gaps[0] >= targetLen) {
+            //     std::cerr << "Row Index out of bounds: " << i + gaps[0] << " " << j + gaps[2] << "original: " << targetLen << " " << qlen_padding << std::endl;
+            //     exit(1);
+            // }
+            // if (j + gaps[2] >= qlen_padding) {
+            //     std::cerr << "Col Index out of bounds: " << i + gaps[0] << " " << j + gaps[2] << "original: " << targetLen << " " << qlen_padding << std::endl;
+            //     exit(1);
+            // }
             simd_float vScoreForward = simdf32_loadu(&inputScoreMatrix[i+gaps[0]][j+gaps[2]]);
             vScoreForward = simdf32_div(vScoreForward, vTemp);
             simdf32_store(&scoreForward[i][j], vScoreForward);
@@ -324,11 +331,13 @@ void FwBwAligner::initQueryProfile(unsigned char* queryAANum, size_t queryLen) {
     }
 }
 
-void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then it is lolalign
+template <int profile>
+void FwBwAligner::forward() {   // if has_Profile = false, then it is lolalign
     //Init zInit
     for (size_t i = 0 ; i < 3; ++i) {
         std::fill(zInit[i], zInit[i] + rowsCapacity, FLT_MIN_EXP); // rowsCapacity -> tlen
-    }  
+    }
+    simd_float zmMaxData;
     for (size_t b = 0; b < blocks; ++b) {
         size_t start = b * length;
         size_t end = (b + 1) * length;
@@ -352,32 +361,35 @@ void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then 
         float ze_i0 = expf(zeFirst[1]);
         float current_max = 0;
         float zmMaxRowBlock = -std::numeric_limits<float>::max();
-        float* zmMaxData = (float*)malloc_simd_float(VECSIZE_FLOAT * sizeof(float));
+        // float* zmMaxData = (float*)malloc_simd_float(VECSIZE_FLOAT * sizeof(float));
         float log_zmMax = 0;
         simd_float vZmMaxRowBlock;
         for (size_t i = 1; i <= tlen; ++i) {
             simd_float vExpMax = simdf32_set(exp(-current_max));
             simd_float vZeI0 = simdf32_set(ze_i0);
             simd_float vLastPrefixSum = simdf32_setzero(); 
-            simd_float vZmax_tmp = simdf32_set(-std::numeric_limits<float>::max());
+            // simd_float vZmax_tmp = simdf32_set(-std::numeric_limits<float>::max());
+            zmMaxData = simdf32_set(-std::numeric_limits<float>::max());
             // ZM calculation
             for (size_t j = 1; j <= cols; j += VECSIZE_FLOAT) {
                 simd_float vZmPrev = simdf32_load(&zmBlockPrev[j-1]);
                 simd_float vZe = simdf32_load(&zeBlock[j-1]);
                 simd_float vZf = simdf32_load(&zfBlock[j-1]);
                 simd_float vScoreMatrix;
-                if (has_Profile) {
+                if (profile) {
                     vScoreMatrix = simdf32_exp(simdf32_load(&scoreForwardProfile[targetNum[i-1]][start + j - 1]));
                 } else {
                     vScoreMatrix = simdf32_exp(simdf32_load(&scoreForward[i-1][start + j - 1]));
                 }              
                 simd_float vZmCurrUpdate = simdf32_add(simdf32_add(vZmPrev, vZe), simdf32_add(vZf, vExpMax));
                 vZmCurrUpdate = simdf32_mul(vZmCurrUpdate, vScoreMatrix);
-                vZmax_tmp = simdf32_max(vZmax_tmp, vZmCurrUpdate);
+                // vZmax_tmp = simdf32_max(vZmax_tmp, vZmCurrUpdate);
+                zmMaxData = simdf32_max(zmMaxData, vZmCurrUpdate);
                 simdf32_storeu(&zmBlockCurr[j], vZmCurrUpdate);
             }
-            simdf32_store(zmMaxData, vZmax_tmp);
-            zmMaxRowBlock = *std::max_element(zmMaxData, zmMaxData+VECSIZE_FLOAT); // or hmax
+            // simdf32_store(zmMaxData, vZmax_tmp);
+            // zmMaxRowBlock = *std::max_element(zmMaxData, zmMaxData+VECSIZE_FLOAT); // or hmax
+            zmMaxRowBlock = simdf32_hmax(zmMaxData);
             vZmMaxRowBlock = simdf32_set(zmMaxRowBlock);
             // ZF calculation 
             for (size_t j = 1; j <= cols; j += VECSIZE_FLOAT) {
@@ -409,11 +421,12 @@ void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then 
 
             log_zmMax = log(zmMaxRowBlock);
             current_max += log_zmMax;
+            simd_float vCurrMax = simdf32_set(current_max);
             for (size_t j = 1; j <= cols; j += VECSIZE_FLOAT){
                 simd_float vZmCurr = simdf32_loadu(&zmBlockCurr[j]);
                 vZmCurr = simdf32_div(vZmCurr, vZmMaxRowBlock);
                 simdf32_storeu(&zmBlockCurr[j], vZmCurr);
-                vZmCurr = simdf32_add(simdf32_log(vZmCurr), simdf32_set(current_max));
+                vZmCurr = simdf32_add(simdf32_log(vZmCurr), vCurrMax);
                 vMax_zm = simdf32_max(vMax_zm, vZmCurr);
                 simdf32_store(&zm[i - 1][start + j-1], vZmCurr);
             }     
@@ -444,7 +457,7 @@ void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then 
 
 
             vNextZinit = simdf32_log(vNextZinit);
-            vNextZinit = simdf32_add(vNextZinit, simdf32_set(current_max));
+            vNextZinit = simdf32_add(vNextZinit, vCurrMax);
 
             zInit[0][i-1] = vNextZinit[0]; zInit[1][i-1] = vNextZinit[1]; zInit[2][i-1] = vNextZinit[2];
             std::swap(zmBlockCurr, zmBlockPrev);
@@ -508,11 +521,12 @@ void FwBwAligner::forward(bool has_Profile) {   // if has_Profile = false, then 
                 zfBlock[0] = exp(zfFirst[i] - current_max); 
             }
         }  
-        free(zmMaxData);  
+        // free(zmMaxData);  
     }
 }
 
-void FwBwAligner::backward(bool has_Profile) {
+template <int profile>
+void FwBwAligner::backward() {
     //Init zInit
     // Debug(Debug::INFO) << "backward function called with has_Profile: " << has_Profile << '\n';
     size_t vecsize_float = static_cast<size_t>(VECSIZE_FLOAT);
@@ -542,14 +556,16 @@ void FwBwAligner::backward(bool has_Profile) {
         float ze_i0 = expf(zeFirst[1]);
         float current_max = 0;
         float zmMaxRowBlock = -std::numeric_limits<float>::max();
-        float* zmMaxData = (float*)malloc_simd_float(VECSIZE_FLOAT * sizeof(float));
+        // float* zmMaxData = (float*)malloc_simd_float(VECSIZE_FLOAT * sizeof(float));
+        simd_float zmMaxData;
         float log_zmMax = 0;
         simd_float vZmMaxRowBlock;
         for (size_t i = 1; i <= tlen; ++i) {
             simd_float vExpMax = simdf32_set(exp(-current_max));
             simd_float vZeI0 = simdf32_set(ze_i0);
             simd_float vLastPrefixSum = simdf32_setzero(); 
-            simd_float vZmax_tmp = simdf32_set(-std::numeric_limits<float>::max());
+            // simd_float vZmax_tmp = simdf32_set(-std::numeric_limits<float>::max());
+            zmMaxData = simdf32_set(-std::numeric_limits<float>::max());
             
             // ZM calculation
             for (size_t j = 1; j <= cols; j += VECSIZE_FLOAT) {
@@ -557,7 +573,7 @@ void FwBwAligner::backward(bool has_Profile) {
                 simd_float vZe = simdf32_load(&zeBlock[j-1]);
                 simd_float vZf = simdf32_load(&zfBlock[j-1]);
                 simd_float vScoreMatrix;
-                if (has_Profile) {
+                if (profile) {
                     vScoreMatrix = simdf32_load(&scoreBackwardProfile_exp[targetNum[tlen - i]][start + j - 1]);
                 } else {
                     size_t reverse_i = tlen - i;
@@ -578,11 +594,13 @@ void FwBwAligner::backward(bool has_Profile) {
                 }
                 simd_float vZmCurrUpdate = simdf32_add(simdf32_add(vZmPrev, vZe), simdf32_add(vZf, vExpMax));
                 vZmCurrUpdate = simdf32_mul(vZmCurrUpdate, vScoreMatrix);
-                vZmax_tmp = simdf32_max(vZmax_tmp, vZmCurrUpdate);
+                // vZmax_tmp = simdf32_max(vZmax_tmp, vZmCurrUpdate);
+                zmMaxData = simdf32_max(zmMaxData, vZmCurrUpdate);
                 simdf32_storeu(&zmBlockCurr[j], vZmCurrUpdate);
             }
-            simdf32_store(zmMaxData, vZmax_tmp);
-            zmMaxRowBlock = *std::max_element(zmMaxData, zmMaxData+VECSIZE_FLOAT); // or hmax
+            // simdf32_store(zmMaxData, vZmax_tmp);
+            // zmMaxRowBlock = *std::max_element(zmMaxData, zmMaxData+VECSIZE_FLOAT); // or hmax
+            zmMaxRowBlock = simdf32_hmax(zmMaxData);
             vZmMaxRowBlock = simdf32_set(zmMaxRowBlock);
             // ZF calculation 
             for (size_t j = 1; j <= cols; j += VECSIZE_FLOAT) {
@@ -616,13 +634,14 @@ void FwBwAligner::backward(bool has_Profile) {
             current_max += log_zmMax;
             size_t adjusted_memcpycols = memcpy_cols - memcpy_cols % VECSIZE_FLOAT;
             size_t forwardBlockStart = qlen - start;
+            simd_float vCurrMax = simdf32_set(current_max);
             for (size_t j = 1; j <= adjusted_memcpycols; j += VECSIZE_FLOAT) {
                 forwardBlockStart -= vecsize_float;
                 size_t simd_index = forwardBlockStart;
                 simd_float vZmCurr = simdf32_loadu(&zmBlockCurr[j]);
                 vZmCurr = simdf32_div(vZmCurr, vZmMaxRowBlock);
                 simdf32_storeu(&zmBlockCurr[j], vZmCurr);
-                vZmCurr = simdf32_add(simdf32_log(vZmCurr), simdf32_set(current_max));
+                vZmCurr = simdf32_add(simdf32_log(vZmCurr), vCurrMax);
 
                 simd_float vZmForward = simdf32_loadu(&zm[tlen - i][simd_index]);
 
@@ -637,7 +656,7 @@ void FwBwAligner::backward(bool has_Profile) {
                 simd_float vZmCurr = simdf32_loadu(&zmBlockCurr[adjusted_memcpycols+1]);
                 vZmCurr = simdf32_div(vZmCurr, vZmMaxRowBlock);
                 simdf32_storeu(&zmBlockCurr[adjusted_memcpycols+1], vZmCurr);
-                vZmCurr = simdf32_add(simdf32_log(vZmCurr), simdf32_set(current_max));
+                vZmCurr = simdf32_add(simdf32_log(vZmCurr), vCurrMax);
                 for (size_t k = 0; k < remainder; ++k) {
                     size_t j_index = remainder - k - 1;
                     zm[tlen - i][j_index] += vZmCurr[k];
@@ -669,7 +688,7 @@ void FwBwAligner::backward(bool has_Profile) {
 #endif
 
             vNextZinit = simdf32_log(vNextZinit);
-            vNextZinit = simdf32_add(vNextZinit, simdf32_set(current_max));
+            vNextZinit = simdf32_add(vNextZinit, vCurrMax);
 
             zInit[0][i-1] = vNextZinit[0]; zInit[1][i-1] = vNextZinit[1]; zInit[2][i-1] = vNextZinit[2];
             std::swap(zmBlockCurr, zmBlockPrev);
@@ -726,13 +745,19 @@ void FwBwAligner::backward(bool has_Profile) {
                 zfBlock[0] = exp(zfFirst[i] - current_max); 
             }
         }  
-        free(zmMaxData); 
+        // free(zmMaxData); 
     }
 }
-void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
+
+
+template void FwBwAligner::computeProbabilityMatrix<0>();
+template void FwBwAligner::computeProbabilityMatrix<1>();
+
+template<int profile>
+void FwBwAligner::computeProbabilityMatrix() {
     //// Run Forward
     maxP = 0;
-    forward(has_Profile);
+    forward<profile>();
     //Calculate max_zm
     for (size_t i = 0; i < VECSIZE_FLOAT; ++i) {
         max_zm = std::max(max_zm, vMax_zm[i]);
@@ -752,12 +777,11 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
     sum_exp += simdf32_hadd(vSum_exp);
     
 
-    
-
     //// Backward
-    backward(has_Profile);
+    backward<profile>();
 
-    float logsumexp_zm = max_zm + log(sum_exp); simd_float vLogsumexp_zm = simdf32_set(logsumexp_zm);
+    float logsumexp_zm = max_zm + log(sum_exp);
+    simd_float vLogsumexp_zm = simdf32_set(logsumexp_zm);
     size_t qLoopCount = qlen / VECSIZE_FLOAT; size_t qLoopEndPos = qLoopCount * VECSIZE_FLOAT;
     P = zm;
     simd_float vMaxP = simdf32_setzero();
@@ -767,7 +791,7 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
         for (size_t j = 0; j < qLoopEndPos; j += VECSIZE_FLOAT) {
             simd_float vZmForward_Backward = simdf32_load(&zm[i][j]);
             simd_float scoreForwardVal;
-            if (has_Profile) {
+            if (profile) {
                 scoreForwardVal = simdf32_load(&scoreForwardProfile[targetNum[i]][j]);
             } else {
                 scoreForwardVal = simdf32_load(&scoreForward[i][j]);
@@ -778,7 +802,7 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
             vMaxP = simdf32_max(vMaxP, P_val);
         }    
         for (size_t j = qLoopEndPos; j < qlen; ++j) {
-            if (has_Profile) {
+            if (profile) {
                 P[i][j] = exp(zm[i][j] - scoreForwardProfile[targetNum[i]][j] - logsumexp_zm);
             } else {
                 P[i][j] = exp(zm[i][j] - scoreForward[i][j] - logsumexp_zm);
@@ -795,9 +819,9 @@ void FwBwAligner::computeProbabilityMatrix(bool has_Profile) {
     
 }
 
+template <int profile>
 FwBwAligner::s_align FwBwAligner::computeAlignment() {
-    bool has_Profile = true;
-    computeProbabilityMatrix(has_Profile);
+    computeProbabilityMatrix<profile>();
 
     // MAC algorithm from HH-suite
     size_t qLoopCount = qlen / VECSIZE_FLOAT; size_t qLoopEndPos = qLoopCount * VECSIZE_FLOAT;
@@ -883,20 +907,23 @@ FwBwAligner::s_align FwBwAligner::computeAlignment() {
     result.score2 = score_MAC;
     while (max_i > 0 && max_j > 0) {
         uint8_t state = btMatrix[max_i][max_j];
-        if (state == States::M) {
-            --max_i;
-            --max_j;
-            // Update start positions to the last match
-            result.qStartPos1 = max_j;
-            result.dbStartPos1 = max_i;
-            result.cigar.push_back('M');
-        } else if (state == States::I) {
-            --max_i;
-            result.cigar.push_back('I');
-        } else if (state == States::D) {
-            --max_j;
-            result.cigar.push_back('D');
-        } else {
+        switch (state) {
+            case States::M:
+                --max_i;
+                --max_j;
+                result.qStartPos1 = max_j;
+                result.dbStartPos1 = max_i;
+                result.cigar.push_back('M');
+                break;
+            case States::I:
+                --max_i;
+                result.cigar.push_back('I');
+                break;
+            case States::D:
+                --max_j;
+                result.cigar.push_back('D');
+                break;
+            default:
             break;
         }
     }
@@ -908,34 +935,188 @@ FwBwAligner::s_align FwBwAligner::computeAlignment() {
     return result;
 }
 
-float** fwbw(float** inputScoreForward, size_t queryLen, size_t targetLen, float gapOpen, float gapExtend, float temperature) {
-    size_t length = 16; // AVX2, need to check
-    size_t assignSeqLen = VECSIZE_FLOAT * sizeof(float) * 20; 
-    float** return_P = malloc_matrix<float>(targetLen, queryLen);
-    FwBwAligner subfwbwaligner(length, gapOpen, gapExtend, temperature, assignSeqLen, assignSeqLen);
-    //Resizing
-    int* gaps = new int[4]{0, 0, 0, 0};
-    subfwbwaligner.initScoreMatrix(inputScoreForward, queryLen, targetLen, gaps);
-    //Resizing
-    if (targetLen > subfwbwaligner.getRowsCapacity() && queryLen > subfwbwaligner.getColsCapacity()) {
-        size_t newRowsCapacity = ((targetLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
-        size_t newColsCapacity = ((queryLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
-        subfwbwaligner.resizeMatrix(newRowsCapacity, newColsCapacity);
-    }else if (targetLen > subfwbwaligner.getRowsCapacity()) {
-        size_t newRowsCapacity = ((targetLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
-        subfwbwaligner.resizeMatrix(newRowsCapacity, subfwbwaligner.getColsCapacity());
-    }else if (queryLen > subfwbwaligner.getColsCapacity()) {
-        size_t newColsCapacity = ((queryLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
-        subfwbwaligner.resizeMatrix(subfwbwaligner.getRowsCapacity(), newColsCapacity);
-    }
+// float** fwbw(float** inputScoreForward, size_t queryLen, size_t targetLen, float gapOpen, float gapExtend, float temperature) {
+//     size_t length = 16; // AVX2, need to check
+//     size_t assignSeqLen = VECSIZE_FLOAT * sizeof(float) * 20; 
+//     float** return_P = malloc_matrix<float>(targetLen, queryLen);
+//     FwBwAligner subfwbwaligner(length, gapOpen, gapExtend, temperature, assignSeqLen, assignSeqLen);
+//     //Resizing
+//     int* gaps = new int[4]{0, 0, 0, 0};
+//     subfwbwaligner.initScoreMatrix(inputScoreForward, queryLen, targetLen, gaps);
+//     //Resizing
+//     if (targetLen > subfwbwaligner.getRowsCapacity() && queryLen > subfwbwaligner.getColsCapacity()) {
+//         size_t newRowsCapacity = ((targetLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
+//         size_t newColsCapacity = ((queryLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
+//         subfwbwaligner.resizeMatrix(newRowsCapacity, newColsCapacity);
+//     }else if (targetLen > subfwbwaligner.getRowsCapacity()) {
+//         size_t newRowsCapacity = ((targetLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
+//         subfwbwaligner.resizeMatrix(newRowsCapacity, subfwbwaligner.getColsCapacity());
+//     }else if (queryLen > subfwbwaligner.getColsCapacity()) {
+//         size_t newColsCapacity = ((queryLen + subfwbwaligner.getBlockLength()-1)/subfwbwaligner.getBlockLength())* subfwbwaligner.getBlockLength();
+//         subfwbwaligner.resizeMatrix(subfwbwaligner.getRowsCapacity(), newColsCapacity);
+//     }
     
-    bool has_Profile = false;
-    subfwbwaligner.computeProbabilityMatrix(has_Profile);
-    float** P = subfwbwaligner.getZm();
-    // copy P to return_P with memcpy
-    for (size_t i = 0; i < targetLen; ++i) {
-        memcpy(return_P[i], P[i], queryLen * sizeof(float));
-    }
+//     bool has_Profile = false;
+//     subfwbwaligner.computeProbabilityMatrix<profile>();
+//     float** P = subfwbwaligner.getZm();
+//     // copy P to return_P with memcpy
+//     for (size_t i = 0; i < targetLen; ++i) {
+//         memcpy(return_P[i], P[i], queryLen * sizeof(float));
+//     }
 
-    return return_P;  
-}
+//     return return_P;  
+// }
+
+
+// fwbw to use in the main function
+// int fwbw(int argc, const char **argv, const Command &command) {
+//     //Prepare the parameters & DB
+//     Parameters &par = Parameters::getInstance();
+//     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
+
+
+//     DBReader<unsigned int> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
+//     qdbr.open(DBReader<unsigned int>::NOSORT);
+//     DBReader<unsigned int> tdbr(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
+//     tdbr.open(DBReader<unsigned int>::NOSORT);
+//     DBReader<unsigned int> alnRes (par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
+//     alnRes.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+
+//     DBWriter fwbwAlnWriter(par.db4.c_str(), par.db4Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_ALIGNMENT_RES);
+//     fwbwAlnWriter.open();
+//     const int querySeqType = qdbr.getDbtype();
+//     if (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES)) {
+//         Debug(Debug::ERROR) << "Invalid datatype. Nucleotide.\n";
+//         EXIT(EXIT_FAILURE);
+//     } 
+//     SubstitutionMatrix subMat = SubstitutionMatrix(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias); // Check : par.scoreBias = 0.0
+
+//     const size_t flushSize = 100000000;
+//     size_t iterations = static_cast<int>(ceil(static_cast<double>(alnRes.getSize()) / static_cast<double>(flushSize)));
+//     Debug(Debug::INFO) << "Processing " << iterations << " iterations\n";
+//     for (size_t i = 0; i < iterations; i++) {
+//         size_t start = (i * flushSize);
+//         size_t bucketSize = std::min(alnRes.getSize() - (i * flushSize), flushSize);
+//         // Debug::Progress progress(bucketSize);
+    
+
+// #pragma omp parallel
+//         {
+//             unsigned int thread_idx = 0;
+// #ifdef OPENMP
+//             thread_idx = (unsigned int) omp_get_thread_num();
+// #endif
+//             size_t length = par.blocklen; //320 in avx2
+//             Debug(Debug::INFO) << "length: " << length << '\n';
+//             Sequence qSeq(par.maxSeqLen, qdbr.getDbtype(), &subMat, 0, false, false);
+//             Sequence dbSeq(par.maxSeqLen, tdbr.getDbtype(), &subMat, 0, false, false);
+            
+//             const size_t assignSeqLen = VECSIZE_FLOAT * sizeof(float) * 20; 
+//             FwBwAligner fwbwaligner(length, subMat, -par.fwbw_gapopen, -par.fwbw_gapextend, par.mact, par.temperature, assignSeqLen, assignSeqLen);
+//             const char *entry[255];
+//             std::string alnResultsOutString;
+//             char buffer[1024 + 32768*4];
+//             std::vector<Matcher::result_t> localFwbwResults;
+// #pragma omp for schedule(dynamic,1)
+//             for (size_t id = start; id < (start + bucketSize); id++) {
+//                 // progress.updateProgress();
+//                 unsigned int key = alnRes.getDbKey(id);
+//                 const size_t queryId = qdbr.getId(key);
+//                 char *alnData = alnRes.getData(id, thread_idx);
+//                 localFwbwResults.clear();
+
+//                 const char* querySeq = qdbr.getData(queryId, thread_idx);
+//                 size_t queryLen = qdbr.getSeqLen(queryId);
+
+//                 qSeq.mapSequence(queryId, key, querySeq, queryLen);
+//                 fwbwaligner.initQueryProfile(qSeq.numSequence, queryLen);
+//                 fwbwAlnWriter.writeStart(thread_idx);
+//                 // fwbwaligner.initQueryProfile(qSeq.numSequence);
+//                 while (*alnData != '\0'){
+//                     Matcher::result_t res;
+//                     const size_t columns = Util::getWordsOfLine(alnData, entry, 255);
+//                     if (columns >= Matcher::ALN_RES_WITHOUT_BT_COL_CNT) {
+//                         res = Matcher::parseAlignmentRecord(alnData, true);                        
+//                     } else {
+//                         Debug(Debug::ERROR) << "Invalid input result format ("<<columns<<" columns).\n";
+//                         EXIT(EXIT_FAILURE);
+//                     }
+//                     alnData = Util::skipLine(alnData);
+//                     unsigned int targetKey = res.dbKey;
+//                     const size_t targetId = tdbr.getId(targetKey);
+//                     const char* targetSeq = tdbr.getData(targetId, thread_idx);
+//                     size_t targetLen = tdbr.getSeqLen(targetId);
+
+//                     dbSeq.mapSequence(targetId, targetKey, targetSeq, targetLen);
+//                     //Resizing
+//                     if (targetLen > fwbwaligner.getRowsCapacity() && queryLen > fwbwaligner.getColsCapacity()) {
+//                         size_t newRowsCapacity = ((targetLen + fwbwaligner.getBlockLength()-1)/fwbwaligner.getBlockLength())* fwbwaligner.getBlockLength();
+//                         size_t newColsCapacity = ((queryLen + fwbwaligner.getBlockLength()-1)/fwbwaligner.getBlockLength())* fwbwaligner.getBlockLength();
+//                         fwbwaligner.resizeMatrix(newRowsCapacity, newColsCapacity);
+//                     }else if (targetLen > fwbwaligner.getRowsCapacity()) {
+//                         size_t newRowsCapacity = ((targetLen + fwbwaligner.getBlockLength()-1)/fwbwaligner.getBlockLength())* fwbwaligner.getBlockLength();
+//                         fwbwaligner.resizeMatrix(newRowsCapacity, fwbwaligner.getColsCapacity());
+//                     }else if (queryLen > fwbwaligner.getColsCapacity()) {
+//                         size_t newColsCapacity = ((queryLen + fwbwaligner.getBlockLength()-1)/fwbwaligner.getBlockLength())* fwbwaligner.getBlockLength();
+//                         fwbwaligner.resizeMatrix(fwbwaligner.getRowsCapacity(), newColsCapacity);
+//                     }
+//                     fwbwaligner.initAlignment(dbSeq.numSequence,targetLen); // or directly pass dbSeq.numSequence and targetLen to .align()
+//                     FwBwAligner::s_align fwbwAlignment = fwbwaligner.computeAlignment();
+                    
+//                     // Debug statement to compare
+//                     // float** blosum = malloc_matrix<float>(21, 21);
+//                     // float** lasse_scoreForward = malloc_matrix<float>(targetLen, queryLen);
+//                     // for (int i = 0; i < subMat.alphabetSize; ++i) {
+//                     //     for (int j = 0; j < subMat.alphabetSize; ++j) {
+//                     //         blosum[i][j] = static_cast<float>(subMat.subMatrix[i][j]);
+//                     //     }
+//                     // }
+//                     // for (size_t i = 0; i < targetLen; ++i) {
+//                     //     for (size_t j = 0; j < queryLen; ++j) {
+//                     //         lasse_scoreForward[i][j] = blosum[dbSeq.numSequence[i]][qSeq.numSequence[j]];
+//                     //     }
+//                     // }
+//                     // float** lasse_P = fwbw(lasse_scoreForward, queryLen, targetLen, -par.fwbw_gapopen, -par.fwbw_gapextend, par.temperature);
+//                     // free(lasse_scoreForward);
+//                     // free(blosum);
+//                     // free(lasse_P);
+//                     // end debug
+//                     float qcov = 0.0;
+//                     float dbcov = 0.0;
+//                     float seqId = 0.0;
+//                     // float evalue = 1.0f - fwbwAlignment.score1;
+//                     float evalue = 1.0f / (1.0f + std::exp(fwbwAlignment.score2));
+//                     const unsigned int alnLength = fwbwAlignment.cigarLen;
+//                     const int score = 0;
+//                     const unsigned int qStartPos = fwbwAlignment.qStartPos1;
+//                     const unsigned int dbStartPos = fwbwAlignment.dbStartPos1;
+//                     const unsigned int qEndPos = fwbwAlignment.qEndPos1;
+//                     const unsigned int dbEndPos = fwbwAlignment.dbEndPos1;
+//                     std::string backtrace = fwbwAlignment.cigar;
+//                     Debug(Debug::INFO) << queryId << "\t" << targetId <<"\t" << fwbwAlignment.score2 << '\t' << backtrace << '\n';
+//                     // Map s_align values to result_t
+//                     localFwbwResults.emplace_back(targetKey, score, qcov, dbcov, seqId, evalue, alnLength, qStartPos, qEndPos, queryLen, dbStartPos, dbEndPos, targetLen, backtrace);
+//                 }
+
+//                 // sort local results. They will currently be sorted by first fwbwscore, then targetlen, then by targetkey.
+//                 SORT_SERIAL(localFwbwResults.begin(), localFwbwResults.end(), Matcher::compareHits);
+//                 for (size_t result = 0; result < localFwbwResults.size(); result++) {
+//                     size_t len = Matcher::resultToBuffer(buffer, localFwbwResults[result], true, true);
+//                     alnResultsOutString.append(buffer, len);
+//                 }
+//                 fwbwAlnWriter.writeData(alnResultsOutString.c_str(), alnResultsOutString.length(), alnRes.getDbKey(id), thread_idx);
+//                 alnResultsOutString.clear();
+//                 localFwbwResults.clear();            
+//             }
+//         }
+//         Debug(Debug::INFO) << "All Done\n";
+//         alnRes.remapData();
+        
+//     }
+//     fwbwAlnWriter.close();
+//     alnRes.close();
+//     qdbr.close();
+//     tdbr.close();
+//     return EXIT_SUCCESS;
+
+// }

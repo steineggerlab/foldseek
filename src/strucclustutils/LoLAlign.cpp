@@ -214,7 +214,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     
     fwbwaln->setParams(start_anchor_go, start_anchor_ge, start_anchor_T, 16);
     fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
-    fwbwaln->computeProbabilityMatrix(false);
+    fwbwaln->computeProbabilityMatrix<0>();
     
 
     for(int sa = 0; sa < 10; sa++){
@@ -333,7 +333,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 calc_gap(anchor_query[sa], anchor_target[sa], gaps, queryLen, targetLen);
                 if(gaps[0] != -1){
                     fwbwaln->initScoreMatrix(G, gaps[3]-gaps[2], gaps[1]-gaps[0], gaps);
-                    fwbwaln->computeProbabilityMatrix(false);
+                    fwbwaln->computeProbabilityMatrix<0>();
                     maxP = std::max(maxP, fwbwaln->maxP);
                     if(fwbwaln->maxP == 0){
                         fwbwaln->temperature += 1;
