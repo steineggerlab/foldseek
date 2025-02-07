@@ -168,7 +168,7 @@ void lolAlign::index_sort(float* nums, int* index, int numsSize) {
 
 
 Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
-                                  char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln)
+                                  char * targetSeq, char* target3diSeq, int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln)
 {
 
     unsigned char *targetNumAA = seq2num(targetSeq, subMatAA.aa2num);
@@ -197,10 +197,10 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     for(int sa = 0; sa < 10; sa++){
         anchor_length[sa] = 0;
         new_anchor_length[sa] = 0;
-        for (unsigned int i = 0; i < queryLen; i++) {
+        for (int i = 0; i < queryLen; i++) {
             anchor_query[sa][i] = 0;
         }
-        for (unsigned int i = 0; i < targetLen; i++) {
+        for (int i = 0; i < targetLen; i++) {
             anchor_target[sa][i] = 0;
         }
     }
@@ -229,7 +229,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
         float maxScore = 0;
 
-        for (unsigned i = start_anchor_length; i < queryLen - start_anchor_length ; ++i) {
+        for (int i = start_anchor_length; i < queryLen - start_anchor_length ; ++i) {
             for (int j = start_anchor_length; j < targetLen - start_anchor_length ; ++j) {
                 if (fwbwaln->zm[i][j] >= maxScore) {
                     maxScore = fwbwaln->zm[i][j];
@@ -271,7 +271,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         align_startAnchors(anchor_query[sa], anchor_target[sa], maxIndexX, maxIndexY, &new_anchor_length[sa], fwbwaln->zm, G);
         anchor_length[sa] = new_anchor_length[sa];
     }
-    for (size_t i = 0; i < queryLen; ++i) {
+    for (int i = 0; i < queryLen; ++i) {
         std::memset(G[i], 0, targetLen * sizeof(G[0][0]));
     }
     
@@ -310,12 +310,12 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
 
             }
-            for(unsigned int i = 0; i < queryLen; i++){
+            for(int i = 0; i < queryLen; i++){
                 if(anchor_query[sa][i] == 2){
                     anchor_query[sa][i] = 1;
                 }
             }
-            for(unsigned int i = 0; i <targetLen; i++){
+            for(int i = 0; i <targetLen; i++){
                 if(anchor_target[sa][i] == 2){
                     anchor_target[sa][i] = 1;
                 }
@@ -345,7 +345,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                         
                     }
                     
-                    for (size_t i = 0; i < gaps[1] -gaps[0]; ++i) {
+                    for (int i = 0; i < gaps[1] -gaps[0]; ++i) {
                         std::copy(&fwbwaln->zm[i][0], &fwbwaln->zm[i][(gaps[3] - gaps[2])], &P[i + gaps[0]][gaps[2]]);
                     }
                     
@@ -425,7 +425,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             }
         }
 
-        for (size_t i = 0; i < queryLen; ++i) {
+        for (int i = 0; i < queryLen; ++i) {
             std::memset(G[i], 0, targetLen * sizeof(G[0][0]));
         }
 
@@ -439,7 +439,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         sa = sa_index[9 - sa_it];
         
         int sa_idx = 0;
-        for(unsigned int i = 0; i < queryLen; i++){
+        for(int i = 0; i < queryLen; i++){
             if(anchor_query[sa][i] != 0){
                 final_anchor_query[sa_idx] = i;
                 sa_idx++;
@@ -447,7 +447,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             }
         }
         sa_idx = 0;
-        for(unsigned int i = 0; i < targetLen; i++){
+        for(int i = 0; i < targetLen; i++){
             if(anchor_target[sa][i] != 0){
                 final_anchor_target[sa_idx] = i;
                 sa_idx++;
@@ -476,7 +476,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             total_lol_score += lol_score_vec[i];
 
         }
-         total_lol_score = total_lol_score / std::sqrt((float)(queryLen * targetLen));
+         total_lol_score = total_lol_score ;// std::sqrt((float)(queryLen * targetLen));
         
         if (total_lol_score > max_lol_score){
             max_lol_score = total_lol_score;
@@ -524,7 +524,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     result.qLen = queryLen;
     result.dbLen = targetLen;
     result.alnLength = backtrace.length();
-    result.backtrace = backtrace;
+    result.backtrace = Matcher::compressAlignment(backtrace);
 
     // trim backtrace find the first 'M'
     size_t firstM = targetLen;
@@ -644,7 +644,7 @@ void lolAlign::computeDi_score(
 
 
 
-void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *query3diSeq, unsigned int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di)
+void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *query3diSeq, int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di)
 {
     memcpy(query_x, x, sizeof(float) * queryLen);
     memcpy(query_y, y, sizeof(float) * queryLen);
@@ -919,8 +919,7 @@ int lolalign(int argc, const char **argv, const Command &command)
             char *data = resultReader.getData(id, thread_idx);
             if (*data != '\0')
             {
-                lolAlign lolaln(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1, tdbr->sequenceReader->getMaxSeqLen() + 1), false);
-                FwBwAligner fwbwaln(16, -2, -2, 1, 1, 1);
+                
                 size_t queryKey = resultReader.getDbKey(id);
                 unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
                 //std::cout << "start Query " << queryId << std::endl;
@@ -928,12 +927,18 @@ int lolalign(int argc, const char **argv, const Command &command)
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
+                if(queryLen <= 20)
+                {
+                    //std::cout << "Query too short: " << queryLen << std::endl;
+                    continue;
+                }
+
                 int max_targetLen = ((tdbr->sequenceReader->getMaxSeqLen() + 1)/16)*16 + 32;
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
                 size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
                 float *qdata = qcoords.read(qcadata, queryLen, qCaLength);
-
-
+                lolAlign lolaln(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1, tdbr->sequenceReader->getMaxSeqLen() + 1), false);
+                FwBwAligner fwbwaln(16, -2, -2, 1, 1, 1);
                 lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen, max_targetLen, subMatAA, subMat3Di);
                 fwbwaln.resizeMatrix(queryLen, max_targetLen);
                 
@@ -972,7 +977,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                     float *tdata = tcoords.read(tcadata, targetLen, tCaLength);
                     char *target3diSeq = tdbr3Di.getData(targetId, thread_idx);
                     
-                    if (targetLen < 20)
+                    if (targetLen <= 20)
                     {
                         //std::cout << "Target too short: " << targetLen << std::endl;
                         continue;

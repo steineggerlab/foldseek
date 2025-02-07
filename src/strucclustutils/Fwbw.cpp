@@ -265,8 +265,6 @@ void FwBwAligner::initScoreMatrix(float** inputScoreMatrix, size_t queryLen, siz
         }
         //std::fill(&scoreForward[i][queryLen], &scoreForward[i][qlen_padding], FLT_MIN_EXP);
     }*/
-
-    
 }
 
 void FwBwAligner::resizeMatrix(size_t newRowsCapacity, size_t newColsCapacity) {

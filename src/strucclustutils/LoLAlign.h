@@ -60,22 +60,18 @@ public:
     }
 
 
-    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, unsigned int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
+    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
     
-    TMscoreResult computeTMscore(float *x, float *y, float *z,
-                                 unsigned int targetLen, int qStartPos,
-                                 int targetStartPos, const std::string & backtrace,
-                                 int normalizationLen);
+
 
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
-                            char * targetSeq, char* target3diSeq, unsigned int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln);
+                            char * targetSeq, char* target3diSeq, int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln);
     float maxSubArray(float* nums, int numsSize);
 
     void align_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length, float** P, float** G);
     void index_sort(float* nums, int* index, int numsSize);
 
 
-    static unsigned int normalization(int mode, unsigned int alignmentLen, unsigned int queryLen, unsigned int targetLen);
     void lol_fwbw(float** scoreForward, float** P,
         size_t queryLen, size_t targetLen,size_t assignTargetLen,
         float go, float ge, float T, int length, int blocks, int* gaps);
@@ -179,7 +175,7 @@ private:
 
     simd_float zero = simdf32_setzero();
 
-    unsigned int queryLen;
+    int queryLen;
     char * querySeq;
     char * query3diSeq;
     std::string seqM, seqxA, seqyA;// for output alignment
