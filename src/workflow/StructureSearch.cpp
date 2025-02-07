@@ -11,24 +11,16 @@
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
-    p->maskMode = 0;
-    p->maskProb = 0.99995;
     p->sensitivity = 9.5;
     p->maxResListLen = 1000;
-    p->gapOpen = 10;
-    p->gapExtend = 1;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->removeTmpFiles = true;
 }
 
 void setStructureSearchMustPassAlong(LocalParameters *p) {
     p->PARAM_K.wasSet = true;
-    p->PARAM_MASK_RESIDUES.wasSet = true;
-    p->PARAM_MASK_PROBABILTY.wasSet = true;
-    p->PARAM_NO_COMP_BIAS_CORR.wasSet = true;
     p->PARAM_S.wasSet = true;
-    p->PARAM_GAP_OPEN.wasSet = true;
-    p->PARAM_GAP_EXTEND.wasSet = true;
+    p->PARAM_MAX_SEQS.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
@@ -108,6 +100,12 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
     par.evalThr = prevEvalueThr;
     par.compBiasCorrectionScale = 0.5;
+
+    // GPU can only use the ungapped prefilter
+    if (par.gpu == 1 && par.PARAM_PREF_MODE.wasSet == false) {
+        par.prefMode = Parameters::PREF_MODE_UNGAPPED;
+    }
+    
     switch(par.prefMode){
         case LocalParameters::PREF_MODE_KMER:
             cmd.addVariable("PREFMODE", "KMER");
@@ -166,18 +164,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
 
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         par.scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("blosum62.out", "nucleotide.out"));
-        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2profile).c_str());
-        par.pca = 1.4;
-        par.pcb = 1.5;
-        par.scoringMatrixFile = "3di.out";
-        par.seedScoringMatrixFile = "3di.out";
-        par.maskProfile = 0;
-        par.compBiasCorrection = 0;
-        if(par.PARAM_E_PROFILE.wasSet == false){
-            par.evalProfile = 0.1;
-            par.evalThr = 0.1;
-        }
-        cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2profile).c_str());
+        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
@@ -202,7 +189,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
                 }
                 indexReader.close();
             }else {
-                std::vector<std::string> dbsToCheck = {"_seq", "_seq_ca", "_seq_ss", "_seq_h"};
+                std::vector<std::string> dbsToCheck = {"_seq", "_seq_ss", "_seq_h"};
                 for (size_t i = 0; i < dbsToCheck.size(); i++) {
                     std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
                     if (!FileUtil::fileExists(db.c_str())) {

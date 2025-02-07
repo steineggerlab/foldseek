@@ -37,10 +37,6 @@ public:
     static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
     static const int TMSCORE_THRESHOLD_MODE_MIN = 3;
 
-    static const int PREF_MODE_KMER = 0;
-    static const int PREF_MODE_UNGAPPED = 1;
-    static const int PREF_MODE_EXHAUSTIVE = 2;
-
     static const int TMALIGN_HIT_ORDER_AVG = 0;
     static const int TMALIGN_HIT_ORDER_QUERY = 1;
     static const int TMALIGN_HIT_ORDER_TARGET = 2;
@@ -69,6 +65,9 @@ public:
     static const int OUTFMT_ASSIGN_ID = 55;
     static const int OUTFMT_COMPLEX_U = 56;
     static const int OUTFMT_COMPLEX_T = 57;
+
+    static const int DB_EXTRACT_MODE_CHAIN = 0;
+    static const int DB_EXTRACT_MODE_INTERFACE = 1;
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
@@ -114,8 +113,10 @@ public:
     std::vector<MMseqsParameter *> createmultimerreport;
     std::vector<MMseqsParameter *> expandmultimer;
     std::vector<MMseqsParameter *> convert2pdb;
+    std::vector<MMseqsParameter *> makepaddeddb;
+    std::vector<MMseqsParameter *> result2structprofile;
+    std::vector<MMseqsParameter *> createstructsubdb;
 
-    PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
@@ -142,12 +143,12 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
-    PARAMETER(PARAM_GPU)
+    PARAMETER(PARAM_DB_EXTRACTION_MODE)
+    PARAMETER(PARAM_DISTANCE_THRESHOLD)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
 
-    int prefMode;
     float tmScoreThr;
     int tmScoreThrMode;
     int tmAlignHitOrder;
@@ -175,7 +176,9 @@ public:
     float filtChainTmThr;
     float filtInterfaceLddtThr;
     std::string prostt5Model;
-    int gpu;
+    int dbExtractionMode;
+    float distanceThreshold;
+    int prostt5SplitLength;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,

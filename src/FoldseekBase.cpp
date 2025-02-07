@@ -46,7 +46,18 @@ std::vector<Command> foldseekCommands = {
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:3didescriptor>",
                 CITATION_FOLDSEEK, {{"PDB|mmCIF[.gz]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
                                            {"3didescriptor", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
-
+        {"createsubdb",          createstructsubdb,          &localPar.createstructsubdb,          COMMAND_SET,
+                "Create a subset of a DB from list of DB keys",
+                "# Create a new sequence, 3di, c-alpha DB with keys 1, 2 and 3\n"
+                "foldseek createsubdb <(printf '1\n2\n3\n') sequenceDB oneTwoThreeDB\n\n"
+                "# Create a new sequence, 3di, c-alpha database with representatives of clusterDB\n"
+                "foldseek cluster sequenceDB clusterDB tmp\n"
+                "foldseek createsubdb clusterDB sequenceDB representativesDB\n",
+                "Milot Mirdita <milot@mirdita.de> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:subsetFile|DB> <i:DB> <o:DB>",
+                CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"subsetFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
+                                          {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"easy-search",          easystructuresearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
                 "Structual search",
                 "# Search a single/multiple PDB file against a set of PDB files\n"
@@ -112,6 +123,22 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"makepaddedseqdb",               makepaddeddb,              &localPar.makepaddeddb,              COMMAND_HIDDEN,
+                "Generate a padded sequence, 3di, c-alpha DB",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:sequenceDB> <o:sequenceDB>",
+                CITATION_GPU, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                          {"sequenceIndexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
+        {"result2profile",       result2structprofile,       &localPar.result2structprofile,       COMMAND_PROFILE,
+                "Compute profile DB from a result DB for both amino acid and 3di",
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr> & Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:queryDB> <i:targetDB> <i:resultDB> <o:profileDB>",
+                CITATION_FOLDSEEK|CITATION_MMSEQS2,{{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                                           {"profileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::profileDb }}},
         {"cluster",              structurecluster,   &localPar.structureclusterworkflow,      COMMAND_MAIN,
                 "Slower, sensitive clustering",
                 "# Cascaded clustering of FASTA file\n"
@@ -370,7 +397,7 @@ std::vector<Command> foldseekCommands = {
                                            {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
                                    }
         },
-        {"easy-complexsearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_EASY,
+        {"easy-complexsearch", easymultimersearch, &localPar.easymultimersearchworkflow, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"createmultimerreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
@@ -391,7 +418,7 @@ std::vector<Command> foldseekCommands = {
                                            {"complexFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}
                                    }
         },
-        {"createcomplexreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_FORMAT_CONVERSION,
+        {"createcomplexreport", createmultimerreport, &localPar.createmultimerreport, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"expandmultimer", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
@@ -406,7 +433,7 @@ std::vector<Command> foldseekCommands = {
                                         {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::prefilterDb }
                                 }
         },
-        {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_PREFILTER,
+        {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
@@ -495,7 +522,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "BFVD",
                 "BFVD Big fantastic virus database (predicted viral protein structures based on the viral sequence representatives of the UniRef30 clusters",
-                "Kim R et al. BFVD - a large repository of predicted viral protein structures. bioRxiv, 2024.09.08.611582v1 (2024)",
+                "Kim R et al. BFVD - a large repository of predicted viral protein structures. Nucleic Acids Research, gkae1119 (2024)",
                 "https://bfvd.steineggerlab.workers.dev",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
@@ -503,7 +530,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "ProstT5",
                 "Protein language model to predict 3Di directly from sequence.",
-                "Heinzinger et al. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, 2023.07.23.550085v2 (2024)",
+                "Heinzinger et al. Bilingual language model for protein sequence and structure. NAR Genomics and Bioinformatics, lqae150 (2024)",
                 "https://huggingface.co/Rostlab/ProstT5",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}

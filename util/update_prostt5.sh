@@ -1,2 +1,2 @@
 #!/bin/sh -e
-git subtree pull --prefix lib/prostt5 https://github.com/Victor-Mihaila/Candle-ProstT5 master --squash
+git subtree pull --prefix lib/prostt5 https://github.com/martin-steinegger/ProstT5-llama.git minimal --squash

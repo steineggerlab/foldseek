@@ -789,6 +789,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         delete q3DiDbr;
         delete qCaDbr;
     }
-    resultWriter.close(true);
+    resultWriter.close(false);
     return EXIT_SUCCESS;
 }

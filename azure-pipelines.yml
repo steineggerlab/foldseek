@@ -18,22 +18,22 @@ jobs:
           SIMD: 'AVX2'
           STATIC: 1
           MPI: 0
-          BUILD_TYPE: RelWithDebInfo
-        # sse41:
-        #   SIMD: 'SSE4_1'
+          BUILD_TYPE: Release
+        sse41:
+          SIMD: 'SSE4_1'
+          STATIC: 1
+          MPI: 0
+          BUILD_TYPE: Release
+        # sse2:
+        #   SIMD: 'SSE2'
         #   STATIC: 1
         #   MPI: 0
         #   BUILD_TYPE: RelWithDebInfo
-        sse2:
-          SIMD: 'SSE2'
-          STATIC: 1
-          MPI: 0
-          BUILD_TYPE: RelWithDebInfo
         avx2_mpi:
           SIMD: 'AVX2'
           STATIC: 0
           MPI: 1
-          BUILD_TYPE: RelWithDebInfo
+          BUILD_TYPE: Release
         asan:
           SIMD: 'AVX2'
           STATIC: 0
@@ -56,18 +56,21 @@ jobs:
           mkdir build && cd build
           export CC=gcc-11 ; export CXX=g++-11
           if [ "${STATIC}" -eq "1" ]; then
-              cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_SHARED_LIBS=OFF \
-                -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
-                -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
-                -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
+            LIBGOMP=/usr/lib/gcc/x86_64-linux-gnu/11
+            cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DFORCE_STATIC_DEPS=1 \
+              -DOpenMP_C_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_C_LIB_NAMES=gomp -DOpenMP_CXX_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_CXX_LIB_NAMES=gomp -DOpenMP_gomp_LIBRARY=${LIBGOMP}/libgomp.a \
+              -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           else
-              cmake -DHAVE_SANITIZER=1 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-                -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
+            cmake -DHAVE_SANITIZER=1 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+              -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           fi
 
-          make -j $(nproc --all)
+          make -j $(nproc --all) VERBOSE=1
         displayName: Build foldseek
       - script: |
+          if [ "${SIMD}" = "SSE2" ]; then
+            export SKIP_PROSTT5=1
+          fi
           cd ${BUILD_SOURCESDIRECTORY}
           ./regression/run_regression.sh ./build/src/foldseek examples 
         displayName: Run Regression Suite
@@ -77,6 +80,28 @@ jobs:
         inputs:
           targetPath: $(Build.SourcesDirectory)/build/src/foldseek
           artifactName: foldseek-linux-$(SIMD)
+
+  - job: build_ubuntu_gpu
+    displayName: Ubuntu GPU
+    pool:
+      vmImage: 'Ubuntu-20.04'
+    timeoutInMinutes: 120
+    steps:
+      - checkout: self
+        submodules: false
+      - script: |
+          mkdir -p ${BUILD_SOURCESDIRECTORY}/output
+          docker build -t manylinux-builder \
+            -f .github/workflows/Dockerfile.GPU-manylinux2014 .
+          docker run --rm \
+            -v ${BUILD_SOURCESDIRECTORY}/output:/output \
+            manylinux-builder \
+            /bin/bash -c "cp /work/build/src/foldseek /output/"
+        displayName: Run Docker Container and Copy Binary
+      - task: PublishPipelineArtifact@0
+        inputs:
+          targetPath: $(Build.SourcesDirectory)/output/foldseek
+          artifactName: foldseek-linux-gpu
 
   - job: build_ubuntu_cross_2004
     displayName: Ubuntu 2004 Cross-Compile
@@ -107,12 +132,11 @@ jobs:
         displayName: Install Toolchain
       - script: |
           mkdir build && cd build
+          LIBGOMP=/usr/lib/gcc-cross/${CPREF}-linux-gnu/9
           CC=${CPREF}-linux-gnu-gcc CXX=${CPREF}-linux-gnu-g++ \
-           cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DHAVE_TESTS=1 \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
-            -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+           cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DHAVE_TESTS=1 -DFORCE_STATIC_DEPS=1 \
             -DRust_CARGO_TARGET=${CPREF}-unknown-linux-gnu \
+            -DOpenMP_C_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_C_LIB_NAMES=gomp -DOpenMP_CXX_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_CXX_LIB_NAMES=gomp -DOpenMP_gomp_LIBRARY=${LIBGOMP}/libgomp.a \
             -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 ..
           make -j $(nproc --all)
         displayName: Build foldseek
@@ -124,7 +148,7 @@ jobs:
   - job: build_macos
     displayName: macOS
     pool:
-      vmImage: 'macos-12'
+      vmImage: 'macos-latest'
     steps:
       - checkout: self
         submodules: true
@@ -156,6 +180,7 @@ jobs:
       - build_macos
       - build_ubuntu_2004
       - build_ubuntu_cross_2004
+      - build_ubuntu_gpu
     steps:
       - script: |
           cd "${BUILD_SOURCESDIRECTORY}"
@@ -176,28 +201,40 @@ jobs:
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: foldseek-linux-SSE2
+          artifactName: foldseek-linux-gpu
           targetPath: $(Build.SourcesDirectory)/foldseek/bin
       - script:
           chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
       - task: ArchiveFiles@2
         inputs:
           rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
+          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-gpu.tar.gz
           includeRootFolder: true
           archiveType: tar
       # - task: DownloadPipelineArtifact@1
       #   inputs:
-      #     artifactName: foldseek-linux-SSE4_1
+      #     artifactName: foldseek-linux-SSE2
       #     targetPath: $(Build.SourcesDirectory)/foldseek/bin
       # - script:
       #     chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
       # - task: ArchiveFiles@2
       #   inputs:
       #     rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
-      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse41.tar.gz
+      #     archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse2.tar.gz
       #     includeRootFolder: true
       #     archiveType: tar
+      - task: DownloadPipelineArtifact@1
+        inputs:
+          artifactName: foldseek-linux-SSE4_1
+          targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      - script:
+          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-sse41.tar.gz
+          includeRootFolder: true
+          archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
           artifactName: foldseek-linux-AVX2
@@ -255,16 +292,18 @@ jobs:
           chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_rsa
           ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub
           cd "${BUILD_SOURCESDIRECTORY}"
-          # disabled:foldseek-linux-sse41.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
+          # disabled:foldseek-linux-sse2.tar.gz foldseek-linux-ppc64le-POWER8.tar.gz foldseek-linux-ppc64le-POWER9.tar.gz
           ssh-keygen -Y sign -f ~/.ssh/id_rsa -n file \
              foldseek-osx-universal.tar.gz \
-             foldseek-linux-sse2.tar.gz \
+             foldseek-linux-sse41.tar.gz \
              foldseek-linux-avx2.tar.gz \
+             foldseek-linux-gpu.tar.gz \
              foldseek-linux-arm64.tar.gz
           curl --retry 5 --retry-all-errors -X POST \
             -F file[]=@foldseek-osx-universal.tar.gz -F signature[]=@foldseek-osx-universal.tar.gz.sig \
-            -F file[]=@foldseek-linux-sse2.tar.gz -F signature[]=@foldseek-linux-sse2.tar.gz.sig \
+            -F file[]=@foldseek-linux-sse41.tar.gz -F signature[]=@foldseek-linux-sse41.tar.gz.sig \
             -F file[]=@foldseek-linux-avx2.tar.gz -F signature[]=@foldseek-linux-avx2.tar.gz.sig \
+            -F file[]=@foldseek-linux-gpu.tar.gz -F signature[]=@foldseek-linux-gpu.tar.gz.sig \
             -F file[]=@foldseek-linux-arm64.tar.gz -F signature[]=@foldseek-linux-arm64.tar.gz.sig \
             -F identifier="foldseek" -F directory="${BUILD_SOURCEVERSION}" \
               https://mmseqs.com/upload

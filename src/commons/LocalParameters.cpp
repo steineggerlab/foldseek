@@ -8,7 +8,6 @@ const int LocalParameters::DBTYPE_TMSCORE = 102;
 
 LocalParameters::LocalParameters() :
         Parameters(),
-        PARAM_PREF_MODE(PARAM_PREF_MODE_ID,"--prefilter-mode", "Prefilter mode", "prefilter mode: 0: kmer/ungapped 1: ungapped, 2: nofilter",typeid(int), (void *) &prefMode, "^[0-2]{1}$"),
         PARAM_TMSCORE_THRESHOLD(PARAM_TMSCORE_THRESHOLD_ID,"--tmscore-threshold", "TMscore threshold", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &tmScoreThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_TMSCORE_THRESHOLD_MODE(PARAM_TMSCORE_THRESHOLD_MODE_ID,"--tmscore-threshold-mode", "TMscore threshold mode", "0: alignment, 1: query 2: target length",typeid(int), (void *) &tmScoreThrMode, "^[0-2]{1}$"),
         PARAM_TMALIGN_HIT_ORDER(PARAM_TMALIGN_HIT_ORDER_ID,"--tmalign-hit-order", "TMalign hit order", "order hits by 0: (qTM+tTM)/2, 1: qTM, 2: tTM, 3: min(qTM,tTM) 4: max(qTM,tTM)",typeid(int), (void *) &tmAlignHitOrder, "^[0-4]{1}$"),
@@ -35,7 +34,8 @@ LocalParameters::LocalParameters() :
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
-        PARAM_GPU(PARAM_GPU_ID, "--gpu", "Use GPU", "Use GPU (CUDA) if possible", typeid(int), (void *) &gpu, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON),
+        PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
+        PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-beta below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
@@ -78,16 +78,16 @@ LocalParameters::LocalParameters() :
     PARAM_ALPH_SIZE.category = MMseqsParameter::COMMAND_HIDDEN;
     PARAM_INCLUDE_IDENTITY.category = MMseqsParameter::COMMAND_HIDDEN;
 
-    scoringMatrixFile = "3di.out";
-    seedScoringMatrixFile = "3di.out";
+    scoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("3di.out", "3di.out"));
+    seedScoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("3di.out", "3di.out"));
     substitutionMatrices.emplace_back("3di.out", mat3di_out, mat3di_out_len);
 
     // structurecreatedb
-#ifdef HAVE_CUDA
     structurecreatedb.push_back(&PARAM_GPU);
-#endif
     structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
+    structurecreatedb.push_back(&PARAM_DB_EXTRACTION_MODE);
+    structurecreatedb.push_back(&PARAM_DISTANCE_THRESHOLD);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
@@ -143,9 +143,9 @@ LocalParameters::LocalParameters() :
     strucclust.push_back(&PARAM_RUNNER);
     // structuresearchworkflow
     structuresearchworkflow = combineList(structurealign, prefilter);
+    structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
-    structuresearchworkflow.push_back(&PARAM_PREF_MODE);
     structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
@@ -154,6 +154,7 @@ LocalParameters::LocalParameters() :
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
+    easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
     structureclusterworkflow = combineList(prefilter, structurealign);
@@ -204,6 +205,50 @@ LocalParameters::LocalParameters() :
     filtermultimer.push_back(&PARAM_THREADS);
     filtermultimer.push_back(&PARAM_V);
 
+    //makepaddeddb
+    makepaddeddb.push_back(&PARAM_SUB_MAT);
+    makepaddeddb.push_back(&PARAM_SCORE_BIAS);
+    makepaddeddb.push_back(&PARAM_MASK_RESIDUES);
+    makepaddeddb.push_back(&PARAM_MASK_PROBABILTY);
+    makepaddeddb.push_back(&PARAM_WRITE_LOOKUP);
+    makepaddeddb.push_back(&PARAM_THREADS);
+    makepaddeddb.push_back(&PARAM_V);
+    makepaddeddb.push_back(&PARAM_CLUSTER_SEARCH);
+
+    //result2structprofile
+    result2structprofile.push_back(&PARAM_SUB_MAT);
+    result2structprofile.push_back(&PARAM_E);
+    result2structprofile.push_back(&PARAM_MASK_PROFILE);
+    result2structprofile.push_back(&PARAM_E_PROFILE);
+    result2structprofile.push_back(&PARAM_NO_COMP_BIAS_CORR);
+    result2structprofile.push_back(&PARAM_NO_COMP_BIAS_CORR_SCALE);
+    result2structprofile.push_back(&PARAM_WG);
+    result2structprofile.push_back(&PARAM_ALLOW_DELETION);
+    result2structprofile.push_back(&PARAM_FILTER_MSA);
+    result2structprofile.push_back(&PARAM_FILTER_MIN_ENABLE);
+    result2structprofile.push_back(&PARAM_FILTER_MAX_SEQ_ID);
+    result2structprofile.push_back(&PARAM_FILTER_QID);
+    result2structprofile.push_back(&PARAM_FILTER_QSC);
+    result2structprofile.push_back(&PARAM_FILTER_COV);
+    result2structprofile.push_back(&PARAM_FILTER_NDIFF);
+    result2structprofile.push_back(&PARAM_PC_MODE);
+    result2structprofile.push_back(&PARAM_PCA);
+    result2structprofile.push_back(&PARAM_PCB);
+    result2structprofile.push_back(&PARAM_PRELOAD_MODE);
+    result2structprofile.push_back(&PARAM_GAP_OPEN);
+    result2structprofile.push_back(&PARAM_GAP_EXTEND);
+#ifdef GAP_POS_SCORING
+    result2structprofile.push_back(&PARAM_GAP_PSEUDOCOUNT);
+#endif
+    result2structprofile.push_back(&PARAM_THREADS);
+    result2structprofile.push_back(&PARAM_COMPRESSED);
+    result2structprofile.push_back(&PARAM_V);
+    result2structprofile.push_back(&PARAM_PROFILE_OUTPUT_MODE);
+    //createstructsubdb
+    createstructsubdb.push_back(&PARAM_SUBDB_MODE);
+    createstructsubdb.push_back(&PARAM_ID_MODE);
+    createstructsubdb.push_back(&PARAM_V);
+    
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
     createmultimerreport.push_back(&PARAM_THREADS);
@@ -241,7 +286,24 @@ LocalParameters::LocalParameters() :
     convert2pdb.push_back(&PARAM_THREADS);
     convert2pdb.push_back(&PARAM_V);
 
-    prefMode = PREF_MODE_KMER;
+    // set masking
+    maskMode = 0;
+    maskNrepeats = 6;
+    maskProb = 0.999995;
+    maskLowerCaseMode = 1;
+
+    // createdb
+    maskBfactorThreshold = 0;
+    chainNameMode = 0;
+    writeMapping = 0;
+    coordStoreMode = COORD_STORE_MODE_CA_DIFF;
+    inputFormat = 0; // auto detect
+    fileInclude = ".*";
+    fileExclude = "^$";
+    prostt5SplitLength = 1024;
+    prostt5Model = "";
+
+    // search parameter
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
     tmScoreThr = 0.0;
     tmScoreThrMode = TMSCORE_THRESHOLD_MODE_ALIGNMENT;
@@ -249,38 +311,34 @@ LocalParameters::LocalParameters() :
     lddtThr = 0.0;
     evalThr = 10;
     sortByStructureBits = 1;
+    clusterSearch = 0;
     minDiagScoreThr = 30;
-    maskBfactorThreshold = 0;
-    chainNameMode = 0;
     minAssignedChainsThreshold = 0.0;
     monomerIncludeMode = 0;
-    writeMapping = 0;
     tmAlignFast = 1;
     exactTMscore = 0;
     gapOpen = 10;
     gapExtend = 1;
     nsample = 5000;
-    maskLowerCaseMode = 1;
-    coordStoreMode = COORD_STORE_MODE_CA_DIFF;
-    clusterSearch = 0;
-    inputFormat = 0; // auto detect
-    fileInclude = ".*";
-    fileExclude = "^$";
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
-    multimerReportMode = 1;
+
+    // multimer
     eValueThrExpandMultimer = 10000.0;
-    prostt5Model = "";
-    gpu = 0;
+    multimerReportMode = 1;
+    dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
+    distanceThreshold = 8.0;
     filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;
     filtInterfaceLddtThr = 0.0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");
-    citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. bioRxiv, doi:10.1101/2023.07.23.550085 (2024)");
+    citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
     
     //rewrite param vals.
     PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
+    // allow higher values for GGML debug trace
+    PARAM_V.regex = "^[0-4]{1}$";
 }
 
 

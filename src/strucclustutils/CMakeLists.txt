@@ -18,6 +18,9 @@ set(strucclustutils_source_files
         strucclustutils/createmultimerreport.cpp
         strucclustutils/MultimerUtil.h
         strucclustutils/expandmultimer.cpp
+        strucclustutils/makepaddeddb.cpp
+        strucclustutils/result2structprofile.cpp
+        strucclustutils/createstructsubdb.cpp
         PARENT_SCOPE
         )
 
@@ -35,5 +38,13 @@ set_property(TARGET gemmiwrapper APPEND PROPERTY COMPILE_DEFINITIONS ${DEF_TMP})
 set_property(TARGET gemmiwrapper APPEND PROPERTY INCLUDE_DIRECTORIES ${INCL_TMP})
 restore_exceptions(gemmiwrapper)
 target_link_libraries(gemmiwrapper foldcomp)
+if(HAVE_ZLIB)
+    target_link_libraries(gemmiwrapper z)
+endif()
 target_include_directories(gemmiwrapper PRIVATE ../../lib/gemmi)
 target_include_directories(gemmiwrapper PRIVATE ../../lib/foldcomp/src)
+
+set(prostt5_source_files
+    strucclustutils/ProstT5.h
+    strucclustutils/ProstT5.cpp
+    PARENT_SCOPE)

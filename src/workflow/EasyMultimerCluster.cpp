@@ -58,6 +58,8 @@ int easymultimercluster(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("RUNNER", par.runner.c_str());
+    cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("MULTIMERCLUSTER_PAR", par.createParameterString(par.multimerclusterworkflow,true).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

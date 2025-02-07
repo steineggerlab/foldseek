@@ -40,6 +40,7 @@ public:
     std::vector<Vec3> c;
     std::vector<Vec3> cb;
     std::vector<char> ami;
+    std::vector<char> seq3di;
     std::vector<std::string> names;
     std::vector<std::string> chainNames;
     std::vector<unsigned int> modelIndices;
@@ -52,7 +53,6 @@ public:
     size_t fixupBufferSize;
 
 private:
-    std::unordered_map<std::string,char> threeAA2oneAA;
     int modelIt;
     int chainIt;
 

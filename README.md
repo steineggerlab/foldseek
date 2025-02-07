@@ -1,7 +1,6 @@
 
 # Foldseek 
-Foldseek enables fast and sensitive comparisons of large protein structure sets.
-
+Foldseek enables fast and sensitive comparisons of large protein structure sets, supporting monomer and multimer searches, as well as clustering. It runs on CPU, supports GPU acceleration for faster searches, and optionally allows ultra-fast and sensitive comparisons directly from protein sequence inputs using a language model, bypassing the need for structures.
 <p align="center"><img src="https://github.com/steineggerlab/foldseek/blob/master/.github/foldseek.png" height="250"/></p>
 
 ## Publications
@@ -14,27 +13,48 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets.
 # Table of Contents
 
 - [Foldseek](#foldseek)
-- [Webserver](#webserver)
-- [Installation](#installation)
-- [Memory requirements](#memory-requirements)
-- [Tutorial Video](#tutorial-video)
-- [Documentation](#documentation)
-- [Quick Start](#quick-start)
-  - [Search](#search)
-    - [Output](#output-search)
-    - [Important Parameters](#important-search-parameters)
-    - [Alignment Mode](#alignment-mode)
-    - [Structure search from FASTA input](#structure-search-from-fasta-input)
-  - [Databases](#databases)
-    - [Create Custom Databases and Indexes](#create-custom-databases-and-indexes)
-  - [Cluster](#cluster)
-    - [Output](#output-cluster)
-    - [Important Parameters](#important-cluster-parameters)
-  - [Multimer](#multimersearch)
-    - [Output](#multimer-search-output)
-  - [MultimerCluster](#multimercluster)
-- [Main Modules](#main-modules)
-- [Examples](#examples)
+  - [Publications](#publications)
+- [Table of Contents](#table-of-contents)
+  - [Webserver](#webserver)
+  - [Installation](#installation)
+  - [Memory requirements](#memory-requirements)
+  - [Tutorial Video](#tutorial-video)
+  - [Documentation](#documentation)
+  - [Quick start](#quick-start)
+    - [Search](#search)
+      - [Output Search](#output-search)
+        - [Tab-separated](#tab-separated)
+        - [Superpositioned Cα only PDB files](#superpositioned-cα-only-pdb-files)
+        - [Interactive HTML](#interactive-html)
+      - [Important search parameters](#important-search-parameters)
+      - [Alignment Mode](#alignment-mode)
+    - [Databases](#databases)
+      - [Create custom databases and indexes](#create-custom-databases-and-indexes)
+      - [Create custom database from protein sequence (FASTA)](#create-custom-database-from-protein-sequence-fasta)
+      - [Pad database for fast GPU search](#pad-database-for-fast-gpu-search)
+    - [Cluster](#cluster)
+      - [Output Cluster](#output-cluster)
+        - [Tab-separated cluster](#tab-separated-cluster)
+        - [Representative fasta](#representative-fasta)
+        - [All member fasta](#all-member-fasta)
+      - [Important cluster parameters](#important-cluster-parameters)
+    - [Multimersearch](#multimersearch)
+      - [Using Multimersearch](#using-multimersearch)
+      - [Multimer Search Output](#multimer-search-output)
+        - [Tab-separated-complex](#tab-separated-complex)
+        - [Complex Report](#complex-report)
+    - [Multimercluster](#multimercluster)
+      - [Output MultimerCluster](#output-multimercluster)
+        - [Tab-separated multimercluster](#tab-separated-multimercluster)
+        - [Representative multimer fasta](#representative-multimer-fasta)
+        - [Filtered search result](#filtered-search-result)
+      - [Important multimer cluster parameters](#important-multimer-cluster-parameters)
+  - [Main Modules](#main-modules)
+  - [Examples](#examples)
+    - [Faster Search with GPU Acceleration](#faster-search-with-gpu-acceleration)
+    - [Fast Structure Search from FASTA input](#fast-structure-search-from-fasta-input)
+    - [Rescore aligments using TMscore](#rescore-aligments-using-tmscore)
+    - [Query centered multiple sequence alignment](#query-centered-multiple-sequence-alignment)
 
 ## Webserver 
 Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.ac.uk/) and [PDB](https://www.rcsb.org/) in seconds using the Foldseek webserver ([code](https://github.com/soedinglab/mmseqs2-app)): [search.foldseek.com](https://search.foldseek.com) 🚀
@@ -44,11 +64,11 @@ Search your protein structures against the [AlphaFoldDB](https://alphafold.ebi.a
 # Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
 wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz; tar xvzf foldseek-linux-avx2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
-# Linux SSE2 build (check using: cat /proc/cpuinfo | grep sse2)
-wget https://mmseqs.com/foldseek/foldseek-linux-sse2.tar.gz; tar xvzf foldseek-linux-sse2.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
-
 # Linux ARM64 build
 wget https://mmseqs.com/foldseek/foldseek-linux-arm64.tar.gz; tar xvzf foldseek-linux-arm64.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
+
+# Linux AVX2 & GPU build (req. glibc >= 2.17 and nvidia driver >=525.60.13)
+wget https://mmseqs.com/foldseek/foldseek-linux-gpu.tar.gz; tar xvfz foldseek-linux-gpu.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
 
 # MacOS
 wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldseek-osx-universal.tar.gz; export PATH=$(pwd)/foldseek/bin/:$PATH
@@ -56,7 +76,10 @@ wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz; tar xvzf foldsee
 # Conda installer (Linux and macOS)
 conda install -c conda-forge -c bioconda foldseek
 ```
-Other precompiled binaries for ARM64 amd SSE2 are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
+Other precompiled binaries are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
+
+> [!NOTE]
+> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Tesla-generation GPUs.
 
 ## Memory requirements 
 For optimal software performance, consider three options based on your RAM and search requirements:
@@ -68,13 +91,10 @@ For optimal software performance, consider three options based on your RAM and s
    By disabling `--sort-by-structure-bits 0`, RAM requirement reduces to 35GB. However, this alters hit rankings and final scores but not E-values. Structure bits are mostly relevant for hit ranking for E-value > 10^-1.
 
 3. **Single query searches.** 
-   Use the `--prefilter-mode 1`, which isn't memory-limited and computes all ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries.
+   Use the `--prefilter-mode 1`, which isn't memory-limited and computes all optimal ungapped alignments. This option optimally utilizes foldseek's multithreading capabilities for single queries and supports GPU acceleration.
 
 ## Tutorial Video
-We presented a Foldseek tutorial at the SBGrid where we demonstrated Foldseek's webserver and command line interface. 
-Check it out [here](https://www.youtube.com/watch?v=k5Rbi22TtOA).
-
-<a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>.
+A Foldseek tutorial covering the webserver and command-line usage is available [here](https://www.youtube.com/watch?v=k5Rbi22TtOA). <a href="https://www.youtube.com/watch?v=k5Rbi22TtOA"><img src="https://img.shields.io/youtube/views/k5Rbi22TtOA?style=social"></a>
 
 ## Documentation
 Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information about these modules, refer to the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki). For documentation specific to Foldseek, checkout the Foldseek wiki [here](https://github.com/steineggerlab/foldseek/wiki).
@@ -82,7 +102,7 @@ Many of Foldseek's modules (subprograms) rely on MMseqs2. For more information a
 ## Quick start
 
 ### Search
-The `easy-search` module allows to query one or more single-chain protein structures, formatted in PDB/mmCIF format (flat or gzipped), against a target database, folder or individual single-chain protein structures (for multi-chain proteins see [complexsearch](#complexsearch)). The default alignment information output is a [tab-separated file](#tab-separated) but Foldseek also supports [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) and [HTML](#interactive-html).
+The `easy-search` module allows to query one or more single-chain proteins, formatted in as protein structures in PDB/mmCIF format (flat or gzipped) or as protein sequnece in [fasta](#create-custom-database-from-protein-sequence-fasta), against a target database, folder or individual single-chain protein structures (for multi-chain proteins see [complexsearch](#complexsearch)). The default alignment information output is a [tab-separated file](#tab-separated) but Foldseek also supports [Superposed Cα PDBs](#superpositioned-cα-only-pdb-files) and [HTML](#interactive-html).
 
     foldseek easy-search example/d1asha_ example/ aln tmpFolder
     
@@ -123,15 +143,17 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 
 #### Important search parameters
 
-| Option            | Category        | Description                                                                                               |
-|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
-| -s              | Sensitivity     | Adjust sensitivity to speed trade-off; lower is faster, higher more sensitive (fast: 7.5, default: 9.5)   |
-| --exhaustive-search | Sensitivity | Skips prefilter and performs an all-vs-all alignment (more sensitive but much slower)                     |
-| --max-seqs      | Sensitivity     | Adjust the amount of prefilter handed to alignment; increasing it can lead to more hits (default: 1000)   |
-| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
-| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
-| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
-| --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
+| Option              | Category    | Description                                                                                                                            |
+|---------------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| -s                  | Sensitivity | Adjust sensitivity to speed trade-off; lower is faster, higher more sensitive (fast: 7.5, default: 9.5)                                |
+| --num-iterations    | Sensitivity | Enables iterative search to find more distantly related hits (Default: off). Recommended `--num-iterations 3`                          |
+| --exhaustive-search | Sensitivity | Skips prefilter and performs an all-vs-all alignment (more sensitive but much slower)                                                  |
+| --max-seqs          | Sensitivity | Adjust the amount of prefilter handed to alignment; increasing it can lead to more hits (default: 1000)                                |
+| -e                  | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                         |
+| --alignment-type    | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default)       |
+| -c                  | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode          | Alignment   | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                                                           |
+| --gpu               | Performance | Enables fast GPU-accelerated ungapped prefilter (`--prefilter-mode 1`) (default: off), ignores `-s`. Use `--gpu 1` to enable.          |
 
 #### Alignment Mode
 By default, Foldseek uses its local 3Di+AA structural alignment but it also supports realigning hits using the global TMalign as well as rescoring alignments using TMscore. 
@@ -139,24 +161,6 @@ By default, Foldseek uses its local 3Di+AA structural alignment but it also supp
     foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 
 If alignment type is set to tmalign (`--alignment-type 1`), the results will be sorted by the TMscore normalized by query length. The TMscore is used for reporting two fields: the e-value=(qTMscore+tTMscore)/2 and the score=(qTMscore*100). All output fields (e.g., pident, fident, and alnlen) are calculated based on the TMalign alignment.
-
-#### Structure search from FASTA input
-Search by predicting 3Di directly from amino acid sequences without the need for existing protein structures. 
-This feature uses the [ProstT5](https://www.biorxiv.org/content/10.1101/2023.07.23.550085v2) protein language model and runs by default on CPU and is about 400-4000x compared to predicted structures by [ColabFold](https://github.com/sokrypton/ColabFold).
-
-```
-foldseek databases ProstT5 weights tmp
-foldseek databases PDB pdb tmp
-foldseek easy-search QUERY.fasta pdb result.m8 tmp --prostt5-model weights
-```
-
-Or create your a structural database from a fasta files.
-
-```
-foldseek createdb db.fasta db --prostt5-model weights
-```
-
-Faster inference using GPU/CUDA is also supported. Compile from source with `cmake -DCMAKE_BUILD_TYPE=Release  -DENABLE_CUDA=1 -DCUDAToolkit_ROOT=Path-To-Cuda-Toolkit` and call with `createdb/easy-search --prostt5-model weights --gpu 1`.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
@@ -184,8 +188,35 @@ The target database can be pre-processed by `createdb`. This is useful when sear
     foldseek createindex targetDB tmp  #OPTIONAL generates and stores the index on disk
     foldseek easy-search example/d1asha_ targetDB aln.m8 tmpFolder
 
+#### Create custom database from protein sequence (FASTA)
+Create a structural database from FASTA files using the [ProstT5](https://academic.oup.com/nargab/article/6/4/lqae150/7901286) protein language model. It runs by default on CPU and is about 400-4000x compared to predicted structures by [ColabFold](https://github.com/sokrypton/ColabFold).
+However, this database will contain only the predicted 3Di structural sequences without additional structural details.
+As a result, it supports monomer search and clustering, but does not enable features requiring Cα information, such as `--alignment-type 1`, TM-score or LDDT output.
+```
+foldseek databases ProstT5 weights tmp
+foldseek createdb db.fasta db --prostt5-model weights
+```
+
+Accelerate inference by one to two magnitudes using GPU(s) (`--gpu 1`) 
+
+```
+foldseek createdb db.fasta db --prostt5-model weights --gpu 1
+```
+- Use the `CUDA_VISIBLE_DEVICES` variable to select the GPU device(s).
+  - `CUDA_VISIBLE_DEVICES=0` to use GPU 0.
+  - `CUDA_VISIBLE_DEVICES=0,1` to use GPUs 0 and 1.
+ 
+#### Pad database for fast GPU search
+GPU searches require the database to be reformatted, with padding added to each sequence using the `makepaddedseqdb` command. The padded database can be used for both CPU and GPU searches.
+```
+# Prepare the database for GPU search
+foldseek makepaddedseqdb db db_pad
+# Perform GPU search
+foldseek search db db_pad result_dir --gpu 1
+```
+
 ### Cluster
-The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein structure using structural alignment. It accepts input in either PDB or mmCIF format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
+The `easy-cluster` algorithm is designed for structural clustering by assigning structures to a representative protein structure using structural alignment. It accepts input in either as protein structures as PDB/mmCIF or protein sequences as [fasta](#create-custom-database-from-protein-sequence-fasta) format, with support for both flat and gzipped files. By default, easy-cluster generates three output files with the following prefixes: (1) `_clu.tsv`, (2) `_repseq.fasta`, and (3) `_allseq.fasta`. The first file (1) is a [tab-separated](#tab-separated-cluster) file describing the mapping from representative to member, while the second file (2) contains only [representative sequences](#representative-fasta), and the third file (3) includes all [cluster member sequences](#all-member-fasta).
 
     foldseek easy-cluster example/ res tmp -c 0.9 
     
@@ -220,8 +251,6 @@ MAGA....R
 MVGA....R
 >D6KVP9
 MVGA....R
->D1Y890
-MVGV....R
 >E3HQM9	
 >E3HQM9
 MCAT...Q
@@ -231,17 +260,16 @@ MCAR...Q
 
 #### Important cluster parameters
 
-| Option            | Category        | Description                                                                                               |
-|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
-| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
-| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
-| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
-| --cov-mode      | Alignment  | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                               |
-| --min-seq-id      | Alignment  | the minimum sequence identity to be clustered                               |
-| --tmscore-threshold      | Alignment  | accept alignments with an alignment TMscore > thr                               |
-| --tmscore-threshold-mode    | Alignment  | normalize TMscore by 0: alignment, 1: representative, 2: member length                             |
-| --lddt-threshold      | Alignment  | accept alignments with an alignment LDDT score > thr                               |
-
+| Option                   | Category    | Description                                                                                                                                 |
+|--------------------------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| -e                       | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                              |
+| --alignment-type         | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default)            |
+| -c                       | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment     |
+| --cov-mode               | Alignment   | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                                                                |
+| --min-seq-id             | Alignment   | the minimum sequence identity to be clustered                                                                                               |
+| --tmscore-threshold      | Alignment   | accept alignments with an alignment TMscore > thr                                                                                           |
+| --tmscore-threshold-mode | Alignment   | normalize TMscore by 0: alignment, 1: representative, 2: member length                                                                      |
+| --lddt-threshold         | Alignment   | accept alignments with an alignment LDDT score > thr                                                                                        |
 
 ### Multimersearch
 The `easy-multimersearch` module is designed for querying one or more protein complex (multi-chain) structures (supported input formats: PDB/mmCIF, flat or gzipped) against a target database of protein complex structures. It reports the similarity metrices between the complexes (e.g., the TMscore).
@@ -307,7 +335,7 @@ The `easy-multimercluster` module is designed for multimer-level structural clus
 
 Make sure chain names in PDB/mmcIF files does not contain underscores(_).
 
-    foldseek easy-multimercluster example/ clu tmp --multimer-tm-threshold 0.65 --chain-tm-threshold 0.5 --interface-tm-threshold 0.65
+    foldseek easy-multimercluster example/ clu tmp --multimer-tm-threshold 0.65 --chain-tm-threshold 0.5 --interface-lddt-threshold 0.65
 
 #### Output MultimerCluster
 ##### Tab-separated multimercluster
@@ -345,15 +373,15 @@ The query and target coverages here represent the sum of the coverages of all al
 
 #### Important multimer cluster parameters
 
-| Option            | Category        | Description                                                                                               |
-|-------------------|-----------------|-----------------------------------------------------------------------------------------------------------|
-| -e              | Sensitivity     | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures |
-| --alignment-type| Alignment       | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default) |
-| -c              | Alignment  | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
-| --cov-mode      | Alignment  | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query |
-| --multimer-tm-threshold      | Alignment  | accept alignments with multimer alignment TMscore > thr |
-| --chain-tm-threshold      | Alignment  | accept alignments if every single chain TMscore > thr |
-| --interface-lddt-threshold      | Alignment  | accept alignments with an interface LDDT score > thr |
+| Option                     | Category    | Description                                                                                                                             |
+|----------------------------|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| -e                         | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                          |
+| --alignment-type           | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default)        |
+| -c                         | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
+| --cov-mode                 | Alignment   | 0: coverage of query and target (cluster multimers only with same chain numbers), 1: coverage of target, 2: coverage of query           |
+| --multimer-tm-threshold    | Alignment   | accept alignments with multimer alignment TMscore > thr                                                                                 |
+| --chain-tm-threshold       | Alignment   | accept alignments if every single chain TMscore > thr                                                                                   |
+| --interface-lddt-threshold | Alignment   | accept alignments with an interface LDDT score > thr                                                                                    |
 
 ## Main Modules
 - `easy-search`       fast protein structure search  
@@ -364,6 +392,26 @@ The query and target coverages here represent the sum of the coverages of all al
 - `databases`         download pre-assembled databases
 
 ## Examples
+#### Faster Search with GPU Acceleration
+Foldseek's prefilter on a 4090 GPU is four times faster than a 64-core CPU. To use GPU-based ungapped alignment for faster prefiltering, ensure you have a CUDA-enabled GPU and specify the `--gpu` option:
+```
+foldseek easy-search example/d1asha_ example/ aln tmp --gpu 1 --prefilter-mode 1
+```
+- Use the `CUDA_VISIBLE_DEVICES` variable to select the GPU device(s).
+  - `CUDA_VISIBLE_DEVICES=0` to use GPU 0.
+  - `CUDA_VISIBLE_DEVICES=0,1` to use GPUs 0 and 1.
+
+#### Fast structure search from FASTA input
+Protein sequences can be directly searched without requiring existing protein structures by using [ProstT5](https://academic.oup.com/nargab/article/6/4/lqae150/7901286), which is approximately 400–4000x faster than predicting structures with ColabFold.
+Read more [here](#create-custom-database-from-protein-sequence-fasta).
+```
+foldseek databases ProstT5 weights tmp
+foldseek databases PDB pdb tmp
+foldseek easy-search QUERY.fasta pdb res.m8 tmp --prostt5-model weights
+```
+The translation with ProstT5 can be accelerated by using GPU(s) (`--gpu 1`) and multiple GPUs can be used by setting the `CUDA_VISIBLE_DEVICES` variable.
+
+
 ### Rescore aligments using TMscore
 The easiest way to get the alignment TMscore normalized by min(alnLen,qLen,targetLen) as well as a rotation matrix is through the following command:
 ```
@@ -381,16 +429,6 @@ foldseek createtsv queryDB targetDB aln_tmscore aln_tmscore.tsv
 
 Output format `aln_tmscore.tsv`: query and target identifiers, TMscore, translation(3) and rotation vector=(3x3)
 
-### Cluster search results 
-The following command performs an all-against-all alignments of the input structures and retains only the alignments, which cover 80% of the sequence (-c 0.8) (read more about alignment coverage options [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-set-the-right-alignment-coverage-to-cluster)). It then clusters the results using a greedy set cover algorithm. The clustering mode can be adjusted using --cluster-mode, read more [here](https://github.com/soedinglab/MMseqs2/wiki#clustering-modes). The clustering output format is described [here](https://github.com/soedinglab/MMseqs2/wiki#cluster-tsv-format).
-
-```
-foldseek createdb example/ db
-foldseek search db db aln tmpFolder -c 0.8 
-foldseek clust db aln clu
-foldseek createtsv db db clu clu.tsv
-```
-
 ### Query centered multiple sequence alignment 
 Foldseek can output multiple sequence alignments in a3m format using the following commands. 
 To convert a3m to FASTA format, the following script can be used [reformat.pl](https://raw.githubusercontent.com/soedinglab/hh-suite/master/scripts/reformat.pl) (`reformat.pl in.a3m out.fas`).
@@ -402,3 +440,4 @@ foldseek search queryDB targetDB aln tmpFolder -a
 foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
 foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
+For a non-query centered multiple sequence alignment please check out [Foldmaons](https://github.com/steineggerlab/foldmason).
