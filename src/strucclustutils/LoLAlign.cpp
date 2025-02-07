@@ -229,7 +229,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
         float maxScore = 0;
 
-        for (int i = start_anchor_length; i < queryLen - start_anchor_length ; ++i) {
+        for (unsigned i = start_anchor_length; i < queryLen - start_anchor_length ; ++i) {
             for (int j = start_anchor_length; j < targetLen - start_anchor_length ; ++j) {
                 if (fwbwaln->zm[i][j] >= maxScore) {
                     maxScore = fwbwaln->zm[i][j];
@@ -1016,6 +1016,7 @@ int lolalign(int argc, const char **argv, const Command &command)
     {
         delete tdbr;
         delete tcadbr;
+
     }
     return EXIT_SUCCESS;
 }
