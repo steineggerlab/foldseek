@@ -189,6 +189,10 @@ FwBwAligner::~FwBwAligner(){
     if (S_curr != nullptr) {
         free(S_curr);
     }
+    if(scoreForward != nullptr){
+        free(scoreForward);
+    }
+
 
     // free(btMatrix);
     // free(blosum);

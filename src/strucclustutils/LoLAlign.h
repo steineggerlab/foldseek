@@ -40,10 +40,8 @@ public:
         double rmsd;
     };
     void computeForwardScoreMatrix(
-        char* queryNumAA,
-        char* queryNum3Di,
-        char* targetNumAA,
-        char* targetNum3Di,
+        unsigned char * targetNumAA,
+        unsigned char *targetNum3Di,
         int queryLen,
         int targetLen,
         SubstitutionMatrix &subMatAA,
@@ -62,7 +60,7 @@ public:
     }
 
 
-    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, unsigned int queryLen);
+    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, unsigned int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
     
     TMscoreResult computeTMscore(float *x, float *y, float *z,
                                  unsigned int targetLen, int qStartPos,
@@ -96,10 +94,8 @@ public:
 
     void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer);
     void computeDi_score(
-        char *querySeqAA,
-        char *querySeq3Di,
-        char *targetSeqAA,
-        char *targetSeq3Di,
+        unsigned char * targetNumAA,
+        unsigned char *targetNum3Di,
         int anchorLen,
         int* final_anchor_query,
         int* final_anchor_target,
@@ -145,6 +141,9 @@ private:
     int* final_anchor_query;
     int* final_anchor_target;
     int SeedNumber = 3;
+    unsigned char *queryNumAA;
+    unsigned char *queryNum3Di;
+
 
 
 
@@ -160,23 +159,23 @@ private:
     float b2 = -0.11200039;
 
     // Load weights and biases into SIMD registers
-    simd_float w1_0 = simdf32_set(w1[0][0]); // Broadcast w1[0][0] to all 8 elements
-    simd_float w1_1 = simdf32_set(w1[0][1]); // Broadcast w1[0][1] to all 8 elements
-    simd_float w1_2 = simdf32_set(w1[0][2]); // Broadcast w1[0][2] to all 8 elements
+    simd_float w1_0 = simdf32_set(w1[0][0]); 
+    simd_float w1_1 = simdf32_set(w1[0][1]); 
+    simd_float w1_2 = simdf32_set(w1[0][2]); 
 
-    simd_float w1_d0 = simdf32_set(w1[1][0]); // Broadcast w1[1][0] to all 8 elements
-    simd_float w1_d1 = simdf32_set(w1[1][1]); // Broadcast w1[1][1] to all 8 elements
-    simd_float w1_d2 = simdf32_set(w1[1][2]); // Broadcast w1[1][2] to all 8 elements
+    simd_float w1_d0 = simdf32_set(w1[1][0]); 
+    simd_float w1_d1 = simdf32_set(w1[1][1]); 
+    simd_float w1_d2 = simdf32_set(w1[1][2]);
 
-    simd_float b1_0 = simdf32_set(b1[0]); // Broadcast b1[0] to all 8 elements
-    simd_float b1_1 = simdf32_set(b1[1]); // Broadcast b1[1] to all 8 elements
-    simd_float b1_2 = simdf32_set(b1[2]); // Broadcast b1[2] to all 8 elements
+    simd_float b1_0 = simdf32_set(b1[0]); 
+    simd_float b1_1 = simdf32_set(b1[1]);
+    simd_float b1_2 = simdf32_set(b1[2]); 
 
-    simd_float w2_0 = simdf32_set(w2[0]); // Broadcast w2[0] to all 8 elements
-    simd_float w2_1 = simdf32_set(w2[1]); // Broadcast w2[1] to all 8 elements
-    simd_float w2_2 = simdf32_set(w2[2]); // Broadcast w2[2] to all 8 elements
+    simd_float w2_0 = simdf32_set(w2[0]); 
+    simd_float w2_1 = simdf32_set(w2[1]);
+    simd_float w2_2 = simdf32_set(w2[2]); 
 
-    simd_float b2_vec = simdf32_set(b2); // Broadcast b2 to all 8 elements
+    simd_float b2_vec = simdf32_set(b2); 
 
     simd_float zero = simdf32_setzero();
 
