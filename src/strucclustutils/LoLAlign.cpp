@@ -486,50 +486,22 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         }
     }
     float seqId = 0.0;
-    int match = 0;
-    int qidx = 0;
-    int tidx = 0;
-    while(match < anchor_length[max_lol_idx]){
-        if(anchor_query[max_lol_idx][qidx] != 0 && anchor_target[max_lol_idx][tidx] != 0){
-            if(querySeq[qidx] == targetSeq[tidx]){
-                seqId += 1.0;
-            }
-            qidx++;
-            tidx++;
-            match++;
-        }
-        else if(anchor_query[max_lol_idx][qidx] == 0){
-            qidx++;
-        }
-        else if(anchor_target[max_lol_idx][tidx] == 0){
-            tidx++;
-        }
-    }
-    
-    float qCov = 0;
-    float tCov = 0;
-    for (int i = 0; i < queryLen; i++) {
-        if (anchor_query[max_lol_idx][i] != 0) {
-            qCov += 1.0;
-        }
-    }
-    for (int i = 0; i < targetLen; i++) {
-        if (anchor_target[max_lol_idx][i] != 0) {
-            tCov += 1.0;
-        }
-    }
     
 
     std::string backtrace = "";
     int matches = 0;
     int q_count = 0;
     int t_count = 0;
+    
 
 
     while(matches < anchor_length[max_lol_idx]){
         if(anchor_query[max_lol_idx][q_count] != 0 && anchor_target[max_lol_idx][t_count] != 0){
             backtrace.append(1, 'M');
             matches++;
+            if(querySeq[q_count] == targetSeq[t_count]){
+                seqId += 1.0;
+            }
             q_count++;
             t_count++;
         }
@@ -553,8 +525,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     Matcher::result_t result = Matcher::result_t();
     result.seqId = seqId / (float)anchor_length[max_lol_idx];
-    result.qcov = qCov / (float)queryLen;
-    result.dbcov = tCov / (float)targetLen;
+    result.qcov = anchor_length[max_lol_idx] / (float)queryLen;
+    result.dbcov = anchor_length[max_lol_idx] / (float)targetLen;
     result.score = max_lol_score; 
     result.eval = max_lol_score;
     result.dbKey = dbKey;
