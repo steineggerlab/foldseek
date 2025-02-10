@@ -26,28 +26,6 @@ abspath() {
     fi
 }
 
-# Shift initial DB to complexDB using soft-linking
-# $1: input db
-# $2: output db
-# buildCmplDb() {
-#     touch "${2}"
-#     awk -F"\t" 'BEGIN {OFFSET=0}
-#         FNR==NR{chain_len[$1]=$3;next}
-#         {
-#             if (!($3 in off_arr)) {
-#                 off_arr[$3]=OFFSET
-#             }
-#             cmpl_len[$3]+=chain_len[$1];OFFSET+=chain_len[$1]
-#         }
-#         END {
-#             for (cmpl in off_arr) {
-#                 print cmpl"\t"off_arr[cmpl]"\t"cmpl_len[cmpl]
-#             }
-#         }' "${1}.index" "${1}.lookup" > "${2}.index"
-#     ln -s "$(abspath "${1}")" "${2}.0"
-#     cp "${1}.dbtype" "${2}.dbtype"
-# }
-
 getLookup() {
     awk 'FNR==NR{idx[$1]=1;next} {
         if ($1 in idx) {
