@@ -491,10 +491,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     int tidx = 0;
     while(match < anchor_length[max_lol_idx]){
         if(anchor_query[max_lol_idx][qidx] != 0 && anchor_target[max_lol_idx][tidx] != 0){
-            
-            if(querySeq[qidx] == querySeq[tidx]){
+            if(querySeq[qidx] == targetSeq[tidx]){
                 seqId += 1.0;
-
             }
             qidx++;
             tidx++;
@@ -507,7 +505,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             tidx++;
         }
     }
-    //std::cout << "seqId: " << seqId << std::endl;
     
     float qCov = 0;
     float tCov = 0;
