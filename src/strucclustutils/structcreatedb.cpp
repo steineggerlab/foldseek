@@ -470,7 +470,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             } else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
                 std::string filenameWithoutExtension;
                 if (chainNameMode == LocalParameters::CHAIN_MODE_ADD || chainNameMode == LocalParameters::CHAIN_MODE_AUTO) {
-                    size_t firstUnderscore = readStructure.names[ch].find('_');
+                    size_t firstUnderscore = readStructure.names[ch].find_last_of('_');
                     filenameWithoutExtension = readStructure.names[ch].substr(0, firstUnderscore);
                 } else {
                     filenameWithoutExtension = readStructure.names[ch];

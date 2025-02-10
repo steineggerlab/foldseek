@@ -189,7 +189,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
                 }
                 indexReader.close();
             }else {
-                std::vector<std::string> dbsToCheck = {"_seq", "_seq_ca", "_seq_ss", "_seq_h"};
+                std::vector<std::string> dbsToCheck = {"_seq", "_seq_ss", "_seq_h"};
                 for (size_t i = 0; i < dbsToCheck.size(); i++) {
                     std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
                     if (!FileUtil::fileExists(db.c_str())) {
