@@ -174,6 +174,8 @@ private:
     simd_float b2_vec = simdf32_set(b2); 
 
     simd_float zero = simdf32_setzero();
+    int min_lolmat_idx;
+    int max_lolmat_idx;
 
     int queryLen;
     char * querySeq;
