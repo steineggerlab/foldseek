@@ -86,6 +86,7 @@ public:
     float calc_discore(int * anchor_query, int * anchor_target, int anchor_length);
     void lolmatrix(int *anchor_query, int* anchor_target,int anchor_length, int *gaps, float **d_ij, float **d_kl, float **G, int queryLen, int targetLen, float ** hidden_layer, float * d_dist);
     void lolscore(float* dist, float* d_seq, float* score, int length, float** hidden_layer);
+    void set_start_anchor_length(int length) {start_anchor_length = length;}
     
 
     void lolscore(float* d_dist, float d_seq, float* score, int length, int start, float** hidden_layer);

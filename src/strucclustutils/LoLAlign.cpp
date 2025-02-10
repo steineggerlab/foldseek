@@ -492,7 +492,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     int matches = 0;
     int q_count = 0;
     int t_count = 0;
-    
+
 
 
     while(matches < anchor_length[max_lol_idx]){
@@ -942,11 +942,7 @@ int lolalign(int argc, const char **argv, const Command &command)
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
-                if(queryLen <= 20)
-                {
-                    //std::cout << "Query too short: " << queryLen << std::endl;
-                    continue;
-                }
+                
 
                 int max_targetLen = ((tdbr->sequenceReader->getMaxSeqLen() + 1)/16)*16 + 32;
                 char *qcadata = qcadbr.sequenceReader->getData(queryId, thread_idx);
@@ -956,6 +952,13 @@ int lolalign(int argc, const char **argv, const Command &command)
                 FwBwAligner fwbwaln(16, -2, -2, 1, 1, 1);
                 lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], querySeq, query3diSeq, queryLen, max_targetLen, subMatAA, subMat3Di);
                 fwbwaln.resizeMatrix(queryLen, max_targetLen);
+                if(queryLen <= 10)
+                {
+                    lolaln.set_start_anchor_length(0);
+                    if(queryLen < 4){
+                        lolaln.set_start_anchor_length(0);
+                    }
+                }
                 
 
                 int passedNum = 0;
@@ -991,14 +994,23 @@ int lolalign(int argc, const char **argv, const Command &command)
                     size_t tCaLength = tcadbr->sequenceReader->getEntryLen(targetId);
                     float *tdata = tcoords.read(tcadata, targetLen, tCaLength);
                     char *target3diSeq = tdbr3Di.getData(targetId, thread_idx);
+                    Matcher::result_t result;
                     
-                    if (targetLen <= 20)
+                    if (targetLen <= 10)
                     {
-                        //std::cout << "Target too short: " << targetLen << std::endl;
-                        continue;
+                        lolaln.set_start_anchor_length(1);
+                        if(targetLen < 4){
+                            lolaln.set_start_anchor_length(0);
+                        }
+                        result = lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetSeq, target3diSeq, targetLen, subMatAA, subMat3Di, &fwbwaln);
+                        if (queryLen >10){
+                            lolaln.set_start_anchor_length(3);
+                        }
+                    }
+                    else{
+                        result = lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetSeq, target3diSeq, targetLen, subMatAA, subMat3Di, &fwbwaln);
                     }
 
-                    Matcher::result_t result = lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], targetSeq, target3diSeq, targetLen, subMatAA, subMat3Di, &fwbwaln);
 
 
 
