@@ -58,6 +58,23 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"subsetFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
                                           {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+        {"createinterfacedb",          createinterfacedb,          &localPar.createinterfacedb,          COMMAND_SET,
+                "Create an interface DB of a dimer DB",
+                "# Create a new sequence, 3di, c-alpha DB of only interfaces"
+                "foldseek createinterfacedb db_dimer db_int"
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:DB> <o:DB>",
+                CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+        {"createdimerdb",          createdimerdb,          &localPar.createdimerdb,          COMMAND_SET,
+                "Create an dimer DB of a DB",
+                "foldseek createdimerdb db db_dimer"
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:DB> <o:DB> <tmpDir>",
+                CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+                                          
         {"easy-search",          easystructuresearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
                 "Structual search",
                 "# Search a single/multiple PDB file against a set of PDB files\n"

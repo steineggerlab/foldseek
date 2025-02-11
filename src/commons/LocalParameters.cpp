@@ -250,6 +250,9 @@ LocalParameters::LocalParameters() :
     createstructsubdb.push_back(&PARAM_SUBDB_MODE);
     createstructsubdb.push_back(&PARAM_ID_MODE);
     createstructsubdb.push_back(&PARAM_V);
+
+    //TODO:createinterfacedb
+    //TODO:createdimerdb
     
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);

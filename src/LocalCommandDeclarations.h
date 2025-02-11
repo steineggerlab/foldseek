@@ -31,4 +31,6 @@ extern int multimersearch(int argc, const char **argv, const Command &command);
 extern int makepaddeddb(int argc, const char **argv, const Command& command);
 extern int result2structprofile(int argc, const char **argv, const Command& command);
 extern int createstructsubdb(int argc, const char **argv, const Command& command);
+extern int createinterfacedb(int argc, const char **argv, const Command& command);
+extern int createdimerdb(int argc, const char **argv, const Command& command);
 #endif
