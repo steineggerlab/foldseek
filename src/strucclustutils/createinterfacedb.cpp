@@ -15,6 +15,7 @@
 #include <omp.h>
 #endif
 
+//one diemr db as an input, one interface db as an output
 int createinterfacedb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
@@ -32,20 +33,25 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
                                            par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
         tStructDbr->open(DBReader<unsigned int>::NOSORT);
     }
-    size_t localThreads = 1;
-    #ifdef OPENMP
-    localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
-    #endif
+
+    //TODO: multithreading
+    
+    // size_t localThreads = 1;
+    // #ifdef OPENMP
+    // localThreads = std::max(std::min((size_t)par.threads, alnDbr.getSize()), (size_t)1);
+    // #endif
+
     const bool shouldCompress = (par.compressed == true);
     
-    DBWriter torsiondbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
+    DBWriter ssdbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     torsiondbw.open();
     DBWriter cadbw((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
-    //TODO header, mapping, lookuop, source: do not change
-    //TODO: openmp
-    
+
+    //TODO: for each dimer, store only interface c-alphas
+    //TODO: rebuildBackbone, and then write them in aa, ca, ss db
+    //TODO: header, mapping, lookup, source: do not change
 
 }
