@@ -25,6 +25,7 @@ int createdimerdb(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("CREATEDIMERDB_PAR", par.createParameterString(par.createdimerdb).c_str());
+    cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
 
     std::string program = tmpDir + "/createdimerdb.sh";
