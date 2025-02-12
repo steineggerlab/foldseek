@@ -196,7 +196,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     calc_dist_matrix(target_x, target_y, target_z, targetLen, d_kl, false);
 
-    for(int sa = 0; sa < 10; sa++){
+    for(int sa = 0; sa < num_sa; sa++){
         anchor_length[sa] = 0;
         new_anchor_length[sa] = 0;
         for (int i = 0; i < queryLen; i++) {
@@ -219,7 +219,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     fwbwaln->computeProbabilityMatrix<0>();
     
 
-    for(int sa = 0; sa < 10; sa++){
+    for(int sa = 0; sa < num_sa; sa++){
 
         //if(sa % 5 == 0){
         //    fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
@@ -277,7 +277,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         std::memset(G[i], 0, targetLen * sizeof(G[0][0]));
     }
     
-    index_sort(sa_scores, sa_index, 10);
+    index_sort(sa_scores, sa_index, num_sa);
 
     gaps[0] = 0;
     gaps[1] = 0;
@@ -290,7 +290,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
 
     for (int sa_it = 0; sa_it < SeedNumber; sa_it++){
-        sa = sa_index[9 - sa_it];
+        sa = sa_index[num_sa - sa_it -1];
         for(int iteration = 0; iteration < 1000; iteration++){
 
             gaps[0] = 0;
@@ -338,6 +338,10 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                     fwbwaln->computeProbabilityMatrix<0>();
                     maxP = std::max(maxP, fwbwaln->maxP);
                     if(fwbwaln->maxP == 0){
+                        if (fwbwaln->temperature > 10){
+                            break;
+                        }
+                       
                         fwbwaln->temperature += 1;
                         gaps[0] = 0;
                         gaps[1] = 0;
@@ -347,9 +351,10 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                         
                     }
                     
-                    for (int i = 0; i < gaps[1] -gaps[0]; ++i) {
+                    for (int i = 0; i < gaps[1]-gaps[0]; ++i) {
                         std::copy(&fwbwaln->zm[i][0], &fwbwaln->zm[i][(gaps[3] - gaps[2])], &P[i + gaps[0]][gaps[2]]);
                     }
+                    
                     
                 }
                 else{
@@ -421,11 +426,16 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                     break;
                 }
             }
+
             if (new_anchor_length[sa] == 0){
                 break;
 
             }
         }
+        //std::cout << "maxP: " << P[queryLen-1][targetLen-1] << std::endl;
+        //std::cout << "anchor_query: " << anchor_query[sa][queryLen-1] << std::endl;
+        //std::cout << "anchor_target: " << anchor_target[sa][targetLen-1] << std::endl;
+
 
         for (int i = 0; i < queryLen; ++i) {
             std::memset(G[i], 0, targetLen * sizeof(G[0][0]));
@@ -433,12 +443,12 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     }
 
-    float max_lol_score = 0.0;
+    float max_lol_score = -10000.0;
     int max_lol_idx = 0;
     
 
     for (int sa_it = 0; sa_it < SeedNumber; sa_it++){
-        sa = sa_index[9 - sa_it];
+        sa = sa_index[num_sa - sa_it -1];
         
         int sa_idx = 0;
         for(int i = 0; i < queryLen; i++){
@@ -478,7 +488,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             total_lol_score += lol_score_vec[i];
 
         }
-         total_lol_score = total_lol_score / std::sqrt((float)(queryLen * targetLen));
+         total_lol_score = total_lol_score ;// std::sqrt((float)(queryLen * targetLen));
         
         if (total_lol_score > max_lol_score){
             max_lol_score = total_lol_score;
@@ -492,6 +502,17 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     int matches = 0;
     int q_count = 0;
     int t_count = 0;
+
+    /*for(int i = 0 ; i<queryLen; i++){
+        std::cout << anchor_query[max_lol_idx][i];
+    }
+    std::cout << std::endl;
+    for(int i = 0 ; i<targetLen; i++){
+        std::cout << anchor_target[max_lol_idx][i];
+    }
+    std::cout << std::endl;
+    std::cout << "queryLen: " << queryLen << std::endl;*/
+    
 
 
 
@@ -522,6 +543,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         //    t_count++;
         //}
     }
+    //std::cout << "backtrace: " << backtrace << " " << backtrace.size() << " " << queryLen << std::endl;
 
     Matcher::result_t result = Matcher::result_t();
     result.seqId = seqId / (float)anchor_length[max_lol_idx];
@@ -725,7 +747,7 @@ void lolAlign::lolmatrix(int *anchor_query, int *anchor_target, int anchor_lengt
             if (dq > 0)
             {
                 min_lolmat_idx = std::min(min_lolmat_idx, j);
-                max_lolmat_idx = std::max(max_lolmat_idx, j); 
+                max_lolmat_idx = std::max(max_lolmat_idx, j+1); 
                 seq_dist = std::copysign(1.0f, (anchor_q-j)) * std::log(1 + std::abs((float)(anchor_q-j)));
                 for(int l = gap1_start; l < gap1_end; l++)
                 {
