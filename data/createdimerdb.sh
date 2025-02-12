@@ -9,13 +9,14 @@
 
 if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createsubdb "idxlist" "${IN}" "${OUT}" ${CREATESTRUCTSUBDB_PAR} \
+    "$MMSEQS" createsubdb "idxlist" "${IN}" "${OUT}" --subdb-mode 0 ${VERBOSITY_PAR} \
         || fail "createsubdb died"
     rm -- "${OUT}_h" "${OUT}_h.dbtype" "${OUT}_h.index"
-    "$MMSEQS" base:createsubdb "idxlist" "${IN}_h" "${OUT}_h" ${CREATESTRUCTSUBDB_PAR} \
+    # shellcheck disable=SC2086
+    "$MMSEQS" base:createsubdb "idxlist" "${IN}_h" "${OUT}_h" --subdb-mode 0  ${VERBOSITY_PAR} \
         || fail "createsubdb died"
     rm -- "${OUT}.lookup" "${OUT}.source" 
 fi
 
-# TODO: make source file of all dimers, including "DI0", "DI1", "DI2".. 
+# TODO: make source file of all dimers
 # TODO: make lookup file reflecting all monomer-dimer relation
