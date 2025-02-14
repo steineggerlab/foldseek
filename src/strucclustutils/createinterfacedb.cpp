@@ -12,10 +12,8 @@
 #include "GemmiWrapper.h"
 #include "PulchraWrapper.h"
 #include "LDDT.h"
-#include <map>
 #include "itoa.h"
 #include "MathUtil.h"
-#include <set>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -115,13 +113,20 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
         findIntereface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
         if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
             for (size_t i = 0; i < resIdx1.size(); i++) {
-                Vec3 caAtom = {qdata[i], qdata[i + qChainLen], qdata[i + qChainLen * 2]};
-                ca.push_back(caAtom);
+                ca.push_back(Vec3(qdata[i], qdata[i + qChainLen], qdata[i + qChainLen * 2]));
+                n.push_back(Vec3(0,0,0));
+                c.push_back(Vec3(0,0,0));
+                cb.push_back(Vec3(0,0,0));
+                //TODO: should store amino acid too
+                ami.push_back('T');
             }
             for (size_t i = 0; i < resIdx2.size(); i++) {
-                Vec3 caAtom = {tdata[i], tdata[i + tChainLen], tdata[i + tChainLen * 2]};
-                ca.push_back(caAtom);
-                //TODO: should I store amino acid too?
+                ca.push_back(Vec3(tdata[i], tdata[i + tChainLen], tdata[i + tChainLen * 2]));
+                n.push_back(Vec3(0,0,0));
+                c.push_back(Vec3(0,0,0));
+                cb.push_back(Vec3(0,0,0));
+                //TODO: should store amino acid too
+                ami.push_back('T');
             }
             //TODO: is it right?
             pulchra.rebuildBackbone(&ca[0],
@@ -129,29 +134,28 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
                                     &c[0],
                                     &ami[0],
                                     resIdx1.size() + resIdx2.size());
-
-            char *states = structureTo3Di.structure2states(ca.data(),
-                                                                n.data(),
-                                                                c.data(),
-                                                                cb.data(),
+            char *states = structureTo3Di.structure2states(&ca[0],
+                                                                &n[0],
+                                                                &c[0],
+                                                                &cb[0],
                                                                 resIdx1.size() + resIdx2.size());
             for (size_t pos = 0; pos < resIdx1.size(); pos++) {
                 alphabet3di1.push_back(mat.num2aa[static_cast<int>(states[pos])]);
             }
+            alphabet3di1.push_back('\n');
             for (size_t pos = 0; pos < resIdx2.size(); pos++) {
                 alphabet3di2.push_back(mat.num2aa[static_cast<int>(states[resIdx1.size() + pos])]);
             }
+            alphabet3di2.push_back('\n');
             ssdbw.writeData(alphabet3di1.data(), alphabet3di1.size(), qChainKey, thread_idx);
             ssdbw.writeData(alphabet3di2.data(), alphabet3di2.size(), tChainKey, thread_idx);
-        
         }
         alphabet3di1.clear();
         alphabet3di2.clear();
-        ca.clear();
-        n.clear();
-        c.clear();
-        ami.clear();
     }
+    ssdbw.close();
+    cadbw.close();
+    aadbw.close();
 
 
     return EXIT_SUCCESS;
