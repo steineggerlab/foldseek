@@ -60,21 +60,20 @@ std::vector<Command> foldseekCommands = {
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"createinterfacedb",          createinterfacedbs,          &localPar.createinterfacedbs,          COMMAND_SET,
                 "Create an interface DB of a dimer DB",
-                "# Create a new sequence, 3di, c-alpha DB consisting of interface"
-                "foldseek createinterfacedb db_dimer db_int"
+                "# Create a new sequence, 3di, c-alpha DB consisting of interface\n"
+                "foldseek createinterfacedb db_dimer db_int\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:DB> <o:DB>",
-                CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"createdimerdb",          createdimerdb,          &localPar.createdimerdb,          COMMAND_SET,
                 "Create an dimer DB of a DB",
-                "foldseek createdimerdb db db_dimer"
+                "foldseek createdimerdb db db_dimer\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:DB> <o:DB> <tmpDir>",
-                CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb },
-                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-                                          
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},                             
         {"easy-search",          easystructuresearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
                 "Structual search",
                 "# Search a single/multiple PDB file against a set of PDB files\n"
