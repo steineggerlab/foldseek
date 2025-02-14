@@ -41,8 +41,10 @@ void findIntereface(std::vector<size_t> & resIdx1, float squareThreshold, float*
     }
 }
 
-//one diemr db as an input, one interface db as an output
+
+//one dimer db as an input, one interface db as an output
 int createinterfacedb(int argc, const char **argv, const Command &command) {
+    int thread_idx = 0;
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
     IndexReader* qDbr = NULL;
@@ -66,7 +68,9 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
-    std::vector<Vec3> ca;
+    std::vector<Vec3> ca, n, c, cb;
+    std::vector<char> alphabet3di1, alphabet3di2;
+    StructureTo3Di structureTo3Di;
     for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
         unsigned int qComplexId = qComplexIndices[qCompIdx];
         std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
@@ -101,21 +105,43 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
                 Vec3 caAtom = {qdata[i], qdata[i + qChainLen], qdata[i + qChainLen * 2]};
                 ca.push_back(caAtom);
             }
-            //TODO: 2nd chain's interface
-            
-            // for (size_t i = 0; i < resIdx2.size(); i++) {
-            //     Vec3 caAtom = {tdata[i], tdata[i + tChainLen], tdata[i + tChainLen * 2]};
-            //     ca.push_back(caAtom);
-            // }
-        }
+            for (size_t i = 0; i < resIdx2.size(); i++) {
+                Vec3 caAtom = {tdata[i], tdata[i + tChainLen], tdata[i + tChainLen * 2]};
+                ca.push_back(caAtom);
+                //TODO: should I store amino acid too?
+            }
+            //TODO: is it right?
+            pulchra.rebuildBackbone(&ca[0],
+                                    &n[0],
+                                    &c[0],
+                                    &ami[0],
+                                    resIdx1.size() + resIdx2.size());
 
+            char *states = structureTo3Di.structure2states(ca.data(),
+                                                                n.data(),
+                                                                c.data(),
+                                                                cb.data(),
+                                                                resIdx1.size() + resIdx2.size());
+            for (size_t pos = 0; pos < resIdx1.size(); pos++) {
+                alphabet3di1.push_back(mat.num2aa[static_cast<int>(states[pos])]);
+            }
+            for (size_t pos = 0; pos < resIdx2.size(); pos++) {
+                alphabet3di2.push_back(mat.num2aa[static_cast<int>(states[resIdx1.size() + pos])]);
+            }
+            ssdbw.writeData(alphabet3di1.data(), alphabet3di1.size(), qChainKey, thread_idx);
+            ssdbw.writeData(alphabet3di2.data(), alphabet3di2.size(), tChainKey, thread_idx);
+        
+        }
+        alphabet3di1.clear();
+        alphabet3di2.clear();
         ca.clear();
+        n.clear();
+        c.clear();
+        ami.clear();
     }
 
 
     //TODO: multithreading
-    
-    //TODO: rebuildBackbone, and then write them in aa, ca, ss db
     //TODO: header, mapping, lookup, source: do not change
     //TODO: set parameters in LocalParameters.cpp
 }

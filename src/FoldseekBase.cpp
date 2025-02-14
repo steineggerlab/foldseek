@@ -58,9 +58,9 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"subsetFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
                                           {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
-        {"createinterfacedb",          createinterfacedb,          &localPar.createinterfacedb,          COMMAND_SET,
+        {"createinterfacedb",          createinterfacedbs,          &localPar.createinterfacedbs,          COMMAND_SET,
                 "Create an interface DB of a dimer DB",
-                "# Create a new sequence, 3di, c-alpha DB of only interfaces"
+                "# Create a new sequence, 3di, c-alpha DB consisting of interface"
                 "foldseek createinterfacedb db_dimer db_int"
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:DB> <o:DB>",

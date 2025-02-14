@@ -21,7 +21,7 @@ set(COMPILED_RESOURCES
         multimercluster.sh
         easymultimercluster.sh
         createdimerdb.sh
-        createinterfacedb.sh
+        createinterfacedbs.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

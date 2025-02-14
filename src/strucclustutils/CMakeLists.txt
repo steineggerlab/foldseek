@@ -22,6 +22,7 @@ set(strucclustutils_source_files
         strucclustutils/result2structprofile.cpp
         strucclustutils/createstructsubdb.cpp
         strucclustutils/createinterfacedb.cpp
+        strucclustutils/createinterfacedbs.cpp
         PARENT_SCOPE
         )
 
