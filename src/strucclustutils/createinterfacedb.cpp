@@ -76,7 +76,7 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
     std::vector<char> alphabet3di1, alphabet3di2;
     std::vector<char> alphabetAA1, alphabetAA2;
     std::vector<int8_t> camol1, camol2;
-    float* camolf32;
+    std::vector<float> ca1, ca2;
 
     StructureTo3Di structureTo3Di;
     SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
@@ -134,7 +134,6 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
                 cb[resIdx1.size() + i] = Vec3(0,0,0);
                 ami[resIdx1.size() + i] = taaadata[resIdx2[i]];
             }
-            //TODO: is it right?
             pulchra.rebuildBackbone(&ca[0],
                                     &n[0],
                                     &c[0],
@@ -148,28 +147,58 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
             alphabet3di1.resize(resIdx1.size() + 1);
             alphabetAA1.resize(resIdx1.size() + 1);
             alphabet3di2.resize(resIdx2.size() + 1);                               
-            alphabetAA2.resize(resIdx2.size() + 1);
+            alphabetAA2.resize(resIdx2.size() + 1);                             
+            ca1.resize(3 * resIdx1.size());                          
+            ca2.resize(3 * resIdx2.size());
+            char* data1;
+            char* data2;
+            camol1.resize((resIdx1.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t));
+            camol2.resize((resIdx2.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t));
+            int16_t* camol1f16 = reinterpret_cast<int16_t*>(camol1.data());
+            int16_t* camol2f16 = reinterpret_cast<int16_t*>(camol2.data());
             for (size_t pos = 0; pos < resIdx1.size(); pos++) {
                 alphabet3di1[pos] = mat.num2aa[static_cast<int>(states[pos])];
                 alphabetAA1[pos] = ami[pos];
+                ca1[pos] = ca[pos].x;
+                ca1[pos + resIdx1.size()] = ca[pos].y;
+                ca1[pos + 2 * resIdx1.size()] = ca[pos].z;
             }
             alphabet3di1[resIdx1.size()] = '\n';
             alphabetAA1[resIdx1.size()] = '\n';
+            ca1[resIdx1.size()] = '\n';
             for (size_t pos = 0; pos < resIdx2.size(); pos++) {
                 alphabet3di2[pos] = mat.num2aa[static_cast<int>(states[resIdx1.size() + pos])];
                 alphabetAA2[pos] = ami[resIdx1.size() + pos];
+                ca2[pos] = ca[resIdx1.size() + pos].x;
+                ca2[pos + resIdx1.size()] = ca[resIdx1.size() + pos].y;
+                ca2[pos + 2 * resIdx1.size()] = ca[resIdx1.size() + pos].z;
             }
             alphabet3di2[resIdx2.size()] = '\n';
             alphabetAA2[resIdx2.size()] = '\n';
+            ca2[resIdx2.size()] = '\n';
             ssdbw.writeData(alphabet3di1.data(), alphabet3di1.size(), qChainKey, thread_idx);
             ssdbw.writeData(alphabet3di2.data(), alphabet3di2.size(), tChainKey, thread_idx);
             aadbw.writeData(alphabetAA1.data(), alphabetAA1.size(), qChainKey, thread_idx);
             aadbw.writeData(alphabetAA2.data(), alphabetAA2.size(), tChainKey, thread_idx);
+            data1 = reinterpret_cast<char*>(ca1.data());
+            data2 = reinterpret_cast<char*>(ca2.data());
+            if (!Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + 0 * resIdx1.size(), camol1f16, 1)
+                    && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + 1 * resIdx1.size(), camol1f16 + 1 * (resIdx1.size() + 1), 1)
+                    && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + 2 * resIdx1.size(), camol1f16 + 2 * (resIdx1.size() + 1), 1)) {
+                cadbw.writeData((const char*)camol1.data(), (resIdx1.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), qChainKey, thread_idx);
+            }
+            if (!Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + 0 * resIdx2.size(), camol2f16, 1)
+                    && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + 1 * resIdx2.size(), camol2f16 + 1 * (resIdx2.size() + 1), 1)
+                    && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + 2 * resIdx2.size(), camol2f16 + 2 * (resIdx2.size() + 1), 1)) {
+                cadbw.writeData((const char*)camol2.data(), (resIdx2.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), tChainKey, thread_idx);
+            }
         }
         alphabet3di1.clear();
         alphabet3di2.clear();
         alphabetAA1.clear();
         alphabetAA2.clear();
+        camol1.clear();
+        camol2.clear();
         resIdx1.clear();
         resIdx2.clear();
         ami.clear();
@@ -181,9 +210,9 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
     ssdbw.close();
     cadbw.close();
     aadbw.close();
-
+    qStructDbr.close();
+    qDbr.close();
 
     return EXIT_SUCCESS;
     //TODO: multithreading
-    //TODO: set parameters in LocalParameters.cpp
 }
