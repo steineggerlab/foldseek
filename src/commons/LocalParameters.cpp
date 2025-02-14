@@ -251,9 +251,17 @@ LocalParameters::LocalParameters() :
     createstructsubdb.push_back(&PARAM_ID_MODE);
     createstructsubdb.push_back(&PARAM_V);
 
-    //TODO:createinterfacedb
-    //TODO:createinterfacedbs
-    //TODO:createdimerdb
+    //TODO: how to ?
+    createinterfacedbs.push_back(&PARAM_V);
+    createinterfacedbs.push_back(&PARAM_THREADS);
+    createinterfacedbs.push_back(&PARAM_PRELOAD_MODE);
+
+    createinterfacedb.push_back(&PARAM_V);
+    createinterfacedb.push_back(&PARAM_THREADS);
+    createinterfacedb.push_back(&PARAM_PRELOAD_MODE);
+
+    createdimerdb.push_back(&PARAM_V);
+    createdimerdb.push_back(&PARAM_THREADS);
     
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);

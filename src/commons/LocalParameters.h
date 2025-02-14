@@ -120,6 +120,7 @@ public:
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
     std::vector<MMseqsParameter *> createinterfacedb;
+    std::vector<MMseqsParameter *> createinterfacedbs;
     std::vector<MMseqsParameter *> createdimerdb;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)

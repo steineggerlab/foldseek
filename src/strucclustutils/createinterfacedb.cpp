@@ -7,8 +7,14 @@
 #include "Coordinate16.h"
 #include "tmalign/basic_fun.h"
 #include "MultimerUtil.h"
+#include "structureto3di.h"
+#include "SubstitutionMatrix.h"
+#include "GemmiWrapper.h"
+#include "PulchraWrapper.h"
 #include "LDDT.h"
 #include <map>
+#include "itoa.h"
+#include "MathUtil.h"
 #include <set>
 
 #ifdef OPENMP
@@ -36,7 +42,7 @@ void findIntereface(std::vector<size_t> & resIdx1, float squareThreshold, float*
             } 
         }
     }
-    if (sameRes / chainLen > 0.9) {
+    if (sameRes / qChainLen > 0.9) {
         resIdx1.clear();
     }
 }
@@ -47,6 +53,8 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
     int thread_idx = 0;
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
+    const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
+    int dbaccessMode = (DBReader<unsigned int>::USE_INDEX);
     IndexReader* qDbr = NULL;
     qDbr = new IndexReader(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
     DBReader<unsigned int> qStructDbr((par.db1 + "_ca").c_str(), (par.db1 + "_ca.index").c_str(), 
@@ -60,17 +68,22 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
     getKeyToIdMapIdToKeysMapIdVec(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
     qChainKeyToComplexIdMap.clear();
 
-    const bool shouldCompress = (par.compressed == true);
+    // const bool shouldCompress = (par.compressed == true);
     
-    DBWriter ssdbw((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
+    DBWriter ssdbw((par.db2 + "_ss").c_str(), (par.db2 + "_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     ssdbw.open();
-    DBWriter cadbw((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
+    DBWriter cadbw((par.db2 + "_ca").c_str(), (par.db2 + "_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
     cadbw.open();
-    DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
+    DBWriter aadbw((par.db2).c_str(), (par.db2 + ".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
     std::vector<Vec3> ca, n, c, cb;
+    std::vector<char> ami;
     std::vector<char> alphabet3di1, alphabet3di2;
     StructureTo3Di structureTo3Di;
+    SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
+    PulchraWrapper pulchra;
+    Coordinate16 qcoords;
+    Coordinate16 tcoords;
     for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
         unsigned int qComplexId = qComplexIndices[qCompIdx];
         std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
@@ -141,7 +154,7 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
     }
 
 
+    return EXIT_SUCCESS;
     //TODO: multithreading
-    //TODO: header, mapping, lookup, source: do not change
     //TODO: set parameters in LocalParameters.cpp
 }
