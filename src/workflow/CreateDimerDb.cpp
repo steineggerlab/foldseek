@@ -6,9 +6,18 @@
 #include "LocalParameters.h"
 #include "createdimerdb.sh.h"
 
+void setCreateDimerDefaults(Parameters *p) {
+    p->removeTmpFiles = true;
+}
+void setCreateDimerMustPassAlong(Parameters *p) {
+    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
+}
+
 int createdimerdb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
+    setCreateDimerDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    setCreateDimerMustPassAlong(&par);
 
     CommandCaller cmd;
     std::string tmpDir = par.filenames.back();
