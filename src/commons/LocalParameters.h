@@ -122,7 +122,8 @@ public:
     std::vector<MMseqsParameter *> createinterfacedb;
     std::vector<MMseqsParameter *> createinterfacedbs;
     std::vector<MMseqsParameter *> createdimerdb;
-
+    std::vector<MMseqsParameter *> filterdimerdb;
+    
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)

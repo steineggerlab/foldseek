@@ -23,6 +23,7 @@ set(strucclustutils_source_files
         strucclustutils/createstructsubdb.cpp
         strucclustutils/createinterfacedb.cpp
         strucclustutils/createinterfacedbs.cpp
+        strucclustutils/filterdimerdb.cpp
         PARENT_SCOPE
         )
 

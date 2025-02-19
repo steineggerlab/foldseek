@@ -71,22 +71,33 @@ if [ -e "${IN}.dbtype" ]; then
         || fail "createsubdb died"
 
     rm -- "${TMP_PATH}/out.lookup" "${TMP_PATH}/out.source"
-    mv "${TMP_PATH}/reallookup" "${OUT}.lookup"
-    mv "${TMP_PATH}/realsource" "${OUT}.source"
+    mv "${TMP_PATH}/reallookup" "${TMP_PATH}/dimerdb.lookup"
+    mv "${TMP_PATH}/realsource" "${TMP_PATH}/dimerdb.source"
 
-    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_h.index" "${TMP_PATH}/realIdx_originalIdx" > "${OUT}_h.index"
-    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out.index" "${TMP_PATH}/realIdx_originalIdx" > "${OUT}.index"
-    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_ss.index" "${TMP_PATH}/realIdx_originalIdx" > "${OUT}_ss.index"
-    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_ca.index" "${TMP_PATH}/realIdx_originalIdx" > "${OUT}_ca.index"
+    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_h.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb_h.index"
+    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb.index"
+    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_ss.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb_ss.index"
+    awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_ca.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb_ca.index"
 
-    mv "${TMP_PATH}/out_h" "${OUT}_h"
-    mv "${TMP_PATH}/out" "${OUT}"
-    mv "${TMP_PATH}/out_ss" "${OUT}_ss"
-    mv "${TMP_PATH}/out_ca" "${OUT}_ca"
-    mv "${TMP_PATH}/out_h.dbtype" "${OUT}_h.dbtype"
-    mv "${TMP_PATH}/out.dbtype" "${OUT}.dbtype"
-    mv "${TMP_PATH}/out_ss.dbtype" "${OUT}_ss.dbtype"
-    mv "${TMP_PATH}/out_ca.dbtype" "${OUT}_ca.dbtype"
+    mv "${TMP_PATH}/out_h" "${TMP_PATH}/dimerdb_h"
+    mv "${TMP_PATH}/out" "${TMP_PATH}/dimerdb"
+    mv "${TMP_PATH}/out_ss" "${TMP_PATH}/dimerdb_ss"
+    mv "${TMP_PATH}/out_ca" "${TMP_PATH}/dimerdb_ca"
+    mv "${TMP_PATH}/out_h.dbtype" "${TMP_PATH}/dimerdb_h.dbtype"
+    mv "${TMP_PATH}/out.dbtype" "${TMP_PATH}/dimerdb.dbtype"
+    mv "${TMP_PATH}/out_ss.dbtype" "${TMP_PATH}/dimerdb_ss.dbtype"
+    mv "${TMP_PATH}/out_ca.dbtype" "${TMP_PATH}/dimerdb_ca.dbtype"
+    # shellcheck disable=SC2086
+    "$MMSEQS" filterdimerdb "${TMP_PATH}/dimerdb" "${TMP_PATH}/contactlist" ${FILTERDIMERDB_PAR} \
+        || fail "filterdimerdb died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" createsubdb "${TMP_PATH}/contactlist.index" "${TMP_PATH}/dimerdb" "${OUT}" --subdb-mode 0 ${VERBOSITY_PAR} \
+        || fail "createsubdb died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" mvdb "${TMP_PATH}/dimerdb_h" "${OUT}_h"
+    mv "${TMP_PATH}/dimerdb.lookup" "${OUT}.lookup"
+    mv "${TMP_PATH}/dimerdb.source" "${OUT}.source"
+
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
@@ -97,4 +108,15 @@ if [ -n "${REMOVE_TMP}" ]; then
     rm "${TMP_PATH}/out_h.index"
     rm "${TMP_PATH}/out.index"
     rm "${TMP_PATH}/out_ss.index"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/dimerdb"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/dimerdb_h"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/dimerdb_ca"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/dimerdb_ss"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/contactlist"
+    rm -- "${TMP_PATH}/sublookup"
 fi

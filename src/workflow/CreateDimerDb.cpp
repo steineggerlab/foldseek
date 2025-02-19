@@ -33,6 +33,7 @@ int createdimerdb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("IN", par.filenames.back().c_str());
     par.filenames.pop_back();
 
+    cmd.addVariable("FILTERDIMERDB_PAR", par.createParameterString(par.filterdimerdb).c_str());
     cmd.addVariable("CREATEDIMERDB_PAR", par.createParameterString(par.createdimerdb).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
