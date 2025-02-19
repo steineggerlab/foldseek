@@ -111,11 +111,28 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
             float distanceThreshold = 10;
             std::vector<size_t> resIdx1, resIdx2;
             const double squareThreshold = distanceThreshold * distanceThreshold;
-            #pragma omp critical
-            {
-                findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
-                findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
+            PulchraWrapper pulchra;
+            std::vector<Vec3> caB, nB, cB;
+            std::vector<char> amiB;
+            amiB.resize(qChainLen + tChainLen);
+            caB.resize(qChainLen + tChainLen);
+            nB.resize(qChainLen + tChainLen);
+            cB.resize(qChainLen + tChainLen);
+            for (size_t i = 0; i < qChainLen; i++) {
+                caB[i] = Vec3(qdata[i], qdata[i + qChainLen], qdata[i + qChainLen * 2]);
+                nB[i] = Vec3(0,0,0);
+                cB[i] = Vec3(0,0,0);
+                amiB[i] = qaaadata[i];
             }
+            for (size_t i = 0; i < tChainLen; i++) {
+                caB[qChainLen + i] = Vec3(tdata[i], tdata[i + tChainLen], tdata[i+ tChainLen * 2]);
+                nB[qChainLen + i] = Vec3(0,0,0);
+                cB[qChainLen + i] = Vec3(0,0,0);
+                amiB[qChainLen + i] = taaadata[i];
+            }
+            pulchra.rebuildBackbone(&caB[0], &nB[0], &cB[0], &amiB[0], qChainLen + tChainLen);
+            findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
+            findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
             if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
                 StructureTo3Di structureTo3Di;
                 std::vector<Vec3> ca, n, c, cb;
@@ -123,32 +140,26 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
                 std::vector<char> alphabet3di1, alphabet3di2;
                 std::vector<char> alphabetAA1, alphabetAA2;
                 SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
-                PulchraWrapper pulchra;
                 ami.resize(resIdx1.size() + resIdx2.size());
                 ca.resize(resIdx1.size() + resIdx2.size());
                 n.resize(resIdx1.size() + resIdx2.size());
                 c.resize(resIdx1.size() + resIdx2.size());
                 cb.resize(resIdx1.size() + resIdx2.size());
                 for (size_t i = 0; i < resIdx1.size(); i++) {
-                    ca[i] = Vec3(qdata[resIdx1[i]], qdata[resIdx1[i] + qChainLen], qdata[resIdx1[i] + qChainLen * 2]);
-                    n[i] = Vec3(0,0,0);
-                    c[i] = Vec3(0,0,0);
+                    ca[i] = caB[resIdx1[i]];
+                    n[i] = nB[resIdx1[i]];
+                    c[i] = cB[resIdx1[i]];
                     cb[i] = Vec3(0,0,0);
-                    ami[i] = qaaadata[resIdx1[i]];
+                    ami[i] = amiB[resIdx1[i]];
                 }
                 for (size_t i = 0; i < resIdx2.size(); i++) {
-                    ca[resIdx1.size() + i] = Vec3(tdata[resIdx2[i]], tdata[resIdx2[i] + tChainLen], tdata[resIdx2[i] + tChainLen * 2]);
-                    n[resIdx1.size() + i] = Vec3(0,0,0);
-                    c[resIdx1.size() + i] = Vec3(0,0,0);
+                    ca[resIdx1.size() + i] = caB[qChainLen + resIdx2[i]];
+                    n[resIdx1.size() + i] = nB[qChainLen + resIdx2[i]];
+                    c[resIdx1.size() + i] = cB[qChainLen + resIdx2[i]];
                     cb[resIdx1.size() + i] = Vec3(0,0,0);
-                    ami[resIdx1.size() + i] = taaadata[resIdx2[i]];
+                    ami[resIdx1.size() + i] = amiB[qChainLen + resIdx2[i]];
                 }
 
-                pulchra.rebuildBackbone(&ca[0],
-                                        &n[0],
-                                        &c[0],
-                                        &ami[0],
-                                        resIdx1.size() + resIdx2.size());
                 char *states = structureTo3Di.structure2states(&ca[0],
                                                                     &n[0],
                                                                     &c[0],
