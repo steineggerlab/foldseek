@@ -262,6 +262,7 @@ LocalParameters::LocalParameters() :
 
     createdimerdb.push_back(&PARAM_V);
     createdimerdb.push_back(&PARAM_THREADS);
+    createdimerdb.push_back(&PARAM_REMOVE_TMP_FILES);
     
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);

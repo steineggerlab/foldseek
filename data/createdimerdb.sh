@@ -8,6 +8,14 @@
 # get dimer's original chainid and name in ${OUT}.lookuptmp
 
 if [ -e "${IN}.dbtype" ]; then
+    awk 'FNR==NR{
+        name[$1]=1; next
+    } {
+        if ($1 in name) {
+            print $0
+        }
+    }' "${IN}.index" "${IN}.lookup" > "${TMP_PATH}/sublookup"
+
     awk -v firstout="${TMP_PATH}/lookuptmp" 'BEGIN {prev = -1; mon = 0; idx = -1; names = -1} {
         if(!($3 == prev)) {
             if (mon > 1) {
@@ -44,7 +52,7 @@ if [ -e "${IN}.dbtype" ]; then
             }
             print words[mon]
         }
-    }' "${IN}.lookup" > "${TMP_PATH}/chainidxlist"
+    }' "${TMP_PATH}/sublookup" > "${TMP_PATH}/chainidxlist"
 
     awk -v secondout="${TMP_PATH}/reallookup" '{
         print NR-1"\t"$2"\t"int((NR-1)/2) >> secondout
