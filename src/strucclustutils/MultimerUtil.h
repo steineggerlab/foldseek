@@ -283,7 +283,7 @@ static void findInterface(std::vector<size_t> & resIdx, double squareThreshold, 
         yesSameRes = false;
         for (unsigned int tRes = 0; tRes < tChainLen; tRes ++) {
             // float distance = MathUtil::squareDist(qdata1[qRes], qdata1[qChainLen + qRes], qdata1[qChainLen * 2 + qRes], tdata1[tRes], tdata1[tChainLen + tRes], tdata1[tChainLen * 2 + tRes]);
-            double distance = (qdata1[qRes] - tdata1[tRes]) * (qdata1[qRes] - tdata1[tRes]) + (qdata1[qChainLen + qRes] + tdata1[tChainLen + tRes]) * (qdata1[qChainLen + qRes] + tdata1[tChainLen + tRes]) + (qdata1[qChainLen * 2 + qRes] + tdata1[tChainLen * 2 + tRes]) * (qdata1[qChainLen * 2 + qRes] + tdata1[tChainLen * 2 + tRes]);
+            double distance = (qdata1[qRes] - tdata1[tRes]) * (qdata1[qRes] - tdata1[tRes]) + (qdata1[qChainLen + qRes] - tdata1[tChainLen + tRes]) * (qdata1[qChainLen + qRes] - tdata1[tChainLen + tRes]) + (qdata1[qChainLen * 2 + qRes] - tdata1[tChainLen * 2 + tRes]) * (qdata1[qChainLen * 2 + qRes] - tdata1[tChainLen * 2 + tRes]);
             if (distance < 0.01) {
                 yesSameRes = true;
                 sameRes++;

@@ -119,8 +119,8 @@ public:
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
+    std::vector<MMseqsParameter *> createSomeinterfacedb;
     std::vector<MMseqsParameter *> createinterfacedb;
-    std::vector<MMseqsParameter *> createinterfacedbs;
     std::vector<MMseqsParameter *> createdimerdb;
     std::vector<MMseqsParameter *> filterdimerdb;
     
