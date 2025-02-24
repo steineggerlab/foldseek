@@ -72,7 +72,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
             
             float distanceThreshold = 10;
             std::vector<size_t> resIdx1, resIdx2;
-            const double squareThreshold = distanceThreshold * distanceThreshold;
+            const float squareThreshold = distanceThreshold * distanceThreshold;
             findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
             findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
             if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {  

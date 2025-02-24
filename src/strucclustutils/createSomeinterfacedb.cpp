@@ -77,11 +77,11 @@ int createSomeinterfacedb(int argc, const char **argv, const Command &command) {
             char *tcadata = qStructDbr.getData(tChainDbId, thread_idx);
             size_t tCaLength = qStructDbr.getEntryLen(tChainDbId);
             size_t tChainLen = qDbr.getSeqLen(tChainDbId);
-            float* tdata = qcoords.read(tcadata, tChainLen, tCaLength);
+            float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
             
             float distanceThreshold = 10;
             std::vector<size_t> resIdx1, resIdx2;
-            const double squareThreshold = distanceThreshold * distanceThreshold;
+            const float squareThreshold = distanceThreshold * distanceThreshold;
             PulchraWrapper pulchra;
             std::vector<Vec3> caB, nB, cB;
             std::vector<char> amiB;
@@ -105,7 +105,6 @@ int createSomeinterfacedb(int argc, const char **argv, const Command &command) {
             findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
             findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
             if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
-                // std::cout<<qChainKey<<"\t"<<tChainKey<<std::endl;
                 StructureTo3Di structureTo3Di;
                 std::vector<Vec3> ca, n, c, cb;
                 std::vector<char> ami;
