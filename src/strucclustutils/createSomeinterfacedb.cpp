@@ -105,6 +105,7 @@ int createSomeinterfacedb(int argc, const char **argv, const Command &command) {
             findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
             findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
             if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
+                // std::cout<<qChainKey<<"\t"<<tChainKey<<std::endl;
                 StructureTo3Di structureTo3Di;
                 std::vector<Vec3> ca, n, c, cb;
                 std::vector<char> ami;
@@ -186,22 +187,11 @@ int createSomeinterfacedb(int argc, const char **argv, const Command &command) {
                 } else {
                     cadbw.writeData(data2, resIdx2.size() * 3 * sizeof(float), tChainKey, thread_idx);
                 }
-                alphabet3di1.clear();
-                alphabet3di2.clear();
-                alphabetAA1.clear();
-                alphabetAA2.clear();
-                ami.clear();
-                ca.clear();
-                c.clear();
-                cb.clear();
-                n.clear();
             }
             ca1.clear();
             ca2.clear();
             camol1.clear();
             camol2.clear();
-            resIdx1.clear();
-            resIdx2.clear();
         }
     }
     ssdbw.close(true);

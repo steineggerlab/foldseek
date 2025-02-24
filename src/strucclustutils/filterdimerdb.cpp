@@ -76,9 +76,14 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
             findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
             findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
             if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {  
+                // std::cout<<qChainKey<<"\t"<<tChainKey<<std::endl;
                 resultWriter.writeData("0\n", 2, qChainKey, thread_idx);
                 resultWriter.writeData("0\n", 2, tChainKey, thread_idx);
             }
+            camol1.clear();
+            camol2.clear();
+            ca1.clear();
+            ca2.clear();
         }
     }
     resultWriter.close(true);
