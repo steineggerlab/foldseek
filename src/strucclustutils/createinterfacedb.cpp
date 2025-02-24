@@ -16,7 +16,7 @@ int createinterfacedb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("OUT", par.filenames.back().c_str());
     par.filenames.pop_back();
     cmd.addVariable("IN", par.filenames.back().c_str());
-    cmd.addVariable("CREATESOMEINTERFACEDB_PAR", par.createParameterString(par.createSomeinterfacedb).c_str());
+    cmd.addVariable("CREATESTRUCTINTERFACEDB_PAR", par.createParameterString(par.createStructinterfacedb).c_str());
     cmd.execProgram(FileUtil::getRealPathFromSymLink(program).c_str(), par.filenames);
 
     // Should never get here

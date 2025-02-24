@@ -20,7 +20,7 @@
 #endif
 
 //one dimer db as an input, one interface db as an output
-int createSomeinterfacedb(int argc, const char **argv, const Command &command) {
+int createStructinterfacedb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
     DBReader<unsigned int> qDbr((par.db1).c_str(), (par.db1 + ".index").c_str(), 

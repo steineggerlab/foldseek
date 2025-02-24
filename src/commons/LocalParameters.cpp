@@ -259,9 +259,9 @@ LocalParameters::LocalParameters() :
     createinterfacedb.push_back(&PARAM_THREADS);
     createinterfacedb.push_back(&PARAM_PRELOAD_MODE);
 
-    createSomeinterfacedb.push_back(&PARAM_V);
-    createSomeinterfacedb.push_back(&PARAM_THREADS);
-    createSomeinterfacedb.push_back(&PARAM_PRELOAD_MODE);
+    createStructinterfacedb.push_back(&PARAM_V);
+    createStructinterfacedb.push_back(&PARAM_THREADS);
+    createStructinterfacedb.push_back(&PARAM_PRELOAD_MODE);
 
     createdimerdb.push_back(&PARAM_V);
     createdimerdb.push_back(&PARAM_THREADS);

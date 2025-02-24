@@ -68,7 +68,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
             char *tcadata = qStructDbr.getData(tChainDbId, thread_idx);
             size_t tCaLength = qStructDbr.getEntryLen(tChainDbId);
             size_t tChainLen = qDbr.getSeqLen(tChainDbId);
-            float* tdata = qcoords.read(tcadata, tChainLen, tCaLength);
+            float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
             
             float distanceThreshold = 10;
             std::vector<size_t> resIdx1, resIdx2;
@@ -76,7 +76,6 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
             findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
             findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
             if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {  
-                // std::cout<<qChainKey<<"\t"<<tChainKey<<std::endl;
                 resultWriter.writeData("0\n", 2, qChainKey, thread_idx);
                 resultWriter.writeData("0\n", 2, tChainKey, thread_idx);
             }
