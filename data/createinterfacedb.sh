@@ -21,8 +21,8 @@ if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" lndb "${IN}_h" "${OUT}_h" \
         || fail "lndb died"
-    ln -s "$(abspath "${IN}.lookup")" "${OUT}.lookup"
-    ln -s "$(abspath "${IN}.source")" "${OUT}.source"
+    ln -sf "$(abspath "${IN}.lookup")" "${OUT}.lookup"
+    ln -sf "$(abspath "${IN}.source")" "${OUT}.source"
 fi
 
 if [ -e "${OUT}.sh" ]; then
