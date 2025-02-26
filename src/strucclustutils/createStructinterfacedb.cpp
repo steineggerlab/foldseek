@@ -91,14 +91,14 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
             cB.resize(qChainLen + tChainLen);
             for (size_t i = 0; i < qChainLen; i++) {
                 caB[i] = Vec3(qdata[i], qdata[i + qChainLen], qdata[i + qChainLen * 2]);
-                nB[i] = Vec3(0,0,0);
-                cB[i] = Vec3(0,0,0);
+                nB[i] = Vec3(NAN,NAN,NAN);
+                cB[i] = Vec3(NAN,NAN,NAN);
                 amiB[i] = qaaadata[i];
             }
             for (size_t i = 0; i < tChainLen; i++) {
                 caB[qChainLen + i] = Vec3(tdata[i], tdata[i + tChainLen], tdata[i+ tChainLen * 2]);
-                nB[qChainLen + i] = Vec3(0,0,0);
-                cB[qChainLen + i] = Vec3(0,0,0);
+                nB[qChainLen + i] = Vec3(NAN,NAN,NAN);
+                cB[qChainLen + i] = Vec3(NAN,NAN,NAN);
                 amiB[qChainLen + i] = taaadata[i];
             }
             pulchra.rebuildBackbone(&caB[0], &nB[0], &cB[0], &amiB[0], qChainLen + tChainLen);
@@ -120,14 +120,14 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                     ca[i] = caB[resIdx1[i]];
                     n[i] = nB[resIdx1[i]];
                     c[i] = cB[resIdx1[i]];
-                    cb[i] = Vec3(0,0,0);
+                    cb[i] = Vec3(NAN,NAN,NAN);
                     ami[i] = amiB[resIdx1[i]];
                 }
                 for (size_t i = 0; i < resIdx2.size(); i++) {
                     ca[resIdx1.size() + i] = caB[qChainLen + resIdx2[i]];
                     n[resIdx1.size() + i] = nB[qChainLen + resIdx2[i]];
                     c[resIdx1.size() + i] = cB[qChainLen + resIdx2[i]];
-                    cb[resIdx1.size() + i] = Vec3(0,0,0);
+                    cb[resIdx1.size() + i] = Vec3(NAN,NAN,NAN);
                     ami[resIdx1.size() + i] = amiB[qChainLen + resIdx2[i]];
                 }
 
@@ -140,10 +140,10 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                 alphabetAA1.resize(resIdx1.size() + 1);
                 alphabet3di2.resize(resIdx2.size() + 1);                               
                 alphabetAA2.resize(resIdx2.size() + 1);                             
-                ca1.resize(3 * resIdx1.size());                          
-                ca2.resize(3 * resIdx2.size());
-                camol1.resize((resIdx1.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
-                camol2.resize((resIdx2.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float));
+                ca1.resize(3 * resIdx1.size() * sizeof(float));                          
+                ca2.resize(3 * resIdx2.size() * sizeof(float));
+                camol1.resize((resIdx1.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t));
+                camol2.resize((resIdx2.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t));
                 int16_t* camol1f16 = reinterpret_cast<int16_t*>(camol1.data());
                 int16_t* camol2f16 = reinterpret_cast<int16_t*>(camol2.data());
                 for (size_t pos = 0; pos < resIdx1.size(); pos++) {
@@ -173,15 +173,15 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                 char *data1 = reinterpret_cast<char*>(ca1.data());
                 char *data2 = reinterpret_cast<char*>(ca2.data());
                 if (!Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1), camol1f16, 1)
-                        && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + resIdx1.size(), camol1f16 + resIdx1.size(), 1)
-                        && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + 2 * resIdx1.size(), camol1f16 + 2 * resIdx1.size(), 1)) {
+                        && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + resIdx1.size(), camol1f16 + 1 * (resIdx1.size() + 1), 1)
+                        && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + 2 * resIdx1.size(), camol1f16 + 2 * (resIdx1.size() + 1), 1)) {
                     cadbw.writeData((const char*)camol1.data(), (resIdx1.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), qChainKey, thread_idx);
                 } else {
                     cadbw.writeData(data1, resIdx1.size() * 3 * sizeof(float), qChainKey, thread_idx);
                 }
                 if (!Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2), camol2f16, 1)
-                        && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + resIdx2.size(), camol2f16 + resIdx2.size(), 1)
-                        && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + 2 * resIdx2.size(), camol2f16 + 2 * resIdx2.size(), 1)) {
+                        && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + resIdx2.size(), camol2f16 + 1 * (resIdx2.size() + 1), 1)
+                        && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + 2 * resIdx2.size(), camol2f16 + 2 * (resIdx2.size() + 1), 1)) {
                     cadbw.writeData((const char*)camol2.data(), (resIdx2.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), tChainKey, thread_idx);
                 } else {
                     cadbw.writeData(data2, resIdx2.size() * 3 * sizeof(float), tChainKey, thread_idx);
