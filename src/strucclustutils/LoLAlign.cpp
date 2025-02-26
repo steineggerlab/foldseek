@@ -8,6 +8,7 @@
 #include <cmath>
 #include <vector>
 #include <fstream>
+#include <omp.h> 
 #include "LoLAlign.h"
 #include "Fwbw.h"
 #include "Debug.h"
