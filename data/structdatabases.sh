@@ -196,7 +196,7 @@ case "${SELECTION}" in
         INPUT_TYPE="FOLDSEEK_DB"
     ;;
     "TED50")
-        if notExists "${TMP_PATH}/teddb.tar.gz"; then
+        if notExists "${TMP_PATH}/teddb_afdb50.tar.gz"; then
             downloadFile "https://foldseek.steineggerlab.workers.dev/teddb_afdb50.tar.gz" "${TMP_PATH}/teddb_afdb50.tar.gz"
             downloadFile "https://foldseek.steineggerlab.workers.dev/teddb_afdb50.version" "${TMP_PATH}/version"
         fi
