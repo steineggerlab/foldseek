@@ -534,5 +534,21 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "https://huggingface.co/Rostlab/ProstT5",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
+        },
+        {
+                "TED",
+                "The Encyclopedia of Domains across the whole AlphaFold Database.",
+                "Lau, Andy M. et al. Exploring structural diversity across the protein universe with the Encyclopedia of Domains. Science, eadq4946 (2024)",
+                "https://ted.cathdb.info",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {       
+                "TED50",
+                "The Encyclopedia of Domains across AFDB50, a clustered AlphaFold Database with MMseqs2 at 50% sequence identity and 90% bidrectional coverage.",
+                "Lau, Andy M. et al. Exploring structural diversity across the protein universe with the Encyclopedia of Domains. Science, eadq4946 (2024)",
+                "https://ted.cathdb.info",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
         }
 };

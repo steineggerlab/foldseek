@@ -185,6 +185,24 @@ case "${SELECTION}" in
         tar xvfz "${TMP_PATH}/bfvd.tar.gz" -C "${TMP_PATH}"
         push_back "${TMP_PATH}/bfvd"
         INPUT_TYPE="FOLDSEEK_DB"
+    ;;
+    "TED")
+        if notExists "${TMP_PATH}/teddb.tar.gz"; then
+            downloadFile "https://foldseek.steineggerlab.workers/teddb.tar.gz" "${TMP_PATH}/teddb.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers/teddb.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/teddb.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/teddb"
+        INPUT_TYPE="FOLDSEEK_DB"
+    ;;
+    "TED50")
+        if notExists "${TMP_PATH}/teddb.tar.gz"; then
+            downloadFile "https://foldseek.steineggerlab.workers/teddb_afdb50.tar.gz" "${TMP_PATH}/teddb_afdb50.tar.gz"
+            downloadFile "https://foldseek.steineggerlab.workers/teddb_afdb50.version" "${TMP_PATH}/version"
+        fi
+        tar xvfz "${TMP_PATH}/teddb_afdb50.tar.gz" -C "${TMP_PATH}"
+        push_back "${TMP_PATH}/teddb_afdb50"
+        INPUT_TYPE="FOLDSEEK_DB"
 esac
 
 if notExists "${OUTDB}.dbtype"; then
