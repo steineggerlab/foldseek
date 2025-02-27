@@ -7,6 +7,10 @@
 # get list of each chain's id of multimers in chainidxlist (remove monomer chainids)
 # get dimer's original chainid and name in ${OUT}.lookuptmp
 
+exists() {
+	[ -f "$1" ]
+}
+
 if [ -e "${IN}.dbtype" ]; then
     awk 'FNR==NR{
         name[$1]=1; next
@@ -65,7 +69,13 @@ if [ -e "${IN}.dbtype" ]; then
     "$MMSEQS" createsubdb "${TMP_PATH}/chainidxlist" "${IN}" "${TMP_PATH}/out" --subdb-mode 0 ${VERBOSITY_PAR} \
         || fail "createsubdb died"
 
-    rm -- "${TMP_PATH}/out_h" "${TMP_PATH}/out_h.dbtype" "${TMP_PATH}/out_h.index"
+    if exists "${TMP_PATH}/out.lookup" ; then
+        rm -- "${TMP_PATH}/out.lookup"
+    fi
+    if exists "${TMP_PATH}/out.source" ; then
+        rm -- "${TMP_PATH}/out.source"
+    fi
+    
     # shellcheck disable=SC2086
     "$MMSEQS" base:createsubdb "${TMP_PATH}/chainidxlist" "${IN}_h" "${TMP_PATH}/out_h" --subdb-mode 0 ${VERBOSITY_PAR} \
         || fail "createsubdb died"
