@@ -79,8 +79,6 @@ if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" base:createsubdb "${TMP_PATH}/chainidxlist" "${IN}_h" "${TMP_PATH}/out_h" --subdb-mode 0 ${VERBOSITY_PAR} \
         || fail "createsubdb died"
-
-    rm -- "${TMP_PATH}/out.lookup" "${TMP_PATH}/out.source"
     mv "${TMP_PATH}/reallookup" "${TMP_PATH}/dimerdb.lookup"
     mv "${TMP_PATH}/realsource" "${TMP_PATH}/dimerdb.source"
 
