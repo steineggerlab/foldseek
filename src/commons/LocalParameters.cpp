@@ -256,13 +256,13 @@ LocalParameters::LocalParameters() :
     structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
     structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
     structureclusterworkflow = combineList(structureclusterworkflow, clust);
-    structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
     structureclusterworkflow.push_back(&PARAM_CASCADED);
     structureclusterworkflow.push_back(&PARAM_CLUSTER_STEPS);
     structureclusterworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
     structureclusterworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structureclusterworkflow.push_back(&PARAM_REUSELATEST);
     structureclusterworkflow.push_back(&PARAM_RUNNER);
+    structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
 
     easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
     easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);
