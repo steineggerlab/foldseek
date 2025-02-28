@@ -36,7 +36,7 @@ LocalParameters::LocalParameters() :
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
         PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
         PARAM_INT_EXTRACTION_MODE(PARAM_INT_EXTRACTION_MODE_ID, "--int-extraction-mode", "Interface extraction mode", "Interface extraction mode: 0: CB 1: CA", typeid(int), (void *) &intExtractionMode, "^[0-1]{1}$"),
-	    PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-beta below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
+	    PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-alpha below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
@@ -207,10 +207,6 @@ LocalParameters::LocalParameters() :
     filtermultimer.push_back(&PARAM_THREADS);
     filtermultimer.push_back(&PARAM_V);
 
-    //filterdimerdb
-    filterdimerdb.push_back(&PARAM_THREADS);
-    filterdimerdb.push_back(&PARAM_V);
-
     //makepaddeddb
     makepaddeddb.push_back(&PARAM_SUB_MAT);
     makepaddeddb.push_back(&PARAM_SCORE_BIAS);
@@ -250,22 +246,34 @@ LocalParameters::LocalParameters() :
     result2structprofile.push_back(&PARAM_COMPRESSED);
     result2structprofile.push_back(&PARAM_V);
     result2structprofile.push_back(&PARAM_PROFILE_OUTPUT_MODE);
+
     //createstructsubdb
     createstructsubdb.push_back(&PARAM_SUBDB_MODE);
     createstructsubdb.push_back(&PARAM_ID_MODE);
     createstructsubdb.push_back(&PARAM_V);
 
+    //createinterfacedb
     createinterfacedb.push_back(&PARAM_V);
     createinterfacedb.push_back(&PARAM_THREADS);
     createinterfacedb.push_back(&PARAM_PRELOAD_MODE);
+    createinterfacedb.push_back(&PARAM_DISTANCE_THRESHOLD);
 
+    //createStructinterfacedb
     createStructinterfacedb.push_back(&PARAM_V);
     createStructinterfacedb.push_back(&PARAM_THREADS);
     createStructinterfacedb.push_back(&PARAM_PRELOAD_MODE);
+    createStructinterfacedb.push_back(&PARAM_DISTANCE_THRESHOLD);
 
-    createdimerdb.push_back(&PARAM_V);
-    createdimerdb.push_back(&PARAM_THREADS);
-    createdimerdb.push_back(&PARAM_REMOVE_TMP_FILES);
+    //filterdimerdb
+    filterdimerdb.push_back(&PARAM_THREADS);
+    filterdimerdb.push_back(&PARAM_V);
+    filterdimerdb.push_back(&PARAM_DISTANCE_THRESHOLD);
+
+    //createdimerdbworkflow
+    createdimerdbworkflow.push_back(&PARAM_THREADS);
+    createdimerdbworkflow.push_back(&PARAM_V);
+    createdimerdbworkflow.push_back(&PARAM_DISTANCE_THRESHOLD);
+    createdimerdbworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
@@ -346,7 +354,7 @@ LocalParameters::LocalParameters() :
     multimerReportMode = 1;
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
     intExtractionMode = INT_EXTRACT_MODE_CB;
-    distanceThreshold = 8.0;
+    distanceThreshold = 10.0;
     filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;
     filtInterfaceLddtThr = 0.0;

@@ -74,7 +74,7 @@ std::vector<Command> foldseekCommands = {
                 "<i:DB> <o:DB>",
                 CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
-        {"createdimerdb",          createdimerdb,          &localPar.createdimerdb,          COMMAND_SET,
+        {"createdimerdb",          createdimerdb,          &localPar.createdimerdbworkflow,          COMMAND_SET,
                 "Create a dimer DB of a DB",
                 "foldseek createdimerdb db db_dimer\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",

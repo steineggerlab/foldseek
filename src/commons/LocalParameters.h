@@ -121,7 +121,7 @@ public:
     std::vector<MMseqsParameter *> createstructsubdb;
     std::vector<MMseqsParameter *> createStructinterfacedb;
     std::vector<MMseqsParameter *> createinterfacedb;
-    std::vector<MMseqsParameter *> createdimerdb;
+    std::vector<MMseqsParameter *> createdimerdbworkflow;
     std::vector<MMseqsParameter *> filterdimerdb;
     
     PARAMETER(PARAM_TMSCORE_THRESHOLD)

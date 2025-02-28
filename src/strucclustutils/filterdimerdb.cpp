@@ -70,7 +70,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
             size_t tChainLen = qDbr.getSeqLen(tChainDbId);
             float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
             
-            float distanceThreshold = 10;
+            float distanceThreshold = par.distanceThreshold;
             std::vector<size_t> resIdx1, resIdx2;
             const float squareThreshold = distanceThreshold * distanceThreshold;
             findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
