@@ -514,7 +514,7 @@ std::vector<DatabaseDownload> externalDownloads = {
         {
                 "BFMD",
                 "BFMD Big fantastic multimer database (combined multimers from large prediction projects).",
-                "Kim W et al. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv (2024)",
+                "Kim W et al. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. Nature Methods, (2025)",
                 "https://foldseek.steineggerlab.workers.dev/bfmd.version",
                 true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
@@ -533,6 +533,22 @@ std::vector<DatabaseDownload> externalDownloads = {
                 "Heinzinger et al. Bilingual language model for protein sequence and structure. NAR Genomics and Bioinformatics, lqae150 (2024)",
                 "https://huggingface.co/Rostlab/ProstT5",
                 false, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {
+                "TED",
+                "The Encyclopedia of Domains across the whole AlphaFold Database.",
+                "Lau, Andy M. et al. Exploring structural diversity across the protein universe with the Encyclopedia of Domains. Science, eadq4946 (2024)",
+                "https://ted.cathdb.info",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
+                {}
+        },
+        {       
+                "TED50",
+                "The Encyclopedia of Domains across AFDB50, a clustered AlphaFold Database with MMseqs2 at 50% sequence identity and 90% bidrectional coverage.",
+                "Lau, Andy M. et al. Exploring structural diversity across the protein universe with the Encyclopedia of Domains. Science, eadq4946 (2024)",
+                "https://ted.cathdb.info",
+                true, Parameters::DBTYPE_AMINO_ACIDS, structdatabases_sh, structdatabases_sh_len,
                 {}
         }
 };
