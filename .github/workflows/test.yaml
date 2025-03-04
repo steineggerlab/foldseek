@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - master
-      - staging
-      - trying
   pull_request:
     branches:
       - 'master'
@@ -30,6 +28,38 @@ jobs:
       os: windows-2019
       rust: 1.46.0
 
+  test_legacy_stable:
+    name: Legacy CMake + stable Rust
+    uses: ./.github/workflows/test_legacy.yaml
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2019 # windows-latest is currently not having a supported MSVC compiler
+          - ubuntu-20.04
+          - macos-12
+    with:
+      os: ${{ matrix.os }}
+      rust: stable
+
+  test_legacy_nightly:
+    name: Legacy CMake + nightly Rust
+    uses: ./.github/workflows/test_legacy.yaml
+    with:
+      os: ubuntu-20.04
+      rust: nightly
+
+  test_legacy_new_lockfile_msrv:
+    name: Test MSRV of the new lockfile
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@1.56
+      - name: Test Generator build with MSRV
+        run: cargo build
+        working-directory: generator
 
   test:
     name: Test Corrosion
@@ -134,7 +164,7 @@ jobs:
             abi: gnu
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
         with:
@@ -174,13 +204,13 @@ jobs:
             cmake: 3.21.5 # VS on windows-2022 requires at least CMake 3.21
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # The initial configure for MSVC is quite slow, so we cache the build directory
       # (including the build directories of the tests) since reconfiguring is
       # significantly faster.
       - name: Cache MSVC build directory
         id: cache-msvc-builddir
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: build
           key: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.rust }}-msvc-build
@@ -213,8 +243,8 @@ jobs:
         #  - os: windows-2019
         #    abi: gnu
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         id: cache_cxxbridge
         with:
           path: "~/.cargo/bin/cxxbridge*"
@@ -253,15 +283,15 @@ jobs:
           - os: macos-12
             rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup MSVC Development Environment
         uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Install CMake
-        uses: corrosion-rs/install-cmake@v2
+        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
         with:
-          cmake: 3.18.0
-          ninja: 1.10.0
+          cmakeVersion: "~3.18.0"
+          ninjaVersion: "~1.10.0"
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
@@ -307,6 +337,8 @@ jobs:
       - test_legacy_linux
       - test_legacy_mac
       - test_legacy_windows
+      - test_legacy_stable
+      - test_legacy_new_lockfile_msrv
       - test
       - test_msvc
       - test_cxxbridge
