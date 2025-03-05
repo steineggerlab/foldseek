@@ -34,8 +34,6 @@ LocalParameters::LocalParameters() :
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
-        PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
-        PARAM_INT_EXTRACTION_MODE(PARAM_INT_EXTRACTION_MODE_ID, "--int-extraction-mode", "Interface extraction mode", "Interface extraction mode: 0: CB 1: CA", typeid(int), (void *) &intExtractionMode, "^[0-1]{1}$"),
 	    PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-alpha below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
@@ -87,8 +85,6 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_GPU);
     structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
-    structurecreatedb.push_back(&PARAM_DB_EXTRACTION_MODE);
-    structurecreatedb.push_back(&PARAM_INT_EXTRACTION_MODE);
     structurecreatedb.push_back(&PARAM_DISTANCE_THRESHOLD);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
@@ -352,8 +348,6 @@ LocalParameters::LocalParameters() :
     // multimer
     eValueThrExpandMultimer = 10000.0;
     multimerReportMode = 1;
-    dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
-    intExtractionMode = INT_EXTRACT_MODE_CB;
     distanceThreshold = 10.0;
     filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;

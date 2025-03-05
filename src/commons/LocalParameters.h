@@ -66,9 +66,6 @@ public:
     static const int OUTFMT_COMPLEX_U = 56;
     static const int OUTFMT_COMPLEX_T = 57;
 
-    static const int DB_EXTRACT_MODE_CHAIN = 0;
-    static const int DB_EXTRACT_MODE_INTERFACE = 1;
-
     static const int INT_EXTRACT_MODE_CB = 0;
     static const int INT_EXTRACT_MODE_CA = 1;
 
@@ -150,8 +147,6 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
-    PARAMETER(PARAM_DB_EXTRACTION_MODE)
-    PARAMETER(PARAM_INT_EXTRACTION_MODE)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
@@ -184,8 +179,6 @@ public:
     float filtChainTmThr;
     float filtInterfaceLddtThr;
     std::string prostt5Model;
-    int dbExtractionMode;
-    int intExtractionMode;
     float distanceThreshold;
     int prostt5SplitLength;
 
