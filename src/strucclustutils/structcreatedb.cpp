@@ -410,7 +410,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             else {
                 header.append(Util::remove_extension(readStructure.names[ch]));
             } 
-            if (readStructure.modelCount > 1) {
+            if (readStructure.modelCount > 1 || par.modelNameMode == LocalParameters::MODEL_MODE_ADD) {
                 header.append("_MODEL_");
                 header.append(SSTR(readStructure.modelIndices[ch]));
             }
@@ -1333,9 +1333,17 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
-            std::string entryNameWithModel = Util::parseFastaHeader(header);
-            entry.entryName = entryNameWithModel;
-            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameWithModel];
+            std::string entryNameRaw = Util::parseFastaHeader(header);
+            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameRaw];
+
+            if(par.modelNameMode == LocalParameters::MODEL_MODE_ADD) {
+                size_t modelIndex = entryNameRaw.find("MODEL");
+                if (modelIndex == std::string::npos) {
+                    entryNameRaw.append("_MODEL_");
+                    entryNameRaw.append(SSTR(fileIdModelEntry.second));
+                }
+            }
+            entry.entryName = entryNameRaw;
             size_t fileId = fileIdModelEntry.first;
             if (modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()) {
                 modelFileIdLookup[fileIdModelEntry] = globalFileNumber;
