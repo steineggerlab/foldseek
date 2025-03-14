@@ -1334,7 +1334,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
             std::string entryNameWithModel = Util::parseFastaHeader(header);
-            entry.entryName = removeModel(entryNameWithModel);
+            entry.entryName = entryNameWithModel;
             std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameWithModel];
             size_t fileId = fileIdModelEntry.first;
             if (modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()) {
