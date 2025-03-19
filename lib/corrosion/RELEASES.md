@@ -1,9 +1,159 @@
-# Unreleased
+# v0.5.1 (2024-12-29)
 
-## Breaking Changes
+### Fixes
+
+- Update FindRust to support `rustup` v1.28.0. Support for older rustup versions is retained,
+  so updating corrosion quickly is recommended to all rustup users.
+
+# v0.5.0 (2024-05-11)
+
+### Breaking Changes
+
+- Dashes (`-`) in names of imported CMake **library** targets are now replaced with underscores (`_`).
+  See [issue #501] for details. Users on older Corrosion versions will experience the same
+  change when using Rust 1.79 or newer. `bin` targets are not affected by this change.
+
+[issue #501]: https://github.com/corrosion-rs/corrosion/issues/501
+
+# v0.4.10 (2024-05-11)
+
+### New features
+
+- `corrosion_experimental_cbindgen()` can now be called multiple times on the same Rust target,
+  as long as the output header name differs. This may be useful to generate separate C and C++
+  bindings. [#507]
+- If `corrosion_link_libraries()` is called on a Rust static library target, then
+  `target_link_libraries()` is called to propagate the dependencies to C/C++ consumers.
+  Previously a warning was emitted in this case and the arguments ignored. [#506]
+
+### Fixes
+
+- Combine `-framework` flags on macos to avoid linker deduplication errors [#455]
+- `corrosion_experimental_cbindgen()` will now correctly use the package name, instead of assuming that
+    the package and crate name are identical. ([11e27c])
+- Set the `AR_<triple>` variable for `cc-rs` (except for msvc targets) [#456]
+- Fix hostbuild when cross-compiling to windows [#477]
+- Consider vworks executable suffix [#504]
+- `corrosion_experimental_cbindgen()` now forwards the Rust target-triple (e.g. `aarch64-unknown-linux-gnu`)
+  to cbindgen via the `TARGET` environment variable. The `hostbuild` property is considered. [#507]
+- Fix linking errors with Rust >= 1.79 and `-msvc` targets.` [#511]
+
+
+[#455]: https://github.com/corrosion-rs/corrosion/pull/455
+[#456]: https://github.com/corrosion-rs/corrosion/pull/456
+[#477]: https://github.com/corrosion-rs/corrosion/pull/477
+[#504]: https://github.com/corrosion-rs/corrosion/pull/504
+[#506]: https://github.com/corrosion-rs/corrosion/pull/506
+[#507]: https://github.com/corrosion-rs/corrosion/pull/507
+[#511]: https://github.com/corrosion-rs/corrosion/pull/511
+[11e27c]: https://github.com/corrosion-rs/corrosion/pull/514/commits/11e27cde2cf32c7ed539c96eb03c2f10035de538
+
+# v0.4.9 (2024-05-01)
+
+### New Features 
+
+- Automatically detect Rust target for OpenHarmony ([#510]).
+
+### Fixes
+
+- Make find_package portable ([#509]).
+
+[#510]: https://github.com/corrosion-rs/corrosion/pull/510
+[#509]: https://github.com/corrosion-rs/corrosion/pull/509
+
+# v0.4.8 (2024-04-03)
+
+### Fixes
+
+- Fix an internal error when passing both the `PROFILE` and `CRATES` option to
+  `corrosion_import_crate()` ([#496]).
+
+[#496]: https://github.com/corrosion-rs/corrosion/pull/496
+
+# v0.4.7 (2024-01-19)
+
+### Fixes
+
+- The C/C++ compiler passed from corrosion to `cc-rs` can now be overriden by users setting
+  `CC_<target>` (e.g. `CC_x86_64-unknown-linux-gnu=/path/to/my-compiler`) environment variables ([#475]).
+
+[#475]: https://github.com/corrosion-rs/corrosion/pull/475
+
+# v0.4.6 (2024-01-17)
+
+### Fixes
+
+- Fix hostbuild executables when cross-compiling from non-windows to windows targets.
+  (Only with CMake >= 3.19).
+
+# v0.4.5 (2023-11-30)
+
+### Fixes
+
+- Fix hostbuild executables when cross-compiling on windows to non-windows targets
+  (Only with CMake >= 3.19).
+
+# v0.4.4 (2023-10-06)
+
+### Fixes
+
+- Add `chimera` ([#445]) and `unikraft` ([#446]) to the list of known vendors
+
+[#445]: https://github.com/corrosion-rs/corrosion/pull/445
+[#446]: https://github.com/corrosion-rs/corrosion/pull/446
+
+# v0.4.3 (2023-09-09)
+
+### Fixes
+
+- Fix the PROFILE option with CMake < 3.19 [#427]
+- Relax vendor parsing for espressif targets (removes warnings)
+- Fix an issue detecting required link libraries with Rust >= 1.71
+  when the cmake build directory is located in a Cargo workspace.
+
+# 0.4.2 (2023-07-16)
+
+### Fixes
+
+- Fix an issue when cross-compiling with clang
+- Fix detecting required libraries with cargo 1.71 
+
+### New features
+
+- Users can now set `Rust_RESOLVE_RUSTUP_TOOLCHAINS` to `OFF`, which will result in Corrosion
+  not attempting to resolve rustc/cargo.
+
+# 0.4.1 (2023-06-03)
+
+This is a bugfix release.
+
+### Fixes
+
+- Fixes a regression on multi-config Generators
+
+# 0.4.0 LTS (2023-06-01)
+
+No changes compared to v0.4.0-beta2.
+
+## Announcements
+
+The `v0.4.x` LTS series will be the last release to support older CMake and Rust versions.
+If necessary, fixes will be backported to the v0.4 branch. New features will not be
+actively backported after the next major release, but community contributions are possible.
+The `v0.4.x` series is currently planned to be maintained until the end of 2024.
+
+The following major release will increase the minimum required CMake version to 3.22. The 
+minimum supported Rust version will also be increased to make use of newly added flags, but 
+the exact version is not fixed yet. 
+
+
+## Changes compared to v0.3.5:
+
+### Breaking Changes
 
 - The Visual Studio Generators now require at least CMake 3.20.
-  This was previously announced in the 0.3.0 release notes.
+  This was previously announced in the 0.3.0 release notes and is the same
+  requirement as for the other Multi-Config Generators.
 - The previously deprecated function `corrosion_set_linker_language()`
   will now raise an error when called and may be removed without further
   notice in future stable releases. Use `corrosion_set_linker()` instead.
@@ -11,7 +161,7 @@
   The detection does not require an enabled language anymore and will always fall back
   to the default host target triple. A warning is issued if target triple detection failed.
 
-## Potentially Breaking Changes
+### Potentially Breaking Changes
 
 - Corrosion now sets the `IMPORTED_NO_SONAME` property for shared rust libraries, since by
   default they won't have an `soname` field.
@@ -24,10 +174,10 @@
   do encounter a new linking issue when upgrading with `staticlib` targets, please open an
   issue.
 
-## New features
+### New features
 
 - `corrosion_import_crate()` has two new options `LOCKED` and `FROZEN` which pass the 
-  `--locked` and `--frozen` flags to all invocations of cargo. Only with CMake >= 3.19.
+  `--locked` and `--frozen` flags to all invocations of cargo.
 - `FindRust` now provides cache variables containing information on the default host
   target triple:
   - `Rust_CARGO_HOST_ARCH`
@@ -35,7 +185,7 @@
   - `Rust_CARGO_HOST_OS`
   - `Rust_CARGO_HOST_ENV`
 
-## Other changes
+### Other changes
 
 - When installing Corrosion with CMake >= 3.19, the legacy Generator tool is
   no longer built and installed by default.
@@ -45,11 +195,12 @@
   no languages where previously enabled. This is not considered a breaking change.
 - `corrosion_import_crate()` now warns about unexpected arguments.
 
-## Fixes
+### Fixes
 
 - Fix building when the `dev` profile is explicitly set by the user.
 
-## Experimental status (may be changed or removed before a stable release)
+## Experimental features (may be changed or removed without a major version bump)
+
 - Experimental cxxbridge and cbindgen integration.
 - Add a helper function to parse the package version from a Cargo.toml file
 - Expose rustup toolchains discovered by `FindRust` in the following cache variables

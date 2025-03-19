@@ -118,6 +118,8 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_PRELOAD_MODE);
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
+//    tmalign.push_back(&PARAM_GAP_OPEN);
+//    tmalign.push_back(&PARAM_GAP_EXTEND);
 
     structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
@@ -133,44 +135,13 @@ LocalParameters::LocalParameters() :
     structurealign.push_back(&PARAM_ALIGNMENT_TYPE);
     structurealign.push_back(&PARAM_EXACT_TMSCORE);
     structurealign = combineList(structurealign, align);
-//    tmalign.push_back(&PARAM_GAP_OPEN);
-//    tmalign.push_back(&PARAM_GAP_EXTEND);
+
     // strucclust
     strucclust = combineList(clust, structurealign);
     strucclust = combineList(strucclust, structurerescorediagonal);
     strucclust = combineList(strucclust, kmermatcher);
     strucclust.push_back(&PARAM_REMOVE_TMP_FILES);
     strucclust.push_back(&PARAM_RUNNER);
-    // structuresearchworkflow
-    structuresearchworkflow = combineList(structurealign, prefilter);
-    structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
-    structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
-    structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
-    structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
-    structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-    structuresearchworkflow.push_back(&PARAM_RUNNER);
-    structuresearchworkflow.push_back(&PARAM_REUSELATEST);
-    structuresearchworkflow.push_back(&PARAM_CLUSTER_SEARCH);
-
-    easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
-    easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
-    easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
-    easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
-
-    structureclusterworkflow = combineList(prefilter, structurealign);
-    structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
-    structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
-    structureclusterworkflow = combineList(structureclusterworkflow, clust);
-    structureclusterworkflow.push_back(&PARAM_CASCADED);
-    structureclusterworkflow.push_back(&PARAM_CLUSTER_STEPS);
-    structureclusterworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
-    structureclusterworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-    structureclusterworkflow.push_back(&PARAM_REUSELATEST);
-    structureclusterworkflow.push_back(&PARAM_RUNNER);
-    structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
-
-    easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
-    easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);
 
     databases.push_back(&PARAM_HELP);
     databases.push_back(&PARAM_HELP_LONG);
@@ -180,7 +151,7 @@ LocalParameters::LocalParameters() :
     databases.push_back(&PARAM_COMPRESSED);
     databases.push_back(&PARAM_THREADS);
     databases.push_back(&PARAM_V);
-    //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
     samplemulambda.push_back(&PARAM_N_SAMPLE);
     samplemulambda.push_back(&PARAM_THREADS);
     samplemulambda.push_back(&PARAM_V);
@@ -244,6 +215,7 @@ LocalParameters::LocalParameters() :
     result2structprofile.push_back(&PARAM_COMPRESSED);
     result2structprofile.push_back(&PARAM_V);
     result2structprofile.push_back(&PARAM_PROFILE_OUTPUT_MODE);
+
     //createstructsubdb
     createstructsubdb.push_back(&PARAM_SUBDB_MODE);
     createstructsubdb.push_back(&PARAM_ID_MODE);
@@ -253,6 +225,47 @@ LocalParameters::LocalParameters() :
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
     createmultimerreport.push_back(&PARAM_THREADS);
     createmultimerreport.push_back(&PARAM_V);
+
+    // expandmultimer
+    expandmultimer.push_back(&PARAM_THREADS);
+    expandmultimer.push_back(&PARAM_V);
+
+    // convert2pdb
+    convert2pdb.push_back(&PARAM_PDB_OUTPUT_MODE);
+    convert2pdb.push_back(&PARAM_THREADS);
+    convert2pdb.push_back(&PARAM_V);
+
+    // structuresearchworkflow
+    structuresearchworkflow = combineList(structurealign, prefilter);
+    structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
+    structuresearchworkflow = combineList(structuresearchworkflow, tmalign);
+    structuresearchworkflow = combineList(structuresearchworkflow, result2structprofile);
+    structuresearchworkflow.push_back(&PARAM_CLUSTER_SEARCH);
+    structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
+    structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
+    structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structuresearchworkflow.push_back(&PARAM_REUSELATEST);
+    structuresearchworkflow.push_back(&PARAM_RUNNER);
+
+    easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
+    easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
+    easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
+    easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
+
+    structureclusterworkflow = combineList(prefilter, structurealign);
+    structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
+    structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
+    structureclusterworkflow = combineList(structureclusterworkflow, clust);
+    structureclusterworkflow.push_back(&PARAM_CASCADED);
+    structureclusterworkflow.push_back(&PARAM_CLUSTER_STEPS);
+    structureclusterworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
+    structureclusterworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structureclusterworkflow.push_back(&PARAM_REUSELATEST);
+    structureclusterworkflow.push_back(&PARAM_RUNNER);
+    structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
+
+    easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
+    easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);
 
     // multimersearchworkflow
     multimersearchworkflow = combineList(structuresearchworkflow, scoremultimer);
@@ -268,7 +281,6 @@ LocalParameters::LocalParameters() :
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
     easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
 
-
     // multimerclusterworkflow
     multimerclusterworkflow = combineList(multimersearchworkflow, filtermultimer);
     multimerclusterworkflow  = combineList(multimerclusterworkflow, clust);
@@ -276,15 +288,6 @@ LocalParameters::LocalParameters() :
     //easymultimerclusterworkflow
     easymultimerclusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
     easymultimerclusterworkflow = combineList(easymultimerclusterworkflow, result2repseq);
-    
-    // expandmultimer
-    expandmultimer.push_back(&PARAM_THREADS);
-    expandmultimer.push_back(&PARAM_V);
-
-    // convert2pdb
-    convert2pdb.push_back(&PARAM_PDB_OUTPUT_MODE);
-    convert2pdb.push_back(&PARAM_THREADS);
-    convert2pdb.push_back(&PARAM_V);
 
     // set masking
     maskMode = 0;
@@ -332,11 +335,12 @@ LocalParameters::LocalParameters() :
     filtChainTmThr = 0.0;
     filtInterfaceLddtThr = 0.0;
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
-    citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");
+    citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)");
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
     
     //rewrite param vals.
     PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
+
     // allow higher values for GGML debug trace
     PARAM_V.regex = "^[0-4]{1}$";
 }

@@ -15,15 +15,16 @@ cmake_minimum_required(VERSION 3.12)
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(FindPackageHandleStandardArgs)
 
-# Print error message and return.
+list(APPEND CMAKE_MESSAGE_CONTEXT "FindRust")
+
+# Print error message and return. Should not be used from inside functions
 macro(_findrust_failed)
     if("${Rust_FIND_REQUIRED}")
         message(FATAL_ERROR ${ARGN})
     elseif(NOT "${Rust_FIND_QUIETLY}")
         message(WARNING ${ARGN})
     endif()
-    # Note: PARENT_SCOPE is the scope of the caller of the caller of this macro.
-    set(Rust_FOUND "" PARENT_SCOPE)
+    set(Rust_FOUND "")
     return()
 endmacro()
 
@@ -83,7 +84,7 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
     # we determine if vendor is present by matching against a list of known vendors.
     set(known_vendors
         "apple"
-        "esp" # riscv32imc-esp-espidf
+        "esp[a-z0-9]*" # espressif, e.g. riscv32imc-esp-espidf or xtensa-esp32s3-none-elf
         "fortanix"
         "kmc"
         "pc"
@@ -91,6 +92,8 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
         "nvidia"
         "openwrt"
         "alpine"
+        "chimera"
+        "unikraft"
         "unknown"
         "uwp" # aarch64-uwp-windows-msvc
         "wrs" # e.g. aarch64-wrs-vxworks
@@ -109,12 +112,14 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
         )
     if((NOT whole_match) AND (NOT CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED))
         message(WARNING "Failed to parse target-triple `${target_triple}`."
-            "Corrosion attempts to link required C libraries depending on the OS "
-            "specified in the Rust target-triple for Linux, MacOS and windows.\n"
-            "Note: If you are targeting a different OS you can surpress this warning by"
+            "Corrosion determines some information about the output artifacts based on OS "
+            "specified in the Rust target-triple.\n"
+            "Currently this is relevant for windows and darwin (mac) targets, since file "
+            "extensions differ.\n"
+            "Note: If you are targeting a different OS you can suppress this warning by"
             " setting the CMake cache variable "
             "`CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED`."
-            "Please consider opening an issue on github if you encounter this warning."
+            "Please consider opening an issue on github if you you need to add a new vendor to the list."
             )
     endif()
 
@@ -127,27 +132,20 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
     set("${out_env}" "${CMAKE_MATCH_6}" PARENT_SCOPE)
 endfunction()
 
-function(_corrosion_determine_libs_new target_triple out_libs)
+function(_corrosion_determine_libs_new target_triple out_libs out_flags)
+    set(package_dir "${CMAKE_BINARY_DIR}/corrosion/required_libs")
     # Cleanup on reconfigure to get a cleans state (in case we change something in the future)
-    file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/corrosion/required_libs")
-    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion")
-    # Create a staticlib application for testing purposes
-    execute_process(
-            COMMAND "${Rust_CARGO_CACHED}" new --lib required_libs
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion"
-            RESULT_VARIABLE cargo_new_result
-            ERROR_QUIET
-    )
-    if(cargo_new_result)
-        file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/corrosion/required_libs")
-        message(DEBUG "Determining required link libraries: failed to create test library: ${cargo_new_result}")
-        return()
-    endif()
-    file(APPEND "${CMAKE_BINARY_DIR}/corrosion/required_libs/Cargo.toml"
-            "[lib]\ncrate-type=[\"staticlib\"]")
+    file(REMOVE_RECURSE "${package_dir}")
+    file(MAKE_DIRECTORY "${package_dir}")
+    set(manifest "[package]\nname = \"required_libs\"\nedition = \"2018\"\nversion = \"0.1.0\"\n")
+    string(APPEND manifest "\n[lib]\ncrate-type=[\"staticlib\"]\npath = \"lib.rs\"\n")
+    string(APPEND manifest "\n[workspace]\n")
+    file(WRITE "${package_dir}/Cargo.toml" "${manifest}")
+    file(WRITE "${package_dir}/lib.rs" "pub fn add(left: usize, right: usize) -> usize {left + right}\n")
+
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E env
-            "CARGO_BUILD_RUST=${Rust_COMPILER_CACHED}"
+            "CARGO_BUILD_RUSTC=${Rust_COMPILER_CACHED}"
         ${Rust_CARGO_CACHED} rustc --verbose --color never --target=${target_triple} -- --print=native-static-libs
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion/required_libs"
         RESULT_VARIABLE cargo_build_result
@@ -163,11 +161,30 @@ function(_corrosion_determine_libs_new target_triple out_libs)
         if(cargo_build_error_message MATCHES "native-static-libs: ([^\r\n]+)\r?\n")
             string(REPLACE " " ";" "libs_list" "${CMAKE_MATCH_1}")
             set(stripped_lib_list "")
+            set(flag_list "")
+
+            set(was_last_framework OFF)
             foreach(lib ${libs_list})
-                # Strip leading `-l` (unix) and potential .lib suffix (windows)
-                string(REGEX REPLACE "^-l" "" "stripped_lib" "${lib}")
-                string(REGEX REPLACE "\.lib$" "" "stripped_lib" "${stripped_lib}")
-                list(APPEND stripped_lib_list "${stripped_lib}")
+                # merge -framework;lib -> "-framework lib" as CMake does de-duplication of link libraries, and -framework prefix is required
+                if (lib STREQUAL "-framework")
+                    set(was_last_framework ON)
+                    continue()
+                endif()
+                if (was_last_framework)
+                    list(APPEND stripped_lib_list "-framework ${lib}")
+                    set(was_last_framework OFF)
+                    continue()
+                endif()
+                
+                # Flags start with / for MSVC
+                if (lib MATCHES "^/" AND ${target_triple} MATCHES "msvc$")
+                    list(APPEND flag_list "${lib}")
+                else()
+                    # Strip leading `-l` (unix) and potential .lib suffix (windows)
+                    string(REGEX REPLACE "^-l" "" "stripped_lib" "${lib}")
+                    string(REGEX REPLACE "\.lib$" "" "stripped_lib" "${stripped_lib}")
+                    list(APPEND stripped_lib_list "${stripped_lib}")
+                endif()
             endforeach()
             set(libs_list "${stripped_lib_list}")
             # Special case `msvcrt` to link with the debug version in Debug mode.
@@ -179,36 +196,7 @@ function(_corrosion_determine_libs_new target_triple out_libs)
         endif()
     endif()
     set("${out_libs}" "${libs_list}" PARENT_SCOPE)
-endfunction()
-
-# Hardcoded, best effort approach
-function(_corrosion_determine_libs arch vendor os env out_libs)
-    if(os STREQUAL "windows")
-        list(APPEND libs "advapi32" "userenv" "ws2_32")
-
-        if(env STREQUAL "msvc")
-            list(APPEND libs "$<$<CONFIG:Debug>:msvcrtd>")
-            # CONFIG takes a comma seperated list starting with CMake 3.19, but we still need to
-            # support older CMake versions.
-            set(config_is_release "$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>,$<CONFIG:RelWithDebInfo>>")
-            list(APPEND libs "$<${config_is_release}:msvcrt>")
-        elseif(env STREQUAL "gnu")
-            list(APPEND libs "gcc_eh" "pthread")
-        endif()
-
-        if(Rust_VERSION VERSION_LESS "1.33.0")
-            list(APPEND libs "shell32" "kernel32")
-        endif()
-
-        if(Rust_VERSION VERSION_GREATER_EQUAL "1.57.0")
-            list(APPEND libs "bcrypt")
-        endif()
-    elseif(vendor STREQUAL "apple" AND os STREQUAL "darwin")
-        list(APPEND libs "System" "resolv" "c" "m")
-    elseif(os STREQUAL "linux")
-        list(APPEND libs "dl" "rt" "pthread" "gcc_s" "c" "m" "util")
-    endif()
-    set("${out_libs}" "${libs}" PARENT_SCOPE)
+    set("${out_flags}" "${flag_list}" PARENT_SCOPE)
 endfunction()
 
 if (NOT "${Rust_TOOLCHAIN}" STREQUAL "$CACHE{Rust_TOOLCHAIN}")
@@ -216,14 +204,14 @@ if (NOT "${Rust_TOOLCHAIN}" STREQUAL "$CACHE{Rust_TOOLCHAIN}")
     set(Rust_TOOLCHAIN ${Rust_TOOLCHAIN} CACHE STRING "Requested rustup toolchain" FORCE)
 endif()
 
+set(_RESOLVE_RUSTUP_TOOLCHAINS_DESC "Indicates whether to descend into the toolchain pointed to by rustup")
+set(Rust_RESOLVE_RUSTUP_TOOLCHAINS ON CACHE BOOL ${_RESOLVE_RUSTUP_TOOLCHAINS_DESC})
+
 # This block checks to see if we're prioritizing a rustup-managed toolchain.
 if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
     find_program(Rust_RUSTUP rustup PATHS "$ENV{HOME}/.cargo/bin")
-    if(Rust_RUSTUP)
-        set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
-    else()
-        set(_RESOLVE_RUSTUP_TOOLCHAINS OFF)
+    if(NOT Rust_RUSTUP)
         if(NOT "${Rust_FIND_QUIETLY}")
             message(
                 WARNING "CMake variable `Rust_TOOLCHAIN` specified, but `rustup` was not found. "
@@ -290,8 +278,6 @@ else()
             unset(Rust_COMPILER CACHE)
         endif()
 
-        set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
-
         # Get `rustup` next to the `rustc` proxy
         get_filename_component(_RUST_PROXIES_PATH "${_Rust_COMPILER_TEST}" DIRECTORY)
         find_program(Rust_RUSTUP rustup HINTS "${_RUST_PROXIES_PATH}" NO_DEFAULT_PATH)
@@ -302,6 +288,9 @@ endif()
 
 # At this point, the only thing we should have evaluated is a path to `rustup` _if that's what the
 # best source for a Rust toolchain was determined to be_.
+if (NOT Rust_RUSTUP)
+    set(Rust_RESOLVE_RUSTUP_TOOLCHAINS OFF CACHE BOOL ${_RESOLVE_RUSTUP_TOOLCHAINS_DESC} FORCE)
+endif()
 
 # List of user variables that will override any toolchain-provided setting
 set(_Rust_USER_VARS Rust_COMPILER Rust_CARGO Rust_CARGO_TARGET Rust_CARGO_HOST_TARGET)
@@ -314,8 +303,9 @@ foreach(_VAR ${_Rust_USER_VARS})
 endforeach()
 
 # Discover what toolchains are installed by rustup, if the discovered `rustc` is a proxy from
-# `rustup`, then select either the default toolchain, or the requested toolchain Rust_TOOLCHAIN
-if (_RESOLVE_RUSTUP_TOOLCHAINS)
+# `rustup` and the user hasn't explicitly requested to override this behavior, then select either
+# the default toolchain, or the requested toolchain Rust_TOOLCHAIN
+if (Rust_RESOLVE_RUSTUP_TOOLCHAINS)
     execute_process(
         COMMAND
             "${Rust_RUSTUP}" toolchain list --verbose
@@ -329,18 +319,18 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     set(_DISCOVERED_TOOLCHAINS_VERSION "")
 
     foreach(_TOOLCHAIN_RAW ${_TOOLCHAINS_RAW})
-        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t\r\n]?(\\(default\\) \\(override\\)|\\(default\\)|\\(override\\))?[ \t\r\n]+(.+)")
+        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t\r\n]?(\\(active\\)|\\(active, default\\)|\\(default\\) \\(override\\)|\\(default\\)|\\(override\\))?[ \t\r\n]+(.+)")
             set(_TOOLCHAIN "${CMAKE_MATCH_1}")
             set(_TOOLCHAIN_TYPE "${CMAKE_MATCH_2}")
 
             set(_TOOLCHAIN_PATH "${CMAKE_MATCH_3}")
             set(_TOOLCHAIN_${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
 
-            if (_TOOLCHAIN_TYPE MATCHES ".*\\(default\\).*")
+            if (_TOOLCHAIN_TYPE MATCHES ".*\\((active, )?default\\).*")
                 set(_TOOLCHAIN_DEFAULT "${_TOOLCHAIN}")
             endif()
 
-            if (_TOOLCHAIN_TYPE MATCHES ".*\\(override\\).*")
+            if (_TOOLCHAIN_TYPE MATCHES ".*\\((active|override)\\).*")
                 set(_TOOLCHAIN_OVERRIDE "${_TOOLCHAIN}")
             endif()
 
@@ -495,6 +485,14 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
         rustc
             HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
             NO_DEFAULT_PATH)
+elseif (Rust_RUSTUP)
+    get_filename_component(_RUST_TOOLCHAIN_PATH "${Rust_RUSTUP}" DIRECTORY)
+    get_filename_component(_RUST_TOOLCHAIN_PATH "${_RUST_TOOLCHAIN_PATH}" DIRECTORY)
+    find_program(
+        Rust_COMPILER_CACHED
+        rustc
+            HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
+            NO_DEFAULT_PATH)
 else()
     find_program(Rust_COMPILER_CACHED rustc)
     if (EXISTS "${Rust_COMPILER_CACHED}")
@@ -512,7 +510,7 @@ if (NOT EXISTS "${Rust_COMPILER_CACHED}")
     _findrust_failed(${_NOT_FOUND_MESSAGE})
 endif()
 
-if (_RESOLVE_RUSTUP_TOOLCHAINS)
+if (Rust_RESOLVE_RUSTUP_TOOLCHAINS)
     set(_NOT_FOUND_MESSAGE "Rust was detected to be managed by rustup, but failed to find `cargo` "
         "next to `rustc` in `${_RUST_TOOLCHAIN_PATH}/bin`. This can happen for custom toolchains, "
         "if cargo was not built. "
@@ -722,6 +720,19 @@ if (NOT Rust_CARGO_TARGET_CACHED)
         if (_Rust_ANDROID_TARGET)
             set(Rust_CARGO_TARGET_CACHED "${_Rust_ANDROID_TARGET}" CACHE STRING "Target triple")
         endif()
+    elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "OHOS")
+        if(CMAKE_OHOS_ARCH_ABI STREQUAL arm64-v8a)
+            set(_RUST_OHOS_TARGET aarch64-unknown-linux-ohos)
+        elseif(CMAKE_OHOS_ARCH_ABI STREQUAL armeabi-v7a)
+            set(_RUST_OHOS_TARGET armv7-unknown-linux-ohos)
+        elseif(CMAKE_OHOS_ARCH_ABI STREQUAL x86_64)
+            set(_RUST_OHOS_TARGET x86_64-unknown-linux-ohos)
+        else()
+            message(WARNING "unrecognized OHOS architecture: ${OHOS_ARCH}")
+        endif()
+        if(_RUST_OHOS_TARGET)
+            set(Rust_CARGO_TARGET_CACHED "${_RUST_OHOS_TARGET}" CACHE STRING "Target triple")
+        endif()
     endif()
     # Fallback to the default host target
     if(NOT Rust_CARGO_TARGET_CACHED)
@@ -744,7 +755,6 @@ endif()
 
 _corrosion_parse_target_triple("${Rust_CARGO_TARGET_CACHED}" rust_arch rust_vendor rust_os rust_env)
 _corrosion_parse_target_triple("${Rust_CARGO_HOST_TARGET_CACHED}" rust_host_arch rust_host_vendor rust_host_os rust_host_env)
-_corrosion_determine_libs("${rust_arch}" "${rust_vendor}" "${rust_os}" "${rust_env}" rust_libs)
 
 set(Rust_CARGO_TARGET_ARCH "${rust_arch}" CACHE INTERNAL "Target architecture")
 set(Rust_CARGO_TARGET_VENDOR "${rust_vendor}" CACHE INTERNAL "Target vendor")
@@ -759,9 +769,12 @@ set(Rust_CARGO_HOST_ENV "${rust_host_env}" CACHE INTERNAL "Host environment")
 if(NOT DEFINED CACHE{Rust_CARGO_TARGET_LINK_NATIVE_LIBS})
     message(STATUS "Determining required link libraries for target ${Rust_CARGO_TARGET_CACHED}")
     unset(required_native_libs)
-    _corrosion_determine_libs_new("${Rust_CARGO_TARGET_CACHED}" required_native_libs)
+    _corrosion_determine_libs_new("${Rust_CARGO_TARGET_CACHED}" required_native_libs required_link_flags)
     if(DEFINED required_native_libs)
         message(STATUS "Required static libs for target ${Rust_CARGO_TARGET_CACHED}: ${required_native_libs}" )
+    endif()
+    if(DEFINED required_link_flags)
+        message(STATUS "Required link flags for target ${Rust_CARGO_TARGET_CACHED}: ${required_link_flags}" )
     endif()
     # In very recent corrosion versions it is possible to override the rust compiler version
     # per target, so to be totally correct we would need to determine the libraries for
@@ -770,17 +783,21 @@ if(NOT DEFINED CACHE{Rust_CARGO_TARGET_LINK_NATIVE_LIBS})
     # for the target and once for the host target (if cross-compiling).
     set(Rust_CARGO_TARGET_LINK_NATIVE_LIBS "${required_native_libs}" CACHE INTERNAL
             "Required native libraries when linking Rust static libraries")
+    set(Rust_CARGO_TARGET_LINK_OPTIONS "${required_link_flags}" CACHE INTERNAL
+            "Required link flags when linking Rust static libraries")
 endif()
 
 if(Rust_CROSSCOMPILING AND NOT DEFINED CACHE{Rust_CARGO_HOST_TARGET_LINK_NATIVE_LIBS})
     message(STATUS "Determining required link libraries for target ${Rust_CARGO_HOST_TARGET_CACHED}")
     unset(host_libs)
-    _corrosion_determine_libs_new("${Rust_CARGO_HOST_TARGET_CACHED}" host_libs)
+    _corrosion_determine_libs_new("${Rust_CARGO_HOST_TARGET_CACHED}" host_libs host_flags)
     if(DEFINED host_libs)
         message(STATUS "Required static libs for host target ${Rust_CARGO_HOST_TARGET_CACHED}: ${host_libs}" )
     endif()
     set(Rust_CARGO_HOST_TARGET_LINK_NATIVE_LIBS "${host_libs}" CACHE INTERNAL
         "Required native libraries when linking Rust static libraries for the host target")
+    set(Rust_CARGO_HOST_TARGET_LINK_OPTIONS "${host_flags}" CACHE INTERNAL
+        "Required linker flags when linking Rust static libraries for the host target")
 endif()
 
 # Set the input variables as non-cache variables so that the variables are available after
@@ -812,3 +829,5 @@ if(NOT TARGET Rust::Rustc)
     )
     set(Rust_FOUND true)
 endif()
+
+list(POP_BACK CMAKE_MESSAGE_CONTEXT)

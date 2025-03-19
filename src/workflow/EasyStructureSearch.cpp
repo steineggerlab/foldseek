@@ -42,8 +42,6 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    par.overrideParameterDescription(par.PARAM_REPORT_MODE, "Taxonomy report mode 0: Kraken 1: Krona 2: Skip taxonomy report", "^[0-2]{1}$", 0);
-
     setEasyStructureSearchDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setEasyStructureSearchMustPassAlong(&par);
