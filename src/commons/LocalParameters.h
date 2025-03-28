@@ -66,9 +66,6 @@ public:
     static const int OUTFMT_COMPLEX_U = 56;
     static const int OUTFMT_COMPLEX_T = 57;
 
-    static const int INT_EXTRACT_MODE_CB = 0;
-    static const int INT_EXTRACT_MODE_CA = 1;
-
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
     static const int COORD_STORE_MODE_CA_PLAIN_TEXT  = 3;
@@ -134,6 +131,7 @@ public:
     PARAMETER(PARAM_EXACT_TMSCORE)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
+    PARAMETER(PARAM_SAVE_RES_INDEX)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
     PARAMETER(PARAM_MONOMER_INCLUDE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
@@ -165,6 +163,7 @@ public:
     int exactTMscore;
     int nsample;
     int coordStoreMode;
+    bool saveResIndex;
     float minAssignedChainsThreshold;
     int monomerIncludeMode;
     int clusterSearch;

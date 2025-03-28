@@ -19,9 +19,23 @@
 #include <omp.h>
 #endif
 
+std::vector<unsigned int> getIdVec(char* idData, size_t chainLen) {
+    std::vector<unsigned int> idVec;
+    unsigned int currId;
+    const char* data = idData;
+    idVec.resize(chainLen);
+    for (size_t i = 0; i < chainLen; i++) {
+        memcpy(&currId, data, sizeof(unsigned int));
+        idVec[i] = currId;
+        data += sizeof(unsigned int);
+    }
+    return idVec;
+}
+
 //one dimer db as an input, one interface db as an output
 int createStructinterfacedb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
+    bool saveResIndex = true;
     par.parseParameters(argc, argv, command, true, 0, 0);
     DBReader<unsigned int> qDbr((par.db1).c_str(), (par.db1 + ".index").c_str(), 
                                 par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
@@ -29,6 +43,20 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
     DBReader<unsigned int> qStructDbr((par.db1 + "_ca").c_str(), (par.db1 + "_ca.index").c_str(), 
                                 par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     qStructDbr.open(DBReader<unsigned int>::NOSORT);
+    std::string idDbFileName = par.db1;
+    idDbFileName.append("_id");
+    const char *idDbChar = idDbFileName.c_str();
+    std::vector<std::string> dataFileNames = FileUtil::findDatafiles(idDbChar);
+    if (dataFileNames.empty()) {
+        saveResIndex = false;
+    }
+    dataFileNames.clear();
+    DBReader<unsigned int>* qIdDbr = NULL;
+    if (saveResIndex) {
+        qIdDbr = new DBReader<unsigned int>((par.db1 + "_id").c_str(), (par.db1 + "_id.index").c_str(),
+                            par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+        qIdDbr->open(DBReader<unsigned int>::NOSORT);
+    }
 
     std::string qLookupFile = par.db1 + ".lookup";
     std::vector<unsigned int> qComplexIndices;
@@ -43,6 +71,11 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
     cadbw.open();
     DBWriter aadbw((par.db2).c_str(), (par.db2 + ".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
+    DBWriter* idbw = NULL; 
+    if (saveResIndex) {
+        idbw = new DBWriter((par.db2 + "_id").c_str(), (par.db2 + "_id.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
+        idbw->open();
+    }
 
 #pragma omp parallel
     {
@@ -65,7 +98,7 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
             unsigned int qChainKey = qChainKeys[qChainIdx];
             unsigned int qChainDbId = qDbr.getId(qChainKey);
             char *qaaadata = qDbr.getData(qChainDbId, thread_idx);
-            char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
+            char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);     
             size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
             size_t qChainLen = qDbr.getSeqLen(qChainDbId);
             float* qdata = qcoords.read(qcadata, qChainLen, qCaLength);
@@ -78,7 +111,17 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
             size_t tCaLength = qStructDbr.getEntryLen(tChainDbId);
             size_t tChainLen = qDbr.getSeqLen(tChainDbId);
             float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
-            
+
+            char* qiddata;
+            char* tiddata;
+            std::vector<unsigned int> qIdVec, tIdVec;
+            if (saveResIndex) {
+                qiddata = qIdDbr->getData(qChainDbId, thread_idx);
+                qIdVec = getIdVec(qiddata, qChainLen);
+                tiddata = qIdDbr->getData(tChainDbId, thread_idx);
+                tIdVec = getIdVec(tiddata, tChainLen);
+            }
+
             float distanceThreshold = par.distanceThreshold;
             std::vector<size_t> resIdx1, resIdx2;
             const float squareThreshold = distanceThreshold * distanceThreshold;
@@ -110,6 +153,7 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                 std::vector<char> ami;
                 std::vector<char> alphabet3di1, alphabet3di2;
                 std::vector<char> alphabetAA1, alphabetAA2;
+                std::vector<unsigned int> resId1, resId2;
                 SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
                 ami.resize(resIdx1.size() + resIdx2.size());
                 ca.resize(resIdx1.size() + resIdx2.size());
@@ -122,6 +166,10 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                     c[i] = cB[resIdx1[i]];
                     cb[i] = Vec3(NAN,NAN,NAN);
                     ami[i] = amiB[resIdx1[i]];
+                    if (saveResIndex) {
+                        resId1.push_back(qIdVec[resIdx1[i]]);
+                        //std::cout << qIdVec[resIdx1[i]] << std::endl;
+                    }
                 }
                 for (size_t i = 0; i < resIdx2.size(); i++) {
                     ca[resIdx1.size() + i] = caB[qChainLen + resIdx2[i]];
@@ -129,6 +177,10 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                     c[resIdx1.size() + i] = cB[qChainLen + resIdx2[i]];
                     cb[resIdx1.size() + i] = Vec3(NAN,NAN,NAN);
                     ami[resIdx1.size() + i] = amiB[qChainLen + resIdx2[i]];
+                    if (saveResIndex) {
+                        resId2.push_back(tIdVec[resIdx2[i]]);
+                        //std::cout << tIdVec[resIdx2[i]] << std::endl;
+                    }
                 }
 
                 char *states = structureTo3Di.structure2states(&ca[0],
@@ -170,6 +222,10 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                 ssdbw.writeData(alphabet3di2.data(), alphabet3di2.size(), tChainKey, thread_idx);
                 aadbw.writeData(alphabetAA1.data(), alphabetAA1.size(), qChainKey, thread_idx);
                 aadbw.writeData(alphabetAA2.data(), alphabetAA2.size(), tChainKey, thread_idx);
+                if (saveResIndex) {
+                    idbw->writeData((const char*)resId1.data(), resIdx1.size() * sizeof(unsigned int), qChainKey, thread_idx);
+                    idbw->writeData((const char*)resId2.data(), resIdx2.size() * sizeof(unsigned int), tChainKey, thread_idx);
+                }
                 char *data1 = reinterpret_cast<char*>(ca1.data());
                 char *data2 = reinterpret_cast<char*>(ca2.data());
                 if (!Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1), camol1f16, 1)
@@ -198,6 +254,9 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
     aadbw.close(true);
     qStructDbr.close();
     qDbr.close();
-
+    if (saveResIndex) {
+        idbw->close(true);
+        qIdDbr->close();
+    }
     return EXIT_SUCCESS;
 }

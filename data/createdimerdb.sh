@@ -69,6 +69,11 @@ if [ -e "${IN}.dbtype" ]; then
     "$MMSEQS" createsubdb "${TMP_PATH}/chainidxlist" "${IN}" "${TMP_PATH}/out" --subdb-mode 0 ${VERBOSITY_PAR} \
         || fail "createsubdb died"
 
+    if exists "${IN}_id"; then
+        "$MMSEQS" lndb "${IN}_id" "${TMP_PATH}/out_id" \
+        || fail "lndb died"
+    fi
+
     if exists "${TMP_PATH}/out.lookup" ; then
         rm -- "${TMP_PATH}/out.lookup"
     fi
@@ -86,7 +91,10 @@ if [ -e "${IN}.dbtype" ]; then
     awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb.index"
     awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_ss.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb_ss.index"
     awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_ca.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb_ca.index"
-
+    if exists "${TMP_PATH}/out_id.index"; then
+        awk 'FNR==NR{name[$1]=$2"\t"$3; next}{print $1"\t"name[$2]}' "${TMP_PATH}/out_id.index" "${TMP_PATH}/realIdx_originalIdx" > "${TMP_PATH}/dimerdb_id.index"
+    fi
+    
     mv "${TMP_PATH}/out_h" "${TMP_PATH}/dimerdb_h"
     mv "${TMP_PATH}/out" "${TMP_PATH}/dimerdb"
     mv "${TMP_PATH}/out_ss" "${TMP_PATH}/dimerdb_ss"
@@ -95,6 +103,10 @@ if [ -e "${IN}.dbtype" ]; then
     mv "${TMP_PATH}/out.dbtype" "${TMP_PATH}/dimerdb.dbtype"
     mv "${TMP_PATH}/out_ss.dbtype" "${TMP_PATH}/dimerdb_ss.dbtype"
     mv "${TMP_PATH}/out_ca.dbtype" "${TMP_PATH}/dimerdb_ca.dbtype"
+    if exists "${TMP_PATH}/out_id.index"; then
+        mv "${TMP_PATH}/out_id.dbtype" "${TMP_PATH}/dimerdb_id.dbtype"
+        mv "${TMP_PATH}/out_id" "${TMP_PATH}/dimerdb_id"
+    fi
     # shellcheck disable=SC2086
     "$MMSEQS" filterdimerdb "${TMP_PATH}/dimerdb" "${TMP_PATH}/contactlist" ${FILTERDIMERDB_PAR} \
         || fail "filterdimerdb died"
@@ -116,6 +128,9 @@ if [ -n "${REMOVE_TMP}" ]; then
     rm "${TMP_PATH}/out_h.index"
     rm "${TMP_PATH}/out.index"
     rm "${TMP_PATH}/out_ss.index"
+    if [ -e "${IN}_id.index" ]; then
+        rm "${TMP_PATH}/out_id.index"
+    fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/dimerdb"
     # shellcheck disable=SC2086
