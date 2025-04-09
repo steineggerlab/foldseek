@@ -6,8 +6,8 @@
  * Description:
  *     Utility functions
  * ---
- * Last Modified: 2022-09-20 11:51:18
- * Modified By: Hyunbin Kim (khb7840@gmail.com)
+ * Last Modified: Fri Mar 03 2023
+ * Modified By: Hyunbin Kim
  * ---
  * Copyright © 2021 Hyunbin Kim, All rights reserved
  */
@@ -17,6 +17,21 @@
 #include <iostream>
 #include <map>
 #include <vector>
+
+#ifdef _WIN32
+#define NOMINMAX
+#ifdef _MSC_VER
+#include <dirent.h>
+#else
+#include "windows/dirent.h"
+#endif // _MSC_VER
+#include <io.h>
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#else
+#include <dirent.h>
+#include <sys/mman.h>
+#endif // _WIN32
 
 template<typename T>
 std::vector<T> vectorSlice(std::vector<T> const& v, int m, int n) {
@@ -87,13 +102,17 @@ void printVector(std::vector<T> v) {
     std::cout << "]" << std::endl;
 }
 
-#ifdef FOLDCOMP_EXECUTABLE
+// #ifdef FOLDCOMP_EXECUTABLE
 // Get all files in a directory using dirent.h
-std::vector<std::string> getFilesInDirectory(std::string dir);
-#endif
-std::string baseName(std::string const& path);
+std::vector<std::string> getFilesInDirectory(const std::string& dir, bool recursive);
+char *file_map(FILE *file, ssize_t *size, int extra_flags = 0);
+int file_unmap(char* mem, ssize_t size);
+// #endif
+std::string baseName(const std::string& path);
 
-std::string getFileWithoutExt(std::string& file);
+std::string getFileWithoutExt(const std::string& file);
+std::pair<std::string, std::string> getFileParts(const std::string& file);
+bool isCompressible(std::pair<std::string, std::string>& fileParts);
 bool stringStartsWith(const std::string& prefix, const std::string& str, const size_t offset = 0);
 bool stringEndsWith(const std::string& suffix, const std::string& str);
 std::vector<std::string> stringSplit(const std::string& str, const std::string& sep);

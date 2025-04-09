@@ -17,6 +17,8 @@
 #include <string> // IWYU pragma: keep
 #include <vector>
 
+#include "tcbspan.h"
+
 class AminoAcid;
 class AtomCoordinate;
 
@@ -52,7 +54,7 @@ std::vector<float> calculateTorsionAnglesInResidue(
 );
 
 std::vector< std::vector<float> > calculateSideChainTorsionAnglesPerResidue(
-    std::vector<AtomCoordinate>& originalAtoms, const std::map<std::string, AminoAcid>& AAmap
+    const tcb::span<AtomCoordinate>& originalAtoms, const std::map<std::string, AminoAcid>& AAmap
 );
 
 void compareMap(

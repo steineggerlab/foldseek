@@ -168,7 +168,7 @@ std::vector<float> calculateTorsionAnglesInResidue(
 }
 
 std::vector< std::vector<float> > calculateSideChainTorsionAnglesPerResidue(
-    std::vector<AtomCoordinate>& originalAtoms, const std::map<std::string, AminoAcid>& AAmap
+    const tcb::span<AtomCoordinate>& originalAtoms, const std::map<std::string, AminoAcid>& AAmap
 ) {
     std::vector<std::vector<AtomCoordinate>> atomByResidue = splitAtomByResidue(originalAtoms);
     std::vector<std::vector<float>> output;
