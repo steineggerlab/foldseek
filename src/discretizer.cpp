@@ -6,7 +6,7 @@
  * Description:
  *     Functions for discretizing float values and restoring them
  * ---
- * Last Modified: 2022-07-20 01:56:31
+ * Last Modified: 2022-12-09 15:42:34
  * Modified By: Hyunbin Kim (khb7840@gmail.com)
  * ---
  * Copyright © 2021 Hyunbin Kim, All rights reserved
@@ -21,6 +21,9 @@
 
 Discretizer::Discretizer(const std::vector<float>& values, unsigned int nb):
     n_bin(nb) {
+    if (values.size() == 0) {
+        return;
+    }
     // Get min & max
     this->min = *std::min_element(values.begin(), values.end());
     this->max = *std::max_element(values.begin(), values.end());
@@ -43,7 +46,7 @@ std::vector<unsigned int> Discretizer::discretize(const std::vector<float>& cont
     std::vector<unsigned int> discretizedValues;
     discretizedValues.reserve(continuous_values.size());
     for (it = continuous_values.cbegin(); it != continuous_values.cend(); it++) {
-        tmp_disc_value = (*it - min) * (this->disc_f);
+        tmp_disc_value = (unsigned int)((*it - min) * (this->disc_f) + 0.5);
         discretizedValues.push_back(tmp_disc_value);
     }
     return discretizedValues;

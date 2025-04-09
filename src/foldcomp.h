@@ -8,7 +8,7 @@
  *     This file contains main data structures for torsion angle compression and
  *     functions for handling them.
  * ---
- * Last Modified: 2022-09-29 17:09:40
+ * Last Modified: 2024-08-08 19:37:12
  * Modified By: Hyunbin Kim (khb7840@gmail.com)
  * ---
  * Copyright © 2021 Hyunbin Kim, All rights reserved
@@ -19,6 +19,7 @@
 #include "atom_coordinate.h"
 #include "discretizer.h"
 #include "nerf.h"
+#include "tcbspan.h"
 
 #ifdef FOLDCOMP_EXECUTABLE
 // TAR format handling - only for executable
@@ -265,10 +266,7 @@ struct FloatArrayWithDisc {
 
 class Foldcomp {
 private:
-    /* data */
-    std::string magicNumber;
     /* private methods */
-    std::vector< std::vector<float> > _calculateCoordinates();
     int _restoreDiscretizer(int angleType);
     int _restoreAtomCoordinate(float* coords);
     int _preprocessBackbone();
@@ -276,7 +274,7 @@ private:
 
     // Anchor
     int _getAnchorNum(int threshold);
-    void _setAnchor();
+    void _setAnchor(const tcb::span<AtomCoordinate>& atomCoordinates);
     std::vector<AtomCoordinate> _getAnchorAtoms(bool includeStartAndEnd = true);
 
     int _discretizeSideChainTorsionAngles(
@@ -319,7 +317,6 @@ public:
     CompressedFileHeader header;
 
     // Vectors for atoms
-    std::vector<AtomCoordinate> rawAtoms;
     std::vector<AtomCoordinate> prevAtoms; // 3 atoms
     std::vector<AtomCoordinate> lastAtoms; // 3 atoms
     std::vector< std::vector<float> > lastAtomCoordinates; // 3 atoms
@@ -331,13 +328,14 @@ public:
 
     std::vector<BackboneChain> compressedBackBone;
     std::vector<unsigned int> compressedSideChain;
-    std::vector<int> backboneBreaks;
     std::vector<char> residues;
     std::vector<std::string> residueThreeLetter;
     AtomCoordinate OXT;
     float3d OXT_coords;
 
     // Angles
+    std::vector<float> backboneTorsionAngles;
+    std::vector<float> backboneBondAngles;
     std::vector<float> psi;
     std::vector<float> omega;
     std::vector<float> phi;
@@ -371,8 +369,8 @@ public:
     Discretizer tempFactorsDisc;
 
      // methods
-    int preprocess(std::vector<AtomCoordinate>& atoms);
-    std::vector<BackboneChain> compress(std::vector<AtomCoordinate>& atoms);
+    int preprocess(const tcb::span<AtomCoordinate>& atoms);
+    std::vector<BackboneChain> compress(const tcb::span<AtomCoordinate>& atoms);
     int decompress(std::vector<AtomCoordinate>& atoms);
     int read(std::istream & filename);
     int writeStream(std::ostream& os);
@@ -390,16 +388,15 @@ public:
     size_t getSize();
     // methods for getting plddt (tempFactors) or amino acid sequence
     int continuizeTempFactors();
-    int writeFASTALike(std::string filename, std::vector<std::string>& data);
-#ifdef FOLDCOMP_EXECUTABLE
-    int writeFASTALikeTar(mtar_t& tar, std::string filename, std::vector<std::string>& data);
-#endif
-    int extract(std::vector<std::string>& data, int type);
+    int writeFASTALike(std::ostream& os, const std::string& data);
+    int writeTSV(std::ostream& os, const std::string& data);
+    int writeTorsionAngles(std::string filename);
+    int extract(std::string& data, int type, int digits);
 
     // temporary method for testing
     std::vector<float> checkTorsionReconstruction();
     void print(int length = 5);
-    void printSideChainTorsion(std::string filename);
+    // void printSideChainTorsion(std::string filename);
     // Check validity
     ValidityError checkValidity();
 };
