@@ -147,7 +147,6 @@ mv -f -- "${TMP_PATH}/cluster.tsv" "${RESULT}_cluster.tsv"
 mv -f -- "${TMP_PATH}/cluster_report" "${RESULT}_cluster_report"
 
 if [ -n "${REMOVE_TMP}" ]; then
-    rm "${INPUT}.0"
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimercluster_tmp/latest/multimer_db" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
@@ -156,6 +155,10 @@ if [ -n "${REMOVE_TMP}" ]; then
     # "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs_ss" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs_ca" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
@@ -168,13 +171,17 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu" ${VERBOSITY_PAR}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu_filt_info" ${VERBOSITY_PAR}
     if exists "${TMP_PATH}/query_ca.dbtype"; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY_PAR}
     fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
-    rm -rf -- "${TMP_PATH}/multimercluster_tmp"
+    # rm -rf -- "${TMP_PATH}/multimercluster_tmp"
     rm -f -- "${TMP_PATH}/rep_seqs.list"
     rm -f -- "${TMP_PATH}/easymultimercluster.sh"
 fi
