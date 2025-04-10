@@ -247,7 +247,7 @@ int tmalign(int argc, const char **argv, const Command& command) {
             }
         } // end chunk
 
-        SORT_PARALLEL(swResults.begin(), swResults.end(), compareHitsByTMScore);
+        SORT_SERIAL(finalHits.begin(), finalHits.end(), compareHitsByTMScore);
         resultBuffer.clear();
 
         char buffer[32768];
