@@ -34,11 +34,10 @@ static inline float norm(float3d v) {
 }
 
 static inline float getCosineTheta(float3d v1, float3d v2) {
-    // TODO: Check the length of v1, v2 to be 3
     // Calculate inner product of two vectors
     float inner_product = (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
-    float v1_size = pow(v1.x, 2) + pow(v1.y, 2) + pow(v1.z, 2);
-    float v2_size = pow(v2.x, 2) + pow(v2.y, 2) + pow(v2.z, 2);
+    float v1_size = v1.x * v1.x + v1.y * v1.y + v1.z * v1.z;
+    float v2_size = v2.x * v2.x + v2.y * v2.y + v2.z * v2.z;
     float output = inner_product / sqrt(v1_size * v2_size);
     return output;
 }

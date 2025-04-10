@@ -1,4 +1,11 @@
+/**
+ * File: database_reader.cpp
+ * Created: 2023-02-10 17:04:07
+ * Author: Milot Mirdita (milot@mirdita.de)
+ */
+
 #include "database_reader.h"
+#include "utility.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -9,16 +16,6 @@
 #include <vector>
 
 #include <sys/stat.h>
-
-
-#ifdef _MSC_VER
-#include <windows.h>
-#include <io.h>
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#else
-#include <sys/mman.h>
-#endif
 
 struct reader_index_s {
     uint32_t id;
@@ -44,8 +41,11 @@ struct DBReader_s {
 };
 typedef struct DBReader_s DBReader;
 
-char *file_map(FILE *file, ssize_t *size, int extra_flags);
-int file_unmap(char* mem, ssize_t size);
+enum {
+    SORT_BY_FIRST = 0,
+    SORT_BY_SECOND = 1
+};
+
 ssize_t count_lines(char *data, ssize_t size);
 struct compare_by_id {
     bool operator()(const reader_index &a, const reader_index &b) const {
@@ -53,7 +53,7 @@ struct compare_by_id {
     }
 };
 bool read_index(DBReader *reader, char *data);
-bool read_lookup(lookup_entry &lookup, char *data, ssize_t size);
+bool read_lookup(lookup_entry &lookup, char *data, ssize_t size, int sortMode);
 DBReader* load_cache(const char *name);
 bool save_cache(DBReader *reader, const char *name);
 
@@ -108,13 +108,14 @@ void* make_reader(const char *data_name, const char *index_name, int32_t data_mo
     std::sort(reader->index, reader->index + reader->size, compare_by_id());
 
     reader->lookup = NULL;
-    if (data_mode & DB_READER_USE_LOOKUP) {
+    if (data_mode & (DB_READER_USE_LOOKUP) || (data_mode & DB_READER_USE_LOOKUP_REVERSE)) {
         std::string lookup_name(data_name);
         lookup_name = lookup_name + ".lookup";
 
         struct stat st;
         if (stat(lookup_name.c_str(), &st) == 0) {
-            reader->lookup = new lookup_entry(reader->size);
+            reader->lookup = new lookup_entry();
+            reader->lookup->reserve(reader->size);
             FILE* file = fopen(lookup_name.c_str(), "rb");
             if (file == NULL) {
                 free_reader(reader);
@@ -122,7 +123,11 @@ void* make_reader(const char *data_name, const char *index_name, int32_t data_mo
             }
             ssize_t lookup_size;
             char *lookup_data = file_map(file, &lookup_size, 0);
-            read_lookup(*(reader->lookup), lookup_data, lookup_size);
+            int sortMode = SORT_BY_FIRST;
+            if (data_mode & DB_READER_USE_LOOKUP_REVERSE) {
+                sortMode = SORT_BY_SECOND;
+            }
+            read_lookup(*(reader->lookup), lookup_data, lookup_size, sortMode);
             file_unmap(lookup_data, lookup_size);
             fclose(file);
         }
@@ -157,6 +162,8 @@ void free_reader(void *r) {
 
     free(reader);
 }
+
+// ID is position in index and KEY pairs with the lookup name
 
 int64_t reader_get_id(void *r, uint32_t key) {
     DBReader *reader = (DBReader*)r;
@@ -217,30 +224,6 @@ int64_t reader_get_size(void *r) {
         return -1;
     }
     return reader->size;
-}
-char *file_map(FILE *file, ssize_t *size, int extra_flags = 0) {
-    struct stat sb;
-    fstat(fileno(file), &sb);
-    *size = sb.st_size;
-
-    int fd = fileno(file);
-#ifdef _MSC_VER
-    HANDLE handle = (HANDLE)_get_osfhandle(fd);
-    void* mapping = CreateFileMapping(handle, NULL, PAGE_READONLY, 0, 0, NULL);
-    DWORD offsetLow  = DWORD(0 & 0xFFFFFFFF);
-    DWORD offsetHigh = DWORD(0 >> 32);
-    return (char *)MapViewOfFile(mapping, FILE_MAP_READ, offsetHigh, offsetLow, sb.st_size);
-#else
-    return (char *)mmap(NULL, (size_t)(*size), PROT_READ, MAP_PRIVATE | extra_flags, fd, 0);
-#endif
-}
-
-int file_unmap(char *mem, ssize_t size) {
-#ifdef _MSC_VER
-    return UnmapViewOfFile(mem);
-#else
-    return munmap(mem, size);
-#endif
 }
 
 ssize_t count_lines(char *data, ssize_t size) {
@@ -332,6 +315,11 @@ struct sort_by_first {
         return a.first.compare(b.first) <= 0;
     }
 };
+struct sort_by_second {
+    bool operator()(const std::pair<std::string, uint32_t>& a, const std::pair<std::string, uint32_t>& b) const {
+        return a.second <= b.second;
+    }
+};
 
 struct compare_by_first {
     bool operator()(const std::pair<std::string, uint32_t> &lhs, const std::string &rhs) const {
@@ -343,11 +331,21 @@ struct compare_by_first {
     }
 };
 
-bool read_lookup(lookup_entry &lookup, char *data, ssize_t size) {
+struct compare_by_second {
+    bool operator()(const std::pair<std::string, uint32_t>& lhs, const uint32_t& rhs) const {
+        return  (lhs.second < rhs);
+    }
+
+    bool operator()(const uint32_t& lhs, const std::pair<std::string, uint32_t>& rhs) const {
+        return  (lhs < rhs.second);
+    }
+};
+
+bool read_lookup(lookup_entry &lookup, char *data, ssize_t size, int sortMode) {
     char *entry[3];
     ssize_t pos = 0;
     char* start = (char *) data;
-    size_t i = 0;
+    // size_t i = 0;
     while (pos < size) {
         const size_t columns = getWordsOfLine(data, entry, 3);
         if (columns < 3) {
@@ -355,12 +353,16 @@ bool read_lookup(lookup_entry &lookup, char *data, ssize_t size) {
         }
         std::string name(entry[1], (entry[2] - entry[1]) - 1);
         uint32_t key = (uint32_t)strtoul(entry[0], NULL, 10);
-        lookup[i] = std::make_pair(name, key);
+        lookup.emplace_back(name, key);
         data = skipLine(data);
         pos = data - start;
-        i++;
+        // i++;
     }
-    std::stable_sort(lookup.begin(), lookup.end(), sort_by_first());
+    if (sortMode == SORT_BY_FIRST) {
+        std::stable_sort(lookup.begin(), lookup.end(), sort_by_first());
+    } else {
+        std::stable_sort(lookup.begin(), lookup.end(), sort_by_second());
+    }
     return true;
 }
 
@@ -369,13 +371,26 @@ uint32_t reader_lookup_entry(void* r, const char* name) {
     if (reader == NULL || reader->lookup == NULL || reader->lookup->size() == 0) {
         return UINT32_MAX;
     }
-    
+
     std::string name_str(name);
     lookup_entry::const_iterator it = std::lower_bound(reader->lookup->cbegin(), reader->lookup->cend(), name_str, compare_by_first());
     if (it != reader->lookup->cend() && it->first == name_str) {
         return it->second;
     }
     return UINT32_MAX;
+}
+
+const char* reader_lookup_name_alloc(void* r, uint32_t key) {
+    DBReader* reader = (DBReader*)r;
+    if (reader == NULL || reader->lookup == NULL || reader->lookup->size() == 0) {
+        return "";
+    }
+
+    lookup_entry::const_iterator it = std::lower_bound(reader->lookup->cbegin(), reader->lookup->cend(), key, compare_by_second());
+    if (it != reader->lookup->cend() && it->second == key) {
+        return strdup(it->first.c_str());
+    }
+    return "";
 }
 
 DBReader* load_cache(const char *name) {

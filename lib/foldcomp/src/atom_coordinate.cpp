@@ -6,8 +6,8 @@
  * Description:
  *     The data type to handle atom coordinate comes here.
  * ---
- * Last Modified: 2022-10-06 19:59:30
- * Modified By: Hyunbin Kim (khb7840@gmail.com)
+ * Last Modified: Fri Mar 03 2023
+ * Modified By: Hyunbin Kim
  * ---
  * Copyright © 2021 Hyunbin Kim, All rights reserved
  */
@@ -132,7 +132,7 @@ void printAtomCoordinateVector(std::vector<AtomCoordinate>& atoms, int option) {
     }
 }
 
-std::vector<AtomCoordinate> filterBackbone(const std::vector<AtomCoordinate>& atoms) {
+std::vector<AtomCoordinate> filterBackbone(const tcb::span<AtomCoordinate>& atoms) {
     std::vector<AtomCoordinate> output;
     for (const AtomCoordinate& curr_atm : atoms) {
         if (curr_atm.isBackbone()) {
@@ -223,19 +223,23 @@ void writeAtomCoordinatesToPDB(
     // Write title
     // Check if title is too long and if so, write the title in multiple lines
     if (title != "") {
-        int title_line_num = 1;
-        if(title.length() > 70){
-            title_line_num = (int)(ceil((title.length() - 70) / 72.0) + 1);
+        const char* headerData = title.c_str();
+        size_t headerLen = title.length();
+        int remainingHeader = headerLen;
+        char buffer[128];
+        int written = snprintf(buffer, sizeof(buffer), "TITLE     %.*s\n",  std::min(70, (int)remainingHeader), headerData);
+        if (written >= 0 && written < (int)sizeof(buffer)) {
+            pdb_stream << buffer;
         }
-        // Split title into lines of 70 characters.
-        for (int i = 0; i < title_line_num; i++) {
-            if (i == 0) {
-                pdb_stream << "TITLE     " << title.substr(0, 70) << "\n";
-
-            } else {
-                pdb_stream << "TITLE   " << title.substr(i * 72 - 2, 72) << std::endl;
-
+        remainingHeader -= 70;
+        int continuation = 2;
+        while (remainingHeader > 0) {
+            written = snprintf(buffer, sizeof(buffer), "TITLE  % 3d%.*s\n", continuation, std::min(70, (int)remainingHeader), headerData + (headerLen - remainingHeader));
+            if (written >= 0 && written < (int)sizeof(buffer)) {
+                pdb_stream << buffer;
             }
+            remainingHeader -= 70;
+            continuation++;
         }
     }
 
@@ -243,7 +247,7 @@ void writeAtomCoordinatesToPDB(
     std::string residue;
     for (int i = 0; i < total; i++) {
         pdb_stream << "ATOM  "; // 1-4 ATOM
-        pdb_stream << std::setw(5) << i + 1; // 7-11
+        pdb_stream << std::setw(5) << atoms[i].atom_index; // 7-11
         pdb_stream << " "; // 12
         if (atoms[i].atom.size() == 4) {
             pdb_stream << std::setw(4) << std::left << atoms[i].atom; // 13-16
@@ -278,7 +282,7 @@ void writeAtomCoordinatesToPDB(
             // 18-20 Residue name.
             // 22 Chain identifier.
             // 23-26 Residue sequence number.
-            pdb_stream << "TER   " << std::setw(5) << total + 1 << "      ";
+            pdb_stream << "TER   " << std::setw(5) << atoms[i].atom_index + 1 << "      ";
             pdb_stream << std::setw(3) << std::right << atoms[i].residue;
             pdb_stream << " " << atoms[i].chain;
             pdb_stream << std::setw(4) << atoms[i].residue_index << std::endl;
@@ -289,19 +293,16 @@ void writeAtomCoordinatesToPDB(
 int writeAtomCoordinatesToPDBFile(
     std::vector<AtomCoordinate>& atoms, std::string title, std::string pdb_path
 ) {
-    std::ofstream pdb_file;
-    pdb_file.open(pdb_path);
-    if (!pdb_file.is_open()) {
-        std::cout << "Error: Cannot open file: " << pdb_path << std::endl;
+    std::ofstream pdb_file(pdb_path);
+    if (!pdb_file) {
         return 1;
     }
     writeAtomCoordinatesToPDB(atoms, title, pdb_file);
-    pdb_file.close();
     return 0;
 }
 
 std::vector< std::vector<AtomCoordinate> > splitAtomByResidue(
-    const std::vector<AtomCoordinate>& atomCoordinates
+    const tcb::span<AtomCoordinate>& atomCoordinates
 ) {
     std::vector< std::vector<AtomCoordinate> > output;
     std::vector<AtomCoordinate> currentResidue;
@@ -327,7 +328,7 @@ std::vector< std::vector<AtomCoordinate> > splitAtomByResidue(
 }
 
 std::vector<std::string> getResidueNameVector(
-    const std::vector<AtomCoordinate>& atomCoordinates
+    const tcb::span<AtomCoordinate>& atomCoordinates
 ) {
     std::vector<std::string> output;
     // Unique residue names
@@ -369,7 +370,31 @@ void removeAlternativePosition(std::vector<AtomCoordinate>& atoms) {
 }
 
 std::vector<AtomCoordinate> getAtomsWithResidueIndex(
-    std::vector<AtomCoordinate>& atoms, int residue_index,
+    std::vector<AtomCoordinate>& atoms, int residue_index
+) {
+    std::vector<AtomCoordinate> output;
+    for (const AtomCoordinate& curr_atm : atoms) {
+        if (curr_atm.residue_index == residue_index) {
+            output.emplace_back(curr_atm);
+        }
+    }
+    return output;
+}
+
+std::vector<AtomCoordinate> getAtomsWithResidueIndiceRange(
+    std::vector<AtomCoordinate>& atoms, int start, int end
+) {
+    std::vector<AtomCoordinate> output;
+    for (const AtomCoordinate& curr_atm : atoms) {
+        if (curr_atm.residue_index >= start && curr_atm.residue_index < end) {
+            output.emplace_back(curr_atm);
+        }
+    }
+    return output;
+}
+
+std::vector<AtomCoordinate> getAtomsWithResidueIndex(
+    const tcb::span<AtomCoordinate>& atoms, int residue_index,
     std::vector<std::string> atomNames
 ) {
     std::vector<AtomCoordinate> output;
@@ -386,13 +411,12 @@ std::vector<AtomCoordinate> getAtomsWithResidueIndex(
 }
 
 std::vector< std::vector<AtomCoordinate> > getAtomsWithResidueIndex(
-    std::vector<AtomCoordinate>& atoms, std::vector<int> residue_index,
+    const tcb::span<AtomCoordinate>& atoms, std::vector<int> residue_index,
     std::vector<std::string> atomNames
 ) {
-    std::vector< std::vector<AtomCoordinate> > output;
+    std::vector<std::vector<AtomCoordinate>> output;
     for (int curr_index : residue_index) {
-        std::vector<AtomCoordinate> curr_atoms = getAtomsWithResidueIndex(atoms, curr_index, atomNames);
-        output.push_back(curr_atoms);
+        output.emplace_back(getAtomsWithResidueIndex(atoms, curr_index, atomNames));
     }
     return output;
 }
@@ -407,4 +431,100 @@ float RMSD(std::vector<AtomCoordinate>& atoms1, std::vector<AtomCoordinate>& ato
         sum += pow(atoms1[i].coordinate.z - atoms2[i].coordinate.z, 2);
     }
     return sqrt(sum / atoms1.size());
+}
+
+std::vector<AtomCoordinate> _subsetAtomVectorWithIndices(
+    std::vector<AtomCoordinate>& atoms,
+    std::pair<size_t, size_t>& indices
+) {
+    std::vector<AtomCoordinate> output;
+    for (size_t i = indices.first; i < indices.second; i++) {
+        output.push_back(atoms[i]);
+    }
+    return output;
+}
+
+void _splitAtomVectorWithIndices(
+    std::vector<AtomCoordinate>& atoms,
+    std::vector< std::pair<size_t, size_t> >& indices,
+    std::vector< std::vector<AtomCoordinate> >& output
+) {
+    if (indices.size() == 0) {
+        output.push_back(atoms);
+    } else {
+        for (size_t i = 0; i < indices.size(); i++) {
+            output.push_back(_subsetAtomVectorWithIndices(atoms, indices[i]));
+        }
+    }
+}
+
+/**
+ * @brief Identify discontinuous regions in atom coordinate vector and return
+ *        vector of indices of the start and end of each region.
+ *        start: inclusive, end: exclusive [start, end)
+ * @param atoms
+ * @param mode
+ * @return std::vector<std::pair<size_t, size_t>>
+ */
+std::vector< std::pair<size_t, size_t> > identifyChains(const std::vector<AtomCoordinate>& atoms) {
+    std::vector< std::pair<size_t, size_t> > output;
+    size_t start = 0;
+    // Split by chain
+    for (size_t i = 1; i < atoms.size(); i++) {
+        if (atoms[i].chain != atoms[i - 1].chain) {
+            // Ensure that the new fragment starts with "N"
+            if (atoms[i].atom == "N") {
+                output.emplace_back(start, i);
+                start = i;
+            } else {
+                // Find the first "N" atom
+                for (size_t j = i; j < atoms.size(); j++) {
+                    if (atoms[j].atom == "N") {
+                        // Ignore fragment between i and j
+                        output.emplace_back(start, i);
+                        start = j;
+                        break;
+                    }
+                }
+                // Set i to j
+                i = start;
+            }
+        }
+    }
+    // Add the last fragment
+    output.emplace_back(start, atoms.size());
+    return output;
+
+}
+
+/**
+ * @brief Identify discontinuous residue indices in atom coordinate vector and return
+ *        coordinates that have the same chain
+ * @param atoms
+ * @return std::vector< std::pair<size_t, size_t> >
+ */
+std::vector<std::pair<size_t, size_t>> identifyDiscontinousResInd(
+    const std::vector<AtomCoordinate>& atoms,
+    size_t chain_start,
+    size_t chain_end
+) {
+    std::vector<std::pair<size_t, size_t>> output;
+    // Extract N atoms only within chain
+    std::vector<std::pair<size_t, int>> N_indices;
+    for (size_t i = chain_start; i < chain_end; i++) {
+        if (atoms[i].atom == "N") {
+            N_indices.emplace_back(i, atoms[i].residue_index);
+        }
+    }
+    // Identify discontinuous regions
+    size_t start = N_indices[0].first;
+    for (size_t i = 1; i < N_indices.size(); i++) {
+        if (N_indices[i].second - N_indices[i - 1].second > 1) {
+            output.emplace_back(start, N_indices[i].first);
+            start = N_indices[i].first;
+        }
+    }
+    // Add the last fragment
+    output.emplace_back(start, chain_end);
+    return output;
 }
