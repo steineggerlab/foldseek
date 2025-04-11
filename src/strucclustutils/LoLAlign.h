@@ -140,6 +140,7 @@ private:
     int SeedNumber = 3;
     unsigned char *queryNumAA;
     unsigned char *queryNum3Di;
+    float* lol_score_vec_sh;
 
 
 
@@ -153,7 +154,7 @@ private:
     float b1[3] = {0.7043129 , 0.374659  , 0.39905924};
 
     float w2[3] = {-0.776632  ,  0.61055756, 0.5823986};
-    float b2 = -0.11200039;
+    float b2 = -0.11200039+0.5;
 
     // Load weights and biases into SIMD registers
     simd_float w1_0 = simdf32_set(w1[0][0]); 

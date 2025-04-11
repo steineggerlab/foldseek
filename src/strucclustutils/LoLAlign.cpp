@@ -8,6 +8,7 @@
 #include <cmath>
 #include <vector>
 #include <fstream>
+#include <omp.h> 
 #include "LoLAlign.h"
 #include "Fwbw.h"
 #include "Debug.h"
@@ -19,6 +20,9 @@
 #include "Util.h"
 #include "LocalParameters.h"
 #include "Coordinate16.h"
+
+#include <bits/stdc++.h> 
+using namespace std; 
 
 
 
@@ -70,6 +74,7 @@ lolAlign::~lolAlign()
     delete[]final_anchor_target;
     free(queryNumAA);
     free(queryNum3Di);
+    free(lol_score_vec_sh);
 }
 
 
@@ -90,6 +95,8 @@ void lolAlign::reallocate_target(size_t targetL){
     lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
     free(lol_score_vec);
     lol_score_vec = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
+    free(lol_score_vec_sh);
+    lol_score_vec_sh = (float *)mem_align(ALIGN_FLOAT, targetL * sizeof(float));
     delete[] final_anchor_target;
     final_anchor_target = new int[targetL];
     delete[] final_anchor_query;
@@ -221,11 +228,11 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     for(int sa = 0; sa < num_sa; sa++){
 
-        //if(sa % 5 == 0){
-        //    fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
-        //    fwbwaln->computeProbabilityMatrix(false);
+        /*if(sa % 5 == 0){
+            fwbwaln->initScoreMatrix(G, targetLen, queryLen, gaps);
+            fwbwaln->computeProbabilityMatrix<0>();
 
-        //}
+        }*/
         maxIndexX = 0;
         maxIndexY = 0;
 
@@ -486,7 +493,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         float total_lol_score = 0.0;
         for (int i = 0; i < anchor_length[sa]; i++) {
             total_lol_score += lol_score_vec[i];
-
         }
          total_lol_score = total_lol_score ;// std::sqrt((float)(queryLen * targetLen));
         
@@ -496,12 +502,131 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         }
     }
     float seqId = 0.0;
+
+    int sa_idx = 0;
+        for(int i = 0; i < queryLen; i++){
+            if(anchor_query[max_lol_idx][i] != 0){
+                final_anchor_query[sa_idx] = i;
+                sa_idx++;
+               
+            }
+        }
+        sa_idx = 0;
+        for(int i = 0; i < targetLen; i++){
+            if(anchor_target[max_lol_idx][i] != 0){
+                final_anchor_target[sa_idx] = i;
+                sa_idx++;
+            }
+        }
     
+    computeDi_score(targetNumAA, targetNum3Di, anchor_length[max_lol_idx], final_anchor_query, final_anchor_target, subMatAA, subMat3Di, lol_score_vec);
+    float max_di = 0;
+    for (int i = 0; i < anchor_length[max_lol_idx]; i++) {
+        max_di += lol_score_vec[i];
+    } 
+
+    for(int i = 0; i < queryLen; i++){
+        lol_score_vec[i] = 0;
+        lol_score_vec_sh[i] = 0;
+        
+    }
+    for (int i = 0; i < anchor_length[max_lol_idx]; i++) {
+        for (int j = 0;j < anchor_length[max_lol_idx]; j++) {
+            if(d_ij[final_anchor_query[i]][final_anchor_query[j]] > 0.0){
+                lol_dist[j] = std::abs(d_ij[final_anchor_query[i]][final_anchor_query[j]] - d_ij[final_anchor_query[i]][final_anchor_query[j]]);
+                //anchor_dist_target[j] = d_kl[final_anchor_target[i]][final_anchor_target[j]];
+                lol_seq_dist[j] = std::copysign(1.0f, (final_anchor_query[i]-final_anchor_query[j])) * std::log(1 + std::abs((float)(final_anchor_query[i]-final_anchor_query[j])));
+            }
+            else{
+                lol_dist[j] = -1;
+                lol_seq_dist[j] = -1;
+            }
+        }
+        lolscore(lol_dist, lol_seq_dist, lol_score_vec_sh, anchor_length[max_lol_idx], hidden_layer);
+
+    }
+    float selfhit_score = 0.0; 
+    for (int i = 0; i < anchor_length[max_lol_idx]; i++) {
+        selfhit_score += lol_score_vec_sh[i];
+    }
+
+
+
+    for (int i = 0; i < anchor_length[max_lol_idx]; i++) {
+        for (int j = 0;j < anchor_length[max_lol_idx]; j++) {
+            if(d_ij[final_anchor_query[i]][final_anchor_query[j]] > 0.0){
+                lol_dist[j] = std::abs(d_ij[final_anchor_query[i]][final_anchor_query[j]] - d_kl[final_anchor_target[i]][final_anchor_target[j]]);
+                //anchor_dist_target[j] = d_kl[final_anchor_target[i]][final_anchor_target[j]];
+                lol_seq_dist[j] = std::copysign(1.0f, (final_anchor_query[i]-final_anchor_query[j])) * std::log(1 + std::abs((float)(final_anchor_query[i]-final_anchor_query[j])));
+            }
+            else{
+                lol_dist[j] = -1;
+                lol_seq_dist[j] = -1;
+            }
+        }
+        lolscore(lol_dist, lol_seq_dist, lol_score_vec, anchor_length[max_lol_idx], hidden_layer);
+
+    }
+
+    float total_lol_score = 0.0;
+    float norm_lol_sh = 0;
+    
+    for (int i = 0; i < anchor_length[max_lol_idx]; i++) {
+        norm_lol_sh += lol_score_vec[i] / (lol_score_vec_sh[i]+1);
+        total_lol_score += lol_score_vec[i];
+    }
+
+
+
 
     std::string backtrace = "";
+    std::string build_dataset = "";
     int matches = 0;
     int q_count = 0;
     int t_count = 0;
+    
+
+    
+
+    float frac_aligned_res = 0;
+    float frac_res = 0;
+    float norm_lol_res = 0;
+
+    for(int i = 0; i < anchor_length[max_lol_idx]; i++){
+        float res_count = 0;
+        for(int j = 0; j < anchor_length[max_lol_idx]; j++){
+            if(d_ij[final_anchor_query[i]][final_anchor_query[j]] > 0){
+                frac_aligned_res += 1;
+                res_count++;
+            }
+
+        }
+        norm_lol_res += lol_score_vec[i]/(res_count+1);
+        for(int j = 0; j < queryLen; j++){
+            if(d_ij[final_anchor_query[i]][j] > 0){
+                frac_res += 1;
+            }
+        }
+    }
+
+    build_dataset.append(to_string(total_lol_score));
+    build_dataset.append(";");
+    build_dataset.append(to_string(max_di));
+    build_dataset.append(";");
+    build_dataset.append(to_string(selfhit_score));
+    build_dataset.append(";");
+    build_dataset.append(to_string(anchor_length[max_lol_idx]));
+    build_dataset.append(";");
+    build_dataset.append(to_string(frac_aligned_res));
+    build_dataset.append(";");
+    build_dataset.append(to_string(frac_res));
+    build_dataset.append(";");
+    build_dataset.append(to_string(norm_lol_sh));
+    build_dataset.append(";");
+    build_dataset.append(to_string(norm_lol_res));
+    build_dataset.append(";");
+
+    
 
     /*for(int i = 0 ; i<queryLen; i++){
         std::cout << anchor_query[max_lol_idx][i];
@@ -512,6 +637,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     }
     std::cout << std::endl;
     std::cout << "queryLen: " << queryLen << std::endl;*/
+    
     
 
 
@@ -545,12 +671,14 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     }
     //std::cout << "backtrace: " << backtrace << " " << backtrace.size() << " " << queryLen << std::endl;
 
+
+
     Matcher::result_t result = Matcher::result_t();
     result.seqId = seqId / (float)anchor_length[max_lol_idx];
     result.qcov = anchor_length[max_lol_idx] / (float)queryLen;
     result.dbcov = anchor_length[max_lol_idx] / (float)targetLen;
     result.score = max_lol_score; 
-    result.eval = max_lol_score;
+    result.eval = max_lol_score/sqrt((float)(queryLen * targetLen));
     result.dbKey = dbKey;
     result.qStartPos = 0;
     result.dbStartPos = 0;
@@ -607,11 +735,10 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     result.qEndPos--;
     result.dbEndPos--;
-    result.backtrace = backtrace.substr(firstM);
+    result.backtrace = build_dataset;//backtrace.substr(firstM);
     result.alnLength = (int)result.backtrace.size();
     free(targetNumAA);
     free(targetNum3Di);
-    
     return result;
 
 }
@@ -704,6 +831,7 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     lol_dist = (float *)mem_align(ALIGN_FLOAT, maxTLen * sizeof(float));
     lol_seq_dist = (float *)mem_align(ALIGN_FLOAT, maxTLen * sizeof(float));
     lol_score_vec = (float *)mem_align(ALIGN_FLOAT, maxTLen * sizeof(float));
+    lol_score_vec_sh = (float *)mem_align(ALIGN_FLOAT, maxTLen * sizeof(float));
     final_anchor_query = new int[maxTLen];
     final_anchor_target = new int[maxTLen];
     calc_dist_matrix(query_x, query_y, query_z, queryLen, d_ij, true);
