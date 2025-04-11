@@ -134,13 +134,14 @@ private:
     int* gaps = new int[4]{0, 0, 0, 0};
     float* lol_dist;
     float* lol_seq_dist;
-    float* lol_score_vec;
+    float** lol_score_vec;
     int* final_anchor_query;
     int* final_anchor_target;
     int SeedNumber = 3;
     unsigned char *queryNumAA;
     unsigned char *queryNum3Di;
     float* lol_score_vec_sh;
+    float QQ_score = 0;
 
 
 
