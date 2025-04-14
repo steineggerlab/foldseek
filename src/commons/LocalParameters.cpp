@@ -16,6 +16,7 @@ LocalParameters::LocalParameters() :
         PARAM_MASK_BFACTOR_THRESHOLD(PARAM_MASK_BFACTOR_THRESHOLD_ID,"--mask-bfactor-threshold", "Mask b-factor threshold", "mask residues for seeding if b-factor < thr [0,100]",typeid(float), (void *) &maskBfactorThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_MODEL_NAME_MODE(PARAM_MODEL_NAME_MODE_ID,"--model-name-mode", "Model name mode", "Add model to name:\n0: auto\n1: always add\n",typeid(int), (void *) &modelNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_WRITE_MAPPING(PARAM_WRITE_MAPPING_ID, "--write-mapping", "Write mapping file", "write _mapping file containing mapping from internal id to taxonomic identifier", typeid(int), (void *) &writeMapping, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_EXACT_TMSCORE(PARAM_EXACT_TMSCORE_ID,"--exact-tmscore", "Exact TMscore","turn on fast exact TMscore (slow), default is approximate" ,typeid(int), (void *) &exactTMscore, "^[0-1]{1}$"),
@@ -86,6 +87,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_GPU);
     structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
+    structurecreatedb.push_back(&PARAM_MODEL_NAME_MODE);
     structurecreatedb.push_back(&PARAM_DB_EXTRACTION_MODE);
     structurecreatedb.push_back(&PARAM_DISTANCE_THRESHOLD);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
@@ -298,6 +300,7 @@ LocalParameters::LocalParameters() :
     // createdb
     maskBfactorThreshold = 0;
     chainNameMode = 0;
+    modelNameMode = 1;
     writeMapping = 0;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     inputFormat = 0; // auto detect

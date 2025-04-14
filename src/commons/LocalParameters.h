@@ -46,6 +46,9 @@ public:
     static const int CHAIN_MODE_AUTO = 0;
     static const int CHAIN_MODE_ADD = 1;
 
+    static const int MODEL_MODE_AUTO = 0;
+    static const int MODEL_MODE_ADD = 1;
+
     static const int OUTFMT_QCA = 40;
     static const int OUTFMT_TCA = 41;
     static const int OUTFMT_U = 42;
@@ -125,6 +128,7 @@ public:
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
     PARAMETER(PARAM_CHAIN_NAME_MODE)
+    PARAMETER(PARAM_MODEL_NAME_MODE)
     PARAMETER(PARAM_WRITE_MAPPING)
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_EXACT_TMSCORE)
@@ -157,6 +161,7 @@ public:
     float maskBfactorThreshold;
     int alignmentType;
     int chainNameMode;
+    int modelNameMode;
     bool writeMapping;
     int tmAlignFast;
     int exactTMscore;
