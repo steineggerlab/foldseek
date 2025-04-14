@@ -300,7 +300,7 @@ LocalParameters::LocalParameters() :
     // createdb
     maskBfactorThreshold = 0;
     chainNameMode = 0;
-    modelNameMode = 1;
+    modelNameMode = 0;
     writeMapping = 0;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     inputFormat = 0; // auto detect
