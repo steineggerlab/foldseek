@@ -927,6 +927,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     if (tar.isFinished == 0 && (mtar_read_header(&tar, &tarHeader)) != MTAR_ENULLRECORD) {
                         // GNU tar has special blocks for long filenames
                         if (tarHeader.type == MTAR_TGNU_LONGNAME || tarHeader.type == MTAR_TGNU_LONGLINK) {
+                            if (tarHeader.size == 0) {
+                                Debug(Debug::ERROR) << "Invalid tar input with long name/link record of size 0\n";
+                                EXIT(EXIT_FAILURE);
+                            }
                             if (tarHeader.size > bufferSize) {
                                 bufferSize = tarHeader.size * 1.5;
                                 dataBuffer = (char *) realloc(dataBuffer, bufferSize);
@@ -935,7 +939,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << tarHeader.name << "\n";
                                 EXIT(EXIT_FAILURE);
                             }
-                            name.assign(dataBuffer, tarHeader.size);
+                            // skip null byte
+                            name.assign(dataBuffer, tarHeader.size - 1);
                             // skip to next record
                             if (mtar_read_header(&tar, &tarHeader) == MTAR_ENULLRECORD) {
                                 Debug(Debug::ERROR) << "Tar truncated after entry " << name << "\n";
