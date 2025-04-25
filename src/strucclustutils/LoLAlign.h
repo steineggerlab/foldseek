@@ -104,7 +104,6 @@ private:
 
 
     std::string backtrace;
-    int num_sa = 10;
     float * query_x;
     float * query_y;
     float * query_z;
@@ -118,6 +117,8 @@ private:
     float ** G;
     int ** anchor_query;
     int ** anchor_target;
+    int num_sa = 10;
+    int SeedNumber = 3;
     float start_anchor_go = -6.0;
     float start_anchor_ge = -3.0;
     float start_anchor_T = 2.0;
@@ -134,14 +135,13 @@ private:
     int* gaps = new int[4]{0, 0, 0, 0};
     float* lol_dist;
     float* lol_seq_dist;
-    float** lol_score_vec;
+    float* lol_score_vec;
     int* final_anchor_query;
     int* final_anchor_target;
-    int SeedNumber = 3;
+
     unsigned char *queryNumAA;
     unsigned char *queryNum3Di;
     float* lol_score_vec_sh;
-    float QQ_score = 0;
 
 
 
@@ -155,7 +155,7 @@ private:
     float b1[3] = {0.7043129 , 0.374659  , 0.39905924};
 
     float w2[3] = {-0.776632  ,  0.61055756, 0.5823986};
-    float b2 = -0.11200039+0.5;
+    float b2 = -0.11200039 + 0.5;
 
     // Load weights and biases into SIMD registers
     simd_float w1_0 = simdf32_set(w1[0][0]); 
@@ -188,9 +188,6 @@ private:
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
-
-
-
 };
 
 
