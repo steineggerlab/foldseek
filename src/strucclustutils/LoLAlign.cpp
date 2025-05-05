@@ -648,7 +648,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     result.qLen = queryLen;
     result.dbLen = targetLen;
     result.alnLength = backtrace.length();
-    //result.backtrace = Matcher::compressAlignment(backtrace);
+    result.backtrace = Matcher::compressAlignment(backtrace);
 
     
 
@@ -698,7 +698,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     result.qEndPos--;
     result.dbEndPos--;
-    result.backtrace = Matcher::compressAlignment(backtrace.substr(firstM));
+    result.backtrace = backtrace.substr(firstM);
     result.alnLength = (int)result.backtrace.size();
     free(targetNumAA);
     free(targetNum3Di);
