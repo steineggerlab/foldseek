@@ -40,7 +40,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
     fi
   else
     # shellcheck disable=SC2086
-    $RUNNER "$MMSEQS" "${ALIGNMENT_ALGO}" "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/pref_${STEP}" "${RESULT}" ${TMP} \
+    $RUNNER "$MMSEQS" "${ALIGNMENT_ALGO}" "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/pref_${STEP}" "${RESULTS}" ${TMP} \
           || fail "Alignment died"
   fi
 
