@@ -144,7 +144,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
     if(par.numIterations > 1 || par.numIterations == 0){
+	//par.evalProfile = 0.1;
         double originalEval = par.evalThr;
+
         par.evalThr = (par.evalThr < par.evalProfile) ? par.evalThr  : par.evalProfile;
         std::string program;
         if (par.numIterations == 0) {
