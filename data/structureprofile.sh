@@ -66,6 +66,10 @@ if [ -n "$REMOVE_TMP" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/aln_${STEP}" ${VERBOSITY}
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/profile_${STEP}" ${VERBOSITY}
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/profile_${STEP}_ss" ${VERBOSITY}
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/profile_${STEP}_h" ${VERBOSITY}
       fi
       STEP=$((STEP+1))
     done
