@@ -333,7 +333,6 @@ LocalParameters::LocalParameters() :
 
     // profiles
     evalProfile = 0.1;
-
     // multimer
     eValueThrExpandMultimer = 10000.0;
     multimerReportMode = 1;

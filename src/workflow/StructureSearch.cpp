@@ -176,7 +176,14 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         }
 
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-        cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());
+        //do not used PROFILE
+        //cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());
+        cmd.addVariable("VERBOSITY_THREADS_PAR", par.createParameterString(par.threadsandcompression).c_str());
+        if(par.PARAM_E_PROFILE.wasSet){
+            std::vector<MMseqsParameter*> tmpVec;
+            tmpVec.push_back(&par.PARAM_E_PROFILE);
+            cmd.addVariable("PROFILE_EVAL",par.createParameterString(tmpVec).c_str() );
+        }
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
         cmd.execProgram(program.c_str(), par.filenames);
