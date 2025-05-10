@@ -154,6 +154,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
             FileUtil::writeFile(program, structureprofile_sh, structureprofile_sh_len);
             par.numIterations = 2;
         } else {
+            if(par.PARAM_E_PROFILE.wasSet==false) {
+                par.evalThr = 0.001;
+            }
             program = tmpDir + "/structureiterativesearch.sh";
             FileUtil::writeFile(program, structureiterativesearch_sh, structureiterativesearch_sh_len);
         }
