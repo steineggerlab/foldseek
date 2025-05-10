@@ -1552,15 +1552,15 @@ std::pair<StructureSmithWaterman::alignment_end, StructureSmithWaterman::alignme
 #undef max4
 }
 
-void StructureSmithWaterman::ssw_init(const Sequence* q_aa,
-                                      const Sequence* q_3di,
+void StructureSmithWaterman::ssw_init(Sequence* q_aa,
+                                      Sequence* q_3di,
                                       const int8_t* mat_aa,
                                       const int8_t* mat_3di,
                                       const BaseMatrix *m){
     profile->bias = 0;
     const int32_t alphabetSize = m->alphabetSize;
     int32_t compositionBias = 0;
-    if (aaBiasCorrection) {
+    if (aaBiasCorrection && Parameters::isEqualDbtype(q_3di->getSeqType(), Parameters::DBTYPE_AMINO_ACIDS)) {
         SubstitutionMatrix::calcLocalAaBiasCorrection(m, q_aa->numSequence, q_aa->L, tmp_composition_bias, 1.0);
         for (int i =0; i < q_aa->L; i++) {
             profile->composition_bias_aa[i] = (int8_t) (tmp_composition_bias[i] < 0.0) ? tmp_composition_bias[i] - 0.5 : tmp_composition_bias[i] + 0.5;

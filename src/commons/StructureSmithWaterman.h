@@ -159,7 +159,7 @@ public:
      -2 -2 -2  2 //T
      mat is the pointer to the array {2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2}
      */
-    void ssw_init(const Sequence *q_aa, const Sequence *q_3di, const int8_t *mat_aa, const int8_t *mat_3di, const BaseMatrix *m);
+    void ssw_init(Sequence *q_aa, Sequence *q_3di, const int8_t *mat_aa, const int8_t *mat_3di, const BaseMatrix *m);
 
 
     static char cigar_int_to_op (uint32_t cigar_int);
