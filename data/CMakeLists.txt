@@ -6,6 +6,7 @@ set(COMPILED_RESOURCES
         structureindex.sh
         structuresearch.sh
         structureiterativesearch.sh
+        structureprofile.sh
         structurerbh.sh
         structdatabases.sh
         mat3di.out

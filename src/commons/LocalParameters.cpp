@@ -45,6 +45,8 @@ LocalParameters::LocalParameters() :
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
     PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
+    PARAM_NUM_ITERATIONS.description = "Number of iterative profile search iterations (0: auto (select optimal), 1: default, 1-n), N≥2 exactly N)";
+    PARAM_NUM_ITERATIONS.regex = "^[0-9]{1}[0-9]*$";
     PARAM_EXHAUSTIVE_SEARCH.description = "Turns on an exhaustive all vs all search by by passing the prefilter step";
     PARAM_EXHAUSTIVE_SEARCH.category = MMseqsParameter::COMMAND_PREFILTER;
     PARAM_MIN_ALN_LEN.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;

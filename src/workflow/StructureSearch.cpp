@@ -8,6 +8,8 @@
 #include "PrefilteringIndexReader.h"
 #include "structuresearch.sh.h"
 #include "structureiterativesearch.sh.h"
+#include "structureprofile.sh.h"
+
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
@@ -141,9 +143,18 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
-    if(par.numIterations > 1){
+    if(par.numIterations > 1 || par.numIterations == 0){
         double originalEval = par.evalThr;
         par.evalThr = (par.evalThr < par.evalProfile) ? par.evalThr  : par.evalProfile;
+        std::string program;
+        if (par.numIterations == 0) {
+            program = tmpDir + "/structureprofile.sh";
+            FileUtil::writeFile(program, structureprofile_sh, structureprofile_sh_len);
+            par.numIterations = 2;
+        } else {
+            program = tmpDir + "/structureiterativesearch.sh";
+            FileUtil::writeFile(program, structureiterativesearch_sh, structureiterativesearch_sh_len);
+        }
         for (int i = 0; i < par.numIterations; i++) {
             if (i == (par.numIterations - 1)) {
                 par.evalThr = originalEval;
@@ -165,15 +176,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         }
 
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-        par.scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("blosum62.out", "nucleotide.out"));
         cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());
-        cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-
-
-        std::string program = tmpDir + "/structureiterativesearch.sh";
-        FileUtil::writeFile(program, structureiterativesearch_sh, structureiterativesearch_sh_len);
         cmd.execProgram(program.c_str(), par.filenames);
     }else{
         if(par.clusterSearch == 1) {
