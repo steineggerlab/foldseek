@@ -146,13 +146,15 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | Option              | Category    | Description                                                                                                                            |
 |---------------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | -s                  | Sensitivity | Adjust sensitivity to speed trade-off; lower is faster, higher more sensitive (fast: 7.5, default: 9.5)                                |
-| --num-iterations    | Sensitivity | Enables iterative search to find more distantly related hits (Default: off). Recommended `--num-iterations 3`                          |
+| --num-iterations    | Sensitivity | Enables iterative search to find more distantly related hits (Default: off). Recommended `--num-iterations 0` optimized version                        |
 | --exhaustive-search | Sensitivity | Skips prefilter and performs an all-vs-all alignment (more sensitive but much slower)                                                  |
 | --max-seqs          | Sensitivity | Adjust the amount of prefilter handed to alignment; increasing it can lead to more hits (default: 1000)                                |
 | -e                  | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                         |
+| --cluster-search     | Sensitivity   | For clustered databases like AFDB50, CATH50 trigger a cluster search: 0: search only representatives (fast), 1: align and report also all members of a cluster (default: 0)                                                           |
 | --alignment-type    | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default)       |
 | -c                  | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode          | Alignment   | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                                                           |
+
 | --gpu               | Performance | Enables fast GPU-accelerated ungapped prefilter (`--prefilter-mode 1`) (default: off), ignores `-s`. Use `--gpu 1` to enable.          |
 
 #### Alignment Mode
