@@ -142,13 +142,12 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-
+    std::string program;
     if(par.numIterations > 1 || par.numIterations == 0){
 	//par.evalProfile = 0.1;
         double originalEval = par.evalThr;
 
         par.evalThr = (par.evalThr < par.evalProfile) ? par.evalThr  : par.evalProfile;
-        std::string program;
         if (par.numIterations == 0) {
             program = tmpDir + "/structureprofile.sh";
             FileUtil::writeFile(program, structureprofile_sh, structureprofile_sh_len);
@@ -179,6 +178,10 @@ int structuresearch(int argc, const char **argv, const Command &command) {
                 cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(), par.createParameterString(par.structurealign).c_str());
             }
         }
+        if(par.clusterSearch == 1){
+            cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
+            cmd.addVariable("EXPAND", "1");
+        }
 
         cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
         //do not used PROFILE
@@ -191,46 +194,46 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         }
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-        cmd.execProgram(program.c_str(), par.filenames);
     }else{
-        if(par.clusterSearch == 1) {
-            if (isIndex){
-                // check if we have  SRC_SEQUENCES, SEQUENCES, ALIGNMENT
-                DBReader<unsigned int> indexReader( (par.db2+".idx").c_str(),
-                                                 (par.db2+".idx.index").c_str(),
-                                                 1, DBReader<unsigned int>::USE_INDEX);
-                indexReader.open(DBReader<unsigned int>::NOSORT);
-                size_t alignmentIdx = indexReader.getId(PrefilteringIndexReader::ALNINDEX);
-                if(alignmentIdx == UINT_MAX){
+        program = tmpDir + "/structuresearch.sh";
+        FileUtil::writeFile(program, structuresearch_sh, structuresearch_sh_len);
+    }
+
+    if(par.clusterSearch == 1) {
+        if (isIndex){
+            // check if we have  SRC_SEQUENCES, SEQUENCES, ALIGNMENT
+            DBReader<unsigned int> indexReader( (par.db2+".idx").c_str(),
+                                                (par.db2+".idx.index").c_str(),
+                                                1, DBReader<unsigned int>::USE_INDEX);
+            indexReader.open(DBReader<unsigned int>::NOSORT);
+            size_t alignmentIdx = indexReader.getId(PrefilteringIndexReader::ALNINDEX);
+            if(alignmentIdx == UINT_MAX){
+                Debug(Debug::ERROR)
+                        << "Require idx with alignments/cluster for cluster search.";
+                EXIT(EXIT_FAILURE);
+            }
+            indexReader.close();
+        }else {
+            std::vector<std::string> dbsToCheck = {"_seq", "_seq_ss", "_seq_h"};
+            for (size_t i = 0; i < dbsToCheck.size(); i++) {
+                std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
+                if (!FileUtil::fileExists(db.c_str())) {
                     Debug(Debug::ERROR)
-                            << "Require idx with alignments/cluster for cluster search.";
-                    EXIT(EXIT_FAILURE);
-                }
-                indexReader.close();
-            }else {
-                std::vector<std::string> dbsToCheck = {"_seq", "_seq_ss", "_seq_h"};
-                for (size_t i = 0; i < dbsToCheck.size(); i++) {
-                    std::string db = par.db2 + dbsToCheck[i] + ".dbtype";
-                    if (!FileUtil::fileExists(db.c_str())) {
-                        Debug(Debug::ERROR)
-                                << "Require " << db << " database for cluster search.";
-                        EXIT(EXIT_FAILURE);
-                    }
-                }
-                if (!FileUtil::fileExists((par.db2 + "_clu.dbtype").c_str()) &&
-                    !FileUtil::fileExists((par.db2 + "_aln.dbtype").c_str())) {
-                    Debug(Debug::ERROR)
-                            << "Require " << par.db2 + "_clu  or " << par.db2 + "_aln database for cluster search.";
+                            << "Require " << db << " database for cluster search.";
                     EXIT(EXIT_FAILURE);
                 }
             }
-            cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
-            cmd.addVariable("EXPAND", "1");
+            if (!FileUtil::fileExists((par.db2 + "_clu.dbtype").c_str()) &&
+                !FileUtil::fileExists((par.db2 + "_aln.dbtype").c_str())) {
+                Debug(Debug::ERROR)
+                        << "Require " << par.db2 + "_clu  or " << par.db2 + "_aln database for cluster search.";
+                EXIT(EXIT_FAILURE);
+            }
         }
-        std::string program = tmpDir + "/structuresearch.sh";
-        FileUtil::writeFile(program, structuresearch_sh, structuresearch_sh_len);
-        cmd.execProgram(program.c_str(), par.filenames);
+        cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
+        cmd.addVariable("EXPAND", "1");
     }
+    cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
     assert(false);

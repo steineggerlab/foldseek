@@ -26,7 +26,6 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
       # shellcheck disable=SC2086
       $RUNNER "$MMSEQS" $TOOL "${QUERYDB}_ss" "${TARGET_PREFILTER}${INDEXEXT}" "$TMP_PATH/pref_${STEP}" ${TMP} \
           || fail "Prefilter died"
-      touch "$TMP_PATH/pref_${STEP}.dbtype"
   fi
 
   # call alignment module
@@ -39,8 +38,24 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
             || fail "Alignment died"
     fi
   else
+    INTERMEDIATE="$TMP_PATH/pref_${STEP}"
+    if [ -n "${EXPAND}" ]; then
+        if notExists "${TMP_PATH}/aln_${STEP}.dbtype"; then
+          # shellcheck disable=SC2086
+          $RUNNER "$MMSEQS" "${ALIGNMENT_ALGO}" "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/pref_${STEP}" "${TMP_PATH}/aln_${STEP}" ${TMP} \
+                   || fail "Alignment died"
+        fi
+        if notExists "${TMP_PATH}/aln_expanded.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" mergeresultsbyset "${TMP_PATH}/aln_${STEP}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/aln_expanded" ${MERGERESULTBYSET_PAR} \
+                || fail "Expand died"
+            # shellcheck disable=SC2086
+            "$MMSEQS" setextendeddbtype "${TMP_PATH}/aln_expanded" --extended-dbtype 2 ${VERBOSITY}
+        fi
+        INTERMEDIATE="${TMP_PATH}/aln_expanded"
+    fi
     # shellcheck disable=SC2086
-    $RUNNER "$MMSEQS" "${ALIGNMENT_ALGO}" "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/pref_${STEP}" "${RESULTS}" ${TMP} \
+    $RUNNER "$MMSEQS" "${ALIGNMENT_ALGO}" "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$INTERMEDIATE" "${RESULTS}" ${TMP} \
           || fail "Alignment died"
   fi
 
@@ -55,6 +70,8 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 	QUERYDB="$TMP_PATH/profile_${STEP}"
 	STEP=$((STEP+1))
 done
+
+
 
 if [ -n "$REMOVE_TMP" ]; then
     STEP=0
@@ -73,6 +90,10 @@ if [ -n "$REMOVE_TMP" ]; then
       fi
       STEP=$((STEP+1))
     done
+    if [ -n "${EXPAND}" ]; then
+       # shellcheck disable=SC2086
+       "$MMSEQS" rmdb "${TMP_PATH}/aln_expanded" ${VERBOSITY}
+    fi
     rm -f "$TMP_PATH/structureprofile.sh"
 fi
 
