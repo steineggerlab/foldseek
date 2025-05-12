@@ -72,7 +72,6 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 done
 
 
-
 if [ -n "$REMOVE_TMP" ]; then
     STEP=0
     while [ "${STEP}" -lt "${NUM_IT}" ]; do
