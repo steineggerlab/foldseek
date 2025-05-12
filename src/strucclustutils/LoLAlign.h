@@ -125,8 +125,8 @@ private:
     int start_anchor_length = 3;
     float lol_go = -5.0;
     float lol_ge = -0.0;
-    float lol_min_p = 0.4;
-    float lol_T = 3;
+    float lol_min_p = 0.8;
+    float lol_T = 4;
     float** hidden_layer;
     int* sa_index = new int[num_sa];
     float* sa_scores = new float[num_sa];

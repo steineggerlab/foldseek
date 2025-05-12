@@ -335,7 +335,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             gaps[1] = 0;
             gaps[2] = 0;
             gaps[3] = 0;
-            float maxP = 0.5;
+            float maxP = 0.65;
             //float max_temp = 0.5;
 
             while((gaps[1] < max_lolmat_idx && gaps[3] < targetLen)){
@@ -699,6 +699,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     result.qEndPos--;
     result.dbEndPos--;
     result.backtrace = Matcher::compressAlignment(backtrace.substr(firstM));
+    //result.backtrace = backtrace.substr(firstM);
     result.alnLength = (int)result.backtrace.size();
     free(targetNumAA);
     free(targetNum3Di);
@@ -721,7 +722,7 @@ void lolAlign::align_startAnchors(int *anchor_query, int *anchor_target, int max
 }
 
 void lolAlign::calc_dist_matrix(float* x, float* y, float* z, size_t len, float** d, bool cutoff){
-    const float cutoff_distance = 15.0f;
+    const float cutoff_distance = 20.0f;
     const float cutoff_sq = cutoff_distance * cutoff_distance;
 
     for (size_t i = 0; i < len; ++i){
@@ -834,7 +835,7 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     for(int i = 0; i < queryLen; i++){
         QQ_score += lol_score_vec[i];
     }
-    QQ_score = (QQ_score + 2.5*di_score);//std::pow(queryLen * queryLen, 0.25);
+    QQ_score = (QQ_score + 2.5*di_score)/std::pow(queryLen * queryLen, 0.25);
 
 
 
