@@ -5,7 +5,7 @@
 #include "TMaligner.h"
 #include "IndexReader.h"
 
-const unsigned int NOT_AVAILABLE_CHAIN_KEY = 4294967295;
+const unsigned int NOT_AVAILABLE_CHAIN_KEY = std::numeric_limits<uint32_t>::max();
 const float MAX_ASSIGNED_CHAIN_RATIO = 1.0;
 const double TOO_SMALL_MEAN = 1.0;
 const double TOO_SMALL_CV = 0.1;
