@@ -48,9 +48,12 @@ buildIndex() {
         print chainMult[$1]"\t"$2"\t"$3
     }' "${1}.lookuptmp" "${1}.indextmp" > "${1}.indextmp2"
     awk '!seen[$1]++ {
-         printf "%d\t%d\t", $1, $2; sum[$1] = $3; next 
-         } { sum[$1] += $3 } { print sum[$1] 
-         }' "${1}.indextmp2" > "${1}.index"
+	    print $1, $2, sum[$1] = $3; next
+	}
+	{
+	    sum[$1] += $3
+	    print $1, $2, sum[$1]
+	}' OFS="\t" "${1}.indextmp2" > "${1}.index"
 }
 
 if notExists "${TMP_PATH}/multimer_result.dbtype"; then
