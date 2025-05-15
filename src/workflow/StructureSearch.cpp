@@ -46,14 +46,17 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         bool needTaxonomyMapping = false;
         bool needLookup = false;
         bool needSequenceDB = false;
+        bool need3DiDB = false;
         bool needFullHeaders = false;
         bool needSource = false;
         bool needQCA = false;
         bool needTCA = false;
         bool needTMalign = false;
         bool needLDDT = false;
-        LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                         needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT);
+        LocalParameters::getOutputFormat(
+            par.formatAlignmentMode, par.outfmt, needSequenceDB, need3DiDB, needBacktrace, needFullHeaders,
+            needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT
+        );
 
         // check if databases have Calpha coordinates
         if (needQCA) {

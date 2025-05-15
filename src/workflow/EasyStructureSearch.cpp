@@ -53,14 +53,17 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     {
         bool needSequenceDB = false;
+        bool need3DiDB = false;
         bool needFullHeaders = false;
         bool needSource = false;
         bool needQCA = false;
         bool needTCA = false;
         bool needTMalign = false;
         bool needLDDT = false;
-        LocalParameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
-                                    needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT);
+        LocalParameters::getOutputFormat(
+            par.formatAlignmentMode, par.outfmt, needSequenceDB, need3DiDB, needBacktrace, needFullHeaders,
+            needLookup, needSource, needTaxonomyMapping, needTaxonomy, needQCA, needTCA, needTMalign, needLDDT
+        );
         if (par.reportMode != 2) {
             needTaxonomy = true;
             needTaxonomyMapping = true;

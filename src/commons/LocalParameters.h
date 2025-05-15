@@ -68,6 +68,8 @@ public:
     static const int OUTFMT_ASSIGN_ID = 55;
     static const int OUTFMT_COMPLEX_U = 56;
     static const int OUTFMT_COMPLEX_T = 57;
+    static const int OUTFMT_Q3DI = 58;
+    static const int OUTFMT_T3DI = 59;
 
     static const int DB_EXTRACT_MODE_CHAIN = 0;
     static const int DB_EXTRACT_MODE_INTERFACE = 1;
@@ -185,9 +187,11 @@ public:
     float distanceThreshold;
     int prostt5SplitLength;
 
-    static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
-                                            bool &needLDDT);
+    static std::vector<int> getOutputFormat(
+        int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
+        bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
+        bool &needLDDT
+    );
 
 
 private:
