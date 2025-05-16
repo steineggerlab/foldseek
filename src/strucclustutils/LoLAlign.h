@@ -123,10 +123,10 @@ private:
     float start_anchor_ge = -3.0;
     float start_anchor_T = 2.0;
     int start_anchor_length = 3;
-    float lol_go = -5.0;
+    float lol_go = -1.5;
     float lol_ge = -0.0;
     float lol_min_p = 0.8;
-    float lol_T = 4;
+    float lol_T = 4.5;
     float** hidden_layer;
     int* sa_index = new int[num_sa];
     float* sa_scores = new float[num_sa];
@@ -156,7 +156,7 @@ private:
     float b1[3] = {0.7043129 , 0.374659  , 0.39905924};
 
     float w2[3] = {-0.776632  ,  0.61055756, 0.5823986};
-    float b2 = -0.11200039 +0.5;
+    float b2 = -0.11200039 + 0.5;
 
     // Load weights and biases into SIMD registers
     simd_float w1_0 = simdf32_set(w1[0][0]); 
