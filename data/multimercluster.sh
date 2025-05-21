@@ -59,12 +59,6 @@ if notExists "${TMP_PATH}/multimer_result.dbtype"; then
         || fail "multimerSearch died"
 fi
 
-if notExists "multimer_filt.dbtype"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" filtermultimer "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_result" "${TMP_PATH}/multimer_filt" ${FILTERMULTIMER_PAR} \
-        || fail "FilterMultimer died"
-fi
-
 # shift query DB, .index, .dbtype
 if notExists "${TMP_PATH}/multimer_db.dbtype"; then
     getLookup "${INPUT}" "${TMP_PATH}/multimer_db"
@@ -85,16 +79,14 @@ COMP="${TMP_PATH}/multimer_db"
 
 if notExists "${RESULT}.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" clust "${COMP}" "${TMP_PATH}/multimer_filt" "${RESULT}" ${CLUSTER_PAR} \
+    "$MMSEQS" clust "${COMP}" "${TMP_PATH}/multimer_result" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
     # shellcheck disable=SC2086
-    "$MMSEQS" mvdb "${TMP_PATH}/multimer_filt_info" "${RESULT}_filt_info" ${VERBOSITY_PAR} \
+    "$MMSEQS" mvdb "${TMP_PATH}/multimer_result_info" "${RESULT}_filt_info" ${VERBOSITY_PAR} \
         || fail "mv died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimer_filt" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY_PAR}
     rm -f -- "${TMP_PATH}/chain_db_h.tsv"

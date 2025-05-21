@@ -40,15 +40,18 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
     fi
     RESULT="${TMP_PATH}/result_expand_aligned"
 fi
-if notExists "${OUTPUT}.dbtype"; then
+if notExists "${TMP_PATH}/scoremultimerresult.dbtype"; then
     # shellcheck disable=SC2086
     $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${OUTPUT}" ${SCOREMULTIMER_PAR} \
         || fail "scoremultimer died"
 fi
 
+## TODO: Add a module that outputs "${OUTPUT}_multimer_db"
+
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
+
     if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}

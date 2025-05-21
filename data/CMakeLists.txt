@@ -17,6 +17,7 @@ set(COMPILED_RESOURCES
         makepaddeddb.sh
         result2structprofile.sh
         createstructsubdb.sh
+        createsimpledb.sh
         multimersearch.sh
         easymultimersearch.sh
         multimercluster.sh

@@ -21,7 +21,6 @@ extern int structureungappedalign(int argc, const char** argv, const Command &co
 extern int convert2pdb(int argc, const char** argv, const Command &command);
 extern int compressca(int argc, const char** argv, const Command &command);
 extern int scoremultimer(int argc, const char **argv, const Command& command);
-extern int filtermultimer(int argc, const char **argv, const Command& command);
 extern int easymultimercluster(int argc, const char** argv, const Command &command);
 extern int multimercluster(int argc, const char** argv, const Command &command);
 extern int easymultimersearch(int argc, const char **argv, const Command &command);
@@ -31,4 +30,6 @@ extern int multimersearch(int argc, const char **argv, const Command &command);
 extern int makepaddeddb(int argc, const char **argv, const Command& command);
 extern int result2structprofile(int argc, const char **argv, const Command& command);
 extern int createstructsubdb(int argc, const char **argv, const Command& command);
+extern int createsimpledb(int argc, const char **argv, const Command& command);
+extern int createstructsimpledb(int argc, const char **argv, const Command& command);
 #endif

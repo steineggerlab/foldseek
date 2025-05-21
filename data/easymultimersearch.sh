@@ -45,15 +45,10 @@ if notExists "${TMP_PATH}/multimer_result.dbtype"; then
     || fail "multimersearch died"
 fi
 
+# TODO: use new multimerdb for createtsv below
 # shellcheck disable=SC2086
-"$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${CONVERT_PAR} \
-    || fail "Convert Alignments died"
-
-if [ -z "${NO_REPORT}" ]; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" createmultimerreport "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}_report" ${REPORT_PAR} \
-        || fail "createmultimerreport died"
-fi
+"$MMSEQS" createtsv "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${THREADS_PAR} \
+    || fail "createtsv died"
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
