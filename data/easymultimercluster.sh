@@ -111,9 +111,6 @@ if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
         || fail "createtsv died"
-    # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu_filt_info" "${TMP_PATH}/cluster_report" ${THREADS_PAR} \
-        || fail "createtsv died"
 fi
 
 if notExists "${TMP_PATH}/multimer_rep_seqs.dbtype"; then
@@ -144,7 +141,6 @@ fi
 # mv "${TMP_PATH}/multimer_all_seqs.fasta" "${RESULT}_all_seqs.fasta"
 mv -f -- "${TMP_PATH}/multimer_rep_seq.fasta" "${RESULT}_rep_seq.fasta"
 mv -f -- "${TMP_PATH}/cluster.tsv" "${RESULT}_cluster.tsv"
-mv -f -- "${TMP_PATH}/cluster_report" "${RESULT}_cluster_report"
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
@@ -173,8 +169,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu_filt_info" ${VERBOSITY_PAR}
     if exists "${TMP_PATH}/query_ca.dbtype"; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY_PAR}
