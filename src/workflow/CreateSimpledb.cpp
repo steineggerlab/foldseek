@@ -17,13 +17,12 @@ int createsimpledb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("OUT", par.filenames.back().c_str());
     par.filenames.pop_back();
     cmd.addVariable("IN", par.filenames.back().c_str());
-    cmd.addVariable("CREATESIMPLEDB_PAR", par.createParameterString(par.createsimpledbworkflow).c_str());
+    cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     
     std::string program = par.db2 + ".sh";
     FileUtil::writeFile(program, createsimpledb_sh, createsimpledb_sh_len);
 
-    cmd.execProgram(program.c_str(), par.filenames);
-
+    cmd.execProgram(FileUtil::getRealPathFromSymLink(program).c_str(), par.filenames);
     // Should never get here
     assert(false);
     return EXIT_FAILURE;

@@ -106,7 +106,7 @@ if notExists "${TMP_PATH}/multimer_clu.dbtype"; then
 fi
 
 SOURCE="${QUERY}"
-INPUT="${TMP_PATH}/multimercluster_tmp/latest/multimer_db"
+INPUT="${TMP_PATH}/multimercluster_tmp/latest/multimer_result_query_multimerdb"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
