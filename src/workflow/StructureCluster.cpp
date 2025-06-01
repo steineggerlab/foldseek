@@ -67,7 +67,7 @@ void setStructuralClusterAutomagicParameters(Parameters& par) {
     }
     if (par.singleStepClustering == false && par.clusteringMode == Parameters::CONNECTED_COMPONENT) {
         Debug(Debug::WARNING) << "Connected component clustering produces less clusters in a single step clustering.\n"
-                              << "Please use --single-step-cluster";
+                              << "Please use --single-step-cluster\n";
     }
     if (par.PARAM_CLUSTER_STEPS.wasSet == false) {
         par.clusterSteps = 3;
