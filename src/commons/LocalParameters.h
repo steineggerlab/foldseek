@@ -155,6 +155,7 @@ public:
     // PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
+    PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -187,6 +188,7 @@ public:
     int dbExtractionMode;
     float distanceThreshold;
     int prostt5SplitLength;
+    int minAlignedChains;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

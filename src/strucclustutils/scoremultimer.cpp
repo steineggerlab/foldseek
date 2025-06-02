@@ -851,6 +851,13 @@ public:
         return(interfaceLddt >= iLddtThr);
     }
 
+    bool hasAlnChainNum(unsigned int alnChainThr) {
+        if (alnChainThr <= alignedChains.size()) {
+            return true;
+        }
+        return false;
+    }
+
     bool satisfy(int covMode, float covThr, float TmThr, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
@@ -861,14 +868,15 @@ public:
         return (covOK && TmOK && chainNumOK && chainTmOK && lddtOK); 
     }
 
-    bool satisfy_first(int covMode, float covThr, float TmThr, size_t qChainNum, size_t tChainNum ) {
+    bool satisfy_first(int covMode, float covThr, float TmThr, size_t qChainNum, size_t tChainNum, int alnChainThr) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
         const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
-        return (covOK && TmOK && chainNumOK ); 
+        const bool alnChainNumOK = hasAlnChainNum(alnChainThr);
+        return (covOK && TmOK && chainNumOK && alnChainNumOK); 
     }
 
-    bool satisfy_second(int covMode, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
+    bool satisfy_second(int covMode, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum) {
         const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true; 
         const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr, qChainNum, tChainNum) : true; 
         return (chainTmOK && lddtOK); 
@@ -1363,7 +1371,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 Complex  &tComplex = dbComplexes[dbComplexIdx];
                 cmplfiltcrit.calcCov(qComplex.complexLength, tComplex.complexLength);
 
-                if (!(cmplfiltcrit.satisfy_first(par.covMode, par.covThr, par.tmScoreThr, qComplex.nChain, tComplex.nChain))) {
+                if (!(cmplfiltcrit.satisfy_first(par.covMode, par.covThr, par.tmScoreThr, qComplex.nChain, tComplex.nChain, par.minAlignedChains))) {
                     continue;
                 }
                 if (par.filtChainTmThr || par.filtInterfaceLddtThr) { // TODO: Recover
@@ -1457,7 +1465,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 selectedAssIDs.push_back(0);
                 localComplexMap.insert({0, cmplfiltcrit});
             }
-
             resultWriter.writeStart(thread_idx);
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
