@@ -442,4 +442,4 @@ foldseek search queryDB targetDB aln tmpFolder -a
 foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
 foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
-For a non-query centered multiple sequence alignment please check out [Foldmaons](https://github.com/steineggerlab/foldmason).
+For a non-query centered multiple sequence alignment please check out [Foldmason](https://github.com/steineggerlab/foldmason).
