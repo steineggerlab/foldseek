@@ -79,7 +79,7 @@ conda install -c conda-forge -c bioconda foldseek
 Other precompiled binaries are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
 > [!NOTE]
-> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Tesla-generation GPUs.
+> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Turing-generation GPUs. The bioconda- and precompiled binaries will not work on older GPU generations (e.g. Volta or Pascal).
 
 ## Memory requirements 
 For optimal software performance, consider three options based on your RAM and search requirements:
