@@ -12,10 +12,9 @@
 #include "MappingReader.h"
 #include "Coordinate16.h"
 #include "MultimerUtil.h"
+#include "StructureUtil.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
-
-
 #include <zstd.h>
 
 #include "main.js.h"
@@ -284,7 +283,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     IndexReader qDbrHeader(par.db1, par.threads, IndexReader::SRC_HEADERS , (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     IndexReader* q3DiDbr = NULL;
     if (need3DiDB) {
-        std::string ssDb = par.db1 + "_ss";
+        std::string ssDb = StructureUtil::getIndexWithSuffix(par.db1, "_ss");
         q3DiDbr = new IndexReader(
             ssDb,
             par.threads,
@@ -315,11 +314,16 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0
         );
         if (need3DiDB) {
-            std::string ssDb = par.db2 + "_ss";
+            std::string ssDb = StructureUtil::getIndexWithSuffix(par.db2, "_ss");
+            const bool is3DiIdx = Parameters::isEqualDbtype(
+                FileUtil::parseDbType(ssDb.c_str()), Parameters::DBTYPE_INDEX_DB
+            );
             t3DiDbr = new IndexReader(
-                ssDb, par.threads,
+                is3DiIdx ? ssDb : par.db2, par.threads,
                 isExtendedAlignment ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-                (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0
+                (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                isExtendedAlignment ? "_seq_ss" : "_ss"
             );
         }
     }
