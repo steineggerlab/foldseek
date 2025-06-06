@@ -24,6 +24,8 @@ typedef std::vector<unsigned int> cluster_t;
 typedef std::string resultToWrite_t;
 typedef std::string chainName_t;
 typedef std::pair<unsigned int, resultToWrite_t> resultToWriteWithKey_t;
+typedef std::map<unsigned int, chainName_t> chainKeyToChainName_t;
+typedef std::pair<unsigned int, unsigned int> chainToResidue;
 
 struct Chain {
     Chain() {}

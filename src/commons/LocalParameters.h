@@ -112,13 +112,14 @@ public:
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
     std::vector<MMseqsParameter *> scoremultimer;
-    std::vector<MMseqsParameter *> filtermultimer;
     std::vector<MMseqsParameter *> multimerclusterworkflow;
     std::vector<MMseqsParameter *> easymultimerclusterworkflow;
     std::vector<MMseqsParameter *> multimersearchworkflow;
     std::vector<MMseqsParameter *> easymultimersearchworkflow;
     std::vector<MMseqsParameter *> createmultimerreport;
     std::vector<MMseqsParameter *> expandmultimer;
+    std::vector<MMseqsParameter *> createstructsimpledb;
+    std::vector<MMseqsParameter *> createsimpledbworkflow;
     std::vector<MMseqsParameter *> convert2pdb;
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
@@ -153,9 +154,10 @@ public:
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_DB_EXTRACTION_MODE)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
-    PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
+    // PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
+    PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -181,13 +183,14 @@ public:
     double eValueThrExpandMultimer;
     int inputFormat;
     int pdbOutputMode;
-    float filtMultimerTmThr;
+    // float filtMultimerTmThr;
     float filtChainTmThr;
     float filtInterfaceLddtThr;
     std::string prostt5Model;
     int dbExtractionMode;
     float distanceThreshold;
     int prostt5SplitLength;
+    int minAlignedChains;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
