@@ -10,6 +10,8 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets,
 
 [Kim W, Mirdita M, Levy Karin E, Gilchrist CLM, Schweke H, Söding J, Levy E, and Steinegger M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)](https://www.nature.com/articles/s41592-025-02593-7)
 
+[Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, doi: 10.1101/2024.11.13.623350 (2024)](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1)
+
 # Table of Contents
 
 - [Foldseek](#foldseek)
