@@ -144,9 +144,7 @@ mv -f -- "${TMP_PATH}/cluster.tsv" "${RESULT}_cluster.tsv"
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimercluster_tmp/latest/multimer_db" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimercluster_tmp/latest/multimer_db_h" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimercluster_tmp/latest/multimer_result_query_multimerdb" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     # "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086

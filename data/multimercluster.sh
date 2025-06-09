@@ -38,11 +38,18 @@ if notExists "${RESULT}.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" clust "${COMP}" "${TMP_PATH}/multimer_result" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" setextendeddbtype "${RESULT}" --extended-dbtype 16 ${VERBOSITY_PAR} \
+        || fail "setextendeddbtype died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY_PAR}
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY_PAR} \
+        || fail "rmdb died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/multimer_result_query_multimerdb" ${VERBOSITY_PAR} \
+        || fail "rmdb died"
     rm -f -- "${TMP_PATH}/chain_db_h.tsv"
     rm -f -- "${TMP_PATH}/chain_db.tsv"
     rm -f -- "${TMP_PATH}/multimer.tsv"
