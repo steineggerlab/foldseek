@@ -181,7 +181,7 @@ if [ -n "${REMOVE_TMP}" ]; then
     fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
-    # rm -rf -- "${TMP_PATH}/multimercluster_tmp"
+    rm -rf -- "${TMP_PATH}/multimercluster_tmp"
     rm -f -- "${TMP_PATH}/rep_seqs.list"
     rm -f -- "${TMP_PATH}/easymultimercluster.sh"
 fi

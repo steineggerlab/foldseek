@@ -48,8 +48,8 @@ buildIndex() {
         print chainMult[$1]"\t"$2"\t"$3
     }' "${1}.lookuptmp" "${1}.indextmp" > "${1}.indextmp2"
     awk '!seen[$1]++ {
-         printf "%d\t%d\t", $1, $2; sum[$1] = $3; next 
-         } { sum[$1] += $3 } { print sum[$1] 
+        sum[$1]=$3; off[$1]=$2; next
+         } { sum[$1] += $3 } { print $1"\t"off[$1]"\t"sum[$1]
          }' "${1}.indextmp2" > "${1}.index"
 }
 

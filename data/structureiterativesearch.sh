@@ -53,7 +53,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 
 	# call alignment module
 	if notExists "$TMP_PATH/aln_tmp_${STEP}.done"; then
-	    PARAM="ALIGNMENT_PAR_$STEP"
+	      PARAM="ALIGNMENT_PAR_$STEP"
         eval TMP="\$$PARAM"
 
         if [ $STEP -eq 0 ]; then
@@ -76,9 +76,28 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
                 "$MMSEQS" mergedbs "${QUERYDB}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
                     || fail "Alignment died"
             else
-                # shellcheck disable=SC2086
-                "$MMSEQS" mergedbs "${QUERYDB}" "${RESULTS}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
-                    || fail "Alignment died"
+                if [ -n "${EXPAND}" ]; then
+                  # shellcheck disable=SC2086
+                  "$MMSEQS" mergedbs "${QUERYDB}" "${TMP_PATH}/aln_final" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
+                      || fail "Merge died"
+
+                  if notExists "${TMP_PATH}/aln_expanded.dbtype"; then
+                    # shellcheck disable=SC2086
+                    "$MMSEQS" mergeresultsbyset "${TMP_PATH}/aln_final" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/aln_expanded" ${MERGERESULTBYSET_PAR} \
+                        || fail "Expand died"
+                    # shellcheck disable=SC2086
+                    "$MMSEQS" setextendeddbtype "${TMP_PATH}/aln_expanded" --extended-dbtype 2 ${VERBOSITY}
+                  fi
+                  PARAM="ALIGNMENT_PAR_$STEP"
+                  eval TMP="\$$PARAM"
+                  # shellcheck disable=SC2086
+                  $RUNNER "$MMSEQS" "${ALIGNMENT_ALGO}" "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/aln_expanded" "${RESULTS}" ${TMP} \
+                      || fail "Alignment died"
+                else
+                  # shellcheck disable=SC2086
+                  "$MMSEQS" mergedbs "${QUERYDB}" "${RESULTS}" "$TMP_PATH/aln_${STEPONE}" "$TMP_PATH/aln_tmp_${STEP}" ${VERBOSITY} \
+                      || fail "Merge died"
+                fi
             fi
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "$TMP_PATH/aln_${STEPONE}" ${VERBOSITY}
@@ -92,7 +111,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
     if [ $STEP -ne $((NUM_IT - 1)) ]; then
         if notExists "$TMP_PATH/profile_${STEP}.dbtype"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" result2profile "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}" ${PROFILE_PAR} \
+            "$MMSEQS" result2profile "${QUERYDB}" "${TARGET_ALIGNMENT}${INDEXEXT}" "$TMP_PATH/aln_${STEP}" "$TMP_PATH/profile_${STEP}" ${VERBOSITY_THREADS_PAR} ${PROFILE_EVAL} \
                 || fail "Create profile died"
         fi
     fi
@@ -119,6 +138,12 @@ if [ -n "$REMOVE_TMP" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/profile_${STEP}_h" ${VERBOSITY}
         STEP=$((STEP+1))
     done
+    if [ -n "${EXPAND}" ]; then
+      # shellcheck disable=SC2086
+      "$MMSEQS" rmdb "${TMP_PATH}/aln_final" ${VERBOSITY}
+      # shellcheck disable=SC2086
+      "$MMSEQS" rmdb "${TMP_PATH}/aln_expanded" ${VERBOSITY}
+    fi
     rm -f "$TMP_PATH/structureiterativesearch.sh"
 fi
 

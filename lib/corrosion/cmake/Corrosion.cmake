@@ -1,9 +1,27 @@
 cmake_minimum_required(VERSION 3.15)
 
-if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_LESS 3.20.0)
+list(APPEND CMAKE_MESSAGE_CONTEXT "Corrosion")
+
+message(DEBUG "Using Corrosion ${Corrosion_VERSION} with CMake ${CMAKE_VERSION} "
+        "and the `${CMAKE_GENERATOR}` Generator"
+)
+
+get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
+set(COR_IS_MULTI_CONFIG "${COR_IS_MULTI_CONFIG}" CACHE BOOL "Do not change this" FORCE)
+mark_as_advanced(FORCE COR_IS_MULTI_CONFIG)
+
+if (COR_IS_MULTI_CONFIG AND CMAKE_VERSION VERSION_LESS 3.20.0)
     message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with Multi-Config Generators such as "
-       "\"Ninja Multi-Config\" or Visual Studio. "
-       "Please use a different generator or update to cmake >= 3.20.")
+        "\"Ninja Multi-Config\" or Visual Studio. "
+        "Please use a different generator or update to cmake >= 3.20.\n"
+        "Note: You are using CMake ${CMAKE_VERSION} (Path: `${CMAKE_COMMAND}`) with "
+        " the `${CMAKE_GENERATOR}` Generator."
+    )
+elseif(NOT COR_IS_MULTI_CONFIG AND DEFINED CMAKE_CONFIGURATION_TYPES)
+    message(WARNING "The Generator is ${CMAKE_GENERATOR}, which is not a multi-config "
+        "Generator, but CMAKE_CONFIGURATION_TYPES is set. Please don't set "
+        "CMAKE_CONFIGURATION_TYPES unless you are using a multi-config Generator."
+    )
 endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
@@ -89,34 +107,24 @@ get_property(
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
 
-# Note: Legacy function, used when respecting the `XYZ_OUTPUT_DIRECTORY` target properties is not
-# possible.
-function(_corrosion_set_imported_location_legacy target_name base_property filename)
-    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
-        string(TOUPPER "${config_type}" config_type_upper)
-        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
-                " to `${binary_root}/${filename}`.")
-        # For Multiconfig we want to specify the correct location for each configuration
-        set_property(
-            TARGET ${target_name}
-            PROPERTY "${base_property}_${config_type_upper}"
-                "${binary_root}/${filename}"
-        )
-    endforeach()
-    if(NOT "${CMAKE_CONFIGURATION_TYPES}")
-        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
+
+# Sets out_var to true if the byproduct copying and imported location is done in a deferred
+# manner to respect target properties, etc. that may be set later.
+function(_corrosion_determine_deferred_byproduct_copying_and_import_location_handling out_var)
+    set(${out_var} ${CORROSION_RESPECT_OUTPUT_DIRECTORY} PARENT_SCOPE)
+endfunction()
+
+function(_corrosion_bin_target_suffix target_name out_var_suffix)
+    get_target_property(hostbuild "${target_name}" ${_CORR_PROP_HOST_BUILD})
+    if((hostbuild AND CMAKE_HOST_WIN32)
+       OR ((NOT hostbuild) AND (Rust_CARGO_TARGET_OS STREQUAL "windows")))
+        set(_suffix ".exe")
+    elseif(Rust_CARGO_TARGET_OS STREQUAL "vxworks")
+        set(_suffix ".vxe")
+    else()
+        set(_suffix "")
     endif()
-
-    message(DEBUG "Setting ${base_property} for target ${target_name}"
-                " to `${binary_root}/${filename}`.")
-
-    # IMPORTED_LOCATION must be set regardless of possible overrides. In the multiconfig case,
-    # the last configuration "wins".
-    set_property(
-            TARGET ${target_name}
-            PROPERTY "${base_property}" "${binary_root}/${filename}"
-        )
+    set(${out_var_suffix} "${_suffix}" PARENT_SCOPE)
 endfunction()
 
 # Do not call this function directly!
@@ -132,6 +140,19 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         set(output_dir_prop_target_name "${CMAKE_MATCH_1}")
     else()
         set(output_dir_prop_target_name "${target_name}")
+    endif()
+    if(CORROSION_NATIVE_TOOLING)
+        set(output_directory_property "INTERFACE_${output_directory_property}")
+    endif()
+
+    # Append .exe suffix for executable by-products if the target is windows or if it's a host
+    # build and the host is Windows.
+    get_target_property(target_type ${target_name} TYPE)
+    if(${target_type} STREQUAL "EXECUTABLE" AND (NOT "${filename}" MATCHES "\.pdb$"))
+        _corrosion_bin_target_suffix(${target_name} "suffix")
+        if(suffix)
+            set(filename "${filename}${suffix}")
+        endif()
     endif()
 
     get_target_property(output_directory "${output_dir_prop_target_name}" "${output_directory_property}")
@@ -160,7 +181,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         set(base_output_directory "${curr_out_dir}")
     endforeach()
 
-    if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT COR_IS_MULTI_CONFIG)
         if(output_directory)
             set(base_output_directory "${output_directory}")
         else()
@@ -210,40 +231,14 @@ endfunction()
 #    artifact.
 # - filename of the artifact.
 function(_corrosion_set_imported_location target_name base_property output_directory_property filename)
-    if(CORROSION_RESPECT_OUTPUT_DIRECTORY)
+    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
+    if(defer)
         _corrosion_call_set_imported_location_deferred("${target_name}" "${base_property}" "${output_directory_property}" "${filename}")
     else()
-        _corrosion_set_imported_location_legacy("${target_name}" "${base_property}" "${filename}")
+        # We can't actually call the function in a deferred way, but we can still respect the output directory
+        # variables that were set **before** importing the crate.
+        _corrosion_set_imported_location_deferred("${target_name}" "${base_property}" "${output_directory_property}" "${filename}")
     endif()
-endfunction()
-
-function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names)
-    if(ARGN)
-        message(FATAL_ERROR "Unexpected additional arguments")
-    endif()
-
-    if(CMAKE_CONFIGURATION_TYPES)
-        set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
-    else()
-        set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
-    endif()
-
-    list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
-    list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
-    message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
-    add_custom_command(TARGET _cargo-build_${target_name}
-                        POST_BUILD
-                        COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
-                        COMMAND
-                        ${CMAKE_COMMAND} -E copy_if_different
-                            # tested to work with both multiple files and paths with spaces
-                            ${src_file_names}
-                            "${output_dir}"
-                        BYPRODUCTS ${dst_file_names}
-                        COMMENT "Copying byproducts `${file_names}` to ${output_dir}"
-                        VERBATIM
-                        COMMAND_EXPAND_LISTS
-    )
 endfunction()
 
 function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
@@ -275,12 +270,28 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
         set(multiconfig_out_dir_genex "${multiconfig_out_dir_genex}$<$<CONFIG:${config_type}>:${curr_out_dir}>")
     endforeach()
 
-    if(CMAKE_CONFIGURATION_TYPES)
+    if(COR_IS_MULTI_CONFIG)
         set(output_dir "${multiconfig_out_dir_genex}")
     else()
         if(NOT output_dir)
             # Fallback to default directory.
             set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
+        endif()
+    endif()
+
+    # Append .exe suffix for executable by-products if the target is windows or if it's a host
+    # build and the host is Windows.
+    get_target_property(target_type "${target_name}" TYPE)
+    if (target_type STREQUAL "EXECUTABLE")
+        list(LENGTH file_names list_len)
+        if(NOT list_len EQUAL "1")
+            message(FATAL_ERROR
+                    "Internal error: Exactly one filename should be passed for executable types.")
+        endif()
+        _corrosion_bin_target_suffix(${target_name} "suffix")
+        if(suffix AND (NOT "${file_names}" MATCHES "\.pdb$"))
+            # For executable targets we know / checked that only one file will be passed.
+            string(APPEND file_names "${suffix}")
         endif()
     endif()
 
@@ -304,16 +315,16 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
 endfunction()
 
 function(_corrosion_call_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
-    cmake_language(EVAL CODE "
-        cmake_language(DEFER
-            CALL
-            _corrosion_copy_byproduct_deferred
-            [[${target_name}]]
-            [[${output_dir_prop_name}]]
-            [[${cargo_build_dir}]]
-            [[${file_names}]]
-        )
-    ")
+        cmake_language(EVAL CODE "
+            cmake_language(DEFER
+                CALL
+                _corrosion_copy_byproduct_deferred
+                [[${target_name}]]
+                [[${output_dir_prop_name}]]
+                [[${cargo_build_dir}]]
+                [[${file_names}]]
+            )
+        ")
 endfunction()
 
 # Copy the artifacts generated by cargo to the appropriate destination.
@@ -324,11 +335,13 @@ endfunction()
 #   `RUNTIME_OUTPUT_DIRECTORY`)
 # - cargo_build_dir: the directory cargo build places it's output artifacts in.
 # - filenames: the file names of any output artifacts as a list.
+# - is_binary: TRUE if the byproducts are program executables.
 function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir filenames)
-    if(CORROSION_RESPECT_OUTPUT_DIRECTORY)
+    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
+    if(defer)
         _corrosion_call_copy_byproduct_deferred("${target_name}" "${output_dir_prop_name}" "${cargo_build_dir}" "${filenames}")
     else()
-        _corrosion_copy_byproduct_legacy("${target_name}" "${cargo_build_dir}" "${filenames}")
+        _corrosion_copy_byproduct_deferred("${target_name}" "${output_dir_prop_name}" "${cargo_build_dir}" "${filenames}")
     endif()
 endfunction()
 
@@ -433,8 +446,6 @@ function(_corrosion_add_library_target)
     endif()
     set("${CALT_OUT_ARCHIVE_OUTPUT_BYPRODUCTS}" "${archive_output_byproducts}" PARENT_SCOPE)
 
-    add_library(${target_name} INTERFACE)
-
     if(has_staticlib)
         add_library(${target_name}-static STATIC IMPORTED GLOBAL)
         add_dependencies(${target_name}-static cargo-build_${target_name})
@@ -448,6 +459,10 @@ function(_corrosion_add_library_target)
             set_property(
                     TARGET ${target_name}-static
                     PROPERTY INTERFACE_LINK_LIBRARIES ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS}
+            )
+            set_property(
+                    TARGET ${target_name}-static
+                    PROPERTY INTERFACE_LINK_OPTIONS ${Rust_CARGO_TARGET_LINK_OPTIONS}
             )
             if(is_macos)
                 set_property(TARGET ${target_name}-static
@@ -510,17 +525,9 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
         set(${out_pdb_byproduct} "${pdb_name}" PARENT_SCOPE)
     endif()
 
-    if(Rust_CARGO_TARGET_OS STREQUAL "windows")
-        set(bin_filename "${bin_name}.exe")
-    else()
-        set(bin_filename "${bin_name}")
-    endif()
+    set(bin_filename "${bin_name}")
+    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
     set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
-
-
-    # Todo: This is compatible with the way corrosion previously exposed the bin name,
-    # but maybe we want to prefix the exposed name with the package name?
-    add_executable(${bin_name} IMPORTED GLOBAL)
     add_dependencies(${bin_name} cargo-build_${bin_name})
 
     if(Rust_CARGO_TARGET_OS STREQUAL "darwin")
@@ -544,67 +551,27 @@ endif()
 # Note: `cmake_language(GET_MESSAGE_LOG_LEVEL <output_variable>)` requires CMake 3.25,
 # so we offer our own option to control verbosity of downstream commands (e.g. cargo build)
 if (CORROSION_VERBOSE_OUTPUT)
-    set(_CORROSION_VERBOSE_OUTPUT_FLAG --verbose)
+    set(_CORROSION_VERBOSE_OUTPUT_FLAG --verbose CACHE INTERNAL "")
 else()
     # We want to silence some less important commands by default.
-    set(_CORROSION_QUIET_OUTPUT_FLAG --quiet)
+    set(_CORROSION_QUIET_OUTPUT_FLAG --quiet CACHE INTERNAL "")
 endif()
 
 if(CORROSION_NATIVE_TOOLING)
     if (NOT TARGET Corrosion::Generator )
-        set(generator_destination "${CMAKE_CURRENT_BINARY_DIR}/corrosion/legacy_generator")
-        message(STATUS "Building CMake Generator for Corrosion - This may take a while")
-        set(generator_build_quiet "")
-        # Using cargo install has the advantage of caching the build in the user .cargo directory,
-        # so likely the rebuild will be very cheap even after deleting the build directory.
-        execute_process(
-                COMMAND ${CMAKE_COMMAND}
-                    -E env
-                        # If the Generator is built at configure of a project (instead of being pre-installed)
-                        # We don't want environment variables like `RUSTFLAGS` affecting the Generator build.
-                        --unset=RUSTFLAGS
-                        "CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}"
-                    "${CARGO_EXECUTABLE}" install
-                        --path "."
-                        --root "${generator_destination}"
-                        ${_CORROSION_QUIET_OUTPUT_FLAG}
-                WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../generator"
-                RESULT_VARIABLE generator_build_failed
-        )
-        if(generator_build_failed)
-            message(FATAL_ERROR "Building CMake Generator for Corrosion - failed")
-        else()
-            message(STATUS "Building CMake Generator for Corrosion - done")
-        endif()
-        set(host_executable_suffix "")
-        if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-            set(host_executable_suffix ".exe")
-        endif()
-        set(_CORROSION_GENERATOR_EXE "${generator_destination}/bin/corrosion-generator${host_executable_suffix}")
-        if (CORROSION_DEV_MODE)
-            # If you're developing Corrosion, you want to make sure to re-configure whenever the
-            # generator changes.
-            file(GLOB_RECURSE _RUST_FILES CONFIGURE_DEPENDS generator/src/*.rs)
-            file(GLOB _CARGO_FILES CONFIGURE_DEPENDS generator/Cargo.*)
-            set_property(
-                DIRECTORY APPEND
-                PROPERTY CMAKE_CONFIGURE_DEPENDS
-                    ${_RUST_FILES} ${_CARGO_FILES})
-        endif()
-    else()
-        get_property(
-            _CORROSION_GENERATOR_EXE
-            TARGET Corrosion::Generator PROPERTY IMPORTED_LOCATION
-        )
+        add_subdirectory(generator)
     endif()
-
+    get_property(
+        _CORROSION_GENERATOR_EXE
+        TARGET Corrosion::Generator PROPERTY IMPORTED_LOCATION
+    )
     set(
         _CORROSION_GENERATOR
         ${CMAKE_COMMAND} -E env
             CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
             ${_CORROSION_GENERATOR_EXE}
-                --cargo ${CARGO_EXECUTABLE}
-                ${_CORROSION_VERBOSE_OUTPUT_FLAG}
+            --cargo ${CARGO_EXECUTABLE}
+            ${_CORROSION_VERBOSE_OUTPUT_FLAG}
         CACHE INTERNAL "corrosion-generator runner"
     )
 endif()
@@ -616,8 +583,8 @@ set(_CORROSION_RUSTC "${RUSTC_EXECUTABLE}" CACHE INTERNAL  "Path to rustc used b
 set(_CORROSION_CARGO "${CARGO_EXECUTABLE}" CACHE INTERNAL "Path to cargo used by corrosion")
 
 string(REPLACE "-" "_" _CORROSION_RUST_CARGO_TARGET_UNDERSCORE "${Rust_CARGO_TARGET}")
+set(_CORROSION_RUST_CARGO_TARGET_UNDERSCORE "${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}" CACHE INTERNAL "lowercase target triple with underscores")
 string(TOUPPER "${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}" _CORROSION_TARGET_TRIPLE_UPPER)
-set(_CORROSION_RUST_CARGO_TARGET_UNDERSCORE ${Rust_CARGO_TARGET} CACHE INTERNAL "lowercase target triple with underscores")
 set(_CORROSION_RUST_CARGO_TARGET_UPPER
         "${_CORROSION_TARGET_TRIPLE_UPPER}"
         CACHE INTERNAL
@@ -690,7 +657,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     if (CMAKE_VS_PLATFORM_NAME)
         set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
-    elseif(CMAKE_CONFIGURATION_TYPES)
+    elseif(COR_IS_MULTI_CONFIG)
         set (build_dir "$<CONFIG>")
     else()
         set (build_dir .)
@@ -787,15 +754,21 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     set(corrosion_cc_rs_flags)
 
-    if(CMAKE_C_COMPILER AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE)
+    if(CMAKE_C_COMPILER)
         # This variable is read by cc-rs (often used in build scripts) to determine the c-compiler.
         # It can still be overridden if the user sets the non underscore variant via the environment variables
         # on the target.
         list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_C_COMPILER}")
     endif()
-    if(CMAKE_CXX_COMPILER AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE)
+    if(CMAKE_CXX_COMPILER)
         list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_CXX_COMPILER}")
     endif()
+    # cc-rs doesn't seem to support `llvm-ar` (commandline syntax), wo we might as well just use
+    # the default AR.
+    if(CMAKE_AR AND NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc"))
+        list(APPEND corrosion_cc_rs_flags "AR_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_AR}")
+    endif()
+
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
     # CMAKE_OSX_SYSROOT. Fortunately the compilers Apple ships also respect the SDKROOT environment
@@ -831,7 +804,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(linker "$<IF:${explicit_linker_defined},${explicit_linker_property},${default_linker}>")
     set(cargo_target_linker $<$<BOOL:${linker}>:${cargo_target_linker_var}=${linker}>)
 
-    if(Rust_CROSSCOMPILING AND ("${CMAKE_C_COMPILER_TARGET}" OR "${CMAKE_CXX_COMPILER_TARGET}"))
+    if(Rust_CROSSCOMPILING AND (CMAKE_C_COMPILER_TARGET OR CMAKE_CXX_COMPILER_TARGET))
         set(linker_target_triple "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER_TARGET},${CMAKE_C_COMPILER_TARGET}>")
         set(rustflag_linker_arg "-Clink-args=--target=${linker_target_triple}")
         set(rustflag_linker_arg "$<${if_not_host_build_condition}:${rustflag_linker_arg}>")
@@ -968,6 +941,7 @@ function(corrosion_import_crate)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
+    list(APPEND CMAKE_MESSAGE_CONTEXT "corrosion_import_crate")
 
     if(DEFINED COR_UNPARSED_ARGUMENTS)
         message(AUTHOR_WARNING "Unexpected arguments: " ${COR_UNPARSED_ARGUMENTS}
@@ -987,7 +961,6 @@ function(corrosion_import_crate)
     _corrosion_option_passthrough_helper(FROZEN COR frozen)
     _corrosion_arg_passthrough_helper(CRATES COR crate_allowlist)
     _corrosion_arg_passthrough_helper(CRATE_TYPES COR crate_types)
-    _corrosion_arg_passthrough_helper(PROFILE COR cargo_profile)
 
     if(COR_PROFILE)
         if(Rust_VERSION VERSION_LESS 1.57.0)
@@ -1002,8 +975,6 @@ function(corrosion_import_crate)
                     " cannot predict. Please consider using a custom cargo profile which inherits from the"
                     " built-in profile instead."
             )
-        else()
-            set(cargo_profile_native_generator --profile=${COR_PROFILE})
         endif()
     endif()
 
@@ -1058,7 +1029,6 @@ function(corrosion_import_crate)
                         ${_CORROSION_CONFIGURATION_ROOT}
                         ${crates_args}
                         ${crate_types}
-                        ${cargo_profile_native_generator}
                         --imported-crates=imported_crates
                         ${passthrough_to_acb}
                         -o ${generated_cmake}
@@ -1078,7 +1048,6 @@ function(corrosion_import_crate)
                 imported_crates
             ${crate_allowlist}
             ${crate_types}
-            ${cargo_profile}
             ${no_linker_override}
         )
     endif()
@@ -1221,11 +1190,15 @@ function(corrosion_set_features target_name)
 endfunction()
 
 function(corrosion_link_libraries target_name)
-    if(TARGET "${target_name}-static" AND NOT TARGET "${target_name}-shared")
-        message(WARNING "The target ${target_name} builds a static library."
-            "The linker is never invoked for a static libraries to link has effect "
-            " aside from establishing a build dependency."
-            )
+    if(TARGET "${target_name}-static")
+        message(DEBUG "The target ${target_name} builds a static Rust library."
+                "Calling `target_link_libraries()` instead."
+        )
+        target_link_libraries("${target_name}-static" INTERFACE ${ARGN})
+        if(NOT TARGET "${target_name}-shared")
+            # Early return, since Rust won't invoke the linker for static libraries
+            return()
+        endif()
     endif()
     add_dependencies(_cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
@@ -1239,7 +1212,7 @@ function(corrosion_link_libraries target_name)
         corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
         corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
     endforeach()
-endfunction(corrosion_link_libraries)
+endfunction()
 
 function(corrosion_install)
     # Default install dirs
@@ -1479,7 +1452,9 @@ function(corrosion_add_cxxbridge cxx_target)
 
     get_filename_component(manifest_dir ${manifest_path} DIRECTORY)
 
-    execute_process(COMMAND ${_CORROSION_CARGO} tree -i cxx --depth=0
+    execute_process(COMMAND ${CMAKE_COMMAND} -E env
+        "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+        ${_CORROSION_CARGO} tree -i cxx --depth=0
         WORKING_DIRECTORY "${manifest_dir}"
         RESULT_VARIABLE cxx_version_result
         OUTPUT_VARIABLE cxx_version_output
@@ -1571,10 +1546,10 @@ function(corrosion_add_cxxbridge cxx_target)
             $<BUILD_INTERFACE:${generated_dir}/include>
             $<INSTALL_INTERFACE:include>
     )
-    
+
     # cxx generated code is using c++11 features in headers, so propagate c++11 as minimal requirement
     target_compile_features(${cxx_target} PUBLIC cxx_std_11)
-    
+
     # Todo: target_link_libraries is only necessary for rust2c projects.
     # It is possible that checking if the rust crate is an executable is a sufficient check,
     # but some more thought may be needed here.
@@ -1669,8 +1644,6 @@ between multiple invocations of this function.
 ANCHOR_END: corrosion_cbindgen
 #]=======================================================================]
 function(corrosion_experimental_cbindgen)
-    # Todo:
-    # - set the target-triple via the TARGET env variable based on the target triple for the rust crate.
     set(OPTIONS "")
     set(ONE_VALUE_KEYWORDS TARGET MANIFEST_DIRECTORY HEADER_NAME CBINDGEN_VERSION)
     set(MULTI_VALUE_KEYWORDS "FLAGS")
@@ -1686,6 +1659,10 @@ function(corrosion_experimental_cbindgen)
     endforeach()
     set(rust_target "${CCN_TARGET}")
     unset(package_manifest_dir)
+
+
+    set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${rust_target},${_CORR_PROP_HOST_BUILD}>>")
+    set(cbindgen_target_triple "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${_CORROSION_RUST_CARGO_TARGET}>")
 
     if(TARGET "${rust_target}")
         get_target_property(package_manifest_path "${rust_target}" INTERFACE_COR_PACKAGE_MANIFEST_PATH)
@@ -1703,6 +1680,18 @@ function(corrosion_experimental_cbindgen)
             set(package_manifest_dir "${CCN_MANIFEST_DIRECTORY}")
         endif()
     endif()
+
+    unset(rust_cargo_package)
+    if(NOT DEFINED CCN_CARGO_PACKAGE)
+        get_target_property(rust_cargo_package "${rust_target}" INTERFACE_COR_CARGO_PACKAGE_NAME )
+        if(NOT rust_cargo_package)
+            message(FATAL_ERROR "Could not determine cargo package name for cbindgen!")
+        endif()
+    else()
+        set(rust_cargo_package "${CCN_CARGO_PACKAGE}")
+    endif()
+    message(STATUS "Using package ${rust_cargo_package} as crate for cbindgen")
+
 
     set(output_header_name "${CCN_HEADER_NAME}")
 
@@ -1739,6 +1728,8 @@ function(corrosion_experimental_cbindgen)
     set(corrosion_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated")
     set(generated_dir "${corrosion_generated_dir}/cbindgen/${rust_target}")
     set(header_placement_dir "${generated_dir}/include/")
+    set(depfile_placement_dir "${generated_dir}/depfile")
+    set(generated_depfile "${depfile_placement_dir}/${output_header_name}.d")
     set(generated_header "${header_placement_dir}/${output_header_name}")
     message(STATUS "rust target is ${rust_target}")
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.23")
@@ -1760,39 +1751,68 @@ function(corrosion_experimental_cbindgen)
     # This may be different from $header_placement_dir since the user specified HEADER_NAME may contain
     # relative directories.
     get_filename_component(generated_header_dir "${generated_header}" DIRECTORY)
-    file(MAKE_DIRECTORY ${generated_header_dir})
+    file(MAKE_DIRECTORY "${generated_header_dir}")
 
-    # Todo: Add dependencies on the source Rust files here to get proper dependency rules (hard).
-    # For now we just specify a dummy file we won't generate as an additional output, so that the rule
-    # always runs.
-    # Future Options: a) upstream depfile creation into cbindgen, b) spider our way through the source-code ourselves.
-    # c) ask the user to specify the dependencies (in order to relax the rules).
-    add_custom_command(
-        OUTPUT
-        "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
-        COMMAND
-        "${cbindgen}"
-                    --output "${generated_header}"
-                    --crate "${rust_target}"
-                    ${CCN_FLAGS}
-        COMMENT "Generate cbindgen bindings for crate ${rust_target}"
-        COMMAND_EXPAND_LISTS
-        WORKING_DIRECTORY "${package_manifest_dir}"
-    )
+    unset(depfile_cbindgen_arg)
+    unset(depfile_cmake_arg)
+    get_filename_component(generated_depfile_dir "${generated_depfile}" DIRECTORY)
+    file(MAKE_DIRECTORY "${generated_depfile_dir}")
+    set(depfile_cbindgen_arg "--depfile=${generated_depfile}")
+
+    # Users might want to call cbindgen multiple times, e.g. to generate separate C++ and C header files.
+    string(MAKE_C_IDENTIFIER "${output_header_name}" header_identifier )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
+        add_custom_command(
+            OUTPUT
+            "${generated_header}"
+            COMMAND
+            "${CMAKE_COMMAND}" -E env
+                TARGET="${cbindgen_target_triple}"
+                "${cbindgen}"
+                        --output "${generated_header}"
+                        --crate "${rust_cargo_package}"
+                        ${depfile_cbindgen_arg}
+                        ${CCN_FLAGS}
+            COMMENT "Generate cbindgen bindings for package ${rust_cargo_package} and output header ${generated_header}"
+            DEPFILE "${generated_depfile}"
+            COMMAND_EXPAND_LISTS
+            WORKING_DIRECTORY "${package_manifest_dir}"
+        )
+        add_custom_target("_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}"
+                          DEPENDS "${generated_header}"
+                          COMMENT "Generate ${generated_header} for ${rust_target}"
+        )
+    else()
+        add_custom_target("_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}"
+                          "${CMAKE_COMMAND}" -E env
+                              TARGET="${cbindgen_target_triple}"
+                              "${cbindgen}"
+                              --output "${generated_header}"
+                              --crate "${rust_cargo_package}"
+                              ${depfile_cbindgen_arg}
+                              ${CCN_FLAGS}
+                          COMMENT "Generate ${generated_header} for ${rust_target}"
+                          COMMAND_EXPAND_LISTS
+                          WORKING_DIRECTORY "${package_manifest_dir}"
+        )
+    endif()
 
     if(NOT installed_cbindgen)
         add_custom_command(
-            OUTPUT "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
+            OUTPUT "${generated_header}"
             APPEND
             DEPENDS _corrosion_cbindgen
         )
     endif()
 
-    add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
-        DEPENDS "${generated_header}"
-        COMMENT "Generate cbindgen bindings for crate ${rust_target}"
-    )
-    add_dependencies(${rust_target} _corrosion_cbindgen_${rust_target}_bindings)
+    if(NOT TARGET "_corrosion_cbindgen_${rust_target}_bindings")
+        add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
+                COMMENT "Generate cbindgen bindings for package ${rust_cargo_package}"
+        )
+    endif()
+
+    add_dependencies("_corrosion_cbindgen_${rust_target}_bindings" "_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}")
+    add_dependencies(${rust_target} "_corrosion_cbindgen_${rust_target}_bindings")
 endfunction()
 
 # Parse the version of a Rust package from it's package manifest (Cargo.toml)
@@ -1842,6 +1862,26 @@ function(corrosion_parse_package_version package_manifest_path out_package_versi
     endif()
 endfunction()
 
+function(_corrosion_initialize_properties target_name)
+    set(prefix "")
+    if(CORROSION_NATIVE_TOOLING)
+        set(prefix "INTERFACE_")
+    endif()
+    # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`.
+    foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
+        if (DEFINED "CMAKE_${output_var}")
+            set_property(TARGET ${target_name} PROPERTY "${prefix}${output_var}" "${CMAKE_${output_var}}")
+        endif()
+
+        foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+            string(TOUPPER "${config_type}" config_type_upper)
+            if (DEFINED "CMAKE_${output_var}_${config_type_upper}")
+                set_property(TARGET ${target_name} PROPERTY "${prefix}${output_var}_${config_type_upper}" "${CMAKE_${output_var}_${config_type_upper}}")
+            endif()
+        endforeach()
+    endforeach()
+endfunction()
+
 # Helper macro to pass through an optional `OPTION` argument parsed via `cmake_parse_arguments`
 # to another function that takes the same OPTION.
 # If the option was set, then the variable <var_name> will be set to the same option name again,
@@ -1865,3 +1905,6 @@ macro(_corrosion_arg_passthrough_helper arg_name prefix var_name)
         unset("${var_name}")
     endif()
 endmacro()
+
+list(POP_BACK CMAKE_MESSAGE_CONTEXT)
+

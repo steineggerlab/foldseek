@@ -1,5 +1,5 @@
 # Author: Milot Mirdita (milot@mirdita.de), Hyunbin Kim (khb7840@gmail.com)
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,6 +14,11 @@ option(GCS_SUPPORT "Enable Google Cloud Storage support" OFF)
 include_directories(src)
 add_subdirectory(src)
 
+# For windows, include lib/windows
+if(WIN32)
+    include_directories(lib/windows)
+endif(WIN32)
+
 if(HAVE_SANITIZER)
     include(FindUBSan)
     include(FindASan)
@@ -26,6 +31,11 @@ if(BUILD_LIBRARY)
         ${foldcomp_header_files}
         ${foldcomp_source_files})
 elseif(BUILD_PYTHON)
+        if(MSVC)
+            install(FILES lib/windows/dirent.h DESTINATION include)
+        endif(MSVC)
+        find_package(PythonInterp)
+    	find_package(PythonLibs) # Trying to fix cibuildwheel ubuntu error
         find_package(PythonExtensions REQUIRED)
         add_library(foldcomp MODULE
             ${foldcomp_header_files}
@@ -45,26 +55,34 @@ else()
     target_compile_definitions(foldcomp PUBLIC FOLDCOMP_EXECUTABLE)
     # For debugging
     # target_compile_definitions(foldcomp PUBLIC _GLIBCXX_DEBUG=1 _LIBCPP_DEBUG=1)
-
-    find_package(OpenMP REQUIRED)
-    if(OPENMP_CXX_FOUND)
-        if((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
-            target_link_libraries(foldcomp PUBLIC OpenMP::OpenMP_CXX)
-        else()
-            target_link_libraries(foldcomp PRIVATE "${OpenMP_CXX_FLAGS}")
-            target_compile_options(foldcomp PRIVATE "${OpenMP_CXX_FLAGS}")
+    
+    if(NOT EMSCRIPTEN)
+        # For local compilation, openmp and zlib are required
+        find_package(OpenMP REQUIRED)
+        if(OPENMP_CXX_FOUND)
+            if((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
+                target_link_libraries(foldcomp PUBLIC OpenMP::OpenMP_CXX)
+            else()
+                target_link_libraries(foldcomp PRIVATE "${OpenMP_CXX_FLAGS}")
+                target_compile_options(foldcomp PRIVATE "${OpenMP_CXX_FLAGS}")
+            endif()
             target_compile_definitions(foldcomp PUBLIC OPENMP)
         endif()
+        find_package(ZLIB REQUIRED)
+        target_link_libraries(foldcomp PUBLIC ZLIB::ZLIB)
+    else()
+        # For webassembly, not using openmp. zlib is added to compile flags
+        set_target_properties(
+            foldcomp
+            PROPERTIES
+            COMPILE_FLAGS -sUSE_ZLIB=1
+            LINK_FLAGS "-sUSE_ZLIB=1 -sEXPORTED_RUNTIME_METHODS=callMain,FS -sINVOKE_RUN=0 -sFILESYSTEM=1 -sALLOW_MEMORY_GROWTH=1 -sTOTAL_MEMORY=256MB -sENVIRONMENT=web -sMODULARIZE=1 -s EXPORT_ES6=1 -sEXPORT_NAME=createFoldcomp -sSINGLE_FILE=0 -sASSERTIONS=0")
     endif()
-
-    find_package(ZLIB REQUIRED)
-    target_link_libraries(foldcomp PUBLIC ZLIB::ZLIB)
 
     include_directories(lib/gemmi)
 
     include_directories(lib/microtar)
     add_subdirectory(lib/microtar)
-
     target_link_libraries(foldcomp PUBLIC microtar)
 
     if(GCS_SUPPORT)

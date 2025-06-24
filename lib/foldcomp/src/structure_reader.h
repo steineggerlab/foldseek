@@ -8,7 +8,7 @@
  * References:
  *     GemmiWrapper.cpp in https://github.com/steineggerlab/foldseek
  * ---
- * Last Modified: 2022-09-13 15:14:16
+ * Last Modified: 2022-10-18 17:50:04
  * Modified By: Hyunbin Kim (khb7840@gmail.com)
  * ---
  * Copyright © 2022 Hyunbin Kim, All rights reserved
@@ -32,3 +32,8 @@ public:
     bool readBackboneAtoms(std::vector<AtomCoordinate>& backboneAtoms);
     bool readAllAtoms(std::vector<AtomCoordinate>& allAtoms);
 };
+
+int uncompressBuffer(
+    const char** uncompBuffer, size_t* uncompBufferSize,
+    const char* origBuffer, size_t origBufferSize
+);

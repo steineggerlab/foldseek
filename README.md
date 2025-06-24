@@ -8,7 +8,9 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets,
 
 [Barrio-Hernandez I, Yeo J, Jänes J, Mirdita M, Gilchrist CLM, Wein T, Varadi M, Velankar S, Beltrao P and Steinegger M. Clustering predicted structures at the scale of the known protein universe. Nature, doi:10.1038/s41586-023-06510-w (2023)](https://www.nature.com/articles/s41586-023-06510-w)
 
-[Kim W, Mirdita M, Levy Karin E, Gilchrist CLM, Schweke H, Söding J, Levy E, and Steinegger M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)](https://www.biorxiv.org/content/10.1101/2024.04.14.589414v1)
+[Kim W, Mirdita M, Levy Karin E, Gilchrist CLM, Schweke H, Söding J, Levy E, and Steinegger M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)](https://www.nature.com/articles/s41592-025-02593-7)
+
+[Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, doi: 10.1101/2024.11.13.623350 (2024)](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1)
 
 # Table of Contents
 
@@ -79,7 +81,7 @@ conda install -c conda-forge -c bioconda foldseek
 Other precompiled binaries are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
 > [!NOTE]
-> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Tesla-generation GPUs.
+> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Turing-generation GPUs. The bioconda- and precompiled binaries will not work on older GPU generations (e.g. Volta or Pascal).
 
 ## Memory requirements 
 For optimal software performance, consider three options based on your RAM and search requirements:
@@ -146,13 +148,15 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | Option              | Category    | Description                                                                                                                            |
 |---------------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | -s                  | Sensitivity | Adjust sensitivity to speed trade-off; lower is faster, higher more sensitive (fast: 7.5, default: 9.5)                                |
-| --num-iterations    | Sensitivity | Enables iterative search to find more distantly related hits (Default: off). Recommended `--num-iterations 3`                          |
+| --num-iterations    | Sensitivity | Enables iterative search to find more distantly related hits (Default: off). Recommended `--num-iterations 0` optimized version                        |
 | --exhaustive-search | Sensitivity | Skips prefilter and performs an all-vs-all alignment (more sensitive but much slower)                                                  |
 | --max-seqs          | Sensitivity | Adjust the amount of prefilter handed to alignment; increasing it can lead to more hits (default: 1000)                                |
 | -e                  | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                         |
+| --cluster-search     | Sensitivity   | For clustered databases like AFDB50, CATH50 trigger a cluster search: 0: search only representatives (fast), 1: align and report also all members of a cluster (default: 0)                                                           |
 | --alignment-type    | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default)       |
 | -c                  | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode          | Alignment   | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                                                           |
+
 | --gpu               | Performance | Enables fast GPU-accelerated ungapped prefilter (`--prefilter-mode 1`) (default: off), ignores `-s`. Use `--gpu 1` to enable.          |
 
 #### Alignment Mode
@@ -440,4 +444,4 @@ foldseek search queryDB targetDB aln tmpFolder -a
 foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
 foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
-For a non-query centered multiple sequence alignment please check out [Foldmaons](https://github.com/steineggerlab/foldmason).
+For a non-query centered multiple sequence alignment please check out [Foldmason](https://github.com/steineggerlab/foldmason).

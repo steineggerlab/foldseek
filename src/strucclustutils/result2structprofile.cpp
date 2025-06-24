@@ -23,6 +23,13 @@ int result2structprofile(int argc, const char **argv, const Command &command) {
     }
     par.scoringMatrixFile = "blosum62.out";
     par.seedScoringMatrixFile = "blosum62.out";
+    par.pca = MultiParam<PseudoCounts>(PseudoCounts(1.1, 1.4));
+    par.pcb = MultiParam<PseudoCounts>(PseudoCounts(4.1, 5.8));
+    par.compBiasCorrection = 1;
+    par.compBiasCorrectionScale = 1.0;
+    par.maskProfile = 1;
+    par.maskProb = 0.9;
+    par.evalProfile = 0.001;
     cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2structprofile).c_str());
     par.pca = 1.4;
     par.pcb = 1.5;

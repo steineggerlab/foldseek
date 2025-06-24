@@ -705,6 +705,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     if (tar.isFinished == 0 && (mtar_read_header(&tar, &tarHeader)) != MTAR_ENULLRECORD) {
                         // GNU tar has special blocks for long filenames
                         if (tarHeader.type == MTAR_TGNU_LONGNAME || tarHeader.type == MTAR_TGNU_LONGLINK) {
+                            if (tarHeader.size == 0) {
+                                Debug(Debug::ERROR) << "Invalid tar input with long name/link record of size 0\n";
+                                EXIT(EXIT_FAILURE);
+                            }
                             if (tarHeader.size > bufferSize) {
                                 bufferSize = tarHeader.size * 1.5;
                                 dataBuffer = (char *) realloc(dataBuffer, bufferSize);
@@ -713,7 +717,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                 Debug(Debug::ERROR) << "Cannot read entry " << tarHeader.name << "\n";
                                 EXIT(EXIT_FAILURE);
                             }
-                            name.assign(dataBuffer, tarHeader.size);
+                            // skip null byte
+                            name.assign(dataBuffer, tarHeader.size - 1);
                             // skip to next record
                             if (mtar_read_header(&tar, &tarHeader) == MTAR_ENULLRECORD) {
                                 Debug(Debug::ERROR) << "Tar truncated after entry " << name << "\n";
@@ -988,7 +993,15 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 #endif
 #pragma omp for schedule(static)
             for (size_t i = 0; i < header_reorder.getSize(); i++) {
-                mappingOrder[i].first = Util::parseFastaHeader(header_reorder.getData(i,thread_idx));
+                std::string entryNameRaw = Util::parseFastaHeader(header_reorder.getData(i,thread_idx));
+                std::string filenameWithoutExtension;
+                if (Util::endsWith(".gz", entryNameRaw)) {
+                    filenameWithoutExtension = Util::remove_extension(Util::remove_extension(Util::remove_extension(entryNameRaw)));
+                }
+                else {
+                    filenameWithoutExtension = Util::remove_extension(Util::remove_extension(entryNameRaw));
+                }
+                mappingOrder[i].first = filenameWithoutExtension;
                 mappingOrder[i].second = i;
             }
         }
@@ -1132,9 +1145,17 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
             entry.id = readerHeader.getDbKey(id);
-            std::string entryNameWithModel = Util::parseFastaHeader(header);
-            entry.entryName = removeModel(entryNameWithModel);
-            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameWithModel];
+            std::string entryNameRaw = Util::parseFastaHeader(header);
+            std::pair<size_t, unsigned int> fileIdModelEntry = entrynameToFileId[entryNameRaw];
+
+            if(par.modelNameMode == LocalParameters::MODEL_MODE_ADD) {
+                size_t modelIndex = entryNameRaw.find("MODEL");
+                if (modelIndex == std::string::npos) {
+                    entryNameRaw.append("_MODEL_");
+                    entryNameRaw.append(SSTR(fileIdModelEntry.second));
+                }
+            }
+            entry.entryName = entryNameRaw;
             size_t fileId = fileIdModelEntry.first;
             if (modelFileIdLookup.find(fileIdModelEntry) == modelFileIdLookup.end()) {
                 modelFileIdLookup[fileIdModelEntry] = globalFileNumber;

@@ -6,8 +6,8 @@
  * Description:
  *     Utility functions
  * ---
- * Last Modified: 2022-09-20 11:51:28
- * Modified By: Hyunbin Kim (khb7840@gmail.com)
+ * Last Modified: Fri Mar 03 2023
+ * Modified By: Hyunbin Kim
  * ---
  * Copyright © 2021 Hyunbin Kim, All rights reserved
  */
@@ -18,38 +18,125 @@
 #include <fstream>
 #include <string>
 
-#ifdef FOLDCOMP_EXECUTABLE
-#include <dirent.h>
 #include <errno.h>
+#include <sys/stat.h>
+
 // Get all files in a directory using dirent.h
-std::vector<std::string> getFilesInDirectory(std::string dir) {
-    std::vector<std::string> files;
+void getdir(const std::string& dir, bool recursive, std::vector<std::string>& files) {
+    struct stat st;
+    if (stat(dir.c_str(), &st) == 0) {
+        if (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode)) {
+            files.emplace_back(dir);
+            return;
+        }
+    }
     DIR* dp;
     struct dirent* dirp;
-    if ((dp = opendir(dir.c_str())) == nullptr) {
-        std::cout << "Error(" << errno << ") opening " << dir << std::endl;
-        return files;
+    if ((dp = opendir(dir.c_str())) == NULL) {
+        perror("error");
+        exit(errno);
     }
-
-    while ((dirp = readdir(dp)) != nullptr) {
-        // Skip directories
-        if (dirp->d_type == DT_DIR) {
-            continue;
+    std::vector<std::string> dirs;
+    while ((dirp = readdir(dp)) != NULL) {
+        unsigned int type = dirp->d_type;
+        if (type == DT_UNKNOWN) {
+            // stat the file to determine its real type
+            struct stat st;
+            std::string path = dir + "/" + dirp->d_name;
+            if (stat(path.c_str(), &st) == 0) {
+                if (S_ISDIR(st.st_mode)) {
+                    type = DT_DIR;
+                } else if (S_ISREG(st.st_mode)) {
+                    type = DT_REG;
+                } else if (S_ISLNK(st.st_mode)) {
+                    type = DT_LNK;
+                } else {
+                    continue;
+                }
+            }
         }
-        files.push_back(std::string(dirp->d_name));
+        if (type == DT_DIR) {
+            if (recursive && std::string(dirp->d_name) != "." && std::string(dirp->d_name) != "..") {
+                dirs.emplace_back(dir + "/" + dirp->d_name);
+            } else {
+                continue;
+            }
+        }
+        if (type == DT_REG || type == DT_LNK) {
+            files.emplace_back(dir + "/" + dirp->d_name);
+        }
     }
     closedir(dp);
+
+    for (std::vector<std::string>::const_iterator it = dirs.begin(); it != dirs.end(); ++it) {
+        getdir(*it, recursive, files);
+    }
+}
+std::vector<std::string> getFilesInDirectory(const std::string& dir, bool recursive) {
+    std::vector<std::string> files;
+    getdir(dir, recursive, files);
     return files;
 }
-#endif
 
-std::string baseName(std::string const path) {
+char *file_map(FILE *file, ssize_t *size, int extra_flags) {
+    struct stat sb;
+    fstat(fileno(file), &sb);
+    *size = sb.st_size;
+
+    int fd = fileno(file);
+#ifdef _MSC_VER
+    HANDLE handle = (HANDLE)_get_osfhandle(fd);
+    void* mapping = CreateFileMapping(handle, NULL, PAGE_READONLY, 0, 0, NULL);
+    DWORD offsetLow  = DWORD(0 & 0xFFFFFFFF);
+    DWORD offsetHigh = DWORD(0 >> 32);
+    return (char *)MapViewOfFile(mapping, FILE_MAP_READ, offsetHigh, offsetLow, sb.st_size);
+#else
+    return (char *)mmap(NULL, (size_t)(*size), PROT_READ, MAP_PRIVATE | extra_flags, fd, 0);
+#endif
+}
+
+int file_unmap(char *mem, ssize_t size) {
+#ifdef _MSC_VER
+    return UnmapViewOfFile(mem);
+#else
+    return munmap(mem, size);
+#endif
+}
+
+
+std::string baseName(const std::string& path) {
     return path.substr(path.find_last_of("/\\") + 1);
 }
 
-std::string getFileWithoutExt(std::string& file) {
-    size_t extStart = file.find_last_of('.');
-    return extStart == std::string::npos ? file : file.substr(0, extStart);
+std::string getFileWithoutExt(const std::string& file) {
+    size_t basePos = file.find_last_of("/\\");
+    basePos = basePos == std::string::npos ? 0 : basePos + 1;
+    size_t extStart = file.substr(basePos).find_last_of(".");
+    return extStart == std::string::npos ? file : file.substr(0, basePos + extStart);
+}
+
+std::pair<std::string, std::string> getFileParts(const std::string& file) {
+    size_t basePos = file.find_last_of("/\\");
+    basePos = basePos == std::string::npos ? 0 : basePos + 1;
+    size_t extStart = file.substr(basePos).find_last_of(".");
+    if (extStart == std::string::npos) {
+        return std::make_pair(file, "");
+    }
+    return std::make_pair(file.substr(0, basePos + extStart), file.substr(basePos + extStart + 1));
+}
+
+// Allowable extensions: pdb, cif, pdb.gz, cif.gz
+bool isCompressible(std::pair<std::string, std::string>& fileParts) {
+    std::string ext = fileParts.second;
+    if (ext == "pdb" || ext == "cif") {
+        return true;
+    } else if (ext == "gz") {
+        std::pair<std::string, std::string> fileParts2 = getFileParts(fileParts.first);
+        if (fileParts2.second == "pdb" || fileParts2.second == "cif") {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool stringEndsWith(const std::string& suffix, const std::string& str) {

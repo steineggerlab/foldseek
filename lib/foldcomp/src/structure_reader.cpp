@@ -6,7 +6,7 @@
  * Description:
  *     This code is written as part of project "src".
  * ---
- * Last Modified: 2022-09-13 15:14:22
+ * Last Modified: 2022-10-18 17:50:57
  * Modified By: Hyunbin Kim (khb7840@gmail.com)
  * ---
  * Copyright © 2022 Hyunbin Kim, All rights reserved
@@ -14,7 +14,8 @@
 #include "structure_reader.h"
 
 #include <stdexcept>
-
+#include <zlib.h>
+#include <iostream>
 // Gemmi
 #include "gemmi/gz.hpp"
 #include "gemmi/input.hpp"
@@ -73,18 +74,21 @@ void StructureReader::updateStructure(void* void_st, const std::string& filename
 bool StructureReader::loadFromBuffer(const char* buffer, size_t bufferSize, const std::string& name) {
     try {
         gemmi::MaybeGzipped infile(name);
-        gemmi::CoorFormat format = gemmi::coor_format_from_ext(infile.basepath());
         gemmi::Structure st;
-        switch (format) {
-        case gemmi::CoorFormat::Pdb:
-            st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(buffer, bufferSize), name, gemmi::PdbReadOptions());
-            break;
-        case gemmi::CoorFormat::Mmcif:
-            st = gemmi::make_structure(gemmi::cif::read_memory(buffer, bufferSize, name.c_str()));
-            break;
-        default:
-            return false;
+        // If infile is a compressed file, we need to uncompress buffer using zlib
+        if (infile.is_compressed()) {
+            char* uncompBuffer;
+            size_t uncompBufferSize;
+            int ret = uncompressBuffer(const_cast<const char**>(&uncompBuffer), &uncompBufferSize, buffer, bufferSize);
+            if (ret != 0) {
+                return false;
+            }
+            st = gemmi::read_structure_from_char_array(uncompBuffer, uncompBufferSize, name);
+            free(uncompBuffer);
+        } else {
+            st = gemmi::read_structure_from_char_array(const_cast<char*>(buffer), bufferSize, name);
         }
+
         updateStructure((void*)&st, name);
     }
     catch (std::runtime_error& e) {
@@ -147,4 +151,53 @@ bool StructureReader::readAllAtoms(std::vector<AtomCoordinate>& allAtoms){
         allAtoms.push_back(ac);
     }
     return true;
+}
+
+int uncompressBuffer(
+    const char** uncompBuffer, size_t* uncompBufferSize,
+    const char* origBuffer, size_t origBufferSize
+) {
+    const unsigned int CHUNK = 128 * 1024;
+    unsigned char out[CHUNK];
+    z_stream strm;
+    memset(&strm, 0, sizeof(z_stream));
+    int status = inflateInit2(&strm, 15 | 32);
+    if (status < 0) {
+        return -1;
+    }
+    strm.avail_in = origBufferSize;
+    strm.next_in = (unsigned char*)origBuffer;
+    size_t bufferSize = 1024 * 1024;
+    char* buffer = (char*)malloc(bufferSize);
+    char* current = buffer;
+    do {
+        unsigned have;
+        strm.avail_out = CHUNK;
+        strm.next_out = out;
+        int err = inflate(&strm, Z_NO_FLUSH);
+        switch (err) {
+        case Z_OK:
+        case Z_STREAM_END:
+        case Z_BUF_ERROR:
+            break;
+        default:
+            inflateEnd(&strm);
+            free(buffer);
+            return -1;
+        }
+        have = CHUNK - strm.avail_out;
+        if (current + have > buffer + bufferSize) {
+            size_t offset = current - buffer;
+            bufferSize *= 2;
+            buffer = (char*)realloc(buffer, bufferSize);
+            current = buffer + offset;
+        }
+        memcpy(current, out, have);
+        current += have;
+
+    } while (strm.avail_out == 0);
+    inflateEnd(&strm);
+    *uncompBuffer = buffer;
+    *uncompBufferSize = current - buffer;
+    return 0;
 }
