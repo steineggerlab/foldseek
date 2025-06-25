@@ -105,8 +105,6 @@ if notExists "${TMP_PATH}/multimer_clu.dbtype"; then
         || fail "Multimercluster died"
 fi
 
-SOURCE="${QUERY}"
-INPUT="${TMP_PATH}/multimercluster_tmp/latest/multimer_result_query_multimerdb"
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
@@ -114,15 +112,15 @@ if notExists "${TMP_PATH}/cluster.tsv"; then
 fi
 
 if notExists "${TMP_PATH}/multimer_rep_seqs.dbtype"; then
-    mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${SOURCE}" "${TMP_PATH}/rep_seqs.list" 
+    mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${QUERY}" "${TMP_PATH}/rep_seqs.list" 
     # shellcheck disable=SC2086
-    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list" "${SOURCE}" "${TMP_PATH}/multimer_rep_seqs" ${CREATESUBDB_PAR} \
+    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list" "${QUERY}" "${TMP_PATH}/multimer_rep_seqs" ${CREATESUBDB_PAR} \
         || fail "createsubdb died"
 fi
 
 if notExists "${TMP_PATH}/multimer_rep_seq.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" result2flat "${SOURCE}" "${SOURCE}" "${TMP_PATH}/multimer_rep_seqs" "${TMP_PATH}/multimer_rep_seq.fasta" ${VERBOSITY_PAR} \
+    "$MMSEQS" result2flat "${QUERY}" "${QUERY}" "${TMP_PATH}/multimer_rep_seqs" "${TMP_PATH}/multimer_rep_seq.fasta" ${VERBOSITY_PAR} \
         || fail "result2flat died"
     postprocessFasta "${TMP_PATH}/multimer_rep_seq.fasta"
 fi

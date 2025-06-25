@@ -45,9 +45,11 @@ if notExists "${TMP_PATH}/multimer_result.dbtype"; then
     || fail "multimersearch died"
 fi
 
-# TODO: use new multimerdb for createtsv below
+# # shellcheck disable=SC2086
+# "$MMSEQS" createtsv "${TMP_PATH}/multimer_result_query_multimerdb" "${TMP_PATH}/multimer_result_target_multimerdb" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${THREADS_PAR} \
+#     || fail "createtsv died"
 # shellcheck disable=SC2086
-"$MMSEQS" createtsv "${TMP_PATH}/multimer_result_query_multimerdb" "${TMP_PATH}/multimer_result_target_multimerdb" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${THREADS_PAR} \
+"$MMSEQS" createtsv "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${THREADS_PAR} \
     || fail "createtsv died"
 
 if [ -n "${REMOVE_TMP}" ]; then
