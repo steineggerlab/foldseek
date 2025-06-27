@@ -12,10 +12,9 @@
 #include "MappingReader.h"
 #include "Coordinate16.h"
 #include "MultimerUtil.h"
+#include "StructureUtil.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
-
-
 #include <zstd.h>
 
 #include "main.js.h"
@@ -284,7 +283,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     IndexReader qDbrHeader(par.db1, par.threads, IndexReader::SRC_HEADERS , (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     IndexReader* q3DiDbr = NULL;
     if (need3DiDB) {
-        std::string ssDb = par.db1 + "_ss";
+        std::string ssDb = StructureUtil::getIndexWithSuffix(par.db1, "_ss");
         q3DiDbr = new IndexReader(
             ssDb,
             par.threads,
@@ -315,11 +314,16 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
             (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0
         );
         if (need3DiDB) {
-            std::string ssDb = par.db2 + "_ss";
+            std::string ssDb = StructureUtil::getIndexWithSuffix(par.db2, "_ss");
+            const bool is3DiIdx = Parameters::isEqualDbtype(
+                FileUtil::parseDbType(ssDb.c_str()), Parameters::DBTYPE_INDEX_DB
+            );
             t3DiDbr = new IndexReader(
-                ssDb, par.threads,
+                is3DiIdx ? ssDb : par.db2, par.threads,
                 isExtendedAlignment ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-                (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0
+                (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0,
+                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+                isExtendedAlignment ? "_seq_ss" : "_ss"
             );
         }
     }
@@ -874,29 +878,38 @@ R"html(<!DOCTYPE html>
                                     case Parameters::OUTFMT_THEADER:
                                         result.append(tHeader, tHeaderLen);
                                         break;
-                                    case Parameters::OUTFMT_QALN:
-                                        if (queryProfile) {
-                                            structurePrintSeqBasedOnAln(result, queryProfData.c_str(), res.qStartPos,
-                                                               Matcher::uncompressAlignment(res.backtrace), false, (res.qStartPos > res.qEndPos),
-                                                               (isTranslatedSearch == true && queryNucs == true), translateNucl);
+                                    case LocalParameters::OUTFMT_Q3DIALN:
+                                        // FALLTHROUGH
+                                    case Parameters::OUTFMT_QALN: {
+                                        const char* print = NULL;
+                                        if (outcodes[i] == LocalParameters::OUTFMT_Q3DIALN) {
+                                            print = queryProfile ? query3DiProfData.c_str() : query3DiData;
                                         } else {
-                                            structurePrintSeqBasedOnAln(result, querySeqData, res.qStartPos,
-                                                               Matcher::uncompressAlignment(res.backtrace), false, (res.qStartPos > res.qEndPos),
-                                                               (isTranslatedSearch == true && queryNucs == true), translateNucl);
+                                            print = queryProfile ? queryProfData.c_str() : querySeqData;
                                         }
+                                        structurePrintSeqBasedOnAln(
+                                            result, print, res.qStartPos,
+                                            Matcher::uncompressAlignment(res.backtrace), false,
+                                            (res.qStartPos > res.qEndPos),
+                                            (isTranslatedSearch == true && queryNucs == true), translateNucl
+                                        );
                                         break;
+                                    }
+                                    case LocalParameters::OUTFMT_T3DIALN:
+                                        // FALLTHROUGH
                                     case Parameters::OUTFMT_TALN: {
-                                        if (targetProfile) {
-                                            structurePrintSeqBasedOnAln(result, targetProfData.c_str(), res.dbStartPos,
-                                                               Matcher::uncompressAlignment(res.backtrace), true,
-                                                               (res.dbStartPos > res.dbEndPos),
-                                                               (isTranslatedSearch == true && targetNucs == true), translateNucl);
+                                        const char* print = NULL;
+                                        if (outcodes[i] == LocalParameters::OUTFMT_T3DIALN) {
+                                            print = targetProfile ? target3DiProfData.c_str() : target3DiData;
                                         } else {
-                                            structurePrintSeqBasedOnAln(result, targetSeqData, res.dbStartPos,
-                                                               Matcher::uncompressAlignment(res.backtrace), true,
-                                                               (res.dbStartPos > res.dbEndPos),
-                                                               (isTranslatedSearch == true && targetNucs == true), translateNucl);
+                                            print = targetProfile ? targetProfData.c_str() : targetSeqData;
                                         }
+                                        structurePrintSeqBasedOnAln(
+                                            result, print, res.dbStartPos,
+                                            Matcher::uncompressAlignment(res.backtrace), true,
+                                            (res.dbStartPos > res.dbEndPos),
+                                            (isTranslatedSearch == true && targetNucs == true), translateNucl
+                                        );
                                         break;
                                     }
                                     case Parameters::OUTFMT_MISMATCH:

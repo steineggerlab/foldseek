@@ -1208,7 +1208,15 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 #endif
 #pragma omp for schedule(static)
             for (size_t i = 0; i < header_reorder.getSize(); i++) {
-                mappingOrder[i].first = Util::parseFastaHeader(header_reorder.getData(i,thread_idx));
+                std::string entryNameRaw = Util::parseFastaHeader(header_reorder.getData(i,thread_idx));
+                std::string filenameWithoutExtension;
+                if (Util::endsWith(".gz", entryNameRaw)) {
+                    filenameWithoutExtension = Util::remove_extension(Util::remove_extension(Util::remove_extension(entryNameRaw)));
+                }
+                else {
+                    filenameWithoutExtension = Util::remove_extension(Util::remove_extension(entryNameRaw));
+                }
+                mappingOrder[i].first = filenameWithoutExtension;
                 mappingOrder[i].second = i;
             }
         }
