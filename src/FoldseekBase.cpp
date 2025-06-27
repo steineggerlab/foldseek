@@ -15,7 +15,7 @@ void updateValdiation() {
 void (*validatorUpdate)(void) = updateValdiation;
 
 std::vector<Command> foldseekCommands = {
-        {"lolalign",                lolalign,                &localPar.tmalign,        COMMAND_ALIGNMENT,
+        {"lolalign",                lolalign,                &localPar.lolalign,        COMMAND_ALIGNMENT,
                 "LoLalign. creating structure alignmetns by optimizing the Local distance log odds (LoL) score ",
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",

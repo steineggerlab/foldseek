@@ -117,6 +117,7 @@ public:
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
     std::vector<MMseqsParameter *> fwbw;
+    std::vector<MMseqsParameter *> lolalign;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
@@ -156,6 +157,10 @@ public:
     PARAMETER(PARAM_FWBW_GAPEXTEND)
     PARAMETER(PARAM_TEMPERATURE)
 
+    // lolAlign
+    PARAMETER(PARAM_MULTIDOMAIN)
+
+
     float tmScoreThr;
     int tmScoreThrMode;
     int tmAlignHitOrder;
@@ -192,6 +197,9 @@ public:
     float fwbw_gapopen;
     float fwbw_gapextend;
     float temperature;
+
+    // LoLalign
+    int multiDomain;
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,

@@ -43,8 +43,10 @@ LocalParameters::LocalParameters() :
         PARAM_MACT(PARAM_MACT_ID, "--mact", "MAC threshold", "Maximum accuracy threshold", typeid(float), (void *) &mact, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
         PARAM_FWBW_GAPOPEN(PARAM_FWBW_GAPOPEN_ID, "--fwbw-gapopen", "fwbw-gapopen", "gap open penalty for fwbw", typeid(float), (void *) &fwbw_gapopen, "^([0-9]+(\\.[0-9]+)?)|(\\.[0-9]+)$"),
         PARAM_FWBW_GAPEXTEND(PARAM_FWBW_GAPEXTEND_ID, "--fwbw-gapextend", "fwbw-gapextend", "gap extension penalty for fwbw", typeid(float), (void *) &fwbw_gapextend, "^([0-9]+(\\.[0-9]+)?)|(\\.[0-9]+)$"),
-        PARAM_TEMPERATURE(PARAM_TEMPERATURE_ID, "--temperature", "Temperature", "Temperature for forward-backward", typeid(float), (void *) &temperature, "^(0\\.[0-9]+|[1-9][0-9]*\\.?[0-9]*)$")
-       {
+        PARAM_TEMPERATURE(PARAM_TEMPERATURE_ID, "--temperature", "Temperature", "Temperature for forward-backward", typeid(float), (void *) &temperature, "^(0\\.[0-9]+|[1-9][0-9]*\\.?[0-9]*)$"),
+        // LoLalign
+        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$")
+        {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
     PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
@@ -122,6 +124,20 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_PRELOAD_MODE);
     tmalign.push_back(&PARAM_THREADS);
     tmalign.push_back(&PARAM_V);
+
+    //LoLalign
+    
+    lolalign.push_back(&PARAM_MULTIDOMAIN);
+    lolalign.push_back(&PARAM_MIN_SEQ_ID);
+    lolalign.push_back(&PARAM_PRELOAD_MODE);
+    lolalign.push_back(&PARAM_MAX_REJECTED);
+    lolalign.push_back(&PARAM_MAX_ACCEPT);
+    lolalign.push_back(&PARAM_THREADS);
+    lolalign.push_back(&PARAM_V);
+    lolalign.push_back(&PARAM_C);
+    lolalign.push_back(&PARAM_ADD_BACKTRACE);
+
+
 
     structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
@@ -356,6 +372,9 @@ LocalParameters::LocalParameters() :
     fwbw_gapopen = 10;
     fwbw_gapextend = 2;
     temperature = 1;
+
+    // LoLalign
+    multiDomain = 1;
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");

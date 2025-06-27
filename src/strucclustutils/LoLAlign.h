@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "Matcher.h"
-#include "tmalign/affineneedlemanwunsch.h"
 #include "tmalign/Coordinates.h"
 
 class lolAlign{
@@ -20,26 +19,17 @@ public:
     lolAlign(unsigned int maxSeqLen, bool exact);
     ~lolAlign();
 
-    struct TMscoreResult{
-        TMscoreResult(){
-            memset(&u, 0, 3*3*sizeof(float));
-            memset(&t, 0, 3*sizeof(float));
-            this->tmscore = 0.0;
-            this->rmsd = 0.0;
-        }
-
-        TMscoreResult(float u[3][3], float t[3], double tmscore, double rmsd) {
-            memcpy(this->u,u,3*3*sizeof(float));
-            memcpy(this->t,t,3*sizeof(float));
-            this->tmscore = tmscore;
-            this->rmsd = rmsd;
-        }
-        float u[3][3];
-        float t[3];
-        double tmscore;
-        double rmsd;
-    };
+    
     void computeForwardScoreMatrix(
+        unsigned char * targetNumAA,
+        unsigned char *targetNum3Di,
+        int queryLen,
+        int targetLen,
+        SubstitutionMatrix &subMatAA,
+        SubstitutionMatrix &subMat3Di,
+        float** scoreForward
+    );
+    void addForwardScoreMatrix(
         unsigned char * targetNumAA,
         unsigned char *targetNum3Di,
         int queryLen,
@@ -60,12 +50,12 @@ public:
     }
 
 
-    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di);
+    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, int md);
     
 
 
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
-                            char * targetSeq, char* target3diSeq, int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln);
+                            char * targetSeq, char* target3diSeq, int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln, int md);
     float maxSubArray(float* nums, int numsSize);
 
     void align_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length, float** P, float** G);
@@ -123,9 +113,9 @@ private:
     float start_anchor_ge = -3.0;
     float start_anchor_T = 2.0;
     int start_anchor_length = 3;
-    float lol_go = -5.0;
+    float lol_go = -1.5;
     float lol_ge = -0.0;
-    float lol_min_p = 0.8;
+    float lol_min_p = 0.4;
     float lol_T = 4;
     float** hidden_layer;
     int* sa_index = new int[num_sa];
@@ -189,6 +179,29 @@ private:
     Coordinates xtm, ytm, xt, r1, r2;
     bool computeExactScore;
     int * invmap;
+    const float scoringMatrix3Di[20][20] = {
+        // A   B   C   D   E   F   G   H   I   J   K   L   M   N   O   P   Q   R   S   T
+        {10, -1,  1,  7,  6,  2,  2, -4,  1, -1, -6, -2, -1,  4, -1, -5, -1, -5,  3,  2}, // A
+        {-1,  7, -4, -5, -3, -2, -1, -10, -10,  1, -11,  1, -2,  2,  1,  1, -6,  1, -5, -5}, // B
+        {1, -4,  0, -3, -1,  0,  1, -4, -5, -6, -5, -4, -3, -3, -2, -6, -2, -6, -2, -2}, // C
+        {7, -5, -3, 15,  3, -2,  1, -8, -5, -4, -12, -5, -5,  1, -3, -7, -5, -10, -2,  3}, // D
+        {6, -3, -1,  3, 10,  1,  1, -2,  4, -1, -5, -3, -2,  4, -2, -6,  0, -6,  7,  0}, // E
+        {2, -2,  0, -2,  1, 10,  7,  3, -3, -5,  3,  1, -2, -1,  5, -1,  7, -5, -1,  3}, // F
+        {2, -1,  1,  1,  1,  7, 10,  0, -4, -4, -1,  3, -1,  0,  4, -1,  3, -4, -1,  8}, // G
+        {-4, -10, -4, -8, -2,  3,  0, 11, -1, -10, 11, -5, -6, -3,  0, -7,  9, -11, -2, -3}, // H
+        {1, -10, -5, -5,  4, -3, -4, -1, 13, -9, -4, -9, -7, -2, -6, -12, -2, -13,  9, -3}, // I
+        {-1,  1, -6, -4, -1, -5, -4, -10, -9,  6, -13, -2, -3,  3, -2, -3, -7,  0, -6, -6}, // J
+        {-6, -11, -5, -12, -5,  3, -1, 11, -4, -13, 15, -6, -8, -7, -1, -8,  7, -14, -2, -4}, // K
+        {-2,  1, -4, -5, -3,  1,  3, -5, -9, -2, -6,  8, -1, -1,  4,  4, -2,  0, -6, -1}, // L
+        {-1, -2, -3, -5, -2, -2, -1, -6, -7, -3, -8, -1,  1, -1, -1, -3, -4, -2, -5, -5}, // M
+        {4,  2, -3,  1,  4, -1,  0, -3, -2,  3, -7, -1, -1,  7,  0, -2, -3, -1,  1, -1}, // N
+        {-1,  1, -2, -3, -2,  5,  4,  0, -6, -2, -1,  4, -1,  0,  8,  4,  3, -1, -3,  1}, // O
+        {-5,  1, -6, -7, -6, -1, -1, -7, -12, -3, -8,  4, -3, -2,  4,  6, -4,  0, -9, -5}, // P
+        {-1, -6, -2, -5,  0,  7,  3,  9, -2, -7,  7, -2, -4, -3,  3, -4, 11, -8, -2,  0}, // Q
+        {-5,  1, -6, -10, -6, -5, -4, -11, -13,  0, -14,  0, -2, -1, -1,  0, -8,  2, -9, -9}, // R
+        {3, -5, -2, -2,  7, -1, -1, -2,  9, -6, -2, -6, -5,  1, -3, -9, -2, -9, 11, -2}, // S
+        {2, -5, -2,  3,  0,  3,  8, -3, -3, -6, -4, -1, -5, -1,  1, -5,  0, -9, -2, 14}  // T
+    };
 };
 
 
