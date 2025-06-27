@@ -644,6 +644,8 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     result.qcov = anchor_length[max_lol_idx] / (float)queryLen;
     result.dbcov = anchor_length[max_lol_idx] / (float)targetLen;
     result.score = max_lol_score; 
+    result.eval = (((max_lol_score +3 * max_di) * norm_lol_sh/anchor_length[max_lol_idx])/QQ_score)/ std::pow(queryLen * targetLen, 0.25);
+    result.score = (((max_lol_score +3 * max_di) * norm_lol_sh/anchor_length[max_lol_idx])/QQ_score)/ std::pow(queryLen * targetLen, 0.25);
     if(md == 0){
         result.eval = (((max_lol_score +3 * max_di) * norm_lol_sh/anchor_length[max_lol_idx])/QQ_score)/ std::pow(queryLen * targetLen, 0.25);
         result.score = (((max_lol_score +3 * max_di) * norm_lol_sh/anchor_length[max_lol_idx]))/ std::pow(queryLen * targetLen, 0.25);
