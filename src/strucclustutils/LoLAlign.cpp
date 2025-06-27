@@ -188,7 +188,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             queryLen,
             targetLen,
             subMatAA,
-            subMat3Di,
             G);
 
 
@@ -436,7 +435,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                         queryLen,
                         targetLen,
                         subMatAA,
-                        subMat3Di,
                         G);
                 }
                 else{
@@ -478,7 +476,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
                 sa_idx++;
             }
         }
-        computeDi_score(targetNumAA, targetNum3Di, anchor_length[sa], final_anchor_query, final_anchor_target, subMatAA, subMat3Di, lol_score_vec);
+        computeDi_score(targetNumAA, targetNum3Di, anchor_length[sa], final_anchor_query, final_anchor_target, subMatAA, lol_score_vec);
 
         for (int i = 0; i < anchor_length[sa]; i++) {
             for (int j = 0;j < anchor_length[sa]; j++) {
@@ -525,7 +523,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
             }
         }
     
-    computeDi_score(targetNumAA, targetNum3Di, anchor_length[max_lol_idx], final_anchor_query, final_anchor_target, subMatAA, subMat3Di, lol_score_vec);
+    computeDi_score(targetNumAA, targetNum3Di, anchor_length[max_lol_idx], final_anchor_query, final_anchor_target, subMatAA, lol_score_vec);
     float max_di = 0;
     for (int i = 0; i < anchor_length[max_lol_idx]; i++) {
         max_di += lol_score_vec[i];
@@ -767,7 +765,6 @@ void lolAlign::computeDi_score(
         int* final_anchor_query,
         int* final_anchor_target,
         SubstitutionMatrix &subMatAA,
-        SubstitutionMatrix &subMat3Di,
         float *scoreForward)
 {
 
@@ -822,7 +819,7 @@ void lolAlign::initQuery(float *x, float *y, float *z, char *querySeq, char *que
     }
 
 
-    computeDi_score(queryNumAA, queryNum3Di, queryLen, final_anchor_query, final_anchor_query, subMatAA, subMat3Di, lol_score_vec);
+    computeDi_score(queryNumAA, queryNum3Di, queryLen, final_anchor_query, final_anchor_query, subMatAA, lol_score_vec);
     float di_score = 0;
     QQ_score = 0;
     for(int i = 0; i < queryLen; i++){
@@ -998,7 +995,6 @@ void lolAlign::computeForwardScoreMatrix(
         int queryLen,
         int targetLen,
         SubstitutionMatrix &subMatAA,
-        SubstitutionMatrix &subMat3Di,
         float **scoreForward)
 {
     for (int i = 0; i < queryLen; ++i)
@@ -1017,7 +1013,6 @@ void lolAlign::addForwardScoreMatrix(
     int queryLen,
     int targetLen,
     SubstitutionMatrix &subMatAA,
-    SubstitutionMatrix &subMat3Di,
     float **scoreForward)
 {
     for (int i = 0; i < queryLen; ++i)
