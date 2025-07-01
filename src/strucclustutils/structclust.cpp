@@ -24,14 +24,15 @@ int structclust(int argc, const char **argv, const Command &command) {
     }
 
 
-    cmd.addVariable("RESULT", tmpDir.c_str());
+    cmd.addVariable("RESULT",par.filenames.back().c_str());
+    par.filenames.pop_back();
     cmd.addVariable("ALN", par.filenames.back().c_str());
     par.filenames.pop_back();
     cmd.addVariable("INPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
 
     cmd.addVariable("CLUST_PAR", par.createParameterString(par.clust).c_str());
-    cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+    cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
     std::string program = par.db2 + ".sh";
     FileUtil::writeFile(program, structclust_sh, structclust_sh_len);

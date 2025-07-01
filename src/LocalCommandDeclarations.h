@@ -32,4 +32,5 @@ extern int result2structprofile(int argc, const char **argv, const Command& comm
 extern int createstructsubdb(int argc, const char **argv, const Command& command);
 extern int createsimpledb(int argc, const char **argv, const Command& command);
 extern int createstructsimpledb(int argc, const char **argv, const Command& command);
+extern int structclust(int argc, const char **argv, const Command& command);
 #endif

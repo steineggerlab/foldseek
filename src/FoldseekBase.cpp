@@ -205,7 +205,7 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::sequenceDb },
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::sequenceDb },
                                            {"tmDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::genericDb }}},
-        {"clust",                structclust,                &localPar.clust,                COMMAND_CLUSTER,
+        {"clust",                structclust,                &localPar.structclustworkflow,                COMMAND_CLUSTER,
                 "Cluster result by Set-Cover/Connected-Component/Greedy-Incremental",
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr> & Lars von den Driesch & Maria Hauser",

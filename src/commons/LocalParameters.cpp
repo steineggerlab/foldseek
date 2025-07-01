@@ -239,6 +239,10 @@ LocalParameters::LocalParameters() :
     //createstructsimpledb
     createstructsimpledb.push_back(&PARAM_V);
 
+    //structclustworkflow
+    structclustworkflow = clust;
+    structclustworkflow.push_back(&PARAM_DB_TYPE);
+
     // structuresearchworkflow
     structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
