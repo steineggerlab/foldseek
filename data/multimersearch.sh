@@ -40,9 +40,10 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
     fi
     RESULT="${TMP_PATH}/result_expand_aligned"
 fi
-if notExists "${OUTPUT}.dbtype"; then
+
+if notExists "${TMP_PATH}/scoremultimer.dbtype"; then
     # shellcheck disable=SC2086
-    $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${OUTPUT}" ${SCOREMULTIMER_PAR} \
+    $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${TMP_PATH}/scoremultimer" ${SCOREMULTIMER_PAR} \
         || fail "scoremultimer died"
     # # shellcheck disable=SC2086
     # $MMSEQS createsimpledb "${QUERYDB}" "${OUTPUT}_query_multimerdb" ${SIMPLEDB_PAR} \
@@ -51,8 +52,11 @@ if notExists "${OUTPUT}.dbtype"; then
     # $MMSEQS createsimpledb "${TARGETDB}" "${OUTPUT}_target_multimerdb" ${SIMPLEDB_PAR} \
     #     || fail "createsimpledb died"
     # shellcheck disable=SC2086
-    "$MMSEQS" setextendeddbtype "${OUTPUT}" --extended-dbtype 16 ${VERBOSITY_PAR} \
+    "$MMSEQS" setextendeddbtype "${TMP_PATH}/scoremultimer" --extended-dbtype 16 ${VERBOSITY_PAR} \
         || fail "setextendeddbtype died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" mvdb "${TMP_PATH}/scoremultimer" "${OUTPUT}" \
+        || fail "mvdb died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then

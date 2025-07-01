@@ -21,4 +21,9 @@ if notExists "${RESULT}.dbtype"; then
         || fail "setextendeddbtype died"
 fi
 
+if [ "${NEEDSET}" -eq "1" ]; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${INPUT}"
+fi
+
 

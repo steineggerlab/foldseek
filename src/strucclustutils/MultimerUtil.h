@@ -250,28 +250,4 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     return {assId, qTmScore, tTmScore, uString, tString, true};
 }
 
-static char* fastfloatToBuffer(float value, char* buffer) {
-    if (value < 0) {
-        value *= -1;
-        *(buffer) = '-';
-        buffer++;
-    }
-    int value1 = (int)(value);
-    buffer = Itoa::i32toa_sse2(value1, buffer);
-    *(buffer) = '.';
-    buffer++;
-
-    double value2 = value - value1;
-    if (value2 < 0.1){
-        *(buffer) = '0';
-        buffer++;
-    }
-    if (value2 < 0.01){
-        *(buffer) = '0';
-        buffer++;
-    }
-    buffer = Itoa::i32toa_sse2((int)(value2 * 1000), buffer);
-    return buffer;
-}
-
 #endif //FOLDSEEK_MULTIMERUTIL_H

@@ -159,10 +159,10 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/query" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/query_h" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
+    # # shellcheck disable=SC2086
+    # "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
+    # # shellcheck disable=SC2086
+    # "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu" ${VERBOSITY_PAR}
     if exists "${TMP_PATH}/query_ca.dbtype"; then

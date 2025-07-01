@@ -23,7 +23,6 @@ int structclust(int argc, const char **argv, const Command &command) {
         cmd.addVariable("NEEDSET", "0");
     }
 
-
     cmd.addVariable("RESULT",par.filenames.back().c_str());
     par.filenames.pop_back();
     cmd.addVariable("ALN", par.filenames.back().c_str());

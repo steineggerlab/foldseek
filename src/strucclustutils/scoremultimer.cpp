@@ -1033,57 +1033,59 @@ public:
 };
 
 
-char* filterToBuffer(ComplexFilterCriteria cmplfiltcrit, char* tmpBuff){
-    *(tmpBuff-1) = '\t';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.qCov, tmpBuff);
-    *(tmpBuff-1) = '\t';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.tCov, tmpBuff);
-    *(tmpBuff-1) = '\t';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.qTm, tmpBuff);
-    *(tmpBuff-1) = '\t';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.tTm, tmpBuff);
-    *(tmpBuff-1) = '\t';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.interfaceLddt, tmpBuff);
-    *(tmpBuff-1) = '\t';
+std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit){
+    std::string result;
+    result.append(SSTR(cmplfiltcrit.qCov));
+    result.append("\t");
+    result.append(SSTR(cmplfiltcrit.tCov));
+    result.append("\t");
+    result.append(SSTR(cmplfiltcrit.qTm));
+    result.append("\t");
+    result.append(SSTR(cmplfiltcrit.tTm));
+    result.append("\t");
+    result.append(SSTR(cmplfiltcrit.interfaceLddt));
+    result.append("\t");
 
     for (unsigned int i = 0; i < cmplfiltcrit.qAlnChainTms.size(); i++) {
-        tmpBuff = fastfloatToBuffer(cmplfiltcrit.qAlnChainTms[i], tmpBuff);
-        *(tmpBuff-1) = ',';
+        result.append(SSTR(cmplfiltcrit.qAlnChainTms[i]));
+        result.append(",");
+        if(i == cmplfiltcrit.qAlnChainTms.size() - 1) {
+            result.append("\t");
+        }
     }
-    *(tmpBuff-1) = '\t';
+    
     for (unsigned int i = 0; i < cmplfiltcrit.tAlnChainTms.size(); i++) {
-        tmpBuff = fastfloatToBuffer(cmplfiltcrit.tAlnChainTms[i], tmpBuff);
-        *(tmpBuff-1) = ',';
+        result.append(SSTR(cmplfiltcrit.tAlnChainTms[i]));
+        result.append(",");
+        if(i == cmplfiltcrit.tAlnChainTms.size() - 1) {
+            result.append("\t");
+        }
     }
-    *(tmpBuff-1) = '\t';
-
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.interfaceLddt, tmpBuff);    
-    *(tmpBuff-1) = '\t';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[0][0], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[0][1], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[0][2], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[1][0], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[1][1], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[1][2], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[2][0], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[2][1], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.u[2][2], tmpBuff);
-    *(tmpBuff-1) = '\t';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.t[0], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.t[1], tmpBuff);
-    *(tmpBuff-1) = ',';
-    tmpBuff = fastfloatToBuffer(cmplfiltcrit.t[2], tmpBuff);
-    *(tmpBuff-1) = '\n';
-    return tmpBuff;
+    result.append(SSTR(cmplfiltcrit.u[0][0]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[0][1]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[0][2]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[1][0]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[1][1]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[1][2]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[2][0]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[2][1]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.u[2][2]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.t[0]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.t[1]));
+    result.append(",");
+    result.append(SSTR(cmplfiltcrit.t[2]));
+    result.append("\n");
+    return result;
 }
 
 void fillUArr(const std::string &uString, float (&u)[3][3]) {
@@ -1494,8 +1496,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                         }
                     }
                 }
-                char * tmpBuff = buffer + sprintf(buffer, "%d\t%s\t%s", tComplexId, qChainNames.c_str(), tChainNames.c_str()) +1; // RECOVER
-                tmpBuff = filterToBuffer(cmplfiltcrit, tmpBuff);
+                std::string result1 = filterToBuffer(cmplfiltcrit);
+                char * tmpBuff = buffer + sprintf(buffer, "%d\t%s\t%s\t%s", tComplexId, qChainNames.c_str(), tChainNames.c_str(), result1.c_str()) +1; // RECOVER
                 resultWriter.writeAdd(buffer, tmpBuff - buffer, thread_idx);
             }
             resultWriter.writeEnd(qComplexId, thread_idx);
