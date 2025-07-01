@@ -40,7 +40,7 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
     fi
     RESULT="${TMP_PATH}/result_expand_aligned"
 fi
-if notExists "${TMP_PATH}/scoremultimerresult.dbtype"; then
+if notExists "${OUTPUT}.dbtype"; then
     # shellcheck disable=SC2086
     $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${OUTPUT}" ${SCOREMULTIMER_PAR} \
         || fail "scoremultimer died"

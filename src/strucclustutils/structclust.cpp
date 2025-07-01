@@ -14,8 +14,8 @@ int structclust(int argc, const char **argv, const Command &command) {
     CommandCaller cmd;
 
     DBReader<unsigned int> *reader;
-    reader = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-
+    reader = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX);
+    reader->open(DBReader<unsigned int>::LINEAR_ACCCESS);
     uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(reader->getDbtype());
     if (extended & Parameters::DBTYPE_EXTENDED_SET) {
         cmd.addVariable("NEEDSET", "1");
