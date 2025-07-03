@@ -1214,13 +1214,16 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(alnDbr.getDbtype());
     int dbType = Parameters::DBTYPE_ALIGNMENT_RES;
+    int dbinfoType = Parameters::DBTYPE_CLUSTER_RES;
     bool needSrc = false;
     if (extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC) {
         needSrc = true;
         dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
     }
-    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
-    resultWriter.open();
+    // DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
+    // resultWriter.open();
+    DBWriter resultinfoWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbinfoType);
+    resultinfoWriter.open();
 
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
 
@@ -1467,7 +1470,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 selectedAssIDs.push_back(0);
                 localComplexMap.insert({0, cmplfiltcrit});
             }
-            resultWriter.writeStart(thread_idx);
+            resultinfoWriter.writeStart(thread_idx);
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
                 ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
@@ -1497,10 +1500,11 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                     }
                 }
                 std::string result1 = filterToBuffer(cmplfiltcrit);
-                char * tmpBuff = buffer + sprintf(buffer, "%d\t%s\t%s\t%s", tComplexId, qChainNames.c_str(), tChainNames.c_str(), result1.c_str()) +1; // RECOVER
-                resultWriter.writeAdd(buffer, tmpBuff - buffer, thread_idx);
+                // char * tmpBuff = buffer + sprintf(buffer, "%d\n", tComplexId); // RECOVER
+                char * tmpBuff = buffer + sprintf(buffer, "%d\t%s\t%s\t%s", tComplexId, qChainNames.c_str(), tChainNames.c_str(), result1.c_str()); // RECOVER
+                resultinfoWriter.writeAdd(buffer, tmpBuff - buffer, thread_idx);
             }
-            resultWriter.writeEnd(qComplexId, thread_idx);
+            resultinfoWriter.writeEnd(qComplexId, thread_idx);
             localComplexMap.clear();
             cmplIdToBestAssId.clear();
             selectedAssIDs.clear();
@@ -1527,6 +1531,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     }
     qComplexes.clear();
     dbComplexes.clear();
-    resultWriter.close(false);
+    //TODO: real alignment with bit, e-value etc
+    // resultWriter.close(false);
+    resultinfoWriter.close(false);
     return EXIT_SUCCESS;
 }

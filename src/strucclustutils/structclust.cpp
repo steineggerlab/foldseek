@@ -33,7 +33,7 @@ int structclust(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CLUST_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    std::string program = par.db2 + ".sh";
+    std::string program = par.db3 + ".sh";
     FileUtil::writeFile(program, structclust_sh, structclust_sh_len);
     cmd.execProgram(FileUtil::getRealPathFromSymLink(program).c_str(), par.filenames);
 
