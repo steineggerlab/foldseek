@@ -115,6 +115,14 @@ if [ -e "${IN}.dbtype" ]; then
         || fail "createsubdb died"
     # shellcheck disable=SC2086
     "$MMSEQS" mvdb "${TMP_PATH}/dimerdb_h" "${OUT}_h"
+    # shellcheck disable=SC2086
+    "$MMSEQS" createtsv "${OUT}" "${OUT}_h" "${TMP_PATH}/tmpheader" --threads 1 ${VERBOSITY_PAR}
+    paste "${TMP_PATH}/dimerdb.lookup" "${TMP_PATH}/tmpheader" | awk -F"\t" '{print $1"\t"$2"\t"$5}' > "${TMP_PATH}/tmpheader2"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${OUT}_h"
+    # shellcheck disable=SC2086
+    "$MMSEQS" tsv2db "${TMP_PATH}/tmpheader2" "${OUT}_h" ${VERBOSITY_PAR}
+
     mv "${TMP_PATH}/dimerdb.lookup" "${OUT}.lookup"
     mv "${TMP_PATH}/dimerdb.source" "${OUT}.source"
 
