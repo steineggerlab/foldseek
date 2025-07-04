@@ -59,7 +59,7 @@ if [ -e "${IN}.dbtype" ]; then
     }' "${TMP_PATH}/sublookup" > "${TMP_PATH}/chainidxlist"
 
     awk -v secondout="${TMP_PATH}/reallookup" '{
-        print NR-1"\tDI"int((NR-1)/2)"_"$2"\t"int((NR-1)/2) >> secondout
+        print NR-1"\t"$2"\t"int((NR-1)/2) >> secondout
         print NR-1"\t"$1
     }' "${TMP_PATH}/lookuptmp" > "${TMP_PATH}/realIdx_originalIdx"
 
