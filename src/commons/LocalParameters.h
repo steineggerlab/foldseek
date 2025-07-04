@@ -73,9 +73,6 @@ public:
     static const int OUTFMT_Q3DIALN = 60;
     static const int OUTFMT_T3DIALN = 61;
 
-    static const int DB_EXTRACT_MODE_CHAIN = 0;
-    static const int DB_EXTRACT_MODE_INTERFACE = 1;
-
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
     static const int COORD_STORE_MODE_CA_PLAIN_TEXT  = 3;
@@ -123,7 +120,11 @@ public:
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
-
+    std::vector<MMseqsParameter *> createStructinterfacedb;
+    std::vector<MMseqsParameter *> createinterfacedb;
+    std::vector<MMseqsParameter *> createdimerdbworkflow;
+    std::vector<MMseqsParameter *> filterdimerdb;
+    
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
@@ -138,6 +139,7 @@ public:
     PARAMETER(PARAM_EXACT_TMSCORE)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
+    PARAMETER(PARAM_SAVE_RES_INDEX)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
     PARAMETER(PARAM_MONOMER_INCLUDE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
@@ -151,7 +153,6 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
-    PARAMETER(PARAM_DB_EXTRACTION_MODE)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
@@ -171,6 +172,7 @@ public:
     int exactTMscore;
     int nsample;
     int coordStoreMode;
+    bool saveResIndex;
     float minAssignedChainsThreshold;
     int monomerIncludeMode;
     int clusterSearch;
@@ -185,7 +187,6 @@ public:
     float filtChainTmThr;
     float filtInterfaceLddtThr;
     std::string prostt5Model;
-    int dbExtractionMode;
     float distanceThreshold;
     int prostt5SplitLength;
 

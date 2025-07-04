@@ -21,6 +21,9 @@ set(strucclustutils_source_files
         strucclustutils/makepaddeddb.cpp
         strucclustutils/result2structprofile.cpp
         strucclustutils/createstructsubdb.cpp
+        strucclustutils/createStructinterfacedb.cpp
+        strucclustutils/createinterfacedb.cpp
+        strucclustutils/filterdimerdb.cpp
         PARENT_SCOPE
         )
 
