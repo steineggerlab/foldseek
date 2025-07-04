@@ -21,23 +21,8 @@ if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" createsubdb "${OUT}.index" "${IN}_h" "${OUT}_h" \
         || fail "createsubdb died"
-    
-    awk 'BEGIN{
-        i=0
-        } FNR==NR{
-            name[$1]=$2; next
-            } FNR%2==1{
-                print $1"\tINT"i"_"name[$1]"\t"i; getline; print $1"\tINT"i"_"name[$1]"\t"i; i++
-                }' "$(abspath "${IN}.lookup")" "${OUT}.index" >  "${OUT}.lookup"
-    awk 'NR%2 == 1{
-        n = split($2, a, "_"); 
-        hi=a[1]"_"
-        for (i = 2; i < n-1; i++) {
-            hi= hi a[i]"_";
-        } 
-        hi = hi a[n-1]
-        print $3"\t"hi 
-        }' "${OUT}.lookup" > "${OUT}.source"
+    ln -sf "$(abspath "${IN}.lookup")" "${OUT}.lookup"
+    ln -sf "$(abspath "${IN}.source")" "${OUT}.source"
 fi
 
 if [ -e "${OUT}.sh" ]; then
