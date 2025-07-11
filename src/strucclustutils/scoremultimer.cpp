@@ -1,5 +1,3 @@
-#include <fmt/fmt/base.h>
-
 #include "DBReader.h"
 #include "DBWriter.h"
 #include "Debug.h"
