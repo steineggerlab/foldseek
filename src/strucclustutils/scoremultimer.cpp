@@ -782,10 +782,10 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
 #pragma omp for schedule(dynamic, 1)
 
         for (size_t complexPairIdx = 0; complexPairIdx < complexPairs.size(); complexPairIdx++) {
-            // for each assignment
             unsigned int qComplexId = complexPairs[complexPairIdx].first;
             unsigned int dbComplexId = complexPairs[complexPairIdx].second;
             complexScorer.getAssignments(searchResults[qComplexId][dbComplexId], assignments);
+            // for each assignment
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
                 Assignment &assignment = assignments[assignmentId];
                 // for each output line from this assignment
