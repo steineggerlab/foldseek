@@ -284,6 +284,7 @@ public:
     // seq. split mode
     static const int SEQUENCE_SPLIT_MODE_HARD = 0;
     static const int SEQUENCE_SPLIT_MODE_SOFT = 1;
+    static const int SEQUENCE_SPLIT_MODE_GPU = 2;
 
     // rescorediagonal
     static const int RESCORE_MODE_HAMMING = 0;
@@ -326,6 +327,12 @@ public:
     // translation mode
     static const int PARAM_TRANSLATION_MODE_ORF = 0;
     static const int PARAM_TRANSLATION_MODE_FRAME = 1;
+
+    // report mode
+    static const int REPORT_MODE_KRAKEN = 0;
+    static const int REPORT_MODE_KRONA = 1;
+    static const int REPORT_MODE_SKIP = 2; // for workflows only
+    static const int REPORT_MODE_KRAKENDB = 3;
 
     // path to databases
     std::string db1;
@@ -716,7 +723,14 @@ public:
     // unpackdb
     std::string unpackSuffix;
     int unpackNameMode;
-
+    
+    // fwbw
+    float mact;
+    float fwbw_gapopen;
+    float fwbw_gapextend;
+    float temperature;
+    int blocklen;
+    int fwbw_backtrace_mode;
     // for modules that should handle -h themselves
     bool help;
 
@@ -1073,7 +1087,14 @@ public:
     // unpackdb
     PARAMETER(PARAM_UNPACK_SUFFIX)
     PARAMETER(PARAM_UNPACK_NAME_MODE)
-
+    
+    // fwbw
+    PARAMETER(PARAM_MACT)
+    PARAMETER(PARAM_FWBW_GAPOPEN)
+    PARAMETER(PARAM_FWBW_GAPEXTEND)
+    PARAMETER(PARAM_TEMPERATURE)
+    PARAMETER(PARAM_BLOCKLEN)
+    PARAMETER(PARAM_FWBW_BACKTRACE_MODE)
     // for modules that should handle -h themselves
     PARAMETER(PARAM_HELP)
     PARAMETER(PARAM_HELP_LONG)
@@ -1200,6 +1221,7 @@ public:
     std::vector<MMseqsParameter*> touchdb;
     std::vector<MMseqsParameter*> gpuserver;
     std::vector<MMseqsParameter*> tsv2exprofiledb;
+    std::vector<MMseqsParameter*> fwbw;
 
     std::vector<MMseqsParameter*> combineList(const std::vector<MMseqsParameter*> &par1,
                                              const std::vector<MMseqsParameter*> &par2);

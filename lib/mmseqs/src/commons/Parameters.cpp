@@ -59,7 +59,7 @@ Parameters::Parameters():
         PARAM_SUB_MAT(PARAM_SUB_MAT_ID, "--sub-mat", "Substitution matrix", "Substitution matrix file", typeid(MultiParam<NuclAA<std::string>>), (void *) &scoringMatrixFile, "", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
         PARAM_SEED_SUB_MAT(PARAM_SEED_SUB_MAT_ID, "--seed-sub-mat", "Seed substitution matrix", "Substitution matrix file for k-mer generation", typeid(MultiParam<NuclAA<std::string>>), (void *) &seedScoringMatrixFile, "", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_NO_COMP_BIAS_CORR(PARAM_NO_COMP_BIAS_CORR_ID, "--comp-bias-corr", "Compositional bias", "Correct for locally biased amino acid composition (range 0-1)", typeid(int), (void *) &compBiasCorrection, "^[0-1]{1}$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
-        PARAM_NO_COMP_BIAS_CORR_SCALE(PARAM_NO_COMP_BIAS_CORR_SCALE_ID, "--comp-bias-corr-scale", "Compositional bias", "Correct for locally biased amino acid composition (range 0-1)", typeid(float), (void *) &compBiasCorrectionScale,  "^0(\\.[0-9]+)?|^1(\\.0+)?$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_NO_COMP_BIAS_CORR_SCALE(PARAM_NO_COMP_BIAS_CORR_SCALE_ID, "--comp-bias-corr-scale", "Compositional bias scale", "Correct for locally biased amino acid composition (range 0-1)", typeid(float), (void *) &compBiasCorrectionScale,  "^0(\\.[0-9]+)?|^1(\\.0+)?$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
 
         PARAM_SPACED_KMER_MODE(PARAM_SPACED_KMER_MODE_ID, "--spaced-kmer-mode", "Spaced k-mers", "0: use consecutive positions in k-mers; 1: use spaced k-mers", typeid(int), (void *) &spacedKmer, "^[0-1]{1}", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_REMOVE_TMP_FILES(PARAM_REMOVE_TMP_FILES_ID, "--remove-tmp-files", "Remove temporary files", "Delete temporary files", typeid(bool), (void *) &removeTmpFiles, "", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
@@ -202,7 +202,7 @@ Parameters::Parameters():
         PARAM_USE_HEADER(PARAM_USE_HEADER_ID, "--use-fasta-header", "Use fasta header", "Use the id parsed from the fasta header as the index key instead of using incrementing numeric identifiers", typeid(bool), (void *) &useHeader, ""),
         PARAM_ID_OFFSET(PARAM_ID_OFFSET_ID, "--id-offset", "Offset of numeric ids", "Numeric ids in index file are offset by this value", typeid(int), (void *) &identifierOffset, "^(0|[1-9]{1}[0-9]*)$"),
         PARAM_DB_TYPE(PARAM_DB_TYPE_ID, "--dbtype", "Database type", "Database type 0: auto, 1: amino acid 2: nucleotides", typeid(int), (void *) &dbType, "[0-2]{1}"),
-        PARAM_CREATEDB_MODE(PARAM_CREATEDB_MODE_ID, "--createdb-mode", "Createdb mode", "Createdb mode 0: copy data, 1: soft link data and write new index (works only with single line fasta/q)", typeid(int), (void *) &createdbMode, "^[0-1]{1}$"),
+        PARAM_CREATEDB_MODE(PARAM_CREATEDB_MODE_ID, "--createdb-mode", "Createdb mode", "Createdb mode 0: copy data, 1: soft link data and write new index (works only with single line fasta/q) 2: GPU compatible db", typeid(int), (void *) &createdbMode, "^[0-2]{1}$"),
         PARAM_SHUFFLE(PARAM_SHUFFLE_ID, "--shuffle", "Shuffle input database", "Shuffle input database", typeid(bool), (void *) &shuffleDatabase, ""),
         PARAM_WRITE_LOOKUP(PARAM_WRITE_LOOKUP_ID, "--write-lookup", "Write lookup file", "write .lookup file containing mapping from internal id, fasta id and file number", typeid(int), (void *) &writeLookup, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
         PARAM_USE_HEADER_FILE(PARAM_USE_HEADER_FILE_ID, "--use-header-file", "Use header DB", "use the sequence header DB instead of the body to map the entry keys", typeid(bool), (void *) &useHeaderFile, ""),
@@ -288,7 +288,7 @@ Parameters::Parameters():
         PARAM_PAIRING_DUMMY_MODE(PARAM_PAIRING_DUMMY_MODE_ID, "--pairing-dummy-mode", "Include dummy pairing", "0: dont include, 1: include - an entry that will cause result2msa to write a gap only line", typeid(int), (void *) &pairdummymode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_PAIRING_MODE(PARAM_PAIRING_MODE_ID, "--pairing-mode", "Pairing mode", "0: pair maximal per species, 1: pair only if all chains are covered per species", typeid(int), (void *) &pairmode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         // taxonomyreport
-        PARAM_REPORT_MODE(PARAM_REPORT_MODE_ID, "--report-mode", "Report mode", "Taxonomy report mode 0: Kraken 1: Krona", typeid(int), (void *) &reportMode, "^[0-1]{1}$"),
+        PARAM_REPORT_MODE(PARAM_REPORT_MODE_ID, "--report-mode", "Report mode", "Taxonomy report mode\n0: Kraken\n1: Krona\n2: do not create a report (for workflows only)\n3: Kraken per query database", typeid(int), (void *) &reportMode, "^[0-3]{1}$"),
         // createtaxdb
         PARAM_NCBI_TAX_DUMP(PARAM_NCBI_TAX_DUMP_ID, "--ncbi-tax-dump", "NCBI tax dump directory", "NCBI tax dump directory. The tax dump can be downloaded here \"ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz\"", typeid(std::string), (void *) &ncbiTaxDump, ""),
         PARAM_TAX_MAPPING_FILE(PARAM_TAX_MAPPING_FILE_ID, "--tax-mapping-file", "Taxonomy mapping file", "File to map sequence identifier to taxonomical identifier", typeid(std::string), (void *) &taxMappingFile, ""),
@@ -308,6 +308,13 @@ Parameters::Parameters():
         // unpackdb
         PARAM_UNPACK_SUFFIX(PARAM_UNPACK_SUFFIX_ID, "--unpack-suffix", "Unpack suffix", "File suffix for unpacked files.\nAdd .gz suffix to write compressed files.", typeid(std::string), (void *) &unpackSuffix, "^.*$"),
         PARAM_UNPACK_NAME_MODE(PARAM_UNPACK_NAME_MODE_ID, "--unpack-name-mode", "Unpack name mode", "Name unpacked files by 0: DB key, 1: accession (through .lookup)", typeid(int), (void *) &unpackNameMode, "^[0-1]{1}$"),
+        // fwbw
+        PARAM_MACT(PARAM_MACT_ID, "--mact", "MAC threshold", "Maximum accuracy threshold", typeid(float), (void *) &mact, "^0(\\.[0-9]+)?|^1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FWBW_GAPOPEN(PARAM_FWBW_GAPOPEN_ID, "--fwbw-gapopen", "fwbw-gapopen", "Gap open penalty for fwbw", typeid(float), (void *) &fwbw_gapopen, "^([0-9]+(\\.[0-9]+)?)|(\\.[0-9]+)$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FWBW_GAPEXTEND(PARAM_FWBW_GAPEXTEND_ID, "--fwbw-gapextend", "fwbw-gapextend", "Gap extension penalty for fwbw", typeid(float), (void *) &fwbw_gapextend, "^([0-9]+(\\.[0-9]+)?)|(\\.[0-9]+)$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_TEMPERATURE(PARAM_TEMPERATURE_ID, "--temperature", "Temperature", "Temperature for forward-backward", typeid(float), (void *) &temperature, "^(0\\.[0-9]+|[1-9][0-9]*\\.?[0-9]*)$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_BLOCKLEN(PARAM_BLOCKLEN_ID, "--blocklen", "Block length", "Block length for forward-backward", typeid(int), (void *) &blocklen, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FWBW_BACKTRACE_MODE(PARAM_FWBW_BACKTRACE_MODE_ID, "--fwbw-backtrace-mode", "Backtrace mode", "Backtrace mode 0: no backtrace, 1: local", typeid(int), (void *) &fwbw_backtrace_mode, "^[01]$", MMseqsParameter::COMMAND_EXPERT),
         // for modules that should handle -h themselves
         PARAM_HELP(PARAM_HELP_ID, "-h", "Help", "Help", typeid(bool), (void *) &help, "", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_HELP_LONG(PARAM_HELP_LONG_ID, "--help", "Help", "Help", typeid(bool), (void *) &help, "", MMseqsParameter::COMMAND_HIDDEN)
@@ -837,7 +844,13 @@ Parameters::Parameters():
     createdb.push_back(&PARAM_CREATEDB_MODE);
     createdb.push_back(&PARAM_WRITE_LOOKUP);
     createdb.push_back(&PARAM_ID_OFFSET);
+    createdb.push_back(&PARAM_THREADS);
     createdb.push_back(&PARAM_COMPRESSED);
+    createdb.push_back(&PARAM_MASK_RESIDUES);
+    createdb.push_back(&PARAM_MASK_PROBABILTY);
+    createdb.push_back(&PARAM_MASK_LOWER_CASE);
+    createdb.push_back(&PARAM_MASK_N_REPEAT);
+    createdb.push_back(&PARAM_GPU);
     createdb.push_back(&PARAM_V);
 
     // makepaddedseqdb
@@ -1320,20 +1333,31 @@ Parameters::Parameters():
     easysearchworkflow = combineList(searchworkflow, convertalignments);
     easysearchworkflow = combineList(easysearchworkflow, summarizeresult);
     easysearchworkflow = combineList(easysearchworkflow, createdb);
-    easysearchworkflow = combineList(easysearchworkflow, makepaddedseqdb);
     easysearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
     // createindex workflow
     createindex = combineList(indexdb, extractorfs);
-    createindex = combineList(createindex, extractframes);
+    createindex = combineList(createindex, translatenucs);
     createindex = combineList(createindex, splitsequence);
-    createindex.push_back(&PARAM_TRANSLATION_MODE);
     createindex.push_back(&PARAM_STRAND);
     createindex.push_back(&PARAM_REMOVE_TMP_FILES);
 
     // createindex workflow
     createlinindex = combineList(kmerindexdb, extractorfs);
+    createlinindex = combineList(createlinindex, translatenucs);
     createlinindex.push_back(&PARAM_REMOVE_TMP_FILES);
+
+    // fwbw workflow
+    fwbw.push_back(&PARAM_SUB_MAT);
+    fwbw.push_back(&PARAM_THREADS);
+    fwbw.push_back(&PARAM_COMPRESSED);
+    fwbw.push_back(&PARAM_V);
+    fwbw.push_back(&PARAM_MACT);
+    fwbw.push_back(&PARAM_FWBW_GAPOPEN);
+    fwbw.push_back(&PARAM_FWBW_GAPEXTEND);
+    fwbw.push_back(&PARAM_TEMPERATURE);
+    fwbw.push_back(&PARAM_BLOCKLEN);
+    fwbw.push_back(&PARAM_FWBW_BACKTRACE_MODE);
 
     // linclust workflow
     linclustworkflow = combineList(clust, align);
@@ -1397,10 +1421,10 @@ Parameters::Parameters():
 
     clusterUpdateSearch = removeParameter(searchworkflow, PARAM_MAX_SEQS);
     clusterUpdateClust = removeParameter(clusterworkflow, PARAM_MAX_SEQS);
-    clusterUpdate = combineList(clusterUpdateSearch, clusterUpdateClust);
     clusterUpdate.push_back(&PARAM_REUSELATEST);
     clusterUpdate.push_back(&PARAM_USESEQID);
     clusterUpdate.push_back(&PARAM_RECOVER_DELETED);
+    clusterUpdate = combineList(clusterUpdateSearch, clusterUpdateClust);
     clusterUpdate = removeParameter(clusterUpdate, PARAM_GPU);
     clusterUpdate = removeParameter(clusterUpdate, PARAM_GPU_SERVER);
     clusterUpdate = removeParameter(clusterUpdate, PARAM_GPU_SERVER_WAIT_TIMEOUT);
@@ -1457,7 +1481,6 @@ Parameters::Parameters():
     touchdb.push_back(&PARAM_V);
 
     // gpu server
-    gpuserver.push_back(&PARAM_GPU);
     gpuserver.push_back(&PARAM_MAX_SEQS);
     gpuserver.push_back(&PARAM_PRELOAD_MODE);
     gpuserver.push_back(&PARAM_PREF_MODE);
@@ -2658,7 +2681,14 @@ void Parameters::setDefaults() {
     // taxonomy
     taxonomySearchMode = Parameters::TAXONOMY_APPROX_2BLCA;
     taxonomyOutputMode = Parameters::TAXONOMY_OUTPUT_LCA;
-
+    
+    // fwbw
+    mact = 0.035;
+    fwbw_gapopen = 10;
+    fwbw_gapextend = 2;
+    temperature = 1;
+    blocklen = 16;
+    fwbw_backtrace_mode = 1;
     // help
     help = 0;
 

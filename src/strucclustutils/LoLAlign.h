@@ -38,25 +38,13 @@ public:
     );
     void calc_gap(int* anchor_query, int* anchor_target, int * gaps,  int queryLen, int targetLen);
 
-
-    unsigned char* seq2num(const std::string& seq, const unsigned char* aa2num) {
-        unsigned char* idx = static_cast<unsigned char*>(malloc(seq.size() * sizeof(unsigned char)));
-        for (size_t i = 0; i < seq.size(); ++i) {
-            idx[i] = aa2num[static_cast<unsigned char>(seq[i])];
-        }
-        return idx;
-    }
-
-
-    void initQuery(float *x, float *y, float *z, char * querySeq, char* query3diSeq, int queryLen, int maxTLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, int md);
+    void initQuery(float *x, float *y, float *z, Sequence& qSeqAA, Sequence& qSeq3Di, int queryLen, SubstitutionMatrix &subMatAA, int maxTLen, int md);
     
-
-
     Matcher::result_t align(unsigned int dbKey, float *target_x, float *target_y, float *target_z,
-                            char * targetSeq, char* target3diSeq, int targetLen, SubstitutionMatrix &subMatAA, SubstitutionMatrix &subMat3Di, FwBwAligner* fwbwaln, int md);
+                            Sequence& tSeqAA, Sequence& tSeq3Di, int targetLen, SubstitutionMatrix &subMatAA, FwBwAligner* fwbwaln, int md);
     float maxSubArray(float* nums, int numsSize);
 
-    void align_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length, float** P, float** G);
+    void align_startAnchors(int * anchor_query, int * anchor_target, int max_query, int max_target, int * anchor_length, float** fwbwP, float** G);
     void index_sort(float* nums, int* index, int numsSize);
 
 
@@ -169,8 +157,8 @@ private:
     int max_lolmat_idx;
 
     int queryLen;
-    char * querySeq;
-    char * query3diSeq;
+    const char * querySeq;
+    const char * query3diSeq;
     std::string seqM, seqxA, seqyA;// for output alignment
 
     Coordinates xtm, ytm, xt, r1, r2;

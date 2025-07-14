@@ -418,16 +418,16 @@ std::vector<Command> baseCommands = {
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:targetDB> <i:resultDB> <o:resultDB>",
-                CITATION_TAXONOMY, {{"targetDB", DbType::ACCESS_MODE_INPUT|DbType::NEED_TAXONOMY, DbType::NEED_DATA, &DbValidator::taxSequenceDb },
+                CITATION_TAXONOMY, {{"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_TAXONOMY, &DbValidator::taxSequenceDb },
                                                            {"resultDB",   DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                                            {"resultDB",   DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"taxonomyreport",       taxonomyreport,       &par.taxonomyreport,       COMMAND_TAXONOMY | COMMAND_FORMAT_CONVERSION,
                 "Create a taxonomy report in Kraken or Krona format",
                 NULL,
                 "Milot Mirdita <milot@mirdita.de> & Florian Breitwieser <florian.bw@gmail.com>",
-                "<i:seqTaxDB> <i:taxResultDB/resultDB/sequenceDB> <o:taxonomyReport>",
+                "<i:seqTaxDB> <i:taxResultDB/resultDB/sequenceDB> <o:taxonomyReport|krakenDB>",
                 CITATION_TAXONOMY, {{"seqTaxDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_TAXONOMY, &DbValidator::taxSequenceDb },
-                                                           {"taxResultDB/resultDB/sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,  &DbValidator::taxonomyReportInput },
+                                                           {"taxResultDB/resultDB/sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::taxonomyReportInput },
                                                            {"taxonomyReport",    DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"filtertaxdb",          filtertaxdb,          &par.filtertaxdb,          COMMAND_TAXONOMY,
                 "Filter taxonomy result database",
@@ -572,7 +572,15 @@ std::vector<Command> baseCommands = {
                                                            {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
 
 
-
+        {"pickconsensusrep", pickconsensusrep,            &par.verbandcompression,            COMMAND_CLUSTER,
+                "Select new representatives for each cluster based on consensus",
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr> & Maria Hauser",
+                "<i:seqDb> <i:clusterDB> <o:clusterDB> <tmpDir>",
+                CITATION_MMSEQS2, {{"seqDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"clusterDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
+                                          {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"prefilter",            prefilter,            &par.prefilter,            COMMAND_PREFILTER,
                 "Double consecutive diagonal k-mer search",
                 NULL,
@@ -658,6 +666,15 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
+        {"fwbw",                fwbw,                   &par.fwbw,                COMMAND_ALIGNMENT,
+                "Forward Backward Alignment",
+                NULL,
+                "Gyuri Kim <gyuribio@snu.ac.kr> & Soohyun Kim <sd20163818@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:alignmentDB>",
+                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"fwbwAlignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
         {"alignbykmer",         alignbykmer,           &par.alignbykmer,          COMMAND_ALIGNMENT,
                 "Heuristic gapped local k-mer based alignment",
                 NULL,
@@ -667,7 +684,6 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
-
 
 
         {"clust",                clust,                &par.clust,                COMMAND_CLUSTER,
@@ -780,7 +796,7 @@ std::vector<Command> baseCommands = {
 //                "If exist, the auxillary files: _mapping, source and lookup are also concatenated after IDs update of the 2nd DB",
                 "# Download two sequences databases and concat them\n"
                 "mmseqs databases PDB pdbDB tmp\n"
-                "mmseqs UniProtKB/Swiss-Prot swissprotDB tmp\n"
+                "mmseqs databases UniProtKB/Swiss-Prot swissprotDB tmp\n"
                 "# Works only single threaded since seq. and header DB need the same ordering\n"
                 "mmseqs concatdbs pdbDB swissprotDB pdbAndSwissprotDB --threads 1\n"
                 "mmseqs concatdbs pdbDB_h swissprotDB_h pdbAndSwissprotDB_h --threads 1\n",
