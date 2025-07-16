@@ -126,7 +126,6 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_V);
 
     //LoLalign
-    
     lolalign.push_back(&PARAM_MULTIDOMAIN);
     lolalign.push_back(&PARAM_MIN_SEQ_ID);
     lolalign.push_back(&PARAM_PRELOAD_MODE);
@@ -165,6 +164,7 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
     structuresearchworkflow = combineList(tmalign, structuresearchworkflow);
+    structuresearchworkflow = combineList(lolalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
     structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);

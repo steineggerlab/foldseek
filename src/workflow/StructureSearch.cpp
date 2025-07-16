@@ -31,8 +31,8 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     setStructureSearchWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setStructureSearchMustPassAlong(&par);
-    if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
-        Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
+    if((par.alignmentMode == 1 || par.alignmentMode == 2 || par.alignmentMode == 3) && par.sortByStructureBits){
+        Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1, 2 or 3\n";
         Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
         par.sortByStructureBits = false;
     }
@@ -125,6 +125,16 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.tmalign).c_str());
+        par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_ONLY;
+        par.sortByStructureBits = 0;
+        //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
+        cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
+
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_LOLALIGN){
+        cmd.addVariable("ALIGNMENT_ALGO", "lolalign");
+        cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
+        cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.lolalign).c_str());
         par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_ONLY;
         par.sortByStructureBits = 0;
         //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
