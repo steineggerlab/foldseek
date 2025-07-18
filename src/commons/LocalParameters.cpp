@@ -293,6 +293,7 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
     structuresearchworkflow = combineList(structuresearchworkflow, tmalign);
     structuresearchworkflow = combineList(structuresearchworkflow, result2structprofile);
+    structuresearchworkflow = combineList(lolalign, structuresearchworkflow);
     structuresearchworkflow.push_back(&PARAM_CLUSTER_SEARCH);
     structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
     structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
