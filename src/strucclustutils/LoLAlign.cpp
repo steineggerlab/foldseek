@@ -708,7 +708,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
     result.dbEndPos--;
     result.backtrace = Matcher::compressAlignment(backtrace.substr(firstM));
     //result.backtrace = backtrace.substr(firstM);
-    result.alnLength = (int)result.backtrace.size();
+    result.alnLength = (int)anchor_length[max_lol_idx];
 
     return result;
 
