@@ -47,6 +47,9 @@ public:
     static const int CHAIN_MODE_AUTO = 0;
     static const int CHAIN_MODE_ADD = 1;
 
+    static const int MODEL_MODE_AUTO = 0;
+    static const int MODEL_MODE_ADD = 1;
+
     static const int OUTFMT_QCA = 40;
     static const int OUTFMT_TCA = 41;
     static const int OUTFMT_U = 42;
@@ -66,6 +69,10 @@ public:
     static const int OUTFMT_ASSIGN_ID = 55;
     static const int OUTFMT_COMPLEX_U = 56;
     static const int OUTFMT_COMPLEX_T = 57;
+    static const int OUTFMT_Q3DI = 58;
+    static const int OUTFMT_T3DI = 59;
+    static const int OUTFMT_Q3DIALN = 60;
+    static const int OUTFMT_T3DIALN = 61;
 
     static const int DB_EXTRACT_MODE_CHAIN = 0;
     static const int DB_EXTRACT_MODE_INTERFACE = 1;
@@ -128,6 +135,7 @@ public:
     PARAMETER(PARAM_MASK_BFACTOR_THRESHOLD)
     PARAMETER(PARAM_ALIGNMENT_TYPE)
     PARAMETER(PARAM_CHAIN_NAME_MODE)
+    PARAMETER(PARAM_MODEL_NAME_MODE)
     PARAMETER(PARAM_WRITE_MAPPING)
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_EXACT_TMSCORE)
@@ -170,6 +178,7 @@ public:
     float maskBfactorThreshold;
     int alignmentType;
     int chainNameMode;
+    int modelNameMode;
     bool writeMapping;
     int tmAlignFast;
     int exactTMscore;
@@ -202,9 +211,11 @@ public:
     // LoLalign
     int multiDomain;
 
-    static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
-                                            bool &needLDDT);
+    static std::vector<int> getOutputFormat(
+        int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
+        bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
+        bool &needLDDT
+    );
 
 
 private:

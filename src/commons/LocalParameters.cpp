@@ -16,6 +16,7 @@ LocalParameters::LocalParameters() :
         PARAM_MASK_BFACTOR_THRESHOLD(PARAM_MASK_BFACTOR_THRESHOLD_ID,"--mask-bfactor-threshold", "Mask b-factor threshold", "mask residues for seeding if b-factor < thr [0,100]",typeid(float), (void *) &maskBfactorThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA\n3: LoL alignmnet",typeid(int), (void *) &alignmentType, "^[0-3]{1}$"),
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_MODEL_NAME_MODE(PARAM_MODEL_NAME_MODE_ID,"--model-name-mode", "Model name mode", "Add model to name:\n0: auto\n1: always add\n",typeid(int), (void *) &modelNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_WRITE_MAPPING(PARAM_WRITE_MAPPING_ID, "--write-mapping", "Write mapping file", "write _mapping file containing mapping from internal id to taxonomic identifier", typeid(int), (void *) &writeMapping, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_EXACT_TMSCORE(PARAM_EXACT_TMSCORE_ID,"--exact-tmscore", "Exact TMscore","turn on fast exact TMscore (slow), default is approximate" ,typeid(int), (void *) &exactTMscore, "^[0-1]{1}$"),
@@ -50,6 +51,8 @@ LocalParameters::LocalParameters() :
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
     PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
+    PARAM_NUM_ITERATIONS.description = "Number of iterative profile search iterations (0: auto (select optimal), 1: default, 1-n), N≥2 exactly N)";
+    PARAM_NUM_ITERATIONS.regex = "^[0-9]{1}[0-9]*$";
     PARAM_EXHAUSTIVE_SEARCH.description = "Turns on an exhaustive all vs all search by by passing the prefilter step";
     PARAM_EXHAUSTIVE_SEARCH.category = MMseqsParameter::COMMAND_PREFILTER;
     PARAM_MIN_ALN_LEN.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
@@ -92,6 +95,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_GPU);
     structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
+    structurecreatedb.push_back(&PARAM_MODEL_NAME_MODE);
     structurecreatedb.push_back(&PARAM_DB_EXTRACTION_MODE);
     structurecreatedb.push_back(&PARAM_DISTANCE_THRESHOLD);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
@@ -153,8 +157,7 @@ LocalParameters::LocalParameters() :
     structurealign.push_back(&PARAM_ALIGNMENT_TYPE);
     structurealign.push_back(&PARAM_EXACT_TMSCORE);
     structurealign = combineList(structurealign, align);
-//    tmalign.push_back(&PARAM_GAP_OPEN);
-//    tmalign.push_back(&PARAM_GAP_EXTEND);
+
     // strucclust
     strucclust = combineList(clust, structurealign);
     strucclust = combineList(strucclust, structurerescorediagonal);
@@ -201,7 +204,7 @@ LocalParameters::LocalParameters() :
     databases.push_back(&PARAM_COMPRESSED);
     databases.push_back(&PARAM_THREADS);
     databases.push_back(&PARAM_V);
-    //easystructureclusterworkflow = combineList(structuresearchworkflow, structurecreatedb);
+
     samplemulambda.push_back(&PARAM_N_SAMPLE);
     samplemulambda.push_back(&PARAM_THREADS);
     samplemulambda.push_back(&PARAM_V);
@@ -265,6 +268,7 @@ LocalParameters::LocalParameters() :
     result2structprofile.push_back(&PARAM_COMPRESSED);
     result2structprofile.push_back(&PARAM_V);
     result2structprofile.push_back(&PARAM_PROFILE_OUTPUT_MODE);
+
     //createstructsubdb
     createstructsubdb.push_back(&PARAM_SUBDB_MODE);
     createstructsubdb.push_back(&PARAM_ID_MODE);
@@ -274,6 +278,47 @@ LocalParameters::LocalParameters() :
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
     createmultimerreport.push_back(&PARAM_THREADS);
     createmultimerreport.push_back(&PARAM_V);
+
+    // expandmultimer
+    expandmultimer.push_back(&PARAM_THREADS);
+    expandmultimer.push_back(&PARAM_V);
+
+    // convert2pdb
+    convert2pdb.push_back(&PARAM_PDB_OUTPUT_MODE);
+    convert2pdb.push_back(&PARAM_THREADS);
+    convert2pdb.push_back(&PARAM_V);
+
+    // structuresearchworkflow
+    structuresearchworkflow = combineList(structurealign, prefilter);
+    structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
+    structuresearchworkflow = combineList(structuresearchworkflow, tmalign);
+    structuresearchworkflow = combineList(structuresearchworkflow, result2structprofile);
+    structuresearchworkflow.push_back(&PARAM_CLUSTER_SEARCH);
+    structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
+    structuresearchworkflow.push_back(&PARAM_NUM_ITERATIONS);
+    structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structuresearchworkflow.push_back(&PARAM_REUSELATEST);
+    structuresearchworkflow.push_back(&PARAM_RUNNER);
+
+    easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
+    easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
+    easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
+    easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
+
+    structureclusterworkflow = combineList(prefilter, structurealign);
+    structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
+    structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
+    structureclusterworkflow = combineList(structureclusterworkflow, clust);
+    structureclusterworkflow.push_back(&PARAM_CASCADED);
+    structureclusterworkflow.push_back(&PARAM_CLUSTER_STEPS);
+    structureclusterworkflow.push_back(&PARAM_CLUSTER_REASSIGN);
+    structureclusterworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+    structureclusterworkflow.push_back(&PARAM_REUSELATEST);
+    structureclusterworkflow.push_back(&PARAM_RUNNER);
+    structureclusterworkflow = combineList(structureclusterworkflow, linclustworkflow);
+
+    easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
+    easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);
 
     // multimersearchworkflow
     multimersearchworkflow = combineList(structuresearchworkflow, scoremultimer);
@@ -289,7 +334,6 @@ LocalParameters::LocalParameters() :
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
     easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
 
-
     // multimerclusterworkflow
     multimerclusterworkflow = combineList(multimersearchworkflow, filtermultimer);
     multimerclusterworkflow  = combineList(multimerclusterworkflow, clust);
@@ -297,30 +341,6 @@ LocalParameters::LocalParameters() :
     //easymultimerclusterworkflow
     easymultimerclusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
     easymultimerclusterworkflow = combineList(easymultimerclusterworkflow, result2repseq);
-    
-    // expandmultimer
-    expandmultimer.push_back(&PARAM_THREADS);
-    expandmultimer.push_back(&PARAM_V);
-
-    // convert2pdb
-    convert2pdb.push_back(&PARAM_PDB_OUTPUT_MODE);
-    convert2pdb.push_back(&PARAM_THREADS);
-    convert2pdb.push_back(&PARAM_V);
-    
-    // fwbw workflow
-    fwbw.push_back(&PARAM_SUB_MAT);
-    fwbw.push_back(&PARAM_GAP_OPEN);
-    fwbw.push_back(&PARAM_GAP_EXTEND);
-    fwbw.push_back(&PARAM_E);
-    fwbw.push_back(&PARAM_C);
-    fwbw.push_back(&PARAM_ADD_BACKTRACE);
-    fwbw.push_back(&PARAM_THREADS);
-    fwbw.push_back(&PARAM_COMPRESSED);
-    fwbw.push_back(&PARAM_V);
-    fwbw.push_back(&PARAM_MACT);
-    fwbw.push_back(&PARAM_FWBW_GAPOPEN);
-    fwbw.push_back(&PARAM_FWBW_GAPEXTEND);
-    fwbw.push_back(&PARAM_TEMPERATURE);
 
     // set masking
     maskMode = 0;
@@ -331,6 +351,7 @@ LocalParameters::LocalParameters() :
     // createdb
     maskBfactorThreshold = 0;
     chainNameMode = 0;
+    modelNameMode = 0;
     writeMapping = 0;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     inputFormat = 0; // auto detect
@@ -359,6 +380,8 @@ LocalParameters::LocalParameters() :
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
 
+    // profiles
+    evalProfile = 0.1;
     // multimer
     eValueThrExpandMultimer = 10000.0;
     multimerReportMode = 1;
@@ -378,20 +401,22 @@ LocalParameters::LocalParameters() :
     multiDomain = 1;
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
-    citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and Sensitive Protein Complex Alignment with Foldseek-Multimer. bioRxiv, doi:10.1101/2024.04.14.589414 (2024)");
+    citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)");
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
     
     //rewrite param vals.
-    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
+    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,q3di,t3di,qheader,theader,qaln,taln,q3dialn,t3dialn,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
+
     // allow higher values for GGML debug trace
     PARAM_V.regex = "^[0-4]{1}$";
 }
 
 
 
-std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
-                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
-                                             bool &needLDDT) {
+std::vector<int> LocalParameters::getOutputFormat(
+    int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
+    bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
+    bool &needLDDT) {
     std::vector<int> formatCodes;
     if (formatMode == Parameters::FORMAT_ALIGNMENT_SAM || formatMode == Parameters::FORMAT_ALIGNMENT_HTML) {
         needSequences = true;
@@ -421,10 +446,14 @@ std::vector<int> LocalParameters::getOutputFormat(int formatMode, const std::str
         else if (outformatSplit[i].compare("cigar") == 0){ needBacktrace = true; code = Parameters::OUTFMT_CIGAR;}
         else if (outformatSplit[i].compare("qseq") == 0){ needSequences = true; code = Parameters::OUTFMT_QSEQ;}
         else if (outformatSplit[i].compare("tseq") == 0){ needSequences = true; code = Parameters::OUTFMT_TSEQ;}
+        else if (outformatSplit[i].compare("q3di") == 0) { need3Di = true; code = LocalParameters::OUTFMT_Q3DI; }
+        else if (outformatSplit[i].compare("t3di") == 0) { need3Di = true; code = LocalParameters::OUTFMT_T3DI; }
         else if (outformatSplit[i].compare("qheader") == 0){ needFullHeaders = true; code = Parameters::OUTFMT_QHEADER;}
         else if (outformatSplit[i].compare("theader") == 0){ needFullHeaders = true; code = Parameters::OUTFMT_THEADER;}
         else if (outformatSplit[i].compare("qaln") == 0){ needBacktrace = true; needSequences = true; code = Parameters::OUTFMT_QALN;}
         else if (outformatSplit[i].compare("taln") == 0){ needBacktrace = true; needSequences = true; code = Parameters::OUTFMT_TALN;}
+        else if (outformatSplit[i].compare("q3dialn") == 0){ needBacktrace = true; need3Di = true; code = LocalParameters::OUTFMT_Q3DIALN;}
+        else if (outformatSplit[i].compare("t3dialn") == 0){ needBacktrace = true; need3Di = true; code = LocalParameters::OUTFMT_T3DIALN;}
         else if (outformatSplit[i].compare("mismatch") == 0){ code = Parameters::OUTFMT_MISMATCH;}
         else if (outformatSplit[i].compare("qcov") == 0){ code = Parameters::OUTFMT_QCOV;}
         else if (outformatSplit[i].compare("tcov") == 0){ code = Parameters::OUTFMT_TCOV;}

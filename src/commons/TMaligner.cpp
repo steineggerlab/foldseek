@@ -262,7 +262,8 @@ Matcher::result_t TMaligner::align(unsigned int dbKey, float *x, float *y, float
     float Liden = 0;
     int n_ali = 0;
     int n_ali8 = 0;
-    if(queryLen <=5 || targetLen <=5){
+    if (queryLen <= 5 || targetLen <= 5) {
+        TM1 = std::numeric_limits<float>::min();
         return Matcher::result_t();
     }
     TMalign_main(affineNW,

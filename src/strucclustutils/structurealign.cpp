@@ -59,13 +59,13 @@ int alignStructure(StructureSmithWaterman & structureSmithWaterman,
     }
 
     StructureSmithWaterman::s_align revAlign;
-    if(structureSmithWaterman.isProfileSearch()){
-        revAlign.score1 = 0;
-    } else {
-        revAlign = reverseStructureSmithWaterman.alignScoreEndPos<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence,
+    //if(structureSmithWaterman.isProfileSearch()){
+    //    revAlign.score1 = 0;
+    //} else {
+    revAlign = reverseStructureSmithWaterman.alignScoreEndPos<StructureSmithWaterman::PROFILE>(tSeqAA.numSequence, tSeq3Di.numSequence,
                                                                   targetSeqLen, par.gapOpen.values.aminoacid(),
                                                                   par.gapExtend.values.aminoacid(), querySeqLen / 2);
-    }
+    //}
     int32_t score = static_cast<int32_t>(align.score1) - static_cast<int32_t>(revAlign.score1);
     align.evalue = evaluer.computeEvalueCorr(score, muLambda.first, muLambda.second);
     hasLowerEvalue = align.evalue > par.evalThr;

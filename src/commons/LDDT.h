@@ -100,15 +100,20 @@ public:
             scoreLength = 0;
         }
         LDDTScoreResult(float *reduce_score, int alignLength) {
-            scoreLength = alignLength;
             if(perCaLddtScore) {
                 delete[] perCaLddtScore;
             }
-            perCaLddtScore = new float[scoreLength];
+            perCaLddtScore = new float[alignLength];
             float sum = 0.0;
-            for(int i = 0; i < scoreLength; i++) {
-                sum += reduce_score[i];
-                perCaLddtScore[i] = reduce_score[i];
+            scoreLength = alignLength;
+            for(int i = 0; i < alignLength; i++) {
+                if (std::isnan(reduce_score[i])) {
+                    scoreLength = scoreLength - 1;
+                    perCaLddtScore[i] = 0;
+                } else {
+                    sum += reduce_score[i];
+                    perCaLddtScore[i] = reduce_score[i];
+                }
             }
             avgLddtScore = (double)(sum/(float)scoreLength);
         }

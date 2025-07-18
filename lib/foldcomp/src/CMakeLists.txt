@@ -4,11 +4,13 @@ set(foldcomp_header_files
     src/bond_info.h
     src/execution_timer.h
     src/database_reader.h
+    src/database_writer.h
     src/discretizer.h
     src/float3d.h
     src/foldcomp.h
     src/nerf.h
     src/sidechain.h
+    src/tcbspan.h
     src/torsion_angle.h
     src/utility.h
     PARENT_SCOPE
@@ -18,6 +20,7 @@ set(foldcomp_source_files
     src/amino_acid.cpp
     src/atom_coordinate.cpp
     src/database_reader.cpp
+    src/database_writer.cpp
     src/discretizer.cpp
     src/foldcomp.cpp
     src/nerf.cpp

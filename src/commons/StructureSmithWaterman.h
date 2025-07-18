@@ -74,14 +74,6 @@ public:
     }
 
     typedef struct {
-        short qStartPos;
-        short dbStartPos;
-        short qEndPos;
-        short dbEndPos;
-    } aln_t;
-
-
-    typedef struct {
         uint32_t score1;
         uint32_t score2;
         int32_t dbStartPos1;
@@ -167,7 +159,7 @@ public:
      -2 -2 -2  2 //T
      mat is the pointer to the array {2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2}
      */
-    void ssw_init(const Sequence *q_aa, const Sequence *q_3di, const int8_t *mat_aa, const int8_t *mat_3di, const BaseMatrix *m);
+    void ssw_init(Sequence *q_aa, Sequence *q_3di, const int8_t *mat_aa, const int8_t *mat_3di, const BaseMatrix *m);
 
 
     static char cigar_int_to_op (uint32_t cigar_int);
@@ -193,22 +185,30 @@ private:
     struct s_profile{
         simd_int* profile_aa_byte;	// 0: none
         simd_int* profile_aa_word;	// 0: none
+        simd_int* profile_aa_int;
         simd_int* profile_aa_rev_byte;	// 0: none
         simd_int* profile_aa_rev_word;	// 0: none
+        simd_int* profile_aa_rev_int;
         // gap penalties
 #ifdef GAP_POS_SCORING
         simd_int* profile_gDelOpen_byte;
         simd_int* profile_gDelOpen_word;
+        simd_int* profile_gDelOpen_int;
         simd_int* profile_gDelClose_byte;
         simd_int* profile_gDelClose_word;
+        simd_int* profile_gDelClose_int;
         simd_int* profile_gIns_byte;
         simd_int* profile_gIns_word;
+        simd_int* profile_gIns_int;
         simd_int* profile_gDelOpen_rev_byte;
         simd_int* profile_gDelOpen_rev_word;
+        simd_int* profile_gDelOpen_rev_int;
         simd_int* profile_gDelClose_rev_byte;
         simd_int* profile_gDelClose_rev_word;
+        simd_int* profile_gDelClose_rev_int;
         simd_int* profile_gIns_rev_byte;
         simd_int* profile_gIns_rev_word;
+        simd_int* profile_gIns_rev_int;
         uint8_t* gDelOpen;
         uint8_t* gDelClose;
         uint8_t* gIns;
@@ -220,8 +220,10 @@ private:
         int8_t* query_aa_rev_sequence;
         simd_int* profile_3di_byte;	// 0: none
         simd_int* profile_3di_word;	// 0: none
+        simd_int* profile_3di_int;
         simd_int* profile_3di_rev_byte;	// 0: none
         simd_int* profile_3di_rev_word;	// 0: none
+        simd_int* profile_3di_rev_int;
         int8_t* query_3di_sequence;
         int8_t* query_3di_rev_sequence;
         int8_t* composition_bias_ss;
@@ -252,7 +254,9 @@ private:
         int32_t alphabetSize;
         uint8_t bias;
         short ** profile_aa_word_linear;
+        int32_t ** profile_aa_int_linear;
         short ** profile_3di_word_linear;
+        int32_t ** profile_3di_int_linear;
     };
     simd_int* vHStore;
     simd_int* vHLoad;
@@ -261,7 +265,7 @@ private:
     uint8_t * maxColumn;
     BlockHandle block;
     typedef struct {
-        uint16_t score;
+        uint32_t score;
         int32_t ref;	 //0-based position
         int32_t read;    //alignment ending position on read, 0-based
     } alignment_end;
@@ -317,6 +321,27 @@ private:
                                                           const simd_int*query_3di_profile_byte,
                                                           uint16_t terminate,
                                                           int32_t maskLen);
+
+    template <const unsigned int type>
+    std::pair<alignment_end, alignment_end> sw_sse2_int(
+        const unsigned char* db_aa_sequence,
+        const unsigned char* db_3di_sequence,
+        int8_t ref_dir,	// 0: forward ref; 1: reverse ref
+        int32_t db_length,
+        int32_t query_length,
+        const uint8_t gap_open, /* will be used as - */
+        const uint8_t gap_extend, /* will be used as - */
+#ifdef GAP_POS_SCORING
+        const simd_int *gap_open_del,
+        const simd_int *gap_close_del,
+        const simd_int *gap_open_ins,
+#endif
+        const simd_int*query_aa_profile_byte,
+        const simd_int*query_3di_profile_byte,
+        uint32_t terminate,
+        int32_t maskLen
+    );
+
     template <const unsigned int type>
     StructureSmithWaterman::cigar *banded_sw(const unsigned char *db_aa_sequence, const unsigned char *db_3di_sequence,
                                              const int8_t *query_aa_sequence, const int8_t *query_3di_sequence,
@@ -358,7 +383,9 @@ private:
 
     float *tmp_composition_bias;
     short * profile_aa_word_linear_data;
+    int32_t * profile_aa_int_linear_data;
     short * profile_3di_word_linear_data;
+    int32_t * profile_3di_int_linear_data;
     bool aaBiasCorrection;
     float aaBiasCorrectionScale;
     SubstitutionMatrix * subMatAA;

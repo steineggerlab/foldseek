@@ -176,7 +176,6 @@ typedef __m512i simd_int;
 uint32_t simd_hmax32_sse(const __m128i buffer);
 uint16_t simd_hmax16_sse(const __m128i buffer);
 uint8_t simd_hmax8_sse(const __m128i buffer);
-bool simd_any_sse(const __m128i buffer);
 
 inline uint32_t simd_hmax32_avx(const __m256i buffer) {
     const __m128i abcd = _mm256_castsi256_si128(buffer);
@@ -425,15 +424,11 @@ typedef __m256 simd_float;
 #include <simde/x86/sse4.1.h>
 // see https://stackoverflow.com/questions/6996764/fastest-way-to-do-horizontal-sse-vector-sum-or-other-reduction
 inline uint32_t simd_hmax32_sse(const __m128i buffer) {
-#if defined(SIMDE_ARM_NEON_A64V8_NATIVE)
-    return vmaxvq_u32(vreinterpretq_u32_s64(buffer));
-#else
     __m128i hi64  = _mm_shuffle_epi32(buffer, _MM_SHUFFLE(1, 0, 3, 2));
     __m128i max64 = _mm_max_epi32(hi64, buffer);
     __m128i hi32  = _mm_shufflelo_epi16(max64, _MM_SHUFFLE(1, 0, 3, 2)); // Swap the low two elements
     __m128i max32 = _mm_max_epi32(max64, hi32);
     return _mm_cvtsi128_si32(max32); // SSE2 movd
-#endif
 }
 
 inline uint16_t simd_hmax16_sse(const __m128i buffer) {
