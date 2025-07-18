@@ -8,7 +8,6 @@
 #include <cmath>
 #include <vector>
 #include <fstream>
-#include <omp.h> 
 #include "LoLAlign.h"
 #include "Fwbw.h"
 #include "Debug.h"
@@ -638,6 +637,7 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
 
     Matcher::result_t result = Matcher::result_t();
     result.seqId = seqId / (float)anchor_length[max_lol_idx];
+    //std::cout << result.seqId << std::endl;
     result.qcov = anchor_length[max_lol_idx] / (float)queryLen;
     result.dbcov = anchor_length[max_lol_idx] / (float)targetLen;
     result.score = max_lol_score; 
@@ -1209,7 +1209,8 @@ int lolalign(int argc, const char **argv, const Command &command)
 
 
 
-                    bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
+                    //bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
+                    bool hasCov = Util::hasCoverage(par.covThr, par.covMode, result.qcov, result.dbcov);
                     bool hasSeqId = result.seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
                     //bool hasTMscore = (TMscore >= par.tmScoreThr);
 
