@@ -19,6 +19,9 @@
 #include "Util.h"
 #include "LocalParameters.h"
 #include "Coordinate16.h"
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 using namespace std; 
 
