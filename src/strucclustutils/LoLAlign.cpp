@@ -20,7 +20,6 @@
 #include "LocalParameters.h"
 #include "Coordinate16.h"
 
-#include <bits/stdc++.h> 
 using namespace std; 
 
 
