@@ -666,6 +666,15 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
+        {"fwbw",                fwbw,                   &par.fwbw,                COMMAND_ALIGNMENT,
+                "Forward Backward Alignment",
+                NULL,
+                "Gyuri Kim <gyuribio@snu.ac.kr> & Soohyun Kim <sd20163818@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:alignmentDB>",
+                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"fwbwAlignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
         {"alignbykmer",         alignbykmer,           &par.alignbykmer,          COMMAND_ALIGNMENT,
                 "Heuristic gapped local k-mer based alignment",
                 NULL,
@@ -675,7 +684,6 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
-
 
 
         {"clust",                clust,                &par.clust,                COMMAND_CLUSTER,
@@ -788,7 +796,7 @@ std::vector<Command> baseCommands = {
 //                "If exist, the auxillary files: _mapping, source and lookup are also concatenated after IDs update of the 2nd DB",
                 "# Download two sequences databases and concat them\n"
                 "mmseqs databases PDB pdbDB tmp\n"
-                "mmseqs UniProtKB/Swiss-Prot swissprotDB tmp\n"
+                "mmseqs databases UniProtKB/Swiss-Prot swissprotDB tmp\n"
                 "# Works only single threaded since seq. and header DB need the same ordering\n"
                 "mmseqs concatdbs pdbDB swissprotDB pdbAndSwissprotDB --threads 1\n"
                 "mmseqs concatdbs pdbDB_h swissprotDB_h pdbAndSwissprotDB_h --threads 1\n",
