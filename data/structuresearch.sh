@@ -82,6 +82,37 @@ if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/strualn" ${VERBOSITY}
     fi
+    
+elif [ "$ALIGNMENT_ALGO" = "lolalign" ]; then
+    # 3. lol alignment
+    INTERMEDIATE="${TMP_PATH}/strualn"
+    if notExists "${TMP_PATH}/strualn.dbtype"; then
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" structurealign "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${TMP_PATH}/pref" "${INTERMEDIATE}" ${STRUCTUREALIGN_PAR} \
+            || fail "Alignment step died"
+    fi
+
+    if [ -n "${EXPAND}" ]; then
+        if notExists "${TMP_PATH}/strualn_expanded.dbtype"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" mergeresultsbyset "${INTERMEDIATE}" "${TARGET_ALIGNMENT}_clu" "${TMP_PATH}/strualn_expanded" ${MERGERESULTBYSET_PAR} \
+                || fail "Expand died"
+        fi
+        INTERMEDIATE="${TMP_PATH}/strualn_expanded"
+    fi
+
+    if notExists "${TMP_PATH}/aln.dbtype"; then
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" lolalign "${QUERY_ALIGNMENT}" "${TARGET_ALIGNMENT}${INDEXEXT}" "${INTERMEDIATE}" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+            || fail "Alignment step died"
+    fi
+
+    if [ -n "$REMOVE_TMP" ]; then
+        echo "Removing temporary files"
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/strualn" ${VERBOSITY}
+    fi
+
 else
 
    # 2. Alignment

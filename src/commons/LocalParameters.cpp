@@ -14,7 +14,7 @@ LocalParameters::LocalParameters() :
         PARAM_LDDT_THRESHOLD(PARAM_LDDT_THRESHOLD_ID,"--lddt-threshold", "LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &lddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_SORT_BY_STRUCTURE_BITS(PARAM_SORT_BY_STRUCTURE_BITS_ID,"--sort-by-structure-bits", "Sort by structure bit score", "sort by bits*sqrt(alnlddt*alntmscore)",typeid(int), (void *) &sortByStructureBits, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
         PARAM_MASK_BFACTOR_THRESHOLD(PARAM_MASK_BFACTOR_THRESHOLD_ID,"--mask-bfactor-threshold", "Mask b-factor threshold", "mask residues for seeding if b-factor < thr [0,100]",typeid(float), (void *) &maskBfactorThreshold, "^[0-9]*(\\.[0-9]+)?$"),
-        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA",typeid(int), (void *) &alignmentType, "^[0-2]{1}$"),
+        PARAM_ALIGNMENT_TYPE(PARAM_ALIGNMENT_TYPE_ID,"--alignment-type", "Alignment type", "How to compute the alignment:\n0: 3di alignment\n1: TM alignment\n2: 3Di+AA\n3: LoL alignmnet",typeid(int), (void *) &alignmentType, "^[0-3]{1}$"),
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_MODEL_NAME_MODE(PARAM_MODEL_NAME_MODE_ID,"--model-name-mode", "Model name mode", "Add model to name:\n0: auto\n1: always add\n",typeid(int), (void *) &modelNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_WRITE_MAPPING(PARAM_WRITE_MAPPING_ID, "--write-mapping", "Write mapping file", "write _mapping file containing mapping from internal id to taxonomic identifier", typeid(int), (void *) &writeMapping, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
@@ -39,9 +39,9 @@ LocalParameters::LocalParameters() :
         PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-beta below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$")
-    
-       {
+        PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$")
+        {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
     PARAM_ALIGNMENT_MODE.category = MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT;
@@ -124,6 +124,20 @@ LocalParameters::LocalParameters() :
     tmalign.push_back(&PARAM_V);
 //    tmalign.push_back(&PARAM_GAP_OPEN);
 //    tmalign.push_back(&PARAM_GAP_EXTEND);
+
+    //LoLalign
+    lolalign.push_back(&PARAM_MULTIDOMAIN);
+    lolalign.push_back(&PARAM_MIN_SEQ_ID);
+    lolalign.push_back(&PARAM_PRELOAD_MODE);
+    lolalign.push_back(&PARAM_MAX_REJECTED);
+    lolalign.push_back(&PARAM_MAX_ACCEPT);
+    lolalign.push_back(&PARAM_C);
+    lolalign.push_back(&PARAM_COV_MODE);
+    lolalign.push_back(&PARAM_ADD_BACKTRACE);
+    lolalign.push_back(&PARAM_THREADS);
+    lolalign.push_back(&PARAM_V);
+
+
 
     structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
@@ -243,6 +257,7 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);
     structuresearchworkflow = combineList(structuresearchworkflow, tmalign);
+    structuresearchworkflow = combineList(structuresearchworkflow, lolalign);
     structuresearchworkflow = combineList(structuresearchworkflow, result2structprofile);
     structuresearchworkflow.push_back(&PARAM_CLUSTER_SEARCH);
     structuresearchworkflow.push_back(&PARAM_EXHAUSTIVE_SEARCH);
@@ -341,6 +356,10 @@ LocalParameters::LocalParameters() :
     filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;
     filtInterfaceLddtThr = 0.0;
+
+    // LoLalign
+    multiDomain = 1;
+
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)");
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
