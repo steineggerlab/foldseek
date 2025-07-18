@@ -1,4 +1,5 @@
-
+#ifndef LoLAlign
+#define LoLAlign
 
 #include "SubstitutionMatrix.h"
 #include "IndexReader.h"
@@ -76,8 +77,6 @@ public:
         float *scoreForward);
 
 private:
-
-
     std::string backtrace;
     float * query_x;
     float * query_y;
@@ -118,11 +117,6 @@ private:
     unsigned char *queryNumAA;
     unsigned char *queryNum3Di;
     float* lol_score_vec_sh;
-
-
-
-
-    
 
     float w1[2][3] = {
         {-1.3584513e-04,7.6149112e-01,-8.1348085e-01 },
@@ -189,5 +183,4 @@ private:
     };
 };
 
-
-
+#endif

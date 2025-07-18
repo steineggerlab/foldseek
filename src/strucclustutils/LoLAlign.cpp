@@ -1,14 +1,3 @@
-#ifndef LoLAlign
-#define LoLAlign
-#include <iostream>
-#include <algorithm>
-#include <limits>
-#include <cfloat>
-#include <numeric>
-#include <cmath>
-#include <vector>
-#include <fstream>
-#include <omp.h> 
 #include "LoLAlign.h"
 #include "Fwbw.h"
 #include "Debug.h"
@@ -21,10 +10,20 @@
 #include "LocalParameters.h"
 #include "Coordinate16.h"
 
-#include <bits/stdc++.h> 
-using namespace std; 
+#include <iostream>
+#include <algorithm>
+#include <limits>
+#include <cfloat>
+#include <numeric>
+#include <cmath>
+#include <vector>
+#include <fstream>
 
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
+using namespace std;
 
 bool compareHitsBylolScore(const Matcher::result_t &first, const Matcher::result_t &second) {
     return first.eval > second.eval;
@@ -1247,4 +1246,3 @@ int lolalign(int argc, const char **argv, const Command &command)
     }
     return EXIT_SUCCESS;
 }
-#endif
