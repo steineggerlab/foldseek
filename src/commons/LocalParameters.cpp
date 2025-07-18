@@ -131,10 +131,11 @@ LocalParameters::LocalParameters() :
     lolalign.push_back(&PARAM_PRELOAD_MODE);
     lolalign.push_back(&PARAM_MAX_REJECTED);
     lolalign.push_back(&PARAM_MAX_ACCEPT);
+    lolalign.push_back(&PARAM_C);
+    lolalign.push_back(&PARAM_COV_MODE);
+    lolalign.push_back(&PARAM_ADD_BACKTRACE);
     lolalign.push_back(&PARAM_THREADS);
     lolalign.push_back(&PARAM_V);
-    lolalign.push_back(&PARAM_C);
-    lolalign.push_back(&PARAM_ADD_BACKTRACE);
 
 
 
