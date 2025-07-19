@@ -1014,8 +1014,7 @@ void lolAlign::addForwardScoreMatrix(
 
 
 
-int lolalign(int argc, const char **argv, const Command &command)
-{
+int lolalign(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
 
@@ -1023,10 +1022,8 @@ int lolalign(int argc, const char **argv, const Command &command)
     //subMat3Di.subMatrix[2][2] = 0.5;
 
     std::string blosum;
-    for (size_t i = 0; i < par.substitutionMatrices.size(); i++)
-    {
-        if (par.substitutionMatrices[i].name == "blosum62.out")
-        {
+    for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
+        if (par.substitutionMatrices[i].name == "blosum62.out")  {
             std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
             std::string matrixName = par.substitutionMatrices[i].name;
             char *serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
@@ -1035,6 +1032,7 @@ int lolalign(int argc, const char **argv, const Command &command)
             break;
         }
     }
+
     float aaFactor = (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA) ? 1.4 : 0.0;
     SubstitutionMatrix subMatAA(blosum.c_str(), aaFactor, par.scoreBias);
 
@@ -1043,52 +1041,54 @@ int lolalign(int argc, const char **argv, const Command &command)
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     IndexReader qdbr(par.db1, par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
     IndexReader qcadbr(
-            par.db1,
-            par.threads,
-            IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
-            touch ? IndexReader::PRELOAD_INDEX : 0,
-            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-            "_ca");
+        par.db1,
+        par.threads,
+        IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
+        touch ? IndexReader::PRELOAD_INDEX : 0,
+        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+        "_ca"
+    );
     DBReader<unsigned int> qdbr3Di((par.db1 + "_ss").c_str(), (par.db1 + "_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
     qdbr3Di.open(DBReader<unsigned int>::NOSORT);
 
     IndexReader *tdbr = NULL;
     IndexReader *tcadbr = NULL;
-    DBReader<unsigned int> tdbr3Di((par.db2 + "_ss").c_str(), (par.db2 + "_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-    tdbr3Di.open(DBReader<unsigned int>::NOSORT);
+    DBReader<unsigned int>* tdbr3Di = NULL;
+
     bool sameDB = false;
     uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
     bool alignmentIsExtended = extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC;
-    if (par.db1.compare(par.db2) == 0)
-    {
+    if (par.db1.compare(par.db2) == 0) {
         sameDB = true;
         tdbr = &qdbr;
         tcadbr = &qcadbr;
-        DBReader<unsigned int> tdbr3Di((par.db1 + "_ss").c_str(), (par.db1 + "_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-        tdbr3Di.open(DBReader<unsigned int>::NOSORT);
-    }
-    else
-    {
-        tdbr = new IndexReader(par.db2, par.threads,
-                               alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-                               (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
+        tdbr3Di = &qdbr3Di;
+    } else {
+        tdbr = new IndexReader(
+            par.db2, par.threads,
+            alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+            (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0
+        );
         tcadbr = new IndexReader(
-                par.db2,
-                par.threads,
-                alignmentIsExtended ? IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB2) : IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
-                touch ? IndexReader::PRELOAD_INDEX : 0,
-                DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-                alignmentIsExtended ? "_seq_ca" : "_ca");
+            par.db2,
+            par.threads,
+            alignmentIsExtended ? IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB2) : IndexReader::makeUserDatabaseType(LocalParameters::INDEX_DB_CA_KEY_DB1),
+            touch ? IndexReader::PRELOAD_INDEX : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            alignmentIsExtended ? "_seq_ca" : "_ca"
+        );
+        tdbr3Di = new DBReader<unsigned int>((par.db2 + "_ss").c_str(), (par.db2 + "_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
+        tdbr3Di->open(DBReader<unsigned int>::NOSORT);
     }
 
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
     int dbtype = Parameters::DBTYPE_ALIGNMENT_RES;
-    if (alignmentIsExtended)
-    {
+    if (alignmentIsExtended) {
         dbtype = DBReader<unsigned int>::setExtendedDbtype(dbtype, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
     }
+
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbtype);
     dbw.open();
 
@@ -1122,16 +1122,14 @@ int lolalign(int argc, const char **argv, const Command &command)
         Sequence tSeq3Di(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         FwBwAligner fwbwaln(gapOpen_fwbw, gapExtend_fwbw, temperature_fwbw, 0, 1, max_targetLen, blockLen_fwbw, 0);
         char buffer[1024 + 32768];
+
 #pragma omp for schedule(dynamic, 1)
-        for (size_t id = 0; id < resultReader.getSize(); id++)
-        {
+        for (size_t id = 0; id < resultReader.getSize(); id++) {
             progress.updateProgress();
+            size_t queryKey = resultReader.getDbKey(id);
             char *data = resultReader.getData(id, thread_idx);
-            if (*data != '\0')
-            {
-                size_t queryKey = resultReader.getDbKey(id);
+            if (*data != '\0') {
                 unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
-                //std::cout << "start Query " << queryId << std::endl;
 
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
                 char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
@@ -1147,102 +1145,82 @@ int lolalign(int argc, const char **argv, const Command &command)
                 lolaln.initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], qSeqAA, qSeq3Di, queryLen, subMatAA, max_targetLen, par.multiDomain);
                 fwbwaln.resizeMatrix<false, 0>(queryLen, max_targetLen);
 
-                if(queryLen <= 10)
-                {
+                if (queryLen <= 10) {
                     lolaln.set_start_anchor_length(0);
-                    if(queryLen < 4){
-                        lolaln.set_start_anchor_length(0);
-                    }
                 }
-                
 
                 int passedNum = 0;
                 int rejected = 0;
-
-                while (*data != '\0' && passedNum < par.maxAccept && rejected < par.maxRejected)
-                {
+                while (*data != '\0' && passedNum < par.maxAccept && rejected < par.maxRejected) {
                     char dbKeyBuffer[255 + 1];
                     Util::parseKey(data, dbKeyBuffer);
                     data = Util::skipLine(data);
                     const unsigned int dbKey = (unsigned int)strtoul(dbKeyBuffer, NULL, 10);
                     unsigned int targetId = tdbr->sequenceReader->getId(dbKey);
+
                     char *targetSeq = tdbr->sequenceReader->getData(targetId, thread_idx);
-                    char *target3diSeq = tdbr3Di.getData(targetId, thread_idx);
                     int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
                     tSeqAA.mapSequence(targetId, dbKey, targetSeq, targetLen);
-                    tSeq3Di.mapSequence(targetId, dbKey, target3diSeq, targetLen);
-                    /*if (targetLen > max_targetLen)
-                    {
-                        max_targetLen = ((targetLen*2)/16)*16;
-                        
-                        lolaln.reallocate_target(max_targetLen);
-                        fwbwaln.resizeMatrix(queryLen, max_targetLen);
-                        std::cout << "Reallocating target to: " << max_targetLen << std::endl;
-                    }
-                    if (Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen) == false)
-                    {
-                        continue;
-                    }*/
 
+                    char *target3diSeq = tdbr3Di->getData(targetId, thread_idx);
+                    tSeq3Di.mapSequence(targetId, dbKey, target3diSeq, targetLen);
+                    // if (targetLen > max_targetLen) {
+                    //     max_targetLen = ((targetLen*2)/16)*16;
+                    //     lolaln.reallocate_target(max_targetLen);
+                    //     fwbwaln.resizeMatrix(queryLen, max_targetLen);
+                    //     std::cout << "Reallocating target to: " << max_targetLen << std::endl;
+                    // }
+                    // if (Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen) == false) {
+                    //     continue;
+                    // }
 
                     char *tcadata = tcadbr->sequenceReader->getData(targetId, thread_idx);
                     size_t tCaLength = tcadbr->sequenceReader->getEntryLen(targetId);
                     float *tdata = tcoords.read(tcadata, targetLen, tCaLength);
+
                     Matcher::result_t result;
-                    
-                    if (targetLen <= 10)
-                    {
+                    if (targetLen <= 10) {
                         lolaln.set_start_anchor_length(1);
-                        if(targetLen < 4){
+                        if (targetLen < 4) {
                             lolaln.set_start_anchor_length(0);
                         }
                         result = lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], tSeqAA, tSeq3Di, targetLen, subMatAA, &fwbwaln, par.multiDomain);
-                        if (queryLen >10){
+                        if (queryLen > 10) {
                             lolaln.set_start_anchor_length(3);
                         }
-                    }
-                    else{
+                    } else {
                         result = lolaln.align(dbKey, tdata, &tdata[targetLen], &tdata[targetLen + targetLen], tSeqAA, tSeq3Di, targetLen, subMatAA, &fwbwaln, par.multiDomain);
                     }
-
-
-
 
                     bool hasCov = Util::hasCoverage(par.covThr, par.covMode, 1.0, 1.0);
                     bool hasSeqId = result.seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
                     //bool hasTMscore = (TMscore >= par.tmScoreThr);
 
-                    if(hasCov && hasSeqId) {
+                    if (hasCov && hasSeqId) {
                         swResults.emplace_back(result);
                     }
-                
                 }
-
-
                 
                 SORT_SERIAL(swResults.begin(), swResults.end(), compareHitsBylolScore);
-                for(size_t i = 0; i < swResults.size(); i++){
-                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], par.addBacktrace, false);
+                for (size_t i = 0; i < swResults.size(); i++) {
+                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], par.addBacktrace);
                     resultBuffer.append(buffer, len);
                 }
-
-
-                dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, thread_idx);
-                resultBuffer.clear();
                 swResults.clear();
-
             }
-     
-        }
 
+            dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, thread_idx);
+            resultBuffer.clear();
+        }
     }
     dbw.close();
     resultReader.close();
-    if (sameDB == false)
-    {
+    if (sameDB == false) {
         delete tdbr;
         delete tcadbr;
-
+        tdbr3Di->close();
+        delete tdbr3Di;
     }
+    qdbr3Di.close();
     return EXIT_SUCCESS;
 }
