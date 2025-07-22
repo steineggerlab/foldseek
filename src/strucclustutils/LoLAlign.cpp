@@ -9,6 +9,7 @@
 #include "Util.h"
 #include "LocalParameters.h"
 #include "Coordinate16.h"
+#include "StructureUtil.h"
 
 #include <iostream>
 #include <algorithm>
@@ -1048,12 +1049,18 @@ int lolalign(int argc, const char **argv, const Command &command) {
         DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
         "_ca"
     );
-    DBReader<unsigned int> qdbr3Di((par.db1 + "_ss").c_str(), (par.db1 + "_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-    qdbr3Di.open(DBReader<unsigned int>::NOSORT);
+    IndexReader qdbr3Di(
+        par.db1,
+        par.threads,
+        IndexReader::SEQUENCES,
+        touch ? IndexReader::PRELOAD_INDEX : 0,
+        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+        "_ss"
+    );
 
     IndexReader *tdbr = NULL;
     IndexReader *tcadbr = NULL;
-    DBReader<unsigned int>* tdbr3Di = NULL;
+    IndexReader *tdbr3Di = NULL;
 
     bool sameDB = false;
     uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
@@ -1069,6 +1076,7 @@ int lolalign(int argc, const char **argv, const Command &command) {
             alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
             (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0
         );
+
         tcadbr = new IndexReader(
             par.db2,
             par.threads,
@@ -1077,8 +1085,16 @@ int lolalign(int argc, const char **argv, const Command &command) {
             DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
             alignmentIsExtended ? "_seq_ca" : "_ca"
         );
-        tdbr3Di = new DBReader<unsigned int>((par.db2 + "_ss").c_str(), (par.db2 + "_ss.index").c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-        tdbr3Di->open(DBReader<unsigned int>::NOSORT);
+        
+        std::string t3DiDbrName = StructureUtil::getIndexWithSuffix(par.db2, "_ss");
+        bool is3DiIdx = Parameters::isEqualDbtype(FileUtil::parseDbType(t3DiDbrName.c_str()), Parameters::DBTYPE_INDEX_DB);
+        tdbr3Di = new IndexReader(
+            is3DiIdx ? t3DiDbrName : par.db2, par.threads,
+            alignmentIsExtended ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+            (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0,
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            alignmentIsExtended ? "_seq_ss" : "_ss"
+        );
     }
 
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
@@ -1117,7 +1133,7 @@ int lolalign(int argc, const char **argv, const Command &command) {
         Coordinate16 tcoords;
 
         Sequence qSeqAA(par.maxSeqLen, qdbr.sequenceReader->getDbtype(), (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
-        Sequence qSeq3Di(par.maxSeqLen, qdbr3Di.getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
+        Sequence qSeq3Di(par.maxSeqLen, qdbr3Di.sequenceReader->getDbtype(), (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         Sequence tSeqAA(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMatAA, 0, false, par.compBiasCorrection);
         Sequence tSeq3Di(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, (const BaseMatrix *) &subMat3Di, 0, false, par.compBiasCorrection);
         FwBwAligner fwbwaln(gapOpen_fwbw, gapExtend_fwbw, temperature_fwbw, 0, 1, max_targetLen, blockLen_fwbw, 0);
@@ -1132,7 +1148,7 @@ int lolalign(int argc, const char **argv, const Command &command) {
                 unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
 
                 char *querySeq = qdbr.sequenceReader->getData(queryId, thread_idx);
-                char *query3diSeq = qdbr3Di.getData(queryId, thread_idx);
+                char *query3diSeq = qdbr3Di.sequenceReader->getData(queryId, thread_idx);
                 int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
                 qSeqAA.mapSequence(id, queryKey, querySeq, queryLen);
                 qSeq3Di.mapSequence(id, queryKey, query3diSeq, queryLen);
@@ -1162,7 +1178,7 @@ int lolalign(int argc, const char **argv, const Command &command) {
                     int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
                     tSeqAA.mapSequence(targetId, dbKey, targetSeq, targetLen);
 
-                    char *target3diSeq = tdbr3Di->getData(targetId, thread_idx);
+                    char *target3diSeq = tdbr3Di->sequenceReader->getData(targetId, thread_idx);
                     tSeq3Di.mapSequence(targetId, dbKey, target3diSeq, targetLen);
                     // if (targetLen > max_targetLen) {
                     //     max_targetLen = ((targetLen*2)/16)*16;
@@ -1218,9 +1234,7 @@ int lolalign(int argc, const char **argv, const Command &command) {
     if (sameDB == false) {
         delete tdbr;
         delete tcadbr;
-        tdbr3Di->close();
         delete tdbr3Di;
     }
-    qdbr3Di.close();
     return EXIT_SUCCESS;
 }
