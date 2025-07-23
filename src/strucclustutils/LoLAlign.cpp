@@ -1219,7 +1219,7 @@ int lolalign(int argc, const char **argv, const Command &command) {
                 
                 SORT_SERIAL(swResults.begin(), swResults.end(), compareHitsBylolScore);
                 for (size_t i = 0; i < swResults.size(); i++) {
-                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], par.addBacktrace);
+                    size_t len = Matcher::resultToBuffer(buffer, swResults[i], par.addBacktrace, false);
                     resultBuffer.append(buffer, len);
                 }
                 swResults.clear();
