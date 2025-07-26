@@ -86,13 +86,21 @@ jobs:
     pool:
       vmImage: 'ubuntu-latest'
     timeoutInMinutes: 120
+    strategy:
+      matrix:
+        x86_64:
+          ARCH: x86_64
+          DOCKER: .github/workflows/Dockerfile.GPU-manylinux2014
+        aarch64:
+          ARCH: aarch64
+          DOCKER: .github/workflows/Dockerfile.GPU-buster-cross-sbsa
     steps:
       - checkout: self
         submodules: false
       - script: |
           mkdir -p ${BUILD_SOURCESDIRECTORY}/output
           docker build -t manylinux-builder \
-            -f .github/workflows/Dockerfile.GPU-manylinux2014 .
+            -f ${DOCKER} .
           docker run --rm \
             -v ${BUILD_SOURCESDIRECTORY}/output:/output \
             manylinux-builder \
@@ -101,7 +109,7 @@ jobs:
       - task: PublishPipelineArtifact@0
         inputs:
           targetPath: $(Build.SourcesDirectory)/output/foldseek
-          artifactName: foldseek-linux-gpu
+          artifactName: foldseek-linux-gpu-$(ARCH)
 
   - job: build_ubuntu_cross
     displayName: Build Cross-Compile
@@ -202,7 +210,7 @@ jobs:
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: foldseek-linux-gpu
+          artifactName: foldseek-linux-gpu-x86_64
           targetPath: $(Build.SourcesDirectory)/foldseek/bin
       - script:
           chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
@@ -210,6 +218,18 @@ jobs:
         inputs:
           rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
           archiveFile: $(Build.SourcesDirectory)/foldseek-linux-gpu.tar.gz
+          includeRootFolder: true
+          archiveType: tar
+      - task: DownloadPipelineArtifact@1
+        inputs:
+          artifactName: foldseek-linux-gpu-aarch64
+          targetPath: $(Build.SourcesDirectory)/foldseek/bin
+      - script:
+          chmod +x "${BUILD_SOURCESDIRECTORY}/foldseek/bin/foldseek"
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: $(Build.SourcesDirectory)/foldseek
+          archiveFile: $(Build.SourcesDirectory)/foldseek-linux-gpu-arm64.tar.gz
           includeRootFolder: true
           archiveType: tar
       # - task: DownloadPipelineArtifact@1
@@ -299,12 +319,14 @@ jobs:
              foldseek-linux-sse41.tar.gz \
              foldseek-linux-avx2.tar.gz \
              foldseek-linux-gpu.tar.gz \
+             foldseek-linux-gpu-arm64.tar.gz \
              foldseek-linux-arm64.tar.gz
           curl --fail --retry 5 --retry-all-errors -X POST \
             -F file[]=@foldseek-osx-universal.tar.gz -F signature[]=@foldseek-osx-universal.tar.gz.sig \
             -F file[]=@foldseek-linux-sse41.tar.gz -F signature[]=@foldseek-linux-sse41.tar.gz.sig \
             -F file[]=@foldseek-linux-avx2.tar.gz -F signature[]=@foldseek-linux-avx2.tar.gz.sig \
             -F file[]=@foldseek-linux-gpu.tar.gz -F signature[]=@foldseek-linux-gpu.tar.gz.sig \
+            -F file[]=@foldseek-linux-gpu-arm64.tar.gz -F signature[]=@foldseek-linux-gpu-arm64.tar.gz.sig \
             -F file[]=@foldseek-linux-arm64.tar.gz -F signature[]=@foldseek-linux-arm64.tar.gz.sig \
             -F identifier="foldseek" -F directory="${BUILD_SOURCEVERSION}" \
               https://mmseqs.com/upload

@@ -1,0 +1,32 @@
+ARG APP=foldseek
+FROM ghcr.io/steineggerlab/build-containers:main-sbsa
+ARG APP
+WORKDIR /work
+ADD . .
+
+RUN mkdir -p /work/build && cd /work/build; \
+    /usr/local/bin/cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_TESTS=1 -DENABLE_WERROR=1 -DHAVE_ARM8=1 \
+        -DCMAKE_TOOLCHAIN_FILE=/opt/toolchain.cmake \
+        -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64}" -DOpenMP_C_LIB_NAMES=omp -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64}" -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=${LIBOMP_AARCH64}/libomp.a \
+        -DCMAKE_POLICY_DEFAULT_CMP0074=NEW -DCMAKE_POLICY_DEFAULT_CMP0144=NEW \
+        -DRust_TOOLCHAIN=stable-x86_64-unknown-linux-gnu \
+        -DRust_CARGO_TARGET=aarch64-unknown-linux-gnu \
+        -DFORCE_STATIC_DEPS=1 -DENABLE_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90" ..; \
+    cmake --build . -j$(nproc --all) -v;
+
+RUN if readelf -a /work/build/src/${APP} | grep -i "Shared library" | \
+        grep -P -v "linux-vdso.so|/lib64/(ld-linux-x86-64|libc|libm|libdl|librt|libpthread|libutil).so" | grep -q .; then \
+        echo "Error: unwanted libraries found"; \
+        readelf -a /work/build/src/${APP} | grep -i "Shared library"; \
+        exit 1; \
+    fi; \
+    if readelf -Ws /work/build/src/${APP} | grep -q GLIBC_PRIVATE; then \
+        echo "Error: binary contains private glibc symbols"; \
+        readelf -Ws /work/build/src/${APP}; \
+        exit 1; \
+    fi; \
+    LIBC_V=$(readelf -V /work/build/src/${APP} | awk '$3 ~ /^GLIBC_/ { print $3 }' | sort -V | tail -n1); \
+    if awk -v ver="$LIBC_V" 'BEGIN { split(ver, v, /[_.]/); if ((v[2] > 2) || (v[2] == 2 && v[3] > 28)) exit 0; exit 1; }'; then \
+        echo "Error: glibc too new"; \
+        exit 1; \
+    fi;
