@@ -497,8 +497,6 @@ Matcher::result_t lolAlign::align(unsigned int dbKey, float *target_x, float *ta
         for (int i = 0; i < anchor_length[sa]; i++) {
             total_lol_score += lol_score_vec[i];
         }
-         total_lol_score = total_lol_score ;// std::sqrt((float)(queryLen * targetLen));
-        
         if (total_lol_score > max_lol_score){
             max_lol_score = total_lol_score;
             max_lol_idx = sa;
