@@ -20,8 +20,6 @@ set(strucclustutils_source_files
         strucclustutils/makepaddeddb.cpp
         strucclustutils/result2structprofile.cpp
         strucclustutils/createstructsubdb.cpp
-        strucclustutils/createstructsimpledb.cpp
-        strucclustutils/structclust.cpp
         PARENT_SCOPE
         )
 

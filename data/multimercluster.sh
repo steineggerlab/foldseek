@@ -32,20 +32,10 @@ if notExists "${TMP_PATH}/multimer_result.dbtype"; then
         || fail "multimerSearch died"
 fi
 
-# COMP="${TMP_PATH}/multimer_result_query_multimerdb"
-
 if notExists "${RESULT}.dbtype"; then
-    # # shellcheck disable=SC2086
-    # $MMSEQS createsimpledb "${INPUT}" "${ALN}_multimerdb" ${VERBOSITY_PAR} \
-    #     || fail "createsimpledb died"
-
     # shellcheck disable=SC2086
     "$MMSEQS" clust "${INPUT}" "${TMP_PATH}/multimer_result" "${RESULT}" ${CLUSTER_PAR} \
         || fail "Clustering died"
-
-    # # shellcheck disable=SC2086
-    # "$MMSEQS" setextendeddbtype "${RESULT}" --extended-dbtype 16 ${VERBOSITY_PAR} \
-    #     || fail "setextendeddbtype died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then

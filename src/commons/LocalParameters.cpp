@@ -236,9 +236,6 @@ LocalParameters::LocalParameters() :
     convert2pdb.push_back(&PARAM_THREADS);
     convert2pdb.push_back(&PARAM_V);
 
-    //createstructsimpledb
-    createstructsimpledb.push_back(&PARAM_V);
-
     // structuresearchworkflow
     structuresearchworkflow = combineList(structurealign, prefilter);
     structuresearchworkflow = combineList(structuresearchworkflow, ungappedprefilter);

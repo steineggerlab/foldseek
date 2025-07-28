@@ -45,12 +45,6 @@ if notExists "${TMP_PATH}/scoremultimer.dbtype"; then
     # shellcheck disable=SC2086
     $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${TMP_PATH}/scoremultimer" ${SCOREMULTIMER_PAR} \
         || fail "scoremultimer died"
-    # # shellcheck disable=SC2086
-    # $MMSEQS createsimpledb "${QUERYDB}" "${OUTPUT}_query_multimerdb" ${SIMPLEDB_PAR} \
-    #     || fail "createsimpledb died"
-    # # shellcheck disable=SC2086
-    # $MMSEQS createsimpledb "${TARGETDB}" "${OUTPUT}_target_multimerdb" ${SIMPLEDB_PAR} \
-    #     || fail "createsimpledb died"
     # shellcheck disable=SC2086
     "$MMSEQS" setextendeddbtype "${TMP_PATH}/scoremultimer" --extended-dbtype 16 ${VERBOSITY_PAR} \
         || fail "setextendeddbtype died"

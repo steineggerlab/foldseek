@@ -1339,9 +1339,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
 
                     unsigned int & qChainKey = qChainKeys[qChainIdx];
                     unsigned int qChainDbId = q3DiDbr->sequenceReader->getId(qChainKey);
-                    char *qcadata = qCaDbr->getData(qChainDbId, thread_idx);
-                    size_t qCaLength = qCaDbr->getEntryLen(qChainDbId);
-                    size_t qChainLen = q3DiDbr->sequenceReader->getSeqLen(qChainDbId);
                     const char* data = resultToWrite.c_str();
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
                     unsigned int assId = retComplex.assId;

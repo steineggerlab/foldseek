@@ -116,13 +116,10 @@ public:
     std::vector<MMseqsParameter *> easymultimersearchworkflow;
     std::vector<MMseqsParameter *> createmultimerreport;
     std::vector<MMseqsParameter *> expandmultimer;
-    std::vector<MMseqsParameter *> createstructsimpledb;
-    std::vector<MMseqsParameter *> createsimpledbworkflow;
     std::vector<MMseqsParameter *> convert2pdb;
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
-    std::vector<MMseqsParameter *> structclustworkflow;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)

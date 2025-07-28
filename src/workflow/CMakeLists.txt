@@ -6,7 +6,6 @@ set(workflow_source_files
         workflow/EasyStructureRbh.cpp
         workflow/EasyStructureSearch.cpp
         workflow/EasyStructureCluster.cpp
-        workflow/CreateSimpledb.cpp
         workflow/EasyMultimerSearch.cpp
         workflow/MultimerSearch.cpp
         workflow/MultimerCluster.cpp

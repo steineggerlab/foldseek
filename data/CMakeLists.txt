@@ -17,12 +17,10 @@ set(COMPILED_RESOURCES
         makepaddeddb.sh
         result2structprofile.sh
         createstructsubdb.sh
-        createsimpledb.sh
         multimersearch.sh
         easymultimersearch.sh
         multimercluster.sh
         easymultimercluster.sh
-        structclust.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")
