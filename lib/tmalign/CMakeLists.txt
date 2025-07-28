@@ -8,6 +8,6 @@ add_library(tmalign
         Coordinates.h
         )
 
-
 mmseqs_setup_derived_target(tmalign)
-
+append_target_property(tmalign COMPILE_FLAGS -w)
+append_target_property(tmalign LINK_FLAGS -w)
