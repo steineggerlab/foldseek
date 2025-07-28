@@ -15,7 +15,7 @@ RUN mkdir -p /work/build && cd /work/build; \
     cmake --build . -j$(nproc --all) -v;
 
 RUN if readelf -a /work/build/src/${APP} | grep -i "Shared library" | \
-        grep -P -v "linux-vdso.so|/lib64/(ld-linux-x86-64|libc|libm|libdl|librt|libpthread|libutil).so" | grep -q .; then \
+        grep -P -v "(linux-vdso|ld-linux-aarch64|libc|libm|libdl|librt|libpthread|libutil).so" | grep -q .; then \
         echo "Error: unwanted libraries found"; \
         readelf -a /work/build/src/${APP} | grep -i "Shared library"; \
         exit 1; \
