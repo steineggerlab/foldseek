@@ -77,10 +77,7 @@ struct Assignment {
     std::vector<float> dbCaZVec;
     double qTmScore;
     double dbTmScore;
-    std::string tString;
-    std::string uString;
     std::string backtrace;
-    std::string assignmentInfo;
     std::vector<resultToWriteWithKey_t> resultToWriteLines;
     TMaligner::TMscoreResult tmResult;
 
@@ -104,8 +101,6 @@ struct Assignment {
         dbCaYVec.clear();
         dbCaZVec.clear();
         resultToWriteLines.clear();
-        uString.clear();
-        tString.clear();
     }
 
     void getTmScore(TMaligner &tmAligner) {
@@ -124,22 +119,20 @@ struct Assignment {
         backtrace.clear();
     }
 
-    void updateResultToWriteLines() {
-        char sep = ',';
-        char tab = '\t';
-        tString.append(std::to_string(tmResult.t[0]) + sep + std::to_string(tmResult.t[1]) + sep + std::to_string(tmResult.t[2]));
-        uString.append(std::to_string(tmResult.u[0][0]) + sep + std::to_string(tmResult.u[0][1]) + sep + std::to_string(tmResult.u[0][2]) + sep);
-        uString.append(std::to_string(tmResult.u[1][0]) + sep + std::to_string(tmResult.u[1][1]) + sep + std::to_string(tmResult.u[1][2]) + sep);
-        uString.append(std::to_string(tmResult.u[2][0]) + sep + std::to_string(tmResult.u[2][1]) + sep + std::to_string(tmResult.u[2][2]));
-        assignmentInfo = tab + std::to_string(qTmScore) + tab + std::to_string(dbTmScore) + tab + uString + tab + tString;
+    void updateResultToWriteLines(unsigned int assignmentId) {
+        char buffer[4096];
+        snprintf(
+            buffer, sizeof(buffer), "\t%f\t%f\t%f,%f,%f,%f,%f,%f,%f,%f,%f\t%f,%f,%f\t%u\n",
+            qTmScore, dbTmScore,
+            tmResult.u[0][0], tmResult.u[0][1], tmResult.u[0][2],
+            tmResult.u[1][0], tmResult.u[1][1], tmResult.u[1][2],
+            tmResult.u[2][0], tmResult.u[2][1], tmResult.u[2][2],
+            tmResult.t[0], tmResult.t[1], tmResult.t[2], assignmentId
+        );
 
         for (auto &resultToWrite: resultToWriteLines) {
-            resultToWrite.second.append(assignmentInfo);
+            resultToWrite.second.append(buffer);
         }
-
-        uString.clear();
-        tString.clear();
-        assignmentInfo.clear();
     }
 };
 
@@ -579,7 +572,6 @@ public:
                 assignment.appendChainToChainAln(searchResult.alnVec[alnIdx]);
             }
             assignment.getTmScore(*tmAligner);
-            assignment.updateResultToWriteLines();
             assignments.emplace_back(assignment);
             assignment.reset();
         }
@@ -727,7 +719,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
-        char buffer[4096];
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
@@ -748,20 +739,17 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 complexScorer.getAssignments(searchResults[dbId], assignments);
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
-            // for each query chain key
-            for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
-                resultToWriteLines.emplace_back("");
-            }
             // for each assignment
+            resultToWriteLines.resize(qChainKeys.size());
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
                 Assignment &assignment = assignments[assignmentId];
+                assignment.updateResultToWriteLines(assignmentId);
                 // for each output line from this assignment
                 for (size_t resultToWriteIdx = 0; resultToWriteIdx < assignment.resultToWriteLines.size(); resultToWriteIdx++) {
                     unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;
                     resultToWrite_t &resultToWrite = assignment.resultToWriteLines[resultToWriteIdx].second;
-                    snprintf(buffer, sizeof(buffer), "%s\t%d\n", resultToWrite.c_str(), assignmentId);
                     unsigned int currIdx = find(qChainKeys.begin(), qChainKeys.end(), qKey) - qChainKeys.begin();
-                    resultToWriteLines[currIdx].append(buffer);
+                    resultToWriteLines[currIdx].append(resultToWrite);
                 }
             }
             for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
