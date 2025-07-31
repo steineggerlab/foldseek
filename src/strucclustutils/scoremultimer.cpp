@@ -77,10 +77,7 @@ struct Assignment {
     std::vector<float> dbCaZVec;
     double qTmScore;
     double dbTmScore;
-    std::string tString;
-    std::string uString;
     std::string backtrace;
-    std::string assignmentInfo;
     std::vector<resultToWriteWithKey_t> resultToWriteLines;
     TMaligner::TMscoreResult tmResult;
 
@@ -104,8 +101,6 @@ struct Assignment {
         dbCaYVec.clear();
         dbCaZVec.clear();
         resultToWriteLines.clear();
-        uString.clear();
-        tString.clear();
     }
 
     void getTmScore(TMaligner &tmAligner) {
@@ -138,10 +133,6 @@ struct Assignment {
         for (auto &resultToWrite: resultToWriteLines) {
             resultToWrite.second.append(buffer);
         }
-
-        uString.clear();
-        tString.clear();
-        assignmentInfo.clear();
     }
 };
 
