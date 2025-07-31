@@ -739,11 +739,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 complexScorer.getAssignments(searchResults[dbId], assignments);
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
-            // for each query chain key
-            for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
-                resultToWriteLines.emplace_back("");
-            }
             // for each assignment
+            resultToWriteLines.resize(qChainKeys.size());
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
                 Assignment &assignment = assignments[assignmentId];
                 assignment.updateResultToWriteLines(assignmentId);
