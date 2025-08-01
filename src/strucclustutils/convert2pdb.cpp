@@ -103,7 +103,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     chainKeyToComplexId_t chainKeyToComplexIdMap;
     complexIdToChainKeys_t complexIdToChainKeysMap;
     std::vector<unsigned int> complexIndices;
-    if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX) {
+    if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX || LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN) {
         getKeyToIdMapIdToKeysMapIdVec(db, lookupFile, chainKeyToComplexIdMap, complexIdToChainKeysMap, complexIndices);
     }
 
@@ -139,7 +139,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
         Coordinate16 coords;
 
         KeyIterator* keyIterator;
-        if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX) {
+        if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX || LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN) {
             keyIterator = new MapIterator(complexIdToChainKeysMap, complexIndices);
         } else {
             keyIterator = new DbKeyIterator(db);
@@ -150,7 +150,9 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
             std::pair<const unsigned int*, size_t> keys = keyIterator->getDbKeys(i);
             if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
                 unsigned int key = keys.first[0];
-                std::string name = db.getLookupEntryName(key);
+                // std::string name = db.getLookupEntryName(key);
+                size_t lookupKey = db.getLookupIdByKey(key);
+                std::string name = db.getLookupEntryName(lookupKey);
                 if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX) {
                     std::string chain = name.substr(name.find_last_of('_') + 1);
                     if (chain.size() == 0) {
@@ -195,7 +197,9 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                     const size_t headerLen = db_header.getEntryLen(headerId) - 2;
                     writeTitle(threadHandle, headerData, headerLen);
                 } else {
-                    std::string name = db.getLookupEntryName(key);
+                    // std::string name = db.getLookupEntryName(key);
+                    size_t lookupKey = db.getLookupIdByKey(key);
+                    std::string name = db.getLookupEntryName(lookupKey);
                     chainName = name.substr(name.find_last_of('_') + 1);
                     if (chainName.size() == 0) {
                         chainName = "A";

@@ -125,7 +125,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     if(par.exhaustiveSearch){
         cmd.addVariable("PREFMODE", "EXHAUSTIVE");
     }
-   if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
+    if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_TMALIGN){
         cmd.addVariable("ALIGNMENT_ALGO", "tmalign");
         cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
@@ -135,6 +135,15 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         par.tmScoreThrMode = 0.0;
         par.lddtThr = 0.0;
        //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
+        cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
+    }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_LOLALIGN){
+        cmd.addVariable("ALIGNMENT_ALGO", "lolalign");
+        cmd.addVariable("QUERY_ALIGNMENT", query.c_str());
+        cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
+        cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.lolalign).c_str());
+        par.alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_ONLY;
+        par.sortByStructureBits = 0;
+        //par.evalThr = 10; we want users to adjust this one. Our default is 10 anyhow.
         cmd.addVariable("STRUCTUREALIGN_PAR", par.createParameterString(par.structurealign).c_str());
     }else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI){
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");

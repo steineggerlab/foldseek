@@ -10,6 +10,8 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets,
 
 [Kim W, Mirdita M, Levy Karin E, Gilchrist CLM, Schweke H, Söding J, Levy E, and Steinegger M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)](https://www.nature.com/articles/s41592-025-02593-7)
 
+[Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, doi: 10.1101/2024.11.13.623350 (2024)](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1)
+
 # Table of Contents
 
 - [Foldseek](#foldseek)
@@ -79,7 +81,7 @@ conda install -c conda-forge -c bioconda foldseek
 Other precompiled binaries are available at [https://mmseqs.com/foldseek](https://mmseqs.com/foldseek).
 
 > [!NOTE]
-> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Tesla-generation GPUs.
+> We recently added support for GPU-accelerated protein sequence and profile searches. This requires an NVIDIA GPU of the Ampere generation or newer for full speed, however, also works at reduced speed for Turing-generation GPUs. The bioconda- and precompiled binaries will not work on older GPU generations (e.g. Volta or Pascal).
 
 ## Memory requirements 
 For optimal software performance, consider three options based on your RAM and search requirements:
@@ -442,4 +444,4 @@ foldseek search queryDB targetDB aln tmpFolder -a
 foldseek result2msa queryDB targetDB aln msa --msa-format-mode 6
 foldseek unpackdb msa msa_output --unpack-suffix a3m --unpack-name-mode 0
 ```
-For a non-query centered multiple sequence alignment please check out [Foldmaons](https://github.com/steineggerlab/foldmason).
+For a non-query centered multiple sequence alignment please check out [Foldmason](https://github.com/steineggerlab/foldmason).

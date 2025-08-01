@@ -22,7 +22,9 @@ int createstructsubdb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("LIST", par.filenames.back().c_str());
     par.filenames.pop_back();
 
-    cmd.addVariable("CREATESTRUCTSUBDB_PAR", par.createParameterString(par.createstructsubdb).c_str());
+    cmd.addVariable("CREATESTRUCTSUBDB1_PAR", par.createParameterString(par.createstructsubdb).c_str());
+    par.dbIdMode = 0;
+    cmd.addVariable("CREATESTRUCTSUBDB2_PAR", par.createParameterString(par.createstructsubdb).c_str());
     cmd.execProgram(FileUtil::getRealPathFromSymLink(program).c_str(), par.filenames);
 
     // Should never get here

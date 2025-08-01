@@ -46,15 +46,6 @@ if notExists "${TMP_PATH}/scoremultimer.dbtype"; then
     $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${TMP_PATH}/scoremultimer" ${SCOREMULTIMER_PAR} \
         || fail "scoremultimer died"
     # shellcheck disable=SC2086
-    "$MMSEQS" setextendeddbtype "${TMP_PATH}/scoremultimer" --extended-dbtype 16 ${VERBOSITY_PAR} \
-        || fail "setextendeddbtype died"
-    # # shellcheck disable=SC2086
-    # "$MMSEQS" setextendeddbtype "${TMP_PATH}/scoremultimer_info" --extended-dbtype 16 ${VERBOSITY_PAR} \
-    #     || fail "setextendeddbtype died"
-    # # shellcheck disable=SC2086
-    # "$MMSEQS" mvdb "${TMP_PATH}/scoremultimer_info" "${OUTPUT}_info" \
-    #     || fail "mvdb died"
-    # shellcheck disable=SC2086
     "$MMSEQS" mvdb "${TMP_PATH}/scoremultimer" "${OUTPUT}" \
         || fail "mvdb died"
 fi

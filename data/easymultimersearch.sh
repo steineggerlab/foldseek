@@ -46,8 +46,14 @@ if notExists "${TMP_PATH}/multimer_result.dbtype"; then
 fi
 
 # shellcheck disable=SC2086
-"$MMSEQS" createtsv "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${THREADS_PAR} \
-    || fail "createtsv died"
+"$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}" ${CONVERT_PAR} \
+    || fail "Convert Alignments died"
+
+if [ -z "${NO_REPORT}" ]; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" createmultimerreport "${QUERY}" "${TARGET}" "${TMP_PATH}/multimer_result" "${OUTPUT}_report" ${REPORT_PAR} \
+        || fail "createmultimerreport died"
+fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086

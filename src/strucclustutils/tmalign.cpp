@@ -199,27 +199,35 @@ int tmalign(int argc, const char **argv, const Command& command) {
                                                                      tdata, &tdata[targetLen],
                                                                      &tdata[targetLen + targetLen],
                                                                      targetSeq, targetLen, TMscore);
-
-                            float qTM = (float) tmpResult.score / 100000.0f;
-                            float tTM = tmpResult.eval;
-                            switch (par.tmAlignHitOrder) {
-                                case LocalParameters::TMALIGN_HIT_ORDER_AVG:
-                                    tmpResult.eval = (qTM + tTM) / 2.0f;
-                                    break;
-                                case LocalParameters::TMALIGN_HIT_ORDER_QUERY:
-                                    tmpResult.eval = qTM;
-                                    break;
-                                case LocalParameters::TMALIGN_HIT_ORDER_TARGET:
-                                    tmpResult.eval = tTM;
-                                    break;
-                                case LocalParameters::TMALIGN_HIT_ORDER_MIN:
-                                    tmpResult.eval = std::min(qTM, tTM);
-                                    break;
-                                case LocalParameters::TMALIGN_HIT_ORDER_MAX:
-                                    tmpResult.eval = std::max(qTM, tTM);
-                                    break;
+                            // TM-align could not align
+                            if (TMscore == std::numeric_limits<float>::min()) {
+                                tmpResult.eval = -1.0f; // this should avoid that the hit is added
+                                tmpResult.score = -1.0f;
+                                tmpResult.seqId = -1.0f;
+                                tmpResult.qcov = 0.0f;
+                                tmpResult.dbcov = 0.0f;
+                            } else {
+                                float qTM = (float) tmpResult.score / 100000.0f;
+                                float tTM = tmpResult.eval;
+                                switch (par.tmAlignHitOrder) {
+                                    case LocalParameters::TMALIGN_HIT_ORDER_AVG:
+                                        tmpResult.eval = (qTM + tTM) / 2.0f;
+                                        break;
+                                    case LocalParameters::TMALIGN_HIT_ORDER_QUERY:
+                                        tmpResult.eval = qTM;
+                                        break;
+                                    case LocalParameters::TMALIGN_HIT_ORDER_TARGET:
+                                        tmpResult.eval = tTM;
+                                        break;
+                                    case LocalParameters::TMALIGN_HIT_ORDER_MIN:
+                                        tmpResult.eval = std::min(qTM, tTM);
+                                        break;
+                                    case LocalParameters::TMALIGN_HIT_ORDER_MAX:
+                                        tmpResult.eval = std::max(qTM, tTM);
+                                        break;
+                                }
+                                tmpResult.score = static_cast<int>(qTM * 100.0f); // e.g. scaled
                             }
-                            tmpResult.score = static_cast<int>(qTM * 100.0f); // e.g. scaled
                         }
                     }
 

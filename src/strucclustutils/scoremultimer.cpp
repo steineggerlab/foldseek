@@ -1220,9 +1220,9 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         needSrc = true;
         dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
     }
-    // DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
-    // resultWriter.open();
-    DBWriter resultinfoWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbinfoType);
+    DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
+    resultWriter.open();
+    DBWriter resultinfoWriter((par.db4 + "info").c_str(), (par.db4 + "info.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbinfoType);
     resultinfoWriter.open();
 
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);

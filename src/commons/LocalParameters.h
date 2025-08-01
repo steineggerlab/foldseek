@@ -31,6 +31,7 @@ public:
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
+    static const int ALIGNMENT_TYPE_LOLALIGN = 3;
 
     static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
     static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
@@ -70,6 +71,8 @@ public:
     static const int OUTFMT_COMPLEX_T = 57;
     static const int OUTFMT_Q3DI = 58;
     static const int OUTFMT_T3DI = 59;
+    static const int OUTFMT_Q3DIALN = 60;
+    static const int OUTFMT_T3DIALN = 61;
 
     static const int DB_EXTRACT_MODE_CHAIN = 0;
     static const int DB_EXTRACT_MODE_INTERFACE = 1;
@@ -120,6 +123,7 @@ public:
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
+    std::vector<MMseqsParameter *> lolalign;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
@@ -154,6 +158,7 @@ public:
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
     PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
+    PARAMETER(PARAM_MULTIDOMAIN)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -187,6 +192,7 @@ public:
     float distanceThreshold;
     int prostt5SplitLength;
     int minAlignedChains;
+    int multiDomain;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
