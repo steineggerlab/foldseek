@@ -73,6 +73,13 @@ public:
     static const int OUTFMT_T3DI = 59;
     static const int OUTFMT_Q3DIALN = 60;
     static const int OUTFMT_T3DIALN = 61;
+    static const int OUTFMT_Q_COMPLEX_COV = 62;
+    static const int OUTFMT_T_COMPLEX_COV = 63;
+    static const int OUTFMT_COMPLEX_QCHAINTMS = 64;
+    static const int OUTFMT_COMPLEX_TCHAINTMS = 65;
+    static const int OUTFMT_INTERFACE_LDDT =66;
+    static const int OUTFMT_COMPLEX_QNAME = 67;
+    static const int OUTFMT_COMPLEX_TNAME = 68;
 
     static const int DB_EXTRACT_MODE_CHAIN = 0;
     static const int DB_EXTRACT_MODE_INTERFACE = 1;

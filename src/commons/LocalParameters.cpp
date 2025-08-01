@@ -362,7 +362,7 @@ LocalParameters::LocalParameters() :
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
     
     //rewrite param vals.
-    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,q3di,t3di,qheader,theader,qaln,taln,q3dialn,t3dialn,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
+    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,q3di,t3di,qheader,theader,qaln,taln,q3dialn,t3dialn,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,qcomplexcoverage,tcomplexcoverage,qchaintms,tchaintms,qchains,tchains,interfacelddt,complexassignid\n";
 
     // allow higher values for GGML debug trace
     PARAM_V.regex = "^[0-4]{1}$";
@@ -439,6 +439,13 @@ std::vector<int> LocalParameters::getOutputFormat(
         else if (outformatSplit[i].compare("complexassignid")==0 || outformatSplit[i].compare("multimerassignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
         else if (outformatSplit[i].compare("complexu")==0 || outformatSplit[i].compare("multimeru")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
         else if (outformatSplit[i].compare("complext")==0 || outformatSplit[i].compare("multimert")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
+        else if (outformatSplit[i].compare("qcomplexcoverage")==0 || outformatSplit[i].compare("qmultimercoverage")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_COV;}
+        else if (outformatSplit[i].compare("tcomplexcoverage")==0 || outformatSplit[i].compare("tmultimercoverage")==0){code=LocalParameters::OUTFMT_T_COMPLEX_COV;}
+        else if (outformatSplit[i].compare("qchaintms")==0 ){code=LocalParameters::OUTFMT_COMPLEX_QCHAINTMS;}
+        else if (outformatSplit[i].compare("tchaintms")==0 ){code=LocalParameters::OUTFMT_COMPLEX_TCHAINTMS;}
+        else if (outformatSplit[i].compare("qchains")==0 ){code=LocalParameters::OUTFMT_COMPLEX_QNAME;}
+        else if (outformatSplit[i].compare("tchains")==0 ){code=LocalParameters::OUTFMT_COMPLEX_TNAME;}
+        else if (outformatSplit[i].compare("interfacelddt")==0 ){code=LocalParameters::OUTFMT_INTERFACE_LDDT;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);
