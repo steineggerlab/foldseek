@@ -30,6 +30,11 @@ void getScoreComplexResults(
         double tTMScore,
         const std::string &u,
         const std::string &t,
+        double qComplexCov,
+        double tComplexCov,
+        const std::string &qChainTms,
+        const std::string &tChainTms,
+        double interfaceLddtScore,
         unsigned int qComplexId,
         unsigned int assId
 ) {
@@ -54,14 +59,14 @@ void getScoreComplexResults(
         getComplexNameChainName(tChainVector[tChainId], compAndChainName);
         tChainString += ',' + compAndChainName.second;
     }
-    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), assId);
+    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%1.5f\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), qComplexCov, tComplexCov, qChainTms.c_str(), tChainTms.c_str(), interfaceLddtScore, assId);
     resultToWrite.append(buffer, count);
     scoreComplexResults.emplace_back(qComplexId, assId, resultToWrite);
 }
 
 struct ComplexAlignment {
     ComplexAlignment(){};
-    ComplexAlignment(chainName_t &qChainName, chainName_t &tChainName, double qTmScore, double tTmScore, std::string &u, std::string &t,  unsigned int assId) : qTMScore(qTmScore), tTMScore(tTmScore), u(u), t(t), assId(assId){
+    ComplexAlignment(chainName_t &qChainName, chainName_t &tChainName, double qTmScore, double tTmScore, std::string &u, std::string &t, double qComplexCov, double tComplexCov, const std::string &qChainTms, const std::string &tChainTms, double interfaceLddtScore, unsigned int assId) : qTMScore(qTmScore), tTMScore(tTmScore), u(u), t(t), qComplexCov(qComplexCov), tComplexCov(tComplexCov), qChainTms(qChainTms), tChainTms(tChainTms), interfaceLddtScore(interfaceLddtScore), assId(assId){
         qChainNames = {qChainName};
         tChainNames = {tChainName};
     };
@@ -71,6 +76,11 @@ struct ComplexAlignment {
     double tTMScore;
     std::string u;
     std::string t;
+    double qComplexCov;
+    double tComplexCov;
+    std::string qChainTms;
+    std::string tChainTms;
+    double interfaceLddtScore;
     unsigned int assId;
 };
 
@@ -157,7 +167,7 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
                     unsigned int compAlnIdx = std::find(assIdVec.begin(), assIdVec.end(), assId) - assIdVec.begin();
                     if (compAlnIdx == compAlns.size()) {
                         assIdVec.emplace_back(assId);
-                        compAlns.emplace_back(queryChainName, targetChainName, retComplex.qTmScore, retComplex.tTmScore, retComplex.uString, retComplex.tString, assId);
+                        compAlns.emplace_back(queryChainName, targetChainName, retComplex.qTmScore, retComplex.tTmScore, retComplex.uString, retComplex.tString, retComplex.qComplexCov, retComplex.tComplexCov, retComplex.qChainTms, retComplex.tChainTms, retComplex.interfaceLddtScore, assId);
                     } else {
                         compAlns[compAlnIdx].qChainNames.emplace_back(queryChainName);
                         compAlns[compAlnIdx].tChainNames.emplace_back(targetChainName);
@@ -166,7 +176,7 @@ int createmultimerreport(int argc, const char **argv, const Command &command) {
             }
             for (size_t compAlnIdx = 0; compAlnIdx < compAlns.size(); compAlnIdx++) {
                 const ComplexAlignment &aln = compAlns[compAlnIdx];
-                getScoreComplexResults(localComplexResults, aln.qChainNames, aln.tChainNames, aln.qTMScore, aln.tTMScore, aln.u, aln.t, qComplexId, aln.assId);
+                getScoreComplexResults(localComplexResults, aln.qChainNames, aln.tChainNames, aln.qTMScore, aln.tTMScore, aln.u, aln.t, aln.qComplexCov, aln.tComplexCov, aln.qChainTms, aln.tChainTms, aln.interfaceLddtScore, qComplexId, aln.assId);
             }
         } // for end
 #pragma omp critical

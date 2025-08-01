@@ -150,14 +150,19 @@ static bool compareComplexResultByQuery(const ScoreComplexResult &first, const S
 }
 
 struct ComplexDataHandler {
-    ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), isValid(isValid) {}
-    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string &uString, std::string &tString, bool isValid)
-            : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), uString(uString), tString(tString), isValid(isValid) {}
+    ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), qComplexCov(0.0f), tComplexCov(0.0f), interfaceLddtScore(0.0f), isValid(isValid) {}
+    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string &uString, std::string &tString, double qComplexCov, double tComplexCov, std::string &qChainTms, std::string &tChainTms, double interfaceLddtScore, bool isValid)
+            : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), uString(uString), tString(tString), qComplexCov(qComplexCov), tComplexCov(tComplexCov), qChainTms(qChainTms), tChainTms(tChainTms), interfaceLddtScore(interfaceLddtScore), isValid(isValid) {}
     unsigned int assId;
     double qTmScore;
     double tTmScore;
     std::string uString;
     std::string tString;
+    double qComplexCov;
+    double tComplexCov;
+    std::string qChainTms;
+    std::string tChainTms;
+    double interfaceLddtScore;
     bool isValid;
 };
 
@@ -221,7 +226,7 @@ static void getKeyToIdMapIdToKeysMapIdVec(
 static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
-    if (columns!=16)
+    if (columns!=23)
         return {false};
     char key[255];
     ptrdiff_t keySize =  (entry[1] - data);
@@ -245,9 +250,14 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     double tTmScore = strtod(entry[12], NULL);
     std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
     std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
-    auto assId = Util::fast_atoi<unsigned int>(entry[15]);
+    double qComplexCov = strtod(entry[15], NULL);
+    double tComplexCov = strtod(entry[16], NULL);
+    std::string qChainTms = std::string(entry[17], entry[18] - entry[17]-1);
+    std::string tChainTms = std::string(entry[18], entry[19] - entry[18]-1);
+    double interfaceLddtScore = strtod(entry[19], NULL);
+    auto assId = Util::fast_atoi<unsigned int>(entry[22]);
     res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
-    return {assId, qTmScore, tTmScore, uString, tString, true};
+    return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
 }
 
 #endif //FOLDSEEK_MULTIMERUTIL_H
