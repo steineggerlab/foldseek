@@ -8,9 +8,9 @@
 #include "multimercluster.sh.h"
 
 void setMultimerClusterDefaults(LocalParameters *p) {
-    p->filtMultimerTmThr = 0.65; // FIX
-    p->filtChainTmThr = 0.001; // FIX
-    p->filtInterfaceLddtThr = 0.5; // FIX
+    p->tmScoreThr = 0.65; // TODO
+    p->filtChainTmThr = 0.001; // TODO
+    p->filtInterfaceLddtThr = 0.5; // TODO
 }
 
 int multimercluster(int argc, const char **argv, const Command &command) {
@@ -47,7 +47,6 @@ int multimercluster(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str()); 
-    cmd.addVariable("FILTERMULTIMER_PAR", par.createParameterString(par.filtermultimer).c_str());    
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());

@@ -307,6 +307,13 @@ The default output fields are: `query,target,fident,alnlen,mismatch,gapopen,qsta
 |complexttmscore| TM-score of Complex alignment normalized by the target length |
 |complexu       | Rotation matrix of Complex alignment (computed to by TM-score) |
 |complext       | Translation vector of Complex alignment (computed to by TM-score) |
+|qcomplexcoverage       | Average coverage of Complex alignment normalized by the query length |
+|tcomplexcoverage       | Average coverage of Complex alignment normalized by the target length |
+|qchaintms       | TM-score of each chains for Complex alignment ormalized by the query length |
+|tchaintms       | TM-score of each chains for Complex alignment ormalized by the target length |
+|qchains         | Name of the aligned query chains |
+|tchains       | Name of the aligned target chains |
+|interfacelddt| Interface lddt score of the Complex|
 |complexassignid| Index of Complex alignment |
 
 **Example Output:**
