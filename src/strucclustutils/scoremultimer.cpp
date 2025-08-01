@@ -1046,21 +1046,25 @@ std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit){
 
     for (unsigned int i = 0; i < cmplfiltcrit.qAlnChainTms.size(); i++) {
         result.append(SSTR(cmplfiltcrit.qAlnChainTms[i]));
-        if(i == cmplfiltcrit.qAlnChainTms.size() - 1) {
-            result.append("\t");
-        } else {
+        if(i < cmplfiltcrit.qAlnChainTms.size() - 1) {
             result.append(",");
         }
     }
+    if (cmplfiltcrit.qAlnChainTms.size() == 0) {
+        result.append(".");
+    }
+    result.append("\t");
     
     for (unsigned int i = 0; i < cmplfiltcrit.tAlnChainTms.size(); i++) {
         result.append(SSTR(cmplfiltcrit.tAlnChainTms[i]));
-        if(i == cmplfiltcrit.tAlnChainTms.size() - 1) {
-            result.append("\t");
-        } else {
+        if(i < cmplfiltcrit.tAlnChainTms.size() - 1) {
             result.append(",");
         }
     }
+    if (cmplfiltcrit.tAlnChainTms.size() == 0) {
+        result.append(".");
+    }
+    result.append("\t");
 
 
     result.append(SSTR(cmplfiltcrit.interfaceLddt));
@@ -1476,7 +1480,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
                 ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                
                 unsigned int tComplexId = cmplfiltcrit.targetComplexId;
                 std::string qChainNames = "";
                 std::string tChainNames = "";
@@ -1498,7 +1501,11 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 }
                 
                 std::string result1 = filterToBuffer(cmplfiltcrit);
-                result1 += qChainNames + "\t" + tChainNames;
+                if (cmplfiltcrit.alignedChains.size() > 0) {
+                    result1 += qChainNames + "\t" + tChainNames;
+                } else {
+                    result1 += ".\t.";
+                }
                 Assignment &assignment = assignments[assId];
                 for (size_t resultToWriteIdx = 0; resultToWriteIdx < assignment.resultToWriteLines.size(); resultToWriteIdx++) {
                     unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;

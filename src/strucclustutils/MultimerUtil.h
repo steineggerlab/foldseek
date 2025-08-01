@@ -226,38 +226,71 @@ static void getKeyToIdMapIdToKeysMapIdVec(
 static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
-    if (columns!=23)
+    if (columns==23){
+        char key[255];
+        ptrdiff_t keySize =  (entry[1] - data);
+        strncpy(key, data, keySize);
+        key[keySize] = '\0';
+        auto dbKey = Util::fast_atoi<unsigned int>(key);
+        int score = Util::fast_atoi<int>(entry[1]);
+        float seqId = strtof(entry[2],NULL);
+        double eval = strtod(entry[3],NULL);
+        int qStartPos =  Util::fast_atoi<int>(entry[4]);
+        int qEndPos = Util::fast_atoi<int>(entry[5]);
+        int qLen = Util::fast_atoi<int>(entry[6]);
+        int dbStartPos = Util::fast_atoi<int>(entry[7]);
+        int dbEndPos = Util::fast_atoi<int>(entry[8]);
+        int dbLen = Util::fast_atoi<int>(entry[9]);
+        auto backtrace = std::string(entry[10], entry[11] - entry[10]);
+        float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
+        float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
+        size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
+        double qTmScore = strtod(entry[11], NULL);
+        double tTmScore = strtod(entry[12], NULL);
+        std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
+        std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
+        double qComplexCov = strtod(entry[15], NULL);
+        double tComplexCov = strtod(entry[16], NULL);
+        std::string qChainTms = std::string(entry[17], entry[18] - entry[17]-1);
+        std::string tChainTms = std::string(entry[18], entry[19] - entry[18]-1);
+        double interfaceLddtScore = strtod(entry[19], NULL);
+        auto assId = Util::fast_atoi<unsigned int>(entry[22]);
+        res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
+        return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
+    } else if(columns == 16) {
+        char key[255];
+        ptrdiff_t keySize =  (entry[1] - data);
+        strncpy(key, data, keySize);
+        key[keySize] = '\0';
+        auto dbKey = Util::fast_atoi<unsigned int>(key);
+        int score = Util::fast_atoi<int>(entry[1]);
+        float seqId = strtof(entry[2],NULL);
+        double eval = strtod(entry[3],NULL);
+        int qStartPos =  Util::fast_atoi<int>(entry[4]);
+        int qEndPos = Util::fast_atoi<int>(entry[5]);
+        int qLen = Util::fast_atoi<int>(entry[6]);
+        int dbStartPos = Util::fast_atoi<int>(entry[7]);
+        int dbEndPos = Util::fast_atoi<int>(entry[8]);
+        int dbLen = Util::fast_atoi<int>(entry[9]);
+        auto backtrace = std::string(entry[10], entry[11] - entry[10]);
+        float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
+        float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
+        size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
+        double qTmScore = strtod(entry[11], NULL);
+        double tTmScore = strtod(entry[12], NULL);
+        std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
+        std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
+        double qComplexCov = 0;
+        double tComplexCov = 0;
+        std::string qChainTms = "";
+        std::string tChainTms = "";
+        double interfaceLddtScore = 0;
+        auto assId = Util::fast_atoi<unsigned int>(entry[15]);
+        res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
+        return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
+    } else {
         return {false};
-    char key[255];
-    ptrdiff_t keySize =  (entry[1] - data);
-    strncpy(key, data, keySize);
-    key[keySize] = '\0';
-    auto dbKey = Util::fast_atoi<unsigned int>(key);
-    int score = Util::fast_atoi<int>(entry[1]);
-    float seqId = strtof(entry[2],NULL);
-    double eval = strtod(entry[3],NULL);
-    int qStartPos =  Util::fast_atoi<int>(entry[4]);
-    int qEndPos = Util::fast_atoi<int>(entry[5]);
-    int qLen = Util::fast_atoi<int>(entry[6]);
-    int dbStartPos = Util::fast_atoi<int>(entry[7]);
-    int dbEndPos = Util::fast_atoi<int>(entry[8]);
-    int dbLen = Util::fast_atoi<int>(entry[9]);
-    auto backtrace = std::string(entry[10], entry[11] - entry[10]);
-    float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
-    float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
-    size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
-    double qTmScore = strtod(entry[11], NULL);
-    double tTmScore = strtod(entry[12], NULL);
-    std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
-    std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
-    double qComplexCov = strtod(entry[15], NULL);
-    double tComplexCov = strtod(entry[16], NULL);
-    std::string qChainTms = std::string(entry[17], entry[18] - entry[17]-1);
-    std::string tChainTms = std::string(entry[18], entry[19] - entry[18]-1);
-    double interfaceLddtScore = strtod(entry[19], NULL);
-    auto assId = Util::fast_atoi<unsigned int>(entry[22]);
-    res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
-    return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
+    }
 }
 
 #endif //FOLDSEEK_MULTIMERUTIL_H
