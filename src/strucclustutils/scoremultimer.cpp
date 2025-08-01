@@ -1039,52 +1039,57 @@ std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit){
     result.append("\t");
     result.append(SSTR(cmplfiltcrit.tCov));
     result.append("\t");
-    result.append(SSTR(cmplfiltcrit.qTm));
-    result.append("\t");
-    result.append(SSTR(cmplfiltcrit.tTm));
-    result.append("\t");
-    result.append(SSTR(cmplfiltcrit.interfaceLddt));
-    result.append("\t");
+    // result.append(SSTR(cmplfiltcrit.qTm));
+    // result.append("\t");
+    // result.append(SSTR(cmplfiltcrit.tTm));
+    // result.append("\t");
 
     for (unsigned int i = 0; i < cmplfiltcrit.qAlnChainTms.size(); i++) {
         result.append(SSTR(cmplfiltcrit.qAlnChainTms[i]));
-        result.append(",");
         if(i == cmplfiltcrit.qAlnChainTms.size() - 1) {
             result.append("\t");
+        } else {
+            result.append(",");
         }
     }
     
     for (unsigned int i = 0; i < cmplfiltcrit.tAlnChainTms.size(); i++) {
         result.append(SSTR(cmplfiltcrit.tAlnChainTms[i]));
-        result.append(",");
         if(i == cmplfiltcrit.tAlnChainTms.size() - 1) {
             result.append("\t");
+        } else {
+            result.append(",");
         }
     }
-    result.append(SSTR(cmplfiltcrit.u[0][0]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[0][1]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[0][2]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[1][0]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[1][1]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[1][2]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[2][0]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[2][1]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.u[2][2]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.t[0]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.t[1]));
-    result.append(",");
-    result.append(SSTR(cmplfiltcrit.t[2]));
-    result.append("\n");
+
+
+    result.append(SSTR(cmplfiltcrit.interfaceLddt));
+    result.append("\t");
+
+    // result.append(SSTR(cmplfiltcrit.u[0][0]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[0][1]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[0][2]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[1][0]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[1][1]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[1][2]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[2][0]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[2][1]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.u[2][2]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.t[0]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.t[1]));
+    // result.append(",");
+    // result.append(SSTR(cmplfiltcrit.t[2]));
+    // result.append("\n");
     return result;
 }
 
@@ -1214,7 +1219,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
     uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(alnDbr.getDbtype());
     int dbType = Parameters::DBTYPE_ALIGNMENT_RES;
-    int dbinfoType = Parameters::DBTYPE_CLUSTER_RES;
+    // int dbinfoType = Parameters::DBTYPE_CLUSTER_RES;
     bool needSrc = false;
     if (extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC) {
         needSrc = true;
@@ -1222,8 +1227,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     }
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
     resultWriter.open();
-    DBWriter resultinfoWriter((par.db4 + "info").c_str(), (par.db4 + "info.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbinfoType);
-    resultinfoWriter.open();
+    // DBWriter resultinfoWriter((par.db4 + "info").c_str(), (par.db4 + "info.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbinfoType);
+    // resultinfoWriter.open();
 
     const bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
 
@@ -1301,6 +1306,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
         std::vector<std::vector<resultToWrite_t>> resultToWriteLines;
+        std::vector<resultToWrite_t> resultToWriteLinesFinal;
         ComplexScorer complexScorer(q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
@@ -1319,6 +1325,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
             resultToWriteLines.resize(qChainKeys.size());
+            resultToWriteLinesFinal.resize(qChainKeys.size());
             // for each assignment
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
                 Assignment &assignment = assignments[assignmentId];
@@ -1338,7 +1345,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                     resultToWrite_t& resultToWrite = resultToWrites[resultIdx];
 
                     unsigned int & qChainKey = qChainKeys[qChainIdx];
-                    unsigned int qChainDbId = q3DiDbr->sequenceReader->getId(qChainKey);
                     const char* data = resultToWrite.c_str();
                     ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
                     unsigned int assId = retComplex.assId;
@@ -1467,17 +1473,11 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 selectedAssIDs.push_back(0);
                 localComplexMap.insert({0, cmplfiltcrit});
             }
-            resultinfoWriter.writeStart(thread_idx);
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
                 ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
                 
                 unsigned int tComplexId = cmplfiltcrit.targetComplexId;
-                unsigned int dbComplexIdx = dbComplexIdToIdx.at(tComplexId);
-                Complex tComplex = dbComplexes.at(dbComplexIdx);
-
-                std::string qComplexName = qComplex.complexName;
-                std::string tComplexName = tComplex.complexName;
                 std::string qChainNames = "";
                 std::string tChainNames = "";
 
@@ -1496,12 +1496,25 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                         }
                     }
                 }
+                
                 std::string result1 = filterToBuffer(cmplfiltcrit);
-                // char * tmpBuff = buffer + sprintf(buffer, "%d\n", tComplexId); // RECOVER
-                char * tmpBuff = buffer + sprintf(buffer, "%d\t%s\t%s\t%s", tComplexId, qChainNames.c_str(), tChainNames.c_str(), result1.c_str()); // RECOVER
-                resultinfoWriter.writeAdd(buffer, tmpBuff - buffer, thread_idx);
+                result1 += qChainNames + "\t" + tChainNames;
+                Assignment &assignment = assignments[assId];
+                for (size_t resultToWriteIdx = 0; resultToWriteIdx < assignment.resultToWriteLines.size(); resultToWriteIdx++) {
+                    unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;
+                    resultToWrite_t &resultToWrite = assignment.resultToWriteLines[resultToWriteIdx].second;
+                    
+                    snprintf(buffer, sizeof(buffer), "%s\t%s\t%d\n", resultToWrite.c_str(), result1.c_str(), assId);
+                    unsigned int currIdx = find(qChainKeys.begin(), qChainKeys.end(), qKey) - qChainKeys.begin();
+                    resultToWriteLinesFinal[currIdx].append(buffer);
+                }
             }
-            resultinfoWriter.writeEnd(qComplexId, thread_idx);
+            for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
+                resultToWrite_t &resultToWrite = resultToWriteLinesFinal[qChainKeyIdx];
+                unsigned int & qKey = qChainKeys[qChainKeyIdx];
+                resultWriter.writeData(resultToWrite.c_str(),resultToWrite.length(),qKey,thread_idx);
+            }
+            resultToWriteLinesFinal.clear();
             localComplexMap.clear();
             cmplIdToBestAssId.clear();
             selectedAssIDs.clear();
@@ -1528,8 +1541,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     }
     qComplexes.clear();
     dbComplexes.clear();
-    //TODO: real alignment with bit, e-value etc
-    // resultWriter.close(false);
-    resultinfoWriter.close(false);
+    resultWriter.close(false);
+    // resultinfoWriter.close(false);
     return EXIT_SUCCESS;
 }
