@@ -12,6 +12,11 @@ void setMultimerClusterDefaults(LocalParameters *p) {
     p->filtChainTmThr = 0.001; // TODO
     p->filtInterfaceLddtThr = 0.5; // TODO
 }
+   
+
+void mustsetMultimerCluster(LocalParameters *p) { 
+    p->clusteringSetMode = 1;
+}
 
 int multimercluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -29,6 +34,7 @@ int multimercluster(int argc, const char **argv, const Command &command) {
 
     setMultimerClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    mustsetMultimerCluster(&par);
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
