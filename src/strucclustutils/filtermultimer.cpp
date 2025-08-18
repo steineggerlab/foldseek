@@ -461,8 +461,8 @@ static void getlookupInfo(
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
 
-    int prevComplexId =  -1;
     int nComplex = 0;
+    std::vector<bool> isVistedSet(lookupDB.mappedSize(), false);
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -478,16 +478,14 @@ static void getlookupInfo(
             size_t lastUnderscoreIndex = chainName.find_last_of('_');
             std::string complexName = chainName.substr(0, lastUnderscoreIndex);
 
-            if (complexId != prevComplexId) {
-                
+            if (isVistedSet[complexId] == 0) {
                 Complex complex;
                 complex.complexId = complexId;
                 complex.complexName = complexName;
                 complexIdtoIdx.emplace(complexId, nComplex);
                 complexes.emplace_back(complex);
-
-                prevComplexId = complexId;
                 nComplex++;
+                isVistedSet[complexId] = 1;
             }
             complexes.back().chainKeys.emplace_back(chainKey);
             complexes.back().nChain++;
