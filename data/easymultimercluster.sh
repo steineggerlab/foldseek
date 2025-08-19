@@ -107,7 +107,7 @@ fi
 
 if notExists "${TMP_PATH}/cluster.tsv"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createtsv "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
+    "$MMSEQS" createtsv "${QUERY}" "${QUERY}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/cluster.tsv" ${THREADS_PAR} \
         || fail "createtsv died"
 fi
 
@@ -128,11 +128,11 @@ fi
 #TODO: generate fasta file for all sequences
 # if notExists "${TMP_PATH}/multimer_all_seqs.fasta"; then
 #     # shellcheck disable=SC2086
-#     "$MMSEQS" createseqfiledb "${INPUT}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/multimer_clust_seqs" ${THREADS_PAR} \
+#     "$MMSEQS" createseqfiledb "${QUERY}" "${TMP_PATH}/multimer_clu" "${TMP_PATH}/multimer_clust_seqs" ${THREADS_PAR} \
 #             || fail "createseqfiledb died"
 
 #     # shellcheck disable=SC2086
-#     "$MMSEQS" result2flat "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_clust_seqs" "${TMP_PATH}/multimer_all_seqs.fasta" ${VERBOSITY_PAR} \
+#     "$MMSEQS" result2flat "${QUERY}" "${QUERY}" "${TMP_PATH}/multimer_clust_seqs" "${TMP_PATH}/multimer_all_seqs.fasta" ${VERBOSITY_PAR} \
 #             || fail "result2flat died"
 # fi
 
@@ -159,10 +159,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/query" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/query_h" ${VERBOSITY_PAR}
-    # # shellcheck disable=SC2086
-    # "$MMSEQS" rmdb "${INPUT}" ${VERBOSITY_PAR}
-    # # shellcheck disable=SC2086
-    # "$MMSEQS" rmdb "${INPUT}_h" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu" ${VERBOSITY_PAR}
     if exists "${TMP_PATH}/query_ca.dbtype"; then

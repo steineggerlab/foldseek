@@ -1316,7 +1316,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             Complex qComplex = qComplexes[qCompIdx];
             unsigned int qComplexId = qComplexIndices[qCompIdx];
-            // std::cout<<"GO\t"<<qComplexIndices.size()<<"\t"<<qComplexId<<std::endl;
             std::map<std::vector<unsigned int>, unsigned int> qalnchain2intlen;
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
             if (monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
@@ -1480,7 +1479,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
                 ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                unsigned int tComplexId = cmplfiltcrit.targetComplexId;
                 std::string qChainNames = "";
                 std::string tChainNames = "";
 
@@ -1519,7 +1517,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
                 resultToWrite_t &resultToWrite = resultToWriteLinesFinal[qChainKeyIdx];
                 unsigned int & qKey = qChainKeys[qChainKeyIdx];
-                // std::cout<<qComplexId<<"\t"<<qKey<<std::endl;
                 resultWriter.writeData(resultToWrite.c_str(),resultToWrite.length(),qKey,thread_idx);
             }
             resultToWriteLinesFinal.clear();
