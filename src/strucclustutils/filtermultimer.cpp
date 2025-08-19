@@ -487,8 +487,8 @@ static void getlookupInfo(
                 nComplex++;
                 isVistedSet[complexId] = 1;
             }
-            complexes.back().chainKeys.emplace_back(chainKey);
-            complexes.back().nChain++;
+            complexes[complexIdtoIdx.at(complexId)].chainKeys.emplace_back(chainKey);
+            complexes[complexIdtoIdx.at(complexId)].nChain++;
         }
         data = Util::skipLine(data);
     }
