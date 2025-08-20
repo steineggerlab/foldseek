@@ -799,86 +799,83 @@ public:
         }
     }
 
-    bool hasChainTm(float chainTmThr, int covMode, unsigned int qChainNum, unsigned int tChainNum) {
-        if (alignedChains.size()<std::min(qChainNum, tChainNum)) {
-            return false;
-        }
+    bool hasChainTm(float chainTmThr, int covMode, int minAlignedChains) {
+        int num = 0;
         switch (covMode) {
             case Parameters::COV_MODE_BIDIRECTIONAL:
                 for (size_t i = 0; i < qAlnChainTms.size(); i++) {
-                    if (qAlnChainTms[i] < chainTmThr || tAlnChainTms[i] < chainTmThr) {
-                        return false;
+                    if (qAlnChainTms[i] >= chainTmThr && tAlnChainTms[i] >= chainTmThr) {
+                        num++;
                     }
+                }
+                if(num >= minAlignedChains) {
+                    return true;
+                } else {
+                    return false;
                 }
                 break;
             case Parameters::COV_MODE_TARGET:
                 for (size_t i = 0; i < tAlnChainTms.size(); i++) {
-                    if (tAlnChainTms[i] < chainTmThr) {
-                        return false;
+                    if (tAlnChainTms[i] >= chainTmThr) {
+                        num++;
                     }
+                }
+                if(num >= minAlignedChains) {
+                    return true;
+                } else {
+                    return false;
                 }
                 break;
             case Parameters::COV_MODE_QUERY:
                 for (size_t i = 0; i < qAlnChainTms.size(); i++) {
-                    if (qAlnChainTms[i] < chainTmThr) {
-                        return false;
+                    if (qAlnChainTms[i] >= chainTmThr) {
+                        num++;
                     }
                 }
-                break;
-            default:
-                return true;
-        }
-        return true;
-    }
-
-    bool hasChainNum(int covMode, unsigned int qChainNum, unsigned int tChainNum) {
-        switch (covMode) {
-            case Parameters::COV_MODE_BIDIRECTIONAL:
-                if (qChainNum != tChainNum) {
+                if(num >= minAlignedChains) {
+                    return true;
+                } else {
                     return false;
                 }
                 break;
-            default:
-                return true;
         }
-        return true;
     }
 
-    bool hasInterfaceLDDT(float iLddtThr, unsigned int qChainNum, unsigned int tChainNum) {
-        if (alignedChains.size()<std::min(qChainNum, tChainNum)) {
-            return false;
-        }
+    // bool hasChainNum(int covMode, unsigned int qChainNum, unsigned int tChainNum) {
+    //     switch (covMode) {
+    //         case Parameters::COV_MODE_BIDIRECTIONAL:
+    //             if (qChainNum != tChainNum) {
+    //                 return false;
+    //             }
+    //             break;
+    //         default:
+    //             return true;
+    //     }
+    //     return true;
+    // }
+
+    bool hasInterfaceLDDT(float iLddtThr) {
         return(interfaceLddt >= iLddtThr);
     }
 
-    bool hasAlnChainNum(unsigned int alnChainThr) {
-        if (alnChainThr <= alignedChains.size()) {
+    bool hasAlnChainNum(unsigned int minAlignedChains) {
+        if (minAlignedChains <= alignedChains.size()) {
             return true;
         }
         return false;
     }
 
-    bool satisfy(int covMode, float covThr, float TmThr, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum ) {
+    bool satisfy_first(int covMode, float covThr, float TmThr, int minAlignedChains) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
-        const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
-        const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true; 
-        const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr, qChainNum, tChainNum) : true; 
-        // calculateAvgTm(covMode);
-        return (covOK && TmOK && chainNumOK && chainTmOK && lddtOK); 
+        // const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
+        const bool alnChainNumOK = hasAlnChainNum(minAlignedChains);
+        return (covOK && TmOK && alnChainNumOK); 
     }
 
-    bool satisfy_first(int covMode, float covThr, float TmThr, size_t qChainNum, size_t tChainNum, int alnChainThr) {
-        const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
-        const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
-        const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
-        const bool alnChainNumOK = hasAlnChainNum(alnChainThr);
-        return (covOK && TmOK && chainNumOK && alnChainNumOK); 
-    }
-
-    bool satisfy_second(int covMode, float chainTmThr, float iLddtThr, size_t qChainNum, size_t tChainNum) {
-        const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, qChainNum, tChainNum) : true; 
-        const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr, qChainNum, tChainNum) : true; 
+    bool satisfy_second(int covMode, float chainTmThr, float iLddtThr, int minAlignedChains) {
+        const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, minAlignedChains) : true; 
+        const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr) : true; 
         return (chainTmOK && lddtOK); 
     }
 
@@ -1158,6 +1155,7 @@ void getComplexResidueLength( IndexReader *Dbr, std::vector<Complex> &complexes)
 }
 
 static void getlookupInfo(
+        DBReader<unsigned int>* cadbr,
         IndexReader* dbr,
         const std::string &file,
         std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -1174,8 +1172,8 @@ static void getlookupInfo(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-    int prevComplexId =  -1;
-
+    unsigned int lastKey = cadbr->getLastKey();
+    std::vector<bool> isVistedSet(lastKey + 1, false);
     int nComplex = 0;
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
@@ -1183,18 +1181,17 @@ static void getlookupInfo(
             Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
             continue;
         }
-        auto chainKey = Util::fast_atoi<int>(entry[0]);
+        unsigned int chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = dbr->sequenceReader->getId(chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
+            unsigned int complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
             std::string chainName(entry[1], (entry[2] - entry[1]) - 1);
             size_t lastUnderscoreIndex = chainName.find_last_of('_');
             std::string complexName = chainName.substr(0, lastUnderscoreIndex);
             chainName = chainName.substr(lastUnderscoreIndex + 1, chainName.size()); // 7soy_1.pdb_A -> A
             chainKeyToChainNameMap.emplace(chainKey, chainName);
-
-            if (complexId != prevComplexId) {
+            if (isVistedSet[complexId] == 0){
                 complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
                 complexIdVec.emplace_back(complexId);
                 Complex complex;
@@ -1202,13 +1199,12 @@ static void getlookupInfo(
                 complex.complexName = complexName;
                 complexIdtoIdx.emplace(complexId, nComplex);
                 complexes.emplace_back(complex);
-
-                prevComplexId = complexId;
+                isVistedSet[complexId] = 1;
                 nComplex++;
             }
             complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
-            complexes.back().chainKeys.emplace_back(chainKey);
-            complexes.back().nChain++;
+            complexes[complexIdtoIdx.at(complexId)].chainKeys.emplace_back(chainKey);
+            complexes[complexIdtoIdx.at(complexId)].nChain++;
         }
         data = Util::skipLine(data);
     }
@@ -1279,7 +1275,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     chainKeyToChainName_t qChainKeyToChainNameMap, dbChainKeyToChainNameMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getlookupInfo(q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx, qComplexIdToChainKeysMap, qComplexIndices, qChainKeyToChainNameMap);
+    getlookupInfo(qCaDbr, q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx, qComplexIdToChainKeysMap, qComplexIndices, qChainKeyToChainNameMap);
     getComplexResidueLength(q3DiDbr, qComplexes);
     if (sameDB) {
         dbChainKeyToComplexIdMap = qChainKeyToComplexIdMap;
@@ -1289,7 +1285,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         dbComplexIndices = qComplexIndices;
         dbChainKeyToChainNameMap = qChainKeyToChainNameMap;
     } else {
-        getlookupInfo(t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexes, dbComplexIdToIdx, dbComplexIdToChainKeysMap, dbComplexIndices, dbChainKeyToChainNameMap);
+        getlookupInfo(tCaDbr, t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexes, dbComplexIdToIdx, dbComplexIdToChainKeysMap, dbComplexIndices, dbChainKeyToChainNameMap);
         getComplexResidueLength(t3DiDbr, dbComplexes);
     }
     Debug::Progress progress(qComplexIndices.size());
@@ -1383,7 +1379,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 Complex  &tComplex = dbComplexes[dbComplexIdx];
                 cmplfiltcrit.calcCov(qComplex.complexLength, tComplex.complexLength);
 
-                if (!(cmplfiltcrit.satisfy_first(par.covMode, par.covThr, par.tmScoreThr, qComplex.nChain, tComplex.nChain, par.minAlignedChains))) {
+                if (!(cmplfiltcrit.satisfy_first(par.covMode, par.covThr, par.tmScoreThr, par.minAlignedChains))) {
                     continue;
                 }
                 if (par.filtChainTmThr || par.filtInterfaceLddtThr) { // TODO: Recover
@@ -1438,7 +1434,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                         cmplfiltcrit.computeInterfaceLddt(qAlnCoords, tAlnCoords, interfaceLength);
                     }
 
-                    if (!(cmplfiltcrit.satisfy_second(par.covMode, par.filtChainTmThr, par.filtInterfaceLddtThr, qComplex.nChain, tComplex.nChain))) {
+                    if (!(cmplfiltcrit.satisfy_second(par.covMode, par.filtChainTmThr, par.filtInterfaceLddtThr, par.minAlignedChains))) {
                         continue;
                     }
                 }
@@ -1480,7 +1476,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
                 ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                unsigned int tComplexId = cmplfiltcrit.targetComplexId;
                 std::string qChainNames = "";
                 std::string tChainNames = "";
 
