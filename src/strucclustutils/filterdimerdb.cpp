@@ -35,6 +35,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
     const int db2Type = Parameters::DBTYPE_GENERIC_DB;
     DBWriter resultWriter(par.db2.c_str(), par.db2Index.c_str(), par.threads, 0, db2Type);
     resultWriter.open();
+    Debug::Progress progress(qComplexIndices.size());
 
 #pragma omp parallel
     {
@@ -46,6 +47,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
         Coordinate16 tcoords;
 #pragma omp for schedule(static)
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
+            progress.updateProgress();
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
             if (qChainKeys.size() == 1) {
