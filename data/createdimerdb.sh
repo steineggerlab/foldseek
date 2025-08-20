@@ -41,6 +41,11 @@ if [ -e "${IN}.dbtype" ]; then
     "$MMSEQS" rmdb "${OUT}_h"
     # shellcheck disable=SC2086
     "$MMSEQS" tsv2db "${TMP_PATH}/tmpheader2" "${OUT}_h" ${VERBOSITY_PAR}
+
+    rm "${OUT}_mapping" "${OUT}_taxonomy"
+
+    awk 'FNR==NR{map[$1]=$2; next}BEGIN{num=0}{print num"\t"map[$1]; num++}' "${IN}_mapping" "${TMP_PATH}/contactlist_2"  > "${OUT}_mapping"
+    #TODO: taxonomy
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
@@ -50,4 +55,5 @@ if [ -n "${REMOVE_TMP}" ]; then
     rm "${TMP_PATH}/lookuptmp"
     rm "${TMP_PATH}/tmpheader"
     rm "${TMP_PATH}/tmpheader2"
+    rm -f "${TMP_PATH}/createdimerdb.sh"
 fi
