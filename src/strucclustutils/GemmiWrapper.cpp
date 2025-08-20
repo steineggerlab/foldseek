@@ -416,7 +416,7 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
             if (format == Format::Unknown) {
                 format = Format::Pdb;
             }
-            return loadFromBuffer(out, len, name, format);
+            return loadFromBuffer(out, len, name, saveResIndex, format);
         }
 
 #ifdef HAVE_ZLIB

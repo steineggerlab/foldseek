@@ -84,7 +84,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
             }
         }
     }
-    resultWriter.close(true);
+    resultWriter.close(false);
     qStructDbr.close();
     qDbr.close();
 
