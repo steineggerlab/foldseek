@@ -838,6 +838,8 @@ public:
                     return false;
                 }
                 break;
+            default:
+                return false;
         }
     }
 
@@ -1237,13 +1239,19 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     IndexReader* t3DiDbr = NULL;
     DBReader<unsigned int> *tCaDbr = NULL;
     t3DiDbr = new IndexReader(
-            StructureUtil::getIndexWithSuffix(par.db2, "_ss"),
-            par.threads, IndexReader::SEQUENCES,
+            is3DiIdx ? t3DiDbrName : par.db2,
+            par.threads,
+            needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
             touch ? IndexReader::PRELOAD_INDEX : 0,
-            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA
+            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+            needSrc ? "_seq_ss" : "_ss"
     );
-    tCaDbr = new DBReader<unsigned int>((par.db2 + "_ca").c_str(), (par.db2 + "_ca.index").c_str(),
-        par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+    tCaDbr = new DBReader<unsigned int>(
+        needSrc? (par.db2 + "_seq_ca").c_str() : (par.db2 + "_ca").c_str(), 
+        needSrc? (par.db2 + "_seq_ca.index").c_str() : (par.db2 + "_ca.index").c_str(),
+        par.threads,
+        DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+
     tCaDbr->open(DBReader<unsigned int>::NOSORT);
     IndexReader* q3DiDbr = NULL;
     DBReader<unsigned int> *qCaDbr = NULL;
