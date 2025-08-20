@@ -11,6 +11,91 @@
 #include "cif.hpp"
 
 #include <algorithm>
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <sys/stat.h>
+
+#define ZSTD_STATIC_LINKING_ONLY
+#include <zstd.h>
+
+size_t decompressZstdBuffer(const void* src, size_t srcSize, char*& dst) {
+    if (!src || srcSize == 0) {
+        return 0;
+    }
+
+    const size_t frameSize = ZSTD_getFrameContentSize(src, srcSize);
+    if (frameSize != ZSTD_CONTENTSIZE_ERROR && frameSize != ZSTD_CONTENTSIZE_UNKNOWN) {
+        dst = new char[frameSize];
+        const size_t ret = ZSTD_decompress(dst, frameSize, src, srcSize);
+        if (ZSTD_isError(ret)) {
+            delete[] dst;
+            dst = nullptr;
+            return 0;
+        }
+        return ret;
+    }
+
+    ZSTD_DStream* dctx = ZSTD_createDStream();
+    if (!dctx) {
+        return 0;
+    }
+
+    const size_t inChunk = ZSTD_DStreamInSize();
+    const size_t outChunk = ZSTD_DStreamOutSize();
+
+    std::vector<char> out;
+    out.reserve(outChunk * 4);
+
+    const char* ip = static_cast<const char*>(src);
+    size_t remaining = srcSize;
+    while (remaining) {
+        const size_t toRead = remaining < inChunk ? remaining : inChunk;
+        ZSTD_inBuffer inBuf { const_cast<char*>(ip), toRead, 0 };
+        remaining -= toRead;
+        ip += toRead;
+
+        while (inBuf.pos < inBuf.size)  {
+            const size_t oldSize = out.size();
+            out.resize(oldSize + outChunk);
+
+            ZSTD_outBuffer outBuf { out.data() + oldSize, outChunk, 0 };
+            const size_t ret = ZSTD_decompressStream(dctx, &outBuf, &inBuf);
+            if (ZSTD_isError(ret)) {
+                ZSTD_freeDStream(dctx);
+                return 0;
+            }
+            out.resize(oldSize + outBuf.pos);
+        }
+    }
+    ZSTD_freeDStream(dctx);
+
+    dst = new char[out.size()];
+    memcpy(dst, out.data(), out.size());
+    return out.size();
+}
+
+size_t decompressZstdFile(const std::string& path, char*& dst) {
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0 || st.st_size <= 0) {
+        return 0;
+    }
+
+    FILE* fp = fopen(path.c_str(), "rb");
+    if (!fp) {
+        return 0;
+    }
+
+    const size_t fsize = static_cast<size_t>(st.st_size);
+    std::vector<char> compressed(fsize);
+    if (fread(compressed.data(), 1, fsize, fp) != fsize) {
+        fclose(fp);
+        return 0;
+    }
+    fclose(fp);
+
+    return decompressZstdBuffer(compressed.data(), fsize, dst);
+}
 
 GemmiWrapper::GemmiWrapper(){
     fixupBuffer = NULL;
@@ -321,6 +406,19 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
         return loadFoldcompStructure(in, filename);
     }
     try {
+        if (gemmi::iends_with(filename, ".zstd") || gemmi::iends_with(filename, ".zst")) {
+            std::string name = gemmi::path_basename(filename, { ".zstd", ".zst" });
+            char* out;
+            size_t len = decompressZstdFile(filename, out);
+            if (format == Format::Detect) {
+                format = mapFormat(gemmi::coor_format_from_ext(name));
+            }
+            if (format == Format::Unknown) {
+                format = Format::Pdb;
+            }
+            return loadFromBuffer(out, len, name, format);
+        }
+
 #ifdef HAVE_ZLIB
         gemmi::MaybeGzipped infile(filename);
 #else
@@ -334,7 +432,7 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
         //std::unordered_map<std::string, unsigned int> residueIndices;
         switch (format) {
             case Format::Mmcif: {
-                gemmi::CharArray mem = read_into_buffer(infile);
+                gemmi::CharArray mem = gemmi::read_into_buffer(infile);
                 char* data = mem.data();
                 size_t dataSize = mem.size();
 
@@ -402,10 +500,21 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         return loadFoldcompStructure(istr, name);
     }
     try {
+        std::string newName = name;
+        const char* newBuffer = buffer;
+        size_t newBufferSize = bufferSize;
+        bool zstd = false;
+        if (gemmi::iends_with(name, ".zstd") || gemmi::iends_with(name, ".zst")) {
+            newName = gemmi::path_basename(name, { ".zstd", ".zst" });
+            char* tmpBuffer;
+            newBufferSize = decompressZstdBuffer(buffer, bufferSize, tmpBuffer);
+            newBuffer = tmpBuffer;
+        }
+
 #ifdef HAVE_ZLIB
-        gemmi::MaybeGzipped infile(name);
+        gemmi::MaybeGzipped infile(newName);
 #else
-        gemmi::BasicInput infile(name);
+        gemmi::BasicInput infile(newName);
 #endif
         if (format == Format::Detect) {
             format = mapFormat(gemmi::coor_format_from_ext(infile.basepath()));
@@ -416,21 +525,21 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         //std::unordered_map<std::string, unsigned int> residueIndices;
         switch (format) {
             case Format::Pdb:
-                st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(buffer, bufferSize), name, gemmi::PdbReadOptions());
+                st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(newBuffer, newBufferSize), newName, gemmi::PdbReadOptions());
                 break;
             case Format::Mmcif: {
-                const char* targetBuffer = buffer;
+                const char* targetBuffer = newBuffer;
                 // hack to fix broken _citation.title in AF3
                 const char target0[] = "Accurate structure prediction of biomolecular interactions with AlphaFold 3\n";
                 size_t target0Len = sizeof(target0) - 1;
                 const char target1[] = "_citation.title";
                 size_t target1Len = sizeof(target1) - 1;
-                const char* it = std::search(targetBuffer, targetBuffer + bufferSize, target0, target0 + target1Len);
-                if (it != targetBuffer + bufferSize) {
+                const char* it = std::search(targetBuffer, targetBuffer + newBufferSize, target0, target0 + target1Len);
+                if (it != targetBuffer + newBufferSize) {
                     if (fixupBuffer == NULL) {
-                        fixupBufferSize = bufferSize;
+                        fixupBufferSize = newBufferSize;
                         fixupBuffer = (char*)malloc(fixupBufferSize);
-                    } else if (bufferSize > fixupBufferSize) {
+                    } else if (newBufferSize > fixupBufferSize) {
                         fixupBufferSize = bufferSize * 1.5;
                         fixupBuffer = (char*)realloc(fixupBuffer, fixupBufferSize);
                     }
@@ -444,23 +553,23 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                     }
                     targetBuffer = fixupBuffer;
                 }
-                gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, bufferSize, name.c_str());
+                gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, newBufferSize, newName.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 //residueIndices = getResidueIndices(doc);
                 st = gemmi::make_structure(doc);
                 break;
             }
             case Format::Mmjson: {
-                char* bufferCopy = (char*)malloc(bufferSize + 1 * sizeof(char));
+                char* bufferCopy = (char*)malloc(newBufferSize + 1 * sizeof(char));
                 if (bufferCopy == NULL) {
                     return false;
                 }
-                if (memcpy(bufferCopy, buffer, bufferSize) == NULL) {
+                if (memcpy(bufferCopy, newBuffer, newBufferSize) == NULL) {
                     free(bufferCopy);
                     return false;
                 }
-                bufferCopy[bufferSize] = '\0';
-                gemmi::cif::Document doc = gemmi::cif::read_mmjson_insitu(bufferCopy, bufferSize, name);
+                bufferCopy[newBufferSize] = '\0';
+                gemmi::cif::Document doc = gemmi::cif::read_mmjson_insitu(bufferCopy, newBufferSize, newName);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 //residueIndices = getResidueIndices(doc);
                 st = gemmi::make_structure(doc);
@@ -468,7 +577,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 break;
             }
             case Format::ChemComp: {
-                gemmi::cif::Document doc = gemmi::cif::read_memory(buffer, bufferSize, name.c_str());
+                gemmi::cif::Document doc = gemmi::cif::read_memory(newBuffer, newBufferSize, newName.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 //residueIndices = getResidueIndices(doc);
                 st = gemmi::make_structure_from_chemcomp_doc(doc);
@@ -477,7 +586,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             default:
                 return false;
         }
-        updateStructure((void*) &st, name, entity_to_tax_id, saveResIndex);
+        updateStructure((void*) &st, newName, entity_to_tax_id, saveResIndex);
     } catch (...) {
         return false;
     }
@@ -655,7 +764,7 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 cb.push_back(cb_atom);
                 n.push_back(n_atom);
                 c.push_back(c_atom);
-                
+
                 ami.push_back(threeToOneAA(res.name));
 
                 if (taxId == -1) {

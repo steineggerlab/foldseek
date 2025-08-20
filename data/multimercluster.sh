@@ -47,10 +47,10 @@ buildIndex() {
     awk 'FNR==NR{chainMult[$1]=$2; next} {
         print chainMult[$1]"\t"$2"\t"$3
     }' "${1}.lookuptmp" "${1}.indextmp" > "${1}.indextmp2"
-    awk '!seen[$1]++ {
+     awk '!seen[$1]++ {
         sum[$1]=$3; off[$1]=$2; next
-         } { sum[$1] += $3 } { print $1"\t"off[$1]"\t"sum[$1]
-         }' "${1}.indextmp2" > "${1}.index"
+         } { sum[$1] += $3 } END{for(i in seen) {print i"\t"off[i]"\t"sum[i]
+         }}' "${1}.indextmp2" > "${1}.index"
 }
 
 if notExists "${TMP_PATH}/multimer_result.dbtype"; then

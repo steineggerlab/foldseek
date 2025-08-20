@@ -170,9 +170,6 @@ void LDDTCalculator::calculateLddtScores() {
                 continue;
             }
             visited_boxes[box_coord] = true;
-            std::pair<std::tuple<int, int, int>, int> ref;
-            ref.first = box_coord;
-            ref.second = 0;
 
             std::pair<size_t, size_t> box_members = query_grid.getBoxMemberRange(box_coord);
 
@@ -185,7 +182,6 @@ void LDDTCalculator::calculateLddtScores() {
 
                 // Different boxes
                 for (int dir = 0; dir < DIR; dir++) {
-                    std::pair<std::tuple<int, int, int>, int> ref;
                     std::tuple<int, int, int> key = std::make_tuple(std::get<0>(box_coord) + dx[dir],
                                     std::get<1>(box_coord) + dy[dir],
                                     std::get<2>(box_coord) + dz[dir]);

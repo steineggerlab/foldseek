@@ -189,8 +189,7 @@ static void getKeyToIdMapIdToKeysMapIdVec(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-    int prevComplexId = -1;
-
+    std::vector<bool> isVistedSet(lookupDB.mappedSize(), false);
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -198,16 +197,14 @@ static void getKeyToIdMapIdToKeysMapIdVec(
             continue;
         }
         auto chainKey = Util::fast_atoi<int>(entry[0]);
-
         unsigned int chainDbId = getChainId(dbr, chainKey);
-        
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
             auto complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
-            if (complexId != prevComplexId) {
+            if (isVistedSet[complexId] == 0){
                 complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
                 complexIdVec.emplace_back(complexId);
-                prevComplexId = complexId;
+                isVistedSet[complexId] = 1;
             }
             complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
         }

@@ -31,6 +31,7 @@ public:
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
+    static const int ALIGNMENT_TYPE_LOLALIGN = 3;
 
     static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
     static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
@@ -124,7 +125,8 @@ public:
     std::vector<MMseqsParameter *> createinterfacedb;
     std::vector<MMseqsParameter *> createdimerdbworkflow;
     std::vector<MMseqsParameter *> filterdimerdb;
-    
+    std::vector<MMseqsParameter *> lolalign;
+
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
     PARAMETER(PARAM_TMALIGN_HIT_ORDER)
@@ -157,6 +159,7 @@ public:
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
+    PARAMETER(PARAM_MULTIDOMAIN)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -189,6 +192,7 @@ public:
     std::string prostt5Model;
     float distanceThreshold;
     int prostt5SplitLength;
+    int multiDomain;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

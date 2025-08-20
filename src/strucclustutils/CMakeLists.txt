@@ -24,6 +24,8 @@ set(strucclustutils_source_files
         strucclustutils/createStructinterfacedb.cpp
         strucclustutils/createinterfacedb.cpp
         strucclustutils/filterdimerdb.cpp
+        strucclustutils/LoLAlign.cpp
+        strucclustutils/LoLAlign.h
         PARENT_SCOPE
         )
 

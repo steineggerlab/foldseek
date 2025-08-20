@@ -81,6 +81,131 @@ int structure_mtar_gzopen(mtar_t *tar, const char *filename) {
 }
 #endif
 
+#define ZSTD_STATIC_LINKING_ONLY
+#include <zstd.h>
+
+struct zstd_file_t {
+    FILE *fp;
+    ZSTD_DStream *dctx;
+    char *inBuf;
+    size_t inCap;
+    size_t inPos;
+    size_t inSize;
+    char *outBuf;
+    size_t outCap;
+    size_t outPos;
+    size_t outSize;
+};
+
+static int file_zstdread(mtar_t *tar, void *data, size_t size) {
+    zstd_file_t *s = static_cast<zstd_file_t*>(tar->stream);
+    char *dst = static_cast<char*>(data);
+    size_t need = size;
+
+    while (need) {
+        size_t avail = s->outSize - s->outPos;
+        if (avail) {
+            size_t take = (avail < need) ? avail : need;
+            memcpy(dst, s->outBuf + s->outPos, take);
+            s->outPos += take;
+            dst += take;
+            need -= take;
+            continue;
+        }
+
+        if (s->inPos == s->inSize) {
+            s->inSize = fread(s->inBuf, 1, s->inCap, s->fp);
+            s->inPos = 0;
+            if (s->inSize == 0) {
+                break;
+            }
+        }
+
+        ZSTD_inBuffer  in  { s->inBuf + s->inPos, s->inSize - s->inPos, 0 };
+        ZSTD_outBuffer out { s->outBuf, s->outCap, 0 };
+
+        const size_t ret = ZSTD_decompressStream(s->dctx, &out, &in);
+        if (ZSTD_isError(ret)) {
+            return MTAR_EREADFAIL;
+        }
+
+        s->inPos  += in.pos;
+        s->outSize = out.pos;
+        s->outPos  = 0;
+
+        if (ret == 0 && s->outSize == 0) {
+            break;
+        }
+    }
+    return (need == 0) ? MTAR_ESUCCESS : MTAR_EREADFAIL;
+}
+
+static int file_zstdseek(mtar_t *tar, long offset, int whence) {
+    if (whence != SEEK_CUR || offset < 0) {
+        return MTAR_ESEEKFAIL;
+    }
+
+    char tmp[8192];
+    long left = offset;
+    while (left) {
+        size_t chunk = (left > (long)sizeof(tmp)) ? sizeof(tmp) : (size_t)left;
+        if (file_zstdread(tar, tmp, chunk) != MTAR_ESUCCESS) {
+            return MTAR_ESEEKFAIL;
+        }
+        left -= (long)chunk;
+    }
+    return MTAR_ESUCCESS;
+}
+
+static int file_zstdclose(mtar_t *tar) {
+    zstd_file_t *s = static_cast<zstd_file_t*>(tar->stream);
+    if (s) {
+        ZSTD_freeDStream(s->dctx);
+        fclose(s->fp);
+        free(s->inBuf);
+        free(s->outBuf);
+        delete s;
+        tar->stream = nullptr;
+    }
+    return MTAR_ESUCCESS;
+}
+
+int mtar_zstdopen(mtar_t *tar, const char *filename) {
+    std::memset(tar, 0, sizeof(*tar));
+    tar->read  = file_zstdread;
+    tar->seek  = file_zstdseek;
+    tar->close = file_zstdclose;
+    tar->isFinished = 0;
+
+    zstd_file_t *s = new zstd_file_t{};
+    tar->stream = s;
+
+    s->fp = fopen(filename, "rb");
+    if (!s->fp) {
+        delete s;
+        return MTAR_EOPENFAIL;
+    }
+
+    s->dctx = ZSTD_createDStream();
+    if (!s->dctx) {
+        std::fclose(s->fp);
+        delete s;
+        return MTAR_EOPENFAIL;
+    }
+
+    s->inCap  = ZSTD_DStreamInSize();
+    s->outCap = ZSTD_DStreamOutSize();
+    s->inBuf  = static_cast<char*>(malloc(s->inCap));
+    s->outBuf = static_cast<char*>(malloc(s->outCap));
+    if (!s->inBuf || !s->outBuf) {
+        file_zstdclose(tar);
+        return MTAR_EOPENFAIL;
+    }
+
+    s->inSize = s->inPos = s->outSize = s->outPos = 0;
+    return MTAR_ESUCCESS;
+}
+
 template <typename T, typename U>
 static inline bool compareByFirst(const std::pair<T, U>& a, const std::pair<T, U>& b) {
     return a.first < b.first;
@@ -602,6 +727,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     for (size_t i = 0; i < par.filenames.size(); ++i) {
         if (Util::endsWith(".tar.gz", par.filenames[i])
                 || Util::endsWith(".tgz", par.filenames[i])
+                || Util::endsWith(".tar.zst", par.filenames[i])
+                || Util::endsWith(".tar.zstd", par.filenames[i])
                 || Util::endsWith(".tar", par.filenames[i])) {
             tarFiles.push_back(par.filenames[i]);
         }
@@ -641,6 +768,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             Debug(Debug::ERROR) << "Foldseek was not compiled with zlib support. Cannot read compressed input.\n";
             EXIT(EXIT_FAILURE);
 #endif
+        } else if (Util::endsWith(".tar.zstd", tarFiles[i]) || Util::endsWith(".tar.zst", tarFiles[i])) {
+            if (mtar_zstdopen(&tar, tarFiles[i].c_str()) != MTAR_ESUCCESS) {
+                Debug(Debug::ERROR) << "Cannot open file " << tarFiles[i] << "\n";
+                EXIT(EXIT_FAILURE);
+            }
         } else {
             if (mtar_open(&tar, tarFiles[i].c_str(), "r") != MTAR_ESUCCESS) {
                 Debug(Debug::ERROR) << "Cannot open file " << tarFiles[i] << "\n";
@@ -995,10 +1127,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             for (size_t i = 0; i < header_reorder.getSize(); i++) {
                 std::string entryNameRaw = Util::parseFastaHeader(header_reorder.getData(i,thread_idx));
                 std::string filenameWithoutExtension;
-                if (Util::endsWith(".gz", entryNameRaw)) {
+                if (Util::endsWith(".gz", entryNameRaw) || Util::endsWith(".zstd", entryNameRaw) || Util::endsWith(".zstd", entryNameRaw)) {
                     filenameWithoutExtension = Util::remove_extension(Util::remove_extension(Util::remove_extension(entryNameRaw)));
-                }
-                else {
+                } else {
                     filenameWithoutExtension = Util::remove_extension(Util::remove_extension(entryNameRaw));
                 }
                 mappingOrder[i].first = filenameWithoutExtension;

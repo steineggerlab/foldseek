@@ -35,4 +35,5 @@ extern int createStructinterfacedb(int argc, const char **argv, const Command& c
 extern int createinterfacedb(int argc, const char **argv, const Command& command);
 extern int createdimerdb(int argc, const char **argv, const Command& command);
 extern int filterdimerdb(int argc, const char **argv, const Command& command);
+extern int lolalign(int argc, const char **argv, const Command& command);
 #endif
