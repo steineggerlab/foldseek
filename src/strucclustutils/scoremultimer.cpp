@@ -1155,6 +1155,7 @@ void getComplexResidueLength( IndexReader *Dbr, std::vector<Complex> &complexes)
 }
 
 static void getlookupInfo(
+        DBReader<unsigned int>* cadbr,
         IndexReader* dbr,
         const std::string &file,
         std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -1171,7 +1172,8 @@ static void getlookupInfo(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-    std::vector<bool> isVistedSet(lookupDB.mappedSize(), false);
+    unsigned int lastKey = cadbr->getLastKey();
+    std::vector<bool> isVistedSet(lastKey + 1, false);
     int nComplex = 0;
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
@@ -1179,17 +1181,16 @@ static void getlookupInfo(
             Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
             continue;
         }
-        auto chainKey = Util::fast_atoi<int>(entry[0]);
+        unsigned int chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = dbr->sequenceReader->getId(chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
+            unsigned int complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
             std::string chainName(entry[1], (entry[2] - entry[1]) - 1);
             size_t lastUnderscoreIndex = chainName.find_last_of('_');
             std::string complexName = chainName.substr(0, lastUnderscoreIndex);
             chainName = chainName.substr(lastUnderscoreIndex + 1, chainName.size()); // 7soy_1.pdb_A -> A
             chainKeyToChainNameMap.emplace(chainKey, chainName);
-
             if (isVistedSet[complexId] == 0){
                 complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
                 complexIdVec.emplace_back(complexId);
@@ -1198,7 +1199,6 @@ static void getlookupInfo(
                 complex.complexName = complexName;
                 complexIdtoIdx.emplace(complexId, nComplex);
                 complexes.emplace_back(complex);
-
                 isVistedSet[complexId] = 1;
                 nComplex++;
             }
@@ -1275,7 +1275,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     chainKeyToChainName_t qChainKeyToChainNameMap, dbChainKeyToChainNameMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getlookupInfo(q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx, qComplexIdToChainKeysMap, qComplexIndices, qChainKeyToChainNameMap);
+    getlookupInfo(qCaDbr, q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx, qComplexIdToChainKeysMap, qComplexIndices, qChainKeyToChainNameMap);
     getComplexResidueLength(q3DiDbr, qComplexes);
     if (sameDB) {
         dbChainKeyToComplexIdMap = qChainKeyToComplexIdMap;
@@ -1285,7 +1285,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         dbComplexIndices = qComplexIndices;
         dbChainKeyToChainNameMap = qChainKeyToChainNameMap;
     } else {
-        getlookupInfo(t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexes, dbComplexIdToIdx, dbComplexIdToChainKeysMap, dbComplexIndices, dbChainKeyToChainNameMap);
+        getlookupInfo(tCaDbr, t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexes, dbComplexIdToIdx, dbComplexIdToChainKeysMap, dbComplexIndices, dbChainKeyToChainNameMap);
         getComplexResidueLength(t3DiDbr, dbComplexes);
     }
     Debug::Progress progress(qComplexIndices.size());
