@@ -156,6 +156,7 @@ public:
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
+    PARAMETER(PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
@@ -191,6 +192,7 @@ public:
     float filtInterfaceLddtThr;
     std::string prostt5Model;
     float distanceThreshold;
+    int minResidueNum;
     int prostt5SplitLength;
     int multiDomain;
 

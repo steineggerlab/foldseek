@@ -123,6 +123,7 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
             }
 
             float distanceThreshold = par.distanceThreshold;
+            unsigned int minimumResidue = par.minResidueNum;
             std::vector<size_t> resIdx1, resIdx2;
             const float squareThreshold = distanceThreshold * distanceThreshold;
             PulchraWrapper pulchra;
@@ -147,7 +148,7 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
             pulchra.rebuildBackbone(&caB[0], &nB[0], &cB[0], &amiB[0], qChainLen + tChainLen);
             findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
             findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
-            if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
+            if (resIdx1.size() >= minimumResidue && resIdx2.size() >= minimumResidue) {
                 StructureTo3Di structureTo3Di;
                 std::vector<Vec3> ca, n, c, cb;
                 std::vector<char> ami;

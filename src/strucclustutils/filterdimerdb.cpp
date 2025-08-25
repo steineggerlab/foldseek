@@ -70,16 +70,17 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
 
                     float distanceThreshold = par.distanceThreshold;
+                    unsigned int minimumResidue = par.minResidueNum;
                     std::vector<size_t> resIdx1, resIdx2;
                     const float squareThreshold = distanceThreshold * distanceThreshold;
                     findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
                     findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
-
-                    if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {  
+                    if (resIdx1.size() >= minimumResidue && resIdx2.size() >= minimumResidue) {  
                         resultWriter.writeData("0\n", 2, qChainKey, thread_idx);
                         resultWriter.writeData("0\n", 2, tChainKey, thread_idx);
                     }
-
+                    resIdx1.clear();
+                    resIdx2.clear();
                 }
             }
         }
