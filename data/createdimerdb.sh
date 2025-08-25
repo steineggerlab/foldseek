@@ -11,9 +11,15 @@ if [ -e "${IN}.dbtype" ]; then
         || fail "filterdimerdb died"
     sort -nk2 "${TMP_PATH}/contactlist.index" > "${TMP_PATH}/contactlist_2"
     # shellcheck disable=SC2086
-    "$MMSEQS" createsubdb "${TMP_PATH}/contactlist_2" "${IN}" "${OUT}" --subdb-mode 0 ${VERBOSITY_PAR} \
+    "$MMSEQS" base:createsubdb "${TMP_PATH}/contactlist_2" "${IN}" "${OUT}" --subdb-mode 0 ${VERBOSITY_PAR} \
         || fail "createsubdb died"
     # shellcheck disable=SC2086
+    "$MMSEQS" base:createsubdb "${TMP_PATH}/contactlist_2" "${IN}_ss" "${OUT}_ss" --subdb-mode 0 ${VERBOSITY_PAR} \
+        || fail "createsubdb died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" base:createsubdb "${TMP_PATH}/contactlist_2" "${IN}_ca" "${OUT}_ca" --subdb-mode 0 ${VERBOSITY_PAR} \
+        || fail "createsubdb died"
+    shellcheck disable=SC2086
     "$MMSEQS" rmdb "${OUT}_h"
     # shellcheck disable=SC2086
     "$MMSEQS" createsubdb "${TMP_PATH}/contactlist_2" "${IN}_h" "${OUT}_h" \
@@ -42,10 +48,15 @@ if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" tsv2db "${TMP_PATH}/tmpheader2" "${OUT}_h" ${VERBOSITY_PAR}
 
-    rm "${OUT}_mapping" "${OUT}_taxonomy"
+    if exists "${OUT}_mapping"; then
+        rm "${OUT}_mapping"
+        awk 'FNR==NR{map[$1]=$2; next}BEGIN{num=0}{print num"\t"map[$1]; num++}' "${IN}_mapping" "${TMP_PATH}/contactlist_2"  > "${OUT}_mapping"
+    fi
 
-    awk 'FNR==NR{map[$1]=$2; next}BEGIN{num=0}{print num"\t"map[$1]; num++}' "${IN}_mapping" "${TMP_PATH}/contactlist_2"  > "${OUT}_mapping"
-    #TODO: taxonomy
+    if exists "${OUT}_taxonomy"; then
+        rm "${OUT}_taxonomy"
+        #TODO: taxonomy
+    fi
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then

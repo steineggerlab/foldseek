@@ -1,5 +1,9 @@
 #!/bin/sh -e
 
+exists() {
+	[ -f "$1" ]
+}
+
 abspath() {
     if [ -d "$1" ]; then
         (cd "$1"; pwd)
@@ -23,6 +27,12 @@ if [ -e "${IN}.dbtype" ]; then
         || fail "createsubdb died"
     ln -sf "$(abspath "${IN}.lookup")" "${OUT}.lookup"
     ln -sf "$(abspath "${IN}.source")" "${OUT}.source"
+    if exists "${IN}_mapping"; then
+        ln -sf "$(abspath "${IN}_mapping")" "${OUT}_mapping"
+    fi
+    if exists "${IN}_taxonomy"; then
+        ln -sf "$(abspath "${IN}_taxonomy")" "${OUT}_taxonomy"
+    fi
 fi
 
 if [ -e "${OUT}.sh" ]; then
