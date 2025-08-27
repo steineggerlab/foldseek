@@ -19,7 +19,12 @@ if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" base:createsubdb "${TMP_PATH}/contactlist_2" "${IN}_ca" "${OUT}_ca" --subdb-mode 0 ${VERBOSITY_PAR} \
         || fail "createsubdb died"
-    shellcheck disable=SC2086
+    if exists "${IN}_id"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" base:createsubdb "${TMP_PATH}/contactlist_2" "${IN}_id" "${OUT}_id" --subdb-mode 0 ${VERBOSITY_PAR} \
+            || fail "createsubdb died"
+    fi
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${OUT}_h"
     # shellcheck disable=SC2086
     "$MMSEQS" createsubdb "${TMP_PATH}/contactlist_2" "${IN}_h" "${OUT}_h" \
@@ -29,11 +34,13 @@ if [ -e "${IN}.dbtype" ]; then
     sort -nk2 "${OUT}_ss.index" | awk '{print NR-1"\t"$2"\t"$3}' > "${TMP_PATH}/db_ss.index2"
     sort -nk2 "${OUT}_ca.index" | awk '{print NR-1"\t"$2"\t"$3}' > "${TMP_PATH}/db_ca.index2"
     sort -nk2 "${OUT}_h.index" | awk '{print NR-1"\t"$2"\t"$3}' > "${TMP_PATH}/db_h.index2"
+    sort -nk2 "${OUT}_id.index" | awk '{print NR-1"\t"$2"\t"$3}' > "${TMP_PATH}/db_id.index2"
 
     mv "${TMP_PATH}/db.index2" "${OUT}.index"
     mv "${TMP_PATH}/db_ss.index2" "${OUT}_ss.index"
     mv "${TMP_PATH}/db_ca.index2" "${OUT}_ca.index"
     mv "${TMP_PATH}/db_h.index2" "${OUT}_h.index"
+    mv "${TMP_PATH}/db_id.index2" "${OUT}_id.index"
 
     rm "${OUT}.lookup" "${OUT}.source"
     awk 'FNR==NR{name[$1]=$2; source[$1]=$3; next} BEGIN{num=0}{print num"\tDI"int(num/2)"_"name[$1]"\t"int(num/2)"\t"source[$1]; num++}' "${IN}.lookup" "${TMP_PATH}/contactlist_2" > "${TMP_PATH}/lookuptmp"
