@@ -28,9 +28,8 @@ public:
         }
     }
 
-    bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, Format format = Format::Detect);
-
-    bool load(const std::string& filename, Format format = Format::Detect);
+    bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, bool saveResIndex = false, Format format = Format::Detect);
+    bool load(const std::string& filename, bool saveResIndex = false, Format format = Format::Detect);
 
     std::pair<size_t, size_t> nextChain();
 
@@ -47,6 +46,7 @@ public:
     unsigned int modelCount = 0;
     std::vector<std::pair<size_t ,size_t>> chain;
     std::vector<int> taxIds;
+    std::vector<unsigned int> resIds;
     std::string title;
 
     char* fixupBuffer;
@@ -57,7 +57,7 @@ private:
     int chainIt;
 
     bool loadFoldcompStructure(std::istream& stream, const std::string& filename);
-    void updateStructure(void * structure, const std::string & filename, std::unordered_map<std::string, int>& entity_to_tax_id);
+    void updateStructure(void * structure, const std::string & filename, std::unordered_map<std::string, int>& entity_to_tax_id, bool saveResIndex);
 };
 
 

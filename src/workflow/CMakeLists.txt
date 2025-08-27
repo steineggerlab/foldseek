@@ -10,5 +10,6 @@ set(workflow_source_files
         workflow/MultimerSearch.cpp
         workflow/MultimerCluster.cpp
         workflow/EasyMultimerCluster.cpp
+        workflow/CreateDimerDb.cpp
         PARENT_SCOPE
         )
