@@ -200,14 +200,16 @@ static void getKeyToIdMapIdToKeysMapIdVec(
         auto chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = getChainId(dbr, chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
+            unsigned int complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
-            if (isVistedSet[complexId] == 0){
-                complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
-                complexIdVec.emplace_back(complexId);
-                isVistedSet[complexId] = 1;
+            if(complexId < isVistedSet.size()){
+                if (isVistedSet[complexId] == 0){
+                    complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
+                    complexIdVec.emplace_back(complexId);
+                    isVistedSet[complexId] = 1;
+                }
+                complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
             }
-            complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
         }
         data = Util::skipLine(data);
     }
