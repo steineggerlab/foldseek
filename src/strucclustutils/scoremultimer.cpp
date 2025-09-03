@@ -718,8 +718,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     complexIdToChainKeys_t qComplexIdToChainKeysMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getKeyToIdMapIdToKeysMapIdVec(alnDbr, q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
-    getKeyToIdMapIdToKeysMapIdVec(alnDbr, t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec(q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec(t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
     qChainKeyToComplexIdMap.clear();
     dbComplexIndices.clear();
     Debug::Progress progress(qComplexIndices.size());
