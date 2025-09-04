@@ -23,7 +23,7 @@ fi
 
 if [ -e "${IN}_id.dbtype" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" base:createsubdb "${OUT}.indextmp""${IN}_id" "${OUT}_id" ${CREATESTRUCTSUBDB_PAR} \
+    "$MMSEQS" base:createsubdb "${OUT}.indextmp" "${IN}_id" "${OUT}_id" ${CREATESTRUCTSUBDB2_PAR} \
         || fail "createsubdb died"
 fi
 

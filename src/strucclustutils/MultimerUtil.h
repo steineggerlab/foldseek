@@ -176,7 +176,6 @@ auto getChainId(ReaderType &dbr, unsigned int chainKey) -> decltype(dbr.sequence
 
 template <typename ReaderType>
 static void getKeyToIdMapIdToKeysMapIdVec(
-    DBReader<unsigned int> &alnDbr,
     ReaderType &dbr,
     const std::string &file,
     std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -190,7 +189,23 @@ static void getKeyToIdMapIdToKeysMapIdVec(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-    std::vector<bool> isVistedSet(alnDbr.getLastKey() + 1, false);
+    unsigned int maxSet = 0;
+    while (data < end && *data != '\0') {
+        const size_t columns = Util::getWordsOfLine(data, entry, 255);
+        if (columns < 3) {
+            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
+            continue;
+        }
+        unsigned int complexId = Util::fast_atoi<int>(entry[2]);
+        if (complexId > maxSet) {
+            maxSet = complexId;
+        }
+        data = Util::skipLine(data);
+    }
+    data = (char *) lookupDB.getData();
+    end = data + lookupDB.mappedSize();
+    std::vector<bool> isVistedSet(maxSet + 1, false);
+    
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -200,7 +215,7 @@ static void getKeyToIdMapIdToKeysMapIdVec(
         auto chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = getChainId(dbr, chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
+            unsigned int complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
             if (isVistedSet[complexId] == 0){
                 complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());

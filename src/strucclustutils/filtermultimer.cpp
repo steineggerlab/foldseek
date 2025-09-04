@@ -460,9 +460,23 @@ static void getlookupInfo(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-
+    unsigned int maxSet = 0;
+    while (data < end && *data != '\0') {
+        const size_t columns = Util::getWordsOfLine(data, entry, 255);
+        if (columns < 3) {
+            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
+            continue;
+        }
+        unsigned int complexId = Util::fast_atoi<int>(entry[2]);
+        if (complexId > maxSet) {
+            maxSet = complexId;
+        }
+        data = Util::skipLine(data);
+    }
+    data = (char *) lookupDB.getData();
+    end = data + lookupDB.mappedSize();
+    std::vector<bool> isVistedSet(maxSet + 1, false);
     int nComplex = 0;
-    std::vector<bool> isVistedSet(lookupDB.mappedSize(), false);
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -472,12 +486,11 @@ static void getlookupInfo(
         auto chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = dbr->sequenceReader->getId(chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
+            unsigned int complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
             std::string chainName(entry[1], (entry[2] - entry[1]) - 1);
             size_t lastUnderscoreIndex = chainName.find_last_of('_');
             std::string complexName = chainName.substr(0, lastUnderscoreIndex);
-
             if (isVistedSet[complexId] == 0) {
                 Complex complex;
                 complex.complexId = complexId;

@@ -66,11 +66,10 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
     complexIdToChainKeys_t dbComplexIdToChainKeysMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getKeyToIdMapIdToKeysMapIdVec(alnDbr, qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
-    getKeyToIdMapIdToKeysMapIdVec(alnDbr, tDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec(tDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
     dbComplexIndices.clear();
     qChainKeyToComplexIdMap.clear();
-
     Debug::Progress progress(qComplexIndices.size());
 #pragma omp parallel
     {
@@ -112,6 +111,7 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
             // Among all db complexes aligned to query complex
             for (auto dbIter = dbFoundIndices.cbegin(); dbIter != dbFoundIndices.cend(); ++dbIter) {
                 const std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(*dbIter);
+
                 // for all query chains
                 for (size_t qChainIdx=0; qChainIdx<qChainKeys.size(); qChainIdx++) {
                     // and target chains
