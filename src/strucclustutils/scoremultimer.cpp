@@ -1032,7 +1032,7 @@ public:
 };
 
 
-std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit){
+std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit , float filtinterfacelddt){
     std::string result;
     result.append(SSTR(cmplfiltcrit.qCov));
     result.append("\t");
@@ -1065,8 +1065,11 @@ std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit){
     }
     result.append("\t");
 
-
-    result.append(SSTR(cmplfiltcrit.interfaceLddt));
+    if(filtinterfacelddt == 0){
+        result.append(".");
+    } else {
+        result.append(SSTR(cmplfiltcrit.interfaceLddt));
+    }
     result.append("\t");
 
     // result.append(SSTR(cmplfiltcrit.u[0][0]));
@@ -1157,7 +1160,6 @@ void getComplexResidueLength( IndexReader *Dbr, std::vector<Complex> &complexes)
 }
 
 static void getlookupInfo(
-        DBReader<unsigned int>* cadbr,
         IndexReader* dbr,
         const std::string &file,
         std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -1174,8 +1176,24 @@ static void getlookupInfo(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-    unsigned int lastKey = cadbr->getLastKey();
-    std::vector<bool> isVistedSet(lastKey + 1, false);
+    unsigned int maxSet = 0;
+    while (data < end && *data != '\0') {
+        const size_t columns = Util::getWordsOfLine(data, entry, 255);
+        if (columns < 3) {
+            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
+            continue;
+        }
+        unsigned int complexId = Util::fast_atoi<int>(entry[2]);
+        if (complexId > maxSet) {
+            maxSet = complexId;
+        }
+        data = Util::skipLine(data);
+    }
+
+    data = (char *) lookupDB.getData();
+    end = data + lookupDB.mappedSize();
+    std::vector<bool> isVistedSet(maxSet + 1, false);
+
     int nComplex = 0;
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
@@ -1186,7 +1204,7 @@ static void getlookupInfo(
         unsigned int chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = dbr->sequenceReader->getId(chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            unsigned int complexId = Util::fast_atoi<int>(entry[2]);
+            size_t complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
             std::string chainName(entry[1], (entry[2] - entry[1]) - 1);
             size_t lastUnderscoreIndex = chainName.find_last_of('_');
@@ -1283,7 +1301,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     chainKeyToChainName_t qChainKeyToChainNameMap, dbChainKeyToChainNameMap;
     std::string qLookupFile = par.db1 + ".lookup";
     std::string dbLookupFile = par.db2 + ".lookup";
-    getlookupInfo(qCaDbr, q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx, qComplexIdToChainKeysMap, qComplexIndices, qChainKeyToChainNameMap);
+    getlookupInfo(q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexes, qComplexIdToIdx, qComplexIdToChainKeysMap, qComplexIndices, qChainKeyToChainNameMap);
     getComplexResidueLength(q3DiDbr, qComplexes);
     if (sameDB) {
         dbChainKeyToComplexIdMap = qChainKeyToComplexIdMap;
@@ -1293,7 +1311,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         dbComplexIndices = qComplexIndices;
         dbChainKeyToChainNameMap = qChainKeyToChainNameMap;
     } else {
-        getlookupInfo(tCaDbr, t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexes, dbComplexIdToIdx, dbComplexIdToChainKeysMap, dbComplexIndices, dbChainKeyToChainNameMap);
+        getlookupInfo(t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexes, dbComplexIdToIdx, dbComplexIdToChainKeysMap, dbComplexIndices, dbChainKeyToChainNameMap);
         getComplexResidueLength(t3DiDbr, dbComplexes);
     }
     Debug::Progress progress(qComplexIndices.size());
@@ -1484,31 +1502,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             for (unsigned int assIdidx = 0; assIdidx < selectedAssIDs.size(); assIdidx++) {
                 unsigned int assId = selectedAssIDs.at(assIdidx);
                 ComplexFilterCriteria &cmplfiltcrit = localComplexMap.at(assId);
-                std::string qChainNames = "";
-                std::string tChainNames = "";
-
-                // Add chain names if chain alignment is saved
-                if (cmplfiltcrit.alignedChains.size() > 0) { // If chain alignment is saved : chainTmThr & lddtThr
-                    for (size_t chainIdx = 0; chainIdx < cmplfiltcrit.alignedChains.size(); chainIdx++) {
-                        chainAlignment &alnchain = cmplfiltcrit.alignedChains[chainIdx];
-                        std::string qChainName = qChainKeyToChainNameMap.at(alnchain.qKey);
-                        std::string tChainName = dbChainKeyToChainNameMap.at(alnchain.tKey);
-                        if (chainIdx == 0) {
-                            qChainNames+= qChainName;
-                            tChainNames+= tChainName;
-                        } else {
-                            qChainNames+= ","+qChainName;
-                            tChainNames+= ","+tChainName;
-                        }
-                    }
-                }
                 
-                std::string result1 = filterToBuffer(cmplfiltcrit);
-                if (cmplfiltcrit.alignedChains.size() > 0) {
-                    result1 += qChainNames + "\t" + tChainNames;
-                } else {
-                    result1 += ".\t.";
-                }
+                std::string result1 = filterToBuffer(cmplfiltcrit, par.filtInterfaceLddtThr);
                 Assignment &assignment = assignments[assId];
                 for (size_t resultToWriteIdx = 0; resultToWriteIdx < assignment.resultToWriteLines.size(); resultToWriteIdx++) {
                     unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;

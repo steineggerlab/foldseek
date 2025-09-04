@@ -513,8 +513,6 @@ R"html(<!DOCTYPE html>
     }
 
     Debug::Progress progress(alnDbr.getSize());
-    std::vector<std::string> qChains;
-    std::vector<std::string> tChains;
 #pragma omp parallel num_threads(localThreads)
     {
         unsigned int thread_idx = 0;
@@ -1096,7 +1094,7 @@ R"html(<!DOCTYPE html>
                                             Debug(Debug::ERROR) << "The column interfacelddt is only for scorecomplex result.\n";
                                             EXIT(EXIT_FAILURE);
                                         }
-                                        result.append(SSTR(retComplex.interfaceLddtScore));
+                                        result.append(retComplex.interfaceLddtScore);
                                         break;
                                 }
                                 if (i < outcodes.size() - 1) {

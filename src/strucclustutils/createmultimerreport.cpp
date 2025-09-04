@@ -34,7 +34,7 @@ void getScoreComplexResults(
         double tComplexCov,
         const std::string &qChainTms,
         const std::string &tChainTms,
-        double interfaceLddtScore,
+        const std::string & interfaceLddtScore,
         unsigned int qComplexId,
         unsigned int assId
 ) {
@@ -59,14 +59,14 @@ void getScoreComplexResults(
         getComplexNameChainName(tChainVector[tChainId], compAndChainName);
         tChainString += ',' + compAndChainName.second;
     }
-    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%1.5f\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), qComplexCov, tComplexCov, qChainTms.c_str(), tChainTms.c_str(), interfaceLddtScore, assId);
+    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), qComplexCov, tComplexCov, qChainTms.c_str(), tChainTms.c_str(), interfaceLddtScore.c_str(), assId);
     resultToWrite.append(buffer, count);
     scoreComplexResults.emplace_back(qComplexId, assId, resultToWrite);
 }
 
 struct ComplexAlignment {
     ComplexAlignment(){};
-    ComplexAlignment(chainName_t &qChainName, chainName_t &tChainName, double qTmScore, double tTmScore, std::string &u, std::string &t, double qComplexCov, double tComplexCov, const std::string &qChainTms, const std::string &tChainTms, double interfaceLddtScore, unsigned int assId) : qTMScore(qTmScore), tTMScore(tTmScore), u(u), t(t), qComplexCov(qComplexCov), tComplexCov(tComplexCov), qChainTms(qChainTms), tChainTms(tChainTms), interfaceLddtScore(interfaceLddtScore), assId(assId){
+    ComplexAlignment(chainName_t &qChainName, chainName_t &tChainName, double qTmScore, double tTmScore, std::string &u, std::string &t, double qComplexCov, double tComplexCov, const std::string &qChainTms, const std::string &tChainTms, const std::string &interfaceLddtScore, unsigned int assId) : qTMScore(qTmScore), tTMScore(tTmScore), u(u), t(t), qComplexCov(qComplexCov), tComplexCov(tComplexCov), qChainTms(qChainTms), tChainTms(tChainTms), interfaceLddtScore(interfaceLddtScore), assId(assId){
         qChainNames = {qChainName};
         tChainNames = {tChainName};
     };
@@ -80,7 +80,7 @@ struct ComplexAlignment {
     double tComplexCov;
     std::string qChainTms;
     std::string tChainTms;
-    double interfaceLddtScore;
+    std::string interfaceLddtScore;
     unsigned int assId;
 };
 

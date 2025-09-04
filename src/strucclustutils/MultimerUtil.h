@@ -150,8 +150,8 @@ static bool compareComplexResultByQuery(const ScoreComplexResult &first, const S
 }
 
 struct ComplexDataHandler {
-    ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), qComplexCov(0.0f), tComplexCov(0.0f), interfaceLddtScore(0.0f), isValid(isValid) {}
-    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string &uString, std::string &tString, double qComplexCov, double tComplexCov, std::string &qChainTms, std::string &tChainTms, double interfaceLddtScore, bool isValid)
+    ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), qComplexCov(0.0f), tComplexCov(0.0f), isValid(isValid) {}
+    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string &uString, std::string &tString, double qComplexCov, double tComplexCov, std::string &qChainTms, std::string &tChainTms, std::string &interfaceLddtScore, bool isValid)
             : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), uString(uString), tString(tString), qComplexCov(qComplexCov), tComplexCov(tComplexCov), qChainTms(qChainTms), tChainTms(tChainTms), interfaceLddtScore(interfaceLddtScore), isValid(isValid) {}
     unsigned int assId;
     double qTmScore;
@@ -162,7 +162,7 @@ struct ComplexDataHandler {
     double tComplexCov;
     std::string qChainTms;
     std::string tChainTms;
-    double interfaceLddtScore;
+    std::string interfaceLddtScore;
     bool isValid;
 };
 
@@ -207,14 +207,17 @@ static void getKeyToIdMapIdToKeysMapIdVec(
         auto chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = getChainId(dbr, chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
+            size_t complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
-            if (isVistedSet[complexId] == 0){
-                complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
-                complexIdVec.emplace_back(complexId);
-                isVistedSet[complexId] = 1;
+            if(complexId < isVistedSet.size()){
+                if (isVistedSet[complexId] == 0){
+                    complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
+                    complexIdVec.emplace_back(complexId);
+                    isVistedSet[complexId] = 1;
+                }
+                complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
             }
-            complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
+            
         }
         data = Util::skipLine(data);
     }
@@ -224,7 +227,7 @@ static void getKeyToIdMapIdToKeysMapIdVec(
 static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
-    if (columns==23){
+    if (columns==21){
         char key[255];
         ptrdiff_t keySize =  (entry[1] - data);
         strncpy(key, data, keySize);
@@ -251,8 +254,8 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
         double tComplexCov = strtod(entry[16], NULL);
         std::string qChainTms = std::string(entry[17], entry[18] - entry[17]-1);
         std::string tChainTms = std::string(entry[18], entry[19] - entry[18]-1);
-        double interfaceLddtScore = strtod(entry[19], NULL);
-        auto assId = Util::fast_atoi<unsigned int>(entry[22]);
+        std::string interfaceLddtScore = std::string(entry[19], entry[20] - entry[19]-1);
+        auto assId = Util::fast_atoi<unsigned int>(entry[20]);
         res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
         return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
     } else if(columns == 16) {
@@ -282,7 +285,7 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
         double tComplexCov = 0;
         std::string qChainTms = "";
         std::string tChainTms = "";
-        double interfaceLddtScore = 0;
+        std::string interfaceLddtScore = "";
         auto assId = Util::fast_atoi<unsigned int>(entry[15]);
         res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
         return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
