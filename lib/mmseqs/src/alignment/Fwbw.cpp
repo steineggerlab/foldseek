@@ -100,8 +100,8 @@ FwBwAligner::FwBwAligner(SubstitutionMatrix &subMat, float gapOpen, float gapExt
         exp_ge_arr[i] = exp((i * gapExtend + gapExtend) / temperature);
     }
     // Gap open and extend
-    exp_go = simdf32_set(static_cast<float>(exp(gapOpen / temperature))); 
-    exp_ge = simdf32_set(static_cast<float>(exp(gapExtend / temperature)));
+    exp_go = (static_cast<float>(exp(gapOpen / temperature))); 
+    exp_ge = (static_cast<float>(exp(gapExtend / temperature)));
     // Blosum matrix
     blosum = malloc_matrix<float>(21, 21);
     for (int i = 0; i < subMat.alphabetSize; ++i) {
@@ -149,8 +149,8 @@ FwBwAligner::FwBwAligner(float gapOpen, float gapExtend, float temperature, floa
         exp_ge_arr[i] = exp((i * gapExtend + gapExtend) / temperature);
     }
     // Gap open and extend
-    exp_go = simdf32_set(static_cast<float>(exp(gapOpen / temperature))); 
-    exp_ge = simdf32_set(static_cast<float>(exp(gapExtend / temperature)));
+    exp_go = (static_cast<float>(exp(gapOpen / temperature))); 
+    exp_ge = (static_cast<float>(exp(gapExtend / temperature)));
 
     if (backtrace != 0) {
         blosum = nullptr;
@@ -333,8 +333,8 @@ void FwBwAligner::resetParams(float newGapOpen, float newGapExtend, float newTem
     gapOpen = newGapOpen;
     gapExtend = newGapExtend;
     temperature = newTemperature;
-    exp_go = simdf32_set(static_cast<float>(exp(gapOpen / temperature))); 
-    exp_ge = simdf32_set(static_cast<float>(exp(gapExtend / temperature)));
+    exp_go = (static_cast<float>(exp(gapOpen / temperature))); 
+    exp_ge = (static_cast<float>(exp(gapExtend / temperature)));
 
     for (size_t i = 0; i < length; ++i) { 
         vj[i] = exp(((length - 1) * gapExtend + gapOpen - i * gapExtend) / temperature);
@@ -420,7 +420,7 @@ void FwBwAligner::forward() {
         std::fill(zInit[i], zInit[i] + rowsCapacity, FLT_MIN_EXP); // rowsCapacity -> tlen
     }  
     max_zm = -std::numeric_limits<float>::max(); 
-    vMax_zm = simdf32_set(max_zm);
+    simd_float vMax_zm = simdf32_set(max_zm);
     P = nullptr; // reset p. do we need this?
     for (size_t b = 0; b < blocks; ++b) {
         size_t start = b * length;
@@ -476,8 +476,8 @@ void FwBwAligner::forward() {
                 simd_float vZmPrev = simdf32_loadu(&zmBlockPrev[j]);
                 simd_float vZf = simdf32_loadu(&zfBlock[j]);
                 simd_float vZfUpdate = simdf32_add(
-                                        simdf32_mul(vZmPrev, exp_go),
-                                        simdf32_mul(vZf, exp_ge)
+                                        simdf32_mul(vZmPrev, simdf32_set(exp_go)),
+                                        simdf32_mul(vZf, simdf32_set(exp_ge))
                                         );
                 vZfUpdate = simdf32_div(vZfUpdate, vZmMaxRowBlock);
                 simdf32_storeu(&zfBlock[j], vZfUpdate);
@@ -693,8 +693,8 @@ void FwBwAligner::backward()  {
                 simd_float vZmPrev = simdf32_loadu(&zmBlockPrev[j]);
                 simd_float vZf = simdf32_loadu(&zfBlock[j]);
                 simd_float vZfUpdate = simdf32_add(
-                                        simdf32_mul(vZmPrev, exp_go),
-                                        simdf32_mul(vZf, exp_ge)
+                                        simdf32_mul(vZmPrev, simdf32_set(exp_go)),
+                                        simdf32_mul(vZf, simdf32_set(exp_ge))
                                         );
                 vZfUpdate = simdf32_div(vZfUpdate, vZmMaxRowBlock);
                 simdf32_storeu(&zfBlock[j], vZfUpdate);

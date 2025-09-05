@@ -28,6 +28,7 @@ if(NOT XCODE AND NOT MSVC AND NOT CMAKE_BUILD_TYPE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+
 set(FRAMEWORK_ONLY 1 CACHE INTERNAL "" FORCE)
 include(MMseqsSetupDerivedTarget)
 add_subdirectory(lib/mmseqs EXCLUDE_FROM_ALL)
