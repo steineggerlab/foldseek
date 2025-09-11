@@ -724,11 +724,6 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                     continue;
                 }
 
-                if (saveResIndex) {
-                    int tmpResId = static_cast<int>(res.label_seq);
-                    unsigned int resId = unsigned(tmpResId);
-                    resIds.push_back(resId);
-                }
                 Vec3 ca_atom = {NAN, NAN, NAN};
                 Vec3 cb_atom = {NAN, NAN, NAN};
                 Vec3 n_atom  = {NAN, NAN, NAN};
@@ -766,6 +761,20 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 c.push_back(c_atom);
 
                 ami.push_back(threeToOneAA(res.name));
+
+                if (saveResIndex) {
+                    if (!res.label_seq){
+                        int tmpResId = static_cast<int>(res.seqid.num);
+                        unsigned int resId = unsigned(tmpResId);
+                        resIds.push_back(resId);
+                    }
+                    else {
+                        int tmpResId = static_cast<int>(res.label_seq);
+                        unsigned int resId = unsigned(tmpResId);
+                        resIds.push_back(resId);
+                    }
+                    //std::cout << ch.name << " " << resId << std::endl;
+                }
 
                 if (taxId == -1) {
                     auto it = entity_to_tax_id.find(res.entity_id);
