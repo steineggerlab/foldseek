@@ -42,17 +42,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY_PAR} \
         || fail "rmdb died"
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimer_result_query_multimerdb" ${VERBOSITY_PAR} \
-        || fail "rmdb died"
-    rm -f -- "${TMP_PATH}/chain_db_h.tsv"
-    rm -f -- "${TMP_PATH}/chain_db.tsv"
-    rm -f -- "${TMP_PATH}/multimer.tsv"
-    rm -f -- "${TMP_PATH}/multimer_header.tsv"
     rm -rf -- "${TMP_PATH}/multimersearch_tmp"
-    rm -f -- "${TMP_PATH}/multimer_db.lookuptmp"
-    rm -f -- "${TMP_PATH}/multimer_db.sourcetmp"
-    rm -f -- "${TMP_PATH}/multimer_db.indextmp2"
-    rm -f -- "${TMP_PATH}/multimer_db.indextmp"
     rm -f -- "${TMP_PATH}/multimercluster.sh"
 fi

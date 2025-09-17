@@ -59,6 +59,14 @@ mapCmplName2ChainKeys() {
     ' "${1}" "${2}.source" "${2}.lookup" > "${3}"
 }
 
+checkifIndb(){
+    awk 'FNR==NR{name[$1]=1; next}{
+        if($1 in name){
+            print
+        }
+    }' "${1}.index" "${2}" > "${3}"
+} 
+
 postprocessFasta() {
     awk ' BEGIN {FS=">"}
     $0 ~/^>/ {
@@ -112,9 +120,10 @@ if notExists "${TMP_PATH}/cluster.tsv"; then
 fi
 
 if notExists "${TMP_PATH}/multimer_rep_seqs.dbtype"; then
-    mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${QUERY}" "${TMP_PATH}/rep_seqs.list" 
+    mapCmplName2ChainKeys "${TMP_PATH}/cluster.tsv" "${QUERY}" "${TMP_PATH}/rep_seqs.list"
+    checkifIndb "${QUERY}" "${TMP_PATH}/rep_seqs.list" "${TMP_PATH}/rep_seqs.list2"
     # shellcheck disable=SC2086
-    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list" "${QUERY}" "${TMP_PATH}/multimer_rep_seqs" ${CREATESUBDB_PAR} \
+    "$MMSEQS" createsubdb "${TMP_PATH}/rep_seqs.list2" "${QUERY}" "${TMP_PATH}/multimer_rep_seqs" ${CREATESUBDB_PAR} \
         || fail "createsubdb died"
 fi
 
@@ -142,10 +151,6 @@ mv -f -- "${TMP_PATH}/cluster.tsv" "${RESULT}_cluster.tsv"
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/multimercluster_tmp/latest/multimer_result_query_multimerdb" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
-    # "$MMSEQS" rmdb "${TMP_PATH}/multimer_clu_seqs" ${VERBOSITY_PAR}
-    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs" ${VERBOSITY_PAR}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_rep_seqs_ss" ${VERBOSITY_PAR}
@@ -169,5 +174,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/query_ss" ${VERBOSITY_PAR}
     rm -rf -- "${TMP_PATH}/multimercluster_tmp"
     rm -f -- "${TMP_PATH}/rep_seqs.list"
+    rm -f -- "${TMP_PATH}/rep_seqs.list2"
     rm -f -- "${TMP_PATH}/easymultimercluster.sh"
 fi

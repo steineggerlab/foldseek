@@ -799,20 +799,19 @@ public:
         }
     }
 
-    bool hasChainTm(float chainTmThr, int covMode, int minAlignedChains) {
+    bool hasChainTm(float chainTmThr, int covMode, int minAlignedChains, unsigned int qChainNum, unsigned int tChainNum) {
         int num = 0;
         switch (covMode) {
             case Parameters::COV_MODE_BIDIRECTIONAL:
-                for (size_t i = 0; i < qAlnChainTms.size(); i++) {
-                    if (qAlnChainTms[i] >= chainTmThr && tAlnChainTms[i] >= chainTmThr) {
-                        num++;
-                    }
-                }
-                if(num >= minAlignedChains) {
-                    return true;
-                } else {
+                if (qAlnChainTms.size()<std::min(qChainNum, tChainNum)) {
                     return false;
                 }
+                for (size_t i = 0; i < qAlnChainTms.size(); i++) {
+                    if (qAlnChainTms[i] < chainTmThr || tAlnChainTms[i] < chainTmThr) {
+                        return false;
+                    }
+                }
+                return true;
                 break;
             case Parameters::COV_MODE_TARGET:
                 for (size_t i = 0; i < tAlnChainTms.size(); i++) {
@@ -843,18 +842,18 @@ public:
         }
     }
 
-    // bool hasChainNum(int covMode, unsigned int qChainNum, unsigned int tChainNum) {
-    //     switch (covMode) {
-    //         case Parameters::COV_MODE_BIDIRECTIONAL:
-    //             if (qChainNum != tChainNum) {
-    //                 return false;
-    //             }
-    //             break;
-    //         default:
-    //             return true;
-    //     }
-    //     return true;
-    // }
+    bool hasChainNum(int covMode, unsigned int qChainNum, unsigned int tChainNum) {
+        switch (covMode) {
+            case Parameters::COV_MODE_BIDIRECTIONAL:
+                if (qChainNum != tChainNum) {
+                    return false;
+                }
+                break;
+            default:
+                return true;
+        }
+        return true;
+    }
 
     bool hasInterfaceLDDT(float iLddtThr) {
         return(interfaceLddt >= iLddtThr);
@@ -867,16 +866,16 @@ public:
         return false;
     }
 
-    bool satisfy_first(int covMode, float covThr, float TmThr, int minAlignedChains) {
+    bool satisfy_first(int covMode, float covThr, float TmThr, int minAlignedChains, unsigned int qChainNum, unsigned int tChainNum) {
         const bool covOK = covThr ? Util::hasCoverage(covThr, covMode, qCov, tCov) : true;
         const bool TmOK = TmThr ? hasTm(TmThr, covMode) : true;
-        // const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
+        const bool chainNumOK = hasChainNum(covMode, qChainNum, tChainNum);
         const bool alnChainNumOK = hasAlnChainNum(minAlignedChains);
-        return (covOK && TmOK && alnChainNumOK); 
+        return (covOK && TmOK && alnChainNumOK && chainNumOK); 
     }
 
-    bool satisfy_second(int covMode, float chainTmThr, float iLddtThr, int minAlignedChains) {
-        const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, minAlignedChains) : true; 
+    bool satisfy_second(int covMode, float chainTmThr, float iLddtThr, int minAlignedChains, unsigned int qChainNum, unsigned int tChainNum) {
+        const bool chainTmOK = chainTmThr ? hasChainTm(chainTmThr, covMode, minAlignedChains, qChainNum, tChainNum) : true; 
         const bool lddtOK = iLddtThr ? hasInterfaceLDDT(iLddtThr) : true; 
         return (chainTmOK && lddtOK); 
     }
@@ -1038,10 +1037,6 @@ std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit , float filtinterf
     result.append("\t");
     result.append(SSTR(cmplfiltcrit.tCov));
     result.append("\t");
-    // result.append(SSTR(cmplfiltcrit.qTm));
-    // result.append("\t");
-    // result.append(SSTR(cmplfiltcrit.tTm));
-    // result.append("\t");
 
     for (unsigned int i = 0; i < cmplfiltcrit.qAlnChainTms.size(); i++) {
         result.append(SSTR(cmplfiltcrit.qAlnChainTms[i]));
@@ -1071,31 +1066,6 @@ std::string filterToBuffer(ComplexFilterCriteria cmplfiltcrit , float filtinterf
         result.append(SSTR(cmplfiltcrit.interfaceLddt));
     }
     result.append("\t");
-
-    // result.append(SSTR(cmplfiltcrit.u[0][0]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[0][1]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[0][2]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[1][0]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[1][1]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[1][2]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[2][0]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[2][1]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.u[2][2]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.t[0]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.t[1]));
-    // result.append(",");
-    // result.append(SSTR(cmplfiltcrit.t[2]));
-    // result.append("\n");
     return result;
 }
 
@@ -1365,6 +1335,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                     resultToWriteLines[currIdx].emplace_back(buffer);
                 }
             }
+            // Writing and reading resultToWriteLines could be revised further. Not efficient now.
             for (size_t qChainIdx = 0; qChainIdx < qChainKeys.size(); qChainIdx++) {
                 std::vector<resultToWrite_t> &resultToWrites = resultToWriteLines[qChainIdx];
                 for (size_t resultIdx = 0; resultIdx < resultToWrites.size(); resultIdx++) {
@@ -1405,7 +1376,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 Complex  &tComplex = dbComplexes[dbComplexIdx];
                 cmplfiltcrit.calcCov(qComplex.complexLength, tComplex.complexLength);
 
-                if (!(cmplfiltcrit.satisfy_first(par.covMode, par.covThr, par.tmScoreThr, par.minAlignedChains))) {
+                if (!(cmplfiltcrit.satisfy_first(par.covMode, par.covThr, par.tmScoreThr, par.minAlignedChains, qComplex.nChain, tComplex.nChain))) {
                     continue;
                 }
                 if (par.filtChainTmThr || par.filtInterfaceLddtThr) { // TODO: Recover
@@ -1460,7 +1431,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                         cmplfiltcrit.computeInterfaceLddt(qAlnCoords, tAlnCoords, interfaceLength);
                     }
 
-                    if (!(cmplfiltcrit.satisfy_second(par.covMode, par.filtChainTmThr, par.filtInterfaceLddtThr, par.minAlignedChains))) {
+                    if (!(cmplfiltcrit.satisfy_second(par.covMode, par.filtChainTmThr, par.filtInterfaceLddtThr, par.minAlignedChains, qComplex.nChain, tComplex.nChain))) {
                         continue;
                     }
                 }
@@ -1547,6 +1518,5 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     qComplexes.clear();
     dbComplexes.clear();
     resultWriter.close(false);
-    // resultinfoWriter.close(false);
     return EXIT_SUCCESS;
 }
