@@ -348,10 +348,10 @@ LocalParameters::LocalParameters() :
     eValueThrExpandMultimer = 10000.0;
     multimerReportMode = 1;
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
-    distanceThreshold = 8.0;
+    distanceThreshold = 10.0;
     // filtMultimerTmThr = 0.0;
-    filtChainTmThr = 0.0;
-    filtInterfaceLddtThr = 0.0;
+    filtChainTmThr = 0.1;
+    filtInterfaceLddtThr = 0.1;
     minAlignedChains = 2;
 
     // LoLalign
