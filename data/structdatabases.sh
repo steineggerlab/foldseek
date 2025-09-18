@@ -262,7 +262,7 @@ case "${INPUT_TYPE}" in
         mv -f -- "${IN}_taxonomy" "${OUTDB}_taxonomy"
         if [ -e "${IN}_seq.dbtype" ]; then
             mv -f -- "${IN}_seq_mapping" "${OUTDB}_seq_mapping"
-            mv -f -- "${IN}_seqㄴ" "${OUTDB}_seq_taxonomy"
+            mv -f -- "${IN}_seq_taxonomy" "${OUTDB}_seq_taxonomy"
         fi
     ;;
 esac

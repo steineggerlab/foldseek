@@ -1375,7 +1375,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 unsigned int dbComplexIdx = dbComplexIdToIdx.at(tComplexId);
                 Complex  &tComplex = dbComplexes[dbComplexIdx];
                 cmplfiltcrit.calcCov(qComplex.complexLength, tComplex.complexLength);
-
                 if (!(cmplfiltcrit.satisfy_first(par.covMode, par.covThr, par.tmScoreThr, par.minAlignedChains, qComplex.nChain, tComplex.nChain))) {
                     continue;
                 }

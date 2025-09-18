@@ -228,9 +228,8 @@ static void getKeyToIdMapIdToKeysMapIdVec(
                 complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
                 complexIdVec.emplace_back(complexId);
                 isVistedSet[complexId] = 1;
-                complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
             }
-            
+            complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
         }
         data = Util::skipLine(data);
     }
