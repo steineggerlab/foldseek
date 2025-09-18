@@ -183,7 +183,6 @@ auto getChainId(ReaderType &dbr, unsigned int chainKey) -> decltype(dbr.sequence
 
 template <typename ReaderType>
 static void getKeyToIdMapIdToKeysMapIdVec(
-    DBReader<unsigned int> &alnDbr,
     ReaderType &dbr,
     const std::string &file,
     std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -225,12 +224,10 @@ static void getKeyToIdMapIdToKeysMapIdVec(
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
             size_t complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
-            if(complexId < isVistedSet.size()){
-                if (isVistedSet[complexId] == 0){
-                    complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
-                    complexIdVec.emplace_back(complexId);
-                    isVistedSet[complexId] = 1;
-                }
+            if (isVistedSet[complexId] == 0){
+                complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
+                complexIdVec.emplace_back(complexId);
+                isVistedSet[complexId] = 1;
                 complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
             }
             
