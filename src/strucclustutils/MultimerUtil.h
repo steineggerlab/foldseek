@@ -183,6 +183,7 @@ auto getChainId(ReaderType &dbr, unsigned int chainKey) -> decltype(dbr.sequence
 
 template <typename ReaderType>
 static void getKeyToIdMapIdToKeysMapIdVec(
+    DBReader<unsigned int> &alnDbr,
     ReaderType &dbr,
     const std::string &file,
     std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,

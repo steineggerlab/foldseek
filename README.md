@@ -12,6 +12,11 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets,
 
 [Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, doi: 10.1101/2024.11.13.623350 (2024)](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1)
 
+[![BioConda Install](https://img.shields.io/conda/dn/bioconda/foldseek.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/foldseek) 
+[![Github All Releases](https://img.shields.io/github/downloads/steineggerlab/foldseek/total.svg)](https://github.com/steineggerlab/foldseek/releases/latest) 
+[![Biocontainer Pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fmmseqs.com%2Fbiocontainer.php%3Fcontainer%3Dfoldseek)](https://biocontainers.pro/#/tools/foldseek) 
+[![Build Status](https://dev.azure.com/themartinsteinegger/foldseek/_apis/build/status/steineggerlab.foldseek?branchName=master)](https://dev.azure.com/themartinsteinegger/foldseek/_build/latest?definitionId=2&branchName=master)
+
 # Table of Contents
 
 - [Foldseek](#foldseek)
