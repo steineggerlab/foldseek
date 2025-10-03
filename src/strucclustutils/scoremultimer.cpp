@@ -489,6 +489,9 @@ public:
         maxResLen = maxChainLen * 2;
         tmAligner = new TMaligner(maxResLen, false, true, false);
     }
+    ~ComplexScorer() {
+        delete tmAligner;
+    }
 
     void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
         hasBacktrace = false;
@@ -591,10 +594,6 @@ public:
             assignment.reset();
         }
         finalClusters.clear();
-    }
-
-    void free() {
-        delete tmAligner;
     }
 
 private:
@@ -1021,12 +1020,10 @@ public:
             // }    
 
         std::string bt(intAlnLen, 'M');
-        LDDTCalculator *lddtcalculator = NULL;
-        lddtcalculator = new LDDTCalculator(intAlnLen+1, intAlnLen+1);
-        lddtcalculator->initQuery(intAlnLen, &qInterface.x[0], &qInterface.y[0], &qInterface.z[0]);
-        LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator->computeLDDTScore(intAlnLen, 0, 0, bt, &tInterface.x[0], &tInterface.y[0], &tInterface.z[0]);
+        LDDTCalculator lddtcalculator(intAlnLen+1, intAlnLen+1);
+        lddtcalculator.initQuery(intAlnLen, &qInterface.x[0], &qInterface.y[0], &qInterface.z[0]);
+        LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator.computeLDDTScore(intAlnLen, 0, 0, bt, &tInterface.x[0], &tInterface.y[0], &tInterface.z[0]);
         interfaceLddt = lddtres.avgLddtScore * lddtres.scoreLength / interfaceLength;
-        delete lddtcalculator;
     }
 };
 
@@ -1224,23 +1221,22 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
 
     std::string t3DiDbrName =  StructureUtil::getIndexWithSuffix(par.db2, "_ss");
     bool is3DiIdx = Parameters::isEqualDbtype(FileUtil::parseDbType(t3DiDbrName.c_str()), Parameters::DBTYPE_INDEX_DB);
-    IndexReader* t3DiDbr = NULL;
-    DBReader<unsigned int> *tCaDbr = NULL;
-    t3DiDbr = new IndexReader(
-            is3DiIdx ? t3DiDbrName : par.db2,
-            par.threads,
-            needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
-            touch ? IndexReader::PRELOAD_INDEX : 0,
-            DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
-            needSrc ? "_seq_ss" : "_ss"
+    IndexReader* t3DiDbr = new IndexReader(
+        is3DiIdx ? t3DiDbrName : par.db2,
+        par.threads,
+        needSrc ? IndexReader::SRC_SEQUENCES : IndexReader::SEQUENCES,
+        touch ? IndexReader::PRELOAD_INDEX : 0,
+        DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
+        needSrc ? "_seq_ss" : "_ss"
     );
-    tCaDbr = new DBReader<unsigned int>(
+    DBReader<unsigned int>* tCaDbr = new DBReader<unsigned int>(
         needSrc? (par.db2 + "_seq_ca").c_str() : (par.db2 + "_ca").c_str(), 
         needSrc? (par.db2 + "_seq_ca.index").c_str() : (par.db2 + "_ca.index").c_str(),
         par.threads,
-        DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-
+        DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA
+    );
     tCaDbr->open(DBReader<unsigned int>::NOSORT);
+
     IndexReader* q3DiDbr = NULL;
     DBReader<unsigned int> *qCaDbr = NULL;
     bool sameDB = false;
@@ -1311,8 +1307,9 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::map<std::vector<unsigned int>, unsigned int> qalnchain2intlen;
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX)
+            if (monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX) {
                 continue;
+            }
             complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
             // for each db complex
             for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
@@ -1499,23 +1496,16 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             searchResults.clear();
             progress.updateProgress();
         }
-        complexScorer.free();
     }
-
-    qComplexIndices.clear();
-    dbComplexIndices.clear();
-    qChainKeyToComplexIdMap.clear();
-    dbChainKeyToComplexIdMap.clear();
-    dbComplexIdToChainKeysMap.clear();
-    qComplexIdToChainKeysMap.clear();
     alnDbr.close();
     delete t3DiDbr;
+    tCaDbr->close();
+    delete tCaDbr;
     if (!sameDB) {
         delete q3DiDbr;
+        qCaDbr->close();
         delete qCaDbr;
     }
-    qComplexes.clear();
-    dbComplexes.clear();
-    resultWriter.close(false);
+    resultWriter.close();
     return EXIT_SUCCESS;
 }

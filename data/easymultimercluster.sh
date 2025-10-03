@@ -59,13 +59,9 @@ mapCmplName2ChainKeys() {
     ' "${1}" "${2}.source" "${2}.lookup" > "${3}"
 }
 
-checkifIndb(){
-    awk 'FNR==NR{name[$1]=1; next}{
-        if($1 in name){
-            print
-        }
-    }' "${1}.index" "${2}" > "${3}"
-} 
+checkifIndb() {
+    awk 'FNR == NR { name[$1] = 1; next } $1 in name { print }' "${1}.index" "${2}" > "${3}"
+}
 
 postprocessFasta() {
     awk ' BEGIN {FS=">"}
