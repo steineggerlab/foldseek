@@ -225,7 +225,7 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
                     }
                 }
                 else{
-                    if (alignProb >= maxScore) {
+                    if (alignProb > maxScore) {
                         maxScore = alignProb;
                         maxIndexX = i;
                         maxIndexY = j;
@@ -233,7 +233,12 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
                 }
 
             }
+            if (maxScore == 1){
+                break;
+            }
+
         }
+
 
 
 
@@ -698,8 +703,8 @@ void LoLAlign::initQuery(float* x, float* y, float* z, Sequence& qSeqAA, Sequenc
         delete[] finalAnchorTarget;
     }
 
-    finalAnchorQuery = new int[maxTLen];
-    finalAnchorTarget = new int[maxTLen];
+    finalAnchorQuery = new int[std::max(queryLen, maxTLen)];
+    finalAnchorTarget = new int[std::max(queryLen, maxTLen)];
     if(queryLen < 10){
         startAnchorLength = 0;
     }

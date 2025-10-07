@@ -141,7 +141,6 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
     } else {
         tmaligner.resize(par.threads);
     }
-    
 
 #pragma omp parallel
     {
@@ -152,7 +151,7 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
         if (runLoLAlign) {
             lolaligner[thread_idx] = new LoLAlign(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,
                                                        tdbr->sequenceReader->getMaxSeqLen() + 1), false);
-            fwbwAligner[thread_idx] = new FwBwAligner(-par.fwbwGapopen, -par.fwbwGapextend, par.temperature, 0, tdbr->sequenceReader->getMaxSeqLen() + 1, tdbr->sequenceReader->getMaxSeqLen() + 1, par.blocklen, 0);                
+            fwbwAligner[thread_idx] = new FwBwAligner(-par.fwbwGapopen, -par.fwbwGapextend, par.temperature, 0, qdbr.sequenceReader->getMaxSeqLen() + 1, tdbr->sequenceReader->getMaxSeqLen() + 1, par.blocklen, 0);                
             tSeqAAs[thread_idx] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, subMatAA, 0, false, par.compBiasCorrection);
             tSeq3Dis[thread_idx] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, subMat3Di, 0, false, par.compBiasCorrection);
            
