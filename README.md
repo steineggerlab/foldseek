@@ -159,7 +159,7 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | --gpu               | Performance | Enables fast GPU-accelerated ungapped prefilter (`--prefilter-mode 1`) (default: off), ignores `-s`. Use `--gpu 1` to enable.          |
 
 #### Alignment Mode
-By default, Foldseek uses its local 3Di+AA structural alignment but it also supports realigning hits using the global TMalign or local LoLalign as well as rescoring alignments using TMscore or LoLscore respectivly. 
+By default, Foldseek uses its local 3Di+AA structural alignment, but it also supports realigning hits using the global TMalign or local LoLalign, as well as rescoring alignments using TMscore or LoLscore respectively.
 
     foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 
