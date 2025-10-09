@@ -158,18 +158,19 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | --max-seqs          | Sensitivity | Adjust the amount of prefilter handed to alignment; increasing it can lead to more hits (default: 1000)                                |
 | -e                  | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                         |
 | --cluster-search     | Sensitivity   | For clustered databases like AFDB50, CATH50 trigger a cluster search: 0: search only representatives (fast), 1: align and report also all members of a cluster (default: 0)                                                           |
-| --alignment-type    | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default)       |
+| --alignment-type    | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default), 3: LoLalign (local, slow)       |
 | -c                  | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode          | Alignment   | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                                                           |
-
 | --gpu               | Performance | Enables fast GPU-accelerated ungapped prefilter (`--prefilter-mode 1`) (default: off), ignores `-s`. Use `--gpu 1` to enable.          |
 
 #### Alignment Mode
-By default, Foldseek uses its local 3Di+AA structural alignment but it also supports realigning hits using the global TMalign as well as rescoring alignments using TMscore. 
+By default, Foldseek uses its local 3Di+AA structural alignment, but it also supports realigning hits using the global TMalign or local LoLalign, as well as rescoring alignments using TMscore or LoLscore respectively.
 
     foldseek easy-search example/d1asha_ example/ aln tmp --alignment-type 1
 
 If alignment type is set to tmalign (`--alignment-type 1`), the results will be sorted by the TMscore normalized by query length. The TMscore is used for reporting two fields: the e-value=(qTMscore+tTMscore)/2 and the score=(qTMscore*100). All output fields (e.g., pident, fident, and alnlen) are calculated based on the TMalign alignment.
+
+If alignment type is set to lolalign (`--alignment-type 3`), the result will be sorted by the LoLscore, a novel alignment log-odds score without length normalization. When set to single domain mode (`--lolalign-multidomain 0`) the query and target lengths are incorporated. The e-value is a normalized LoLscore (<= 1) while the score is unnormalized. All output fields (e.g., pident, fident, and alnlen) are calculated based on the LoLalign alignment.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
