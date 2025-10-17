@@ -350,8 +350,8 @@ LocalParameters::LocalParameters() :
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
     distanceThreshold = 10.0;
     // filtMultimerTmThr = 0.0;
-    filtChainTmThr = 0.1;
-    filtInterfaceLddtThr = 0.1;
+    filtChainTmThr = 0.3;
+    filtInterfaceLddtThr = 0;
     minAlignedChains = 2;
 
     // LoLalign
