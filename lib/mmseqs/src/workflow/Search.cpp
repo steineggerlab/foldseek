@@ -385,11 +385,9 @@ int search(int argc, const char **argv, const Command& command) {
         cmd.addVariable("FILTER_RESULT", par.exhaustiveFilterMsa == 1 ? "1" : "0");
         if (isUngappedMode) {
             par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
-            par.compBiasCorrectionScale = 0.5;
             cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.rescorediagonal).c_str());
             par.rescoreMode = originalRescoreMode;
         } else {
-            par.compBiasCorrectionScale = 0.5;
             cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
             par.alignmentOutputMode = Parameters::ALIGNMENT_OUTPUT_CLUSTER;
             cmd.addVariable("ALIGNMENT_IT_PAR", par.createParameterString(par.align).c_str());
@@ -442,12 +440,10 @@ int search(int argc, const char **argv, const Command& command) {
             }
             if (isUngappedMode) {
                 par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
-                par.compBiasCorrectionScale = 0.5;
                 cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(),
                                 par.createParameterString(par.rescorediagonal).c_str());
                 par.rescoreMode = originalRescoreMode;
             } else {
-                par.compBiasCorrectionScale = 0.5;
                 cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(),
                                 par.createParameterString(par.align).c_str());
             }
@@ -455,7 +451,6 @@ int search(int argc, const char **argv, const Command& command) {
         FileUtil::writeFile(tmpDir + "/iterativepp.sh", iterativepp_sh, iterativepp_sh_len);
         program = std::string(tmpDir + "/iterativepp.sh");
     } else if (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_PROFILE) {
-        par.compBiasCorrectionScale = 0.15;
         if (par.gpu != 0) {
             Debug(Debug::ERROR) << "No GPU support in target-side k-mer search\n";
             EXIT(EXIT_FAILURE);
@@ -468,11 +463,9 @@ int search(int argc, const char **argv, const Command& command) {
         par.covMode = Util::swapCoverageMode(par.covMode);
         if (isUngappedMode) {
             par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
-            par.compBiasCorrectionScale = 0.5;
             cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.rescorediagonal).c_str());
             par.rescoreMode = originalRescoreMode;
         } else {
-            par.compBiasCorrectionScale = 0.5;
             cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
         }
         par.covMode = originalCovMode;
@@ -510,12 +503,10 @@ int search(int argc, const char **argv, const Command& command) {
             }
             if (isUngappedMode) {
                 par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
-                par.compBiasCorrectionScale = 0.5;
                 cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(),
                                 par.createParameterString(par.rescorediagonal).c_str());
                 par.rescoreMode = originalRescoreMode;
             } else {
-                par.compBiasCorrectionScale = 0.5;
                 cmd.addVariable(std::string("ALIGNMENT_PAR_" + SSTR(i)).c_str(),
                                 par.createParameterString(par.align).c_str());
             }
@@ -568,11 +559,9 @@ int search(int argc, const char **argv, const Command& command) {
         }
         if (isUngappedMode) {
             par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
-            par.compBiasCorrectionScale = 0.5;
             cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.rescorediagonal).c_str());
             par.rescoreMode = originalRescoreMode;
         } else {
-            par.compBiasCorrectionScale = 0.5;
             cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
         }
         FileUtil::writeFile(tmpDir + "/blastp.sh", blastp_sh, blastp_sh_len);

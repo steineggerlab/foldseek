@@ -513,8 +513,6 @@ R"html(<!DOCTYPE html>
     }
 
     Debug::Progress progress(alnDbr.getSize());
-    std::vector<std::string> qChains;
-    std::vector<std::string> tChains;
 #pragma omp parallel num_threads(localThreads)
     {
         unsigned int thread_idx = 0;
@@ -1062,6 +1060,41 @@ R"html(<!DOCTYPE html>
                                             EXIT(EXIT_FAILURE);
                                         }
                                         result.append(retComplex.uString);
+                                        break;
+                                    case LocalParameters::OUTFMT_Q_COMPLEX_COV:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column qcomplexcoverage is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(SSTR(retComplex.qComplexCov));
+                                        break;
+                                    case LocalParameters::OUTFMT_T_COMPLEX_COV:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column tcomplexcoverage is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(SSTR(retComplex.tComplexCov));
+                                        break;
+                                    case LocalParameters::OUTFMT_COMPLEX_QCHAINTMS:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column qchaintms is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(retComplex.qChainTms);
+                                        break;
+                                    case LocalParameters::OUTFMT_COMPLEX_TCHAINTMS:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column tchaintms is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(retComplex.tChainTms);
+                                        break;
+                                    case LocalParameters::OUTFMT_INTERFACE_LDDT:
+                                        if (!retComplex.isValid) {
+                                            Debug(Debug::ERROR) << "The column interfacelddt is only for scorecomplex result.\n";
+                                            EXIT(EXIT_FAILURE);
+                                        }
+                                        result.append(retComplex.interfaceLddtScore);
                                         break;
                                 }
                                 if (i < outcodes.size() - 1) {

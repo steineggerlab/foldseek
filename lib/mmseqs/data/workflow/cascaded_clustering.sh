@@ -108,7 +108,7 @@ if [ -n "$REASSIGN" ]; then
     # align to cluster sequences
     if notExists "${TMP_PATH}/aln.dbtype"; then
         # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$SOURCE" "$SOURCE"c ${ALIGNMENT_REASSIGN_PAR} \
+        $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$SOURCE" "$SOURCE" "${TMP_PATH}/clu" "${TMP_PATH}/aln" ${ALIGNMENT_REASSIGN_PAR} \
                  || fail "align1 reassign died"
     fi
     # create file of cluster that do not align based on given criteria

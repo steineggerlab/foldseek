@@ -51,7 +51,7 @@ if [ "${CLUSEARCH_PAR}" = 0 ]; then
         fi
 
         rm -f -- "${OUT}.lookup"
-        awk 'FNR==NR{name[$1]=$2; next}{print name[$1]"\t"$2"\t"$3}' "${OUT}_ss.gpu_mapping1" "${IN}.lookup" | sort -nk1 > "${OUT}.lookup"
+        awk 'FNR == NR { name[$1] = $2; next } $1 in name { print name[$1]"\t"$2"\t"$3; }' "${OUT}_ss.gpu_mapping1" "${IN}.lookup" | sort -nk1 > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
     else
         if exists "${IN}.dbtype"; then
@@ -165,7 +165,7 @@ else
         fi
 
         rm -f -- "${OUT}.lookup"
-        awk 'FNR==NR{name[$1]=$2; next}{print name[$1]"\t"$2"\t"$3}' "${OUT}_ss.gpu_mapping1" "${IN}.lookup" | sort -nk1 > "${OUT}.lookup"
+        awk 'FNR == NR { name[$1] = $2; next } $1 in name { print name[$1]"\t"$2"\t"$3; }' "${OUT}_ss.gpu_mapping1" "${IN}.lookup" | sort -nk1 > "${OUT}.lookup"
         rm -f -- "${OUT}_ss.gpu_mapping1"
         rm -f -- "${OUT}_ss.gpu_mapping2"
         rm -f -- "${OUT}_seq"
