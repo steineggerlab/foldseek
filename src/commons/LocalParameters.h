@@ -159,6 +159,8 @@ public:
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
     PARAMETER(PARAM_MULTIDOMAIN)
+    PARAMETER(PARAM_HASH_ENTRY_NAMES)
+    PARAMETER(PARAM_PATHMAP)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -192,6 +194,8 @@ public:
     float distanceThreshold;
     int prostt5SplitLength;
     int multiDomain;
+    int hashEntryNames;
+    std::string pathmapFile;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

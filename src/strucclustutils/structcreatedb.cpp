@@ -16,6 +16,7 @@
 #include "Coordinate16.h"
 #include "itoa.h"
 #include "MathUtil.h"
+#include "PathHasher.h"
 
 #ifdef HAVE_PROSTT5
 #include "ProstT5.h"
@@ -463,13 +464,15 @@ void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, 
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
-                    std::vector<int8_t> & camol, std::string & header, 
+                    std::vector<int8_t> & camol, std::string & header,
                     DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
                     float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
                     size_t & fileidCnt, std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
                     std::map<size_t, std::string> & fileIdToName,
-                    DBWriter* mappingWriter) {
+                    DBWriter* mappingWriter,
+                    std::map<std::string, std::string> & hashToPathMapping,
+                    const std::string & originalFilePath) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
         compute3DiInterfaces(readStructure, pulchra, structureTo3Di, mat, chainNameMode, par.distanceThreshold);
@@ -529,11 +532,16 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     alphabetAA.push_back(readStructure.ami[chainStart+pos]);
                 }
             }
-            if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
-                header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
-            }
-            else {
-                header.append(Util::remove_extension(readStructure.names[ch]));
+            if (par.hashEntryNames) {
+                // Hash the full path to create a unique, alphanumeric ID
+                header.append(PathHasher::hashPath(readStructure.names[ch]));
+            } else {
+                if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
+                    header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
+                }
+                else {
+                    header.append(Util::remove_extension(readStructure.names[ch]));
+                }
             } 
             if (readStructure.modelCount > 1 || par.modelNameMode == LocalParameters::MODEL_MODE_ADD) {
                 header.append("_MODEL_");
@@ -572,6 +580,10 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
+            // Store hash-to-path mapping when hash mode is enabled
+            if (par.hashEntryNames && !originalFilePath.empty()) {
+                hashToPathMapping[entryName] = originalFilePath;
+            }
             if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN) {
                 std::string filenameWithExtension;
                 if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
@@ -940,6 +952,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     std::map<std::string, std::pair<size_t, unsigned int>> entrynameToFileId;
     std::map<size_t, std::string> fileIdToName;
     std::map<std::string, size_t> filenameToFileId;
+    std::map<std::string, std::string> hashToPathMapping; // Hash -> Full Path
 
     std::vector<std::string> tarFiles;
     std::vector<std::string> looseFiles;
@@ -1009,7 +1022,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
 #endif
 
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, hashToPathMapping, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -1151,7 +1164,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter
+                        mappingWriter,
+                        hashToPathMapping,
+                        name
                     );
                 }
             } // end while
@@ -1163,7 +1178,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, hashToPathMapping, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -1194,7 +1209,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                 par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                 globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                mappingWriter
+                mappingWriter,
+                hashToPathMapping,
+                looseFiles[i]
             );
         }
     }
@@ -1218,7 +1235,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter, hashToPathMapping) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1257,7 +1274,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                     alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                                     par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                                     globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                                    mappingWriter
+                                    mappingWriter,
+                                    hashToPathMapping,
+                                    obj_name
                                 );
                             }
                         }
@@ -1272,7 +1291,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, hashToPathMapping, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1308,7 +1327,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter
+                        mappingWriter,
+                        hashToPathMapping,
+                        name
                     );
                 }
             }
@@ -1533,6 +1554,30 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
         readerHeader.close();
     }
+
+    // Write path mapping file when hash-entry-names mode is enabled
+    if (par.hashEntryNames && !hashToPathMapping.empty()) {
+        std::string pathMappingFile = outputName + ".pathmap";
+        FILE* file = FileUtil::openAndDelete(pathMappingFile.c_str(), "w");
+        Debug(Debug::INFO) << "Writing path mapping file to " << pathMappingFile << "\n";
+
+        for (std::map<std::string, std::string>::const_iterator it = hashToPathMapping.begin();
+             it != hashToPathMapping.end(); ++it) {
+            std::string line = it->first + "\t" + it->second + "\n";
+            size_t written = fwrite(line.c_str(), sizeof(char), line.size(), file);
+            if (written != line.size()) {
+                Debug(Debug::ERROR) << "Cannot write to path mapping file " << pathMappingFile << "\n";
+                EXIT(EXIT_FAILURE);
+            }
+        }
+
+        if (fclose(file) != 0) {
+            Debug(Debug::ERROR) << "Cannot close path mapping file " << pathMappingFile << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+        Debug(Debug::INFO) << "Path mapping file written with " << hashToPathMapping.size() << " entries\n";
+    }
+
     if (globalCnt == 0) {
         Debug(Debug::ERROR) << "No structures found in given input.\n";
         EXIT(EXIT_FAILURE);
