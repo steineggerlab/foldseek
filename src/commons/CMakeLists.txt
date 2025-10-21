@@ -4,6 +4,8 @@ set(commons_source_files
         commons/LDDT.cpp
         commons/LocalParameters.h
         commons/LocalParameters.cpp
+        commons/PathHasher.h
+        commons/PathHasher.cpp
         commons/StructureUtil.h
         commons/TMaligner.cpp
         commons/TMaligner.h

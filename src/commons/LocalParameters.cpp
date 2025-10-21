@@ -40,7 +40,9 @@ LocalParameters::LocalParameters() :
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$")
+        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$"),
+        PARAM_HASH_ENTRY_NAMES(PARAM_HASH_ENTRY_NAMES_ID, "--hash-entry-names", "Hash entry names", "Use hash-based entry names from full paths:\n0: use basename (default)\n1: hash full path to base62", typeid(int), (void *) &hashEntryNames, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_PATHMAP(PARAM_PATHMAP_ID, "--pathmap", "Path mapping file", "Path mapping file to replace hashed IDs with full paths in results", typeid(std::string), (void *) &pathmapFile, "^.*$")
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -97,6 +99,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
     structurecreatedb.push_back(&PARAM_INPUT_FORMAT);
+    structurecreatedb.push_back(&PARAM_HASH_ENTRY_NAMES);
     // protein chain only
     structurecreatedb.push_back(&PARAM_FILE_INCLUDE);
     structurecreatedb.push_back(&PARAM_FILE_EXCLUDE);
@@ -104,6 +107,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_V);
 
     convertalignments.push_back(&PARAM_EXACT_TMSCORE);
+    convertalignments.push_back(&PARAM_PATHMAP);
 
     createindex.push_back(&PARAM_INDEX_EXCLUDE);
 
@@ -325,6 +329,8 @@ LocalParameters::LocalParameters() :
     fileExclude = "^$";
     prostt5SplitLength = 1024;
     prostt5Model = "";
+    hashEntryNames = 0;
+    pathmapFile = "";
 
     // search parameter
     alignmentType = ALIGNMENT_TYPE_3DI_AA;

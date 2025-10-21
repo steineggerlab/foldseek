@@ -24,6 +24,7 @@
 #include "LDDT.h"
 #include "CalcProbTP.h"
 #include <map>
+#include <fstream>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -210,6 +211,43 @@ std::map<unsigned int, std::string> structureReadSetToSource(const std::string& 
     return mapping;
 }
 
+std::map<std::string, std::string> loadPathmap(const std::string& pathmapFile) {
+    std::map<std::string, std::string> pathmap;
+    std::ifstream file(pathmapFile);
+
+    if (!file.is_open()) {
+        Debug(Debug::WARNING) << "Could not open pathmap file: " << pathmapFile << "\n";
+        return pathmap;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        // Skip empty lines
+        if (line.empty()) continue;
+
+        // Find tab separator
+        size_t tabPos = line.find('\t');
+        if (tabPos == std::string::npos) {
+            Debug(Debug::WARNING) << "Invalid pathmap line (no tab): " << line << "\n";
+            continue;
+        }
+
+        std::string hash = line.substr(0, tabPos);
+        std::string path = line.substr(tabPos + 1);
+
+        // Remove trailing newline if present
+        if (!path.empty() && path[path.length() - 1] == '\n') {
+            path.erase(path.length() - 1);
+        }
+
+        pathmap[hash] = path;
+    }
+
+    file.close();
+    Debug(Debug::INFO) << "Loaded " << pathmap.size() << " entries from pathmap file\n";
+    return pathmap;
+}
+
 int structureconvertalis(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
@@ -277,6 +315,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
         std::string file2 = par.db2 + ".source";
         qSetToSource = structureReadSetToSource(file1);
         tSetToSource = structureReadSetToSource(file2);
+    }
+
+    // Load pathmap if provided
+    std::map<std::string, std::string> pathmap;
+    if (!par.pathmapFile.empty()) {
+        pathmap = loadPathmap(par.pathmapFile);
     }
 
     IndexReader qDbr(par.db1, par.threads,  IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0, dbaccessMode);
@@ -446,6 +490,12 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
                     unsigned int tHeaderId = tDbrHeader->sequenceReader->getId(dbKey);
                     const char *tHeader = tDbrHeader->sequenceReader->getData(tHeaderId, 0);
                     std::string targetId = Util::parseFastaHeader(tHeader);
+
+                    // Replace with full path from pathmap if available
+                    if (!pathmap.empty() && pathmap.count(targetId)) {
+                        targetId = pathmap.at(targetId);
+                    }
+
                     int count = snprintf(buffer, sizeof(buffer), "@SQ\tSN:%s\tLN:%d\n", targetId.c_str(),
                                          (int32_t) seqLen);
                     if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
@@ -678,6 +728,11 @@ R"html(<!DOCTYPE html>
                 }
 
                 std::string targetId = Util::parseFastaHeader(tHeader);
+
+                // Replace with full path from pathmap if available
+                if (!pathmap.empty() && pathmap.count(targetId)) {
+                    targetId = pathmap.at(targetId);
+                }
 
                 unsigned int gapOpenCount = 0;
                 unsigned int alnLen = res.alnLength;
