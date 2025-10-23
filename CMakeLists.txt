@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 # keep old policy for setting implicit link libraries
 # zlib causes issues in static builds otherwise
-cmake_policy(SET CMP0060 OLD)
+if(CMAKE_VERSION VERSION_LESS "4.0")
+    cmake_policy(SET CMP0060 OLD)
+endif()
 cmake_policy(SET CMP0074 NEW)
 project(foldseek C CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lib/mmseqs/cmake")
