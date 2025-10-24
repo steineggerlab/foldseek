@@ -9,7 +9,7 @@
 #include <cstdint>
 
 static const int DB_READER_USE_DATA   = 1u << 0;
-static const int DB_READER_NO_CACHE   = 1u << 1;
+static const int DB_READER_CACHE   = 1u << 1;
 static const int DB_READER_USE_LOOKUP = 1u << 2;
 static const int DB_READER_USE_LOOKUP_REVERSE = 1u << 3;
 
