@@ -142,6 +142,7 @@ public:
     PARAMETER(PARAM_CHAIN_NAME_MODE)
     PARAMETER(PARAM_MODEL_NAME_MODE)
     PARAMETER(PARAM_WRITE_MAPPING)
+    PARAMETER(PARAM_WRITE_FOLDCOMP)
     PARAMETER(PARAM_TMALIGN_FAST)
     PARAMETER(PARAM_EXACT_TMSCORE)
     PARAMETER(PARAM_N_SAMPLE)
@@ -177,6 +178,7 @@ public:
     int chainNameMode;
     int modelNameMode;
     int writeMapping;
+    int writeFoldcomp;
     int tmAlignFast;
     int exactTMscore;
     int nsample;

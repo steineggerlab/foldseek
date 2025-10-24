@@ -576,6 +576,8 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
     chain.clear();
     names.clear();
     chainNames.clear();
+    chainStartResId.clear();
+    chainStartSerial.clear();
     modelIndices.clear();
     modelCount = 0;
     ca.clear();
@@ -608,6 +610,10 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
 
             names.push_back(name);
             int taxId = -1;
+
+            bool hasResId = false;
+            bool hasSerial = false;
+
             for (const gemmi::Residue &res : ch.first_conformer()) {
                 // only consider polymers and unknowns
                 if (res.entity_type != gemmi::EntityType::Polymer && res.entity_type != gemmi::EntityType::Unknown) {
@@ -618,13 +624,24 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                     continue;
                 }
 
+                if (hasResId == false) {
+                    chainStartResId.push_back(res.seqid.num.has_value() ? *res.seqid.num : 1);
+                    hasResId = true;
+                }
+
                 Vec3 ca_atom = {NAN, NAN, NAN};
                 Vec3 cb_atom = {NAN, NAN, NAN};
                 Vec3 n_atom  = {NAN, NAN, NAN};
                 Vec3 c_atom  = {NAN, NAN, NAN};
                 float ca_atom_bfactor = 0.0f;
+                int atom_serial = 0;
                 bool hasCA = false;
                 for (const gemmi::Atom &atom : res.atoms) {
+                    if (hasSerial == false) {
+                        chainStartSerial.push_back(atom.serial);
+                        hasSerial = true;
+                    }
+
                     if (atom.name == "CA") {
                         ca_atom.x = atom.pos.x;
                         ca_atom.y = atom.pos.y;
@@ -668,4 +685,52 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
             chain.push_back(std::make_pair(chainStartPos, currPos));
         }
     }
+}
+
+extern const char *singleLetterToThree(char singleLetterAminoacid);
+bool GemmiToFoldcomp(
+    const GemmiWrapper& gw,
+    size_t chainIndex,
+    std::string& outBlob,
+    int anchorResidueThreshold) {
+    outBlob.clear();
+
+    if (gw.chain.empty() || gw.ca.empty()) {
+        return false;
+    }
+
+    size_t ci = chainIndex;
+    const size_t start = gw.chain[ci].first;
+    const size_t end   = gw.chain[ci].second;
+    if (start >= end || end > gw.ca.size()) {
+        return false;
+    }
+
+    std::vector<AtomCoordinate> chainAtoms;
+    chainAtoms.reserve((end - start) * 3);
+
+    std::string chainName = gw.chainNames[ci];
+    int serial = gw.chainStartSerial[ci];
+    int resid  = gw.chainStartResId[ci];
+    for (size_t r = start; r < end; ++r, ++resid) {
+        const std::string resName = singleLetterToThree(gw.ami[r]);
+        chainAtoms.emplace_back("N", resName, chainName, serial++, resid, gw.n[r].x, gw.n[r].y, gw.n[r].z, 0.0f, 0.0f);
+        chainAtoms.emplace_back("CA", resName, chainName, serial++, resid, gw.ca[r].x, gw.ca[r].y, gw.ca[r].z, 0.0f, gw.ca_bfactor[r]);
+        chainAtoms.emplace_back("C", resName, chainName, serial++, resid, gw.c[r].x, gw.c[r].y, gw.c[r].z, 0.0f, 0.0f);
+        // chainAtoms.emplace_back("CB", resName, chainName, serial++, resid, gw.cb[r].x, gw.cb[r].y, gw.cb[r].z, 0.0f, 0.0f);
+    }
+
+    if (chainAtoms.empty()) {
+        return false;
+    }
+
+    Foldcomp comp;
+    comp.strTitle = gw.title;
+    comp.anchorThreshold = anchorResidueThreshold;
+    comp.compress(tcb::span<AtomCoordinate>(chainAtoms.data(), chainAtoms.size()));
+    std::ostringstream oss;
+    comp.writeStream(oss);
+    outBlob.assign(oss.str());
+
+    return true;
 }

@@ -469,7 +469,8 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     size_t & fileidCnt, std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
                     std::map<size_t, std::string> & fileIdToName,
-                    DBWriter* mappingWriter) {
+                    DBWriter* mappingWriter,
+                    DBWriter* foldcompWriter) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
         compute3DiInterfaces(readStructure, pulchra, structureTo3Di, mat, chainNameMode, par.distanceThreshold);
@@ -618,6 +619,12 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             std::string taxId = SSTR(readStructure.taxIds[ch]);
             taxId.append(1, '\n');
             mappingWriter->writeData(taxId.c_str(), taxId.size(), dbKey, thread_idx, false);
+        }
+
+        if (foldcompWriter != NULL) {
+            std::string foldcompStr;
+            GemmiToFoldcomp(readStructure, ch, foldcompStr);
+            foldcompWriter->writeData(foldcompStr.c_str(), foldcompStr.size(), dbKey, thread_idx, false);
         }
 
         float* camolf32;
@@ -938,6 +945,12 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         mappingWriter->open();
     }
 
+    DBWriter* foldcompWriter = NULL;
+    if (par.writeFoldcomp) {
+        foldcompWriter = new DBWriter((outputName+"_fcz").c_str(), (outputName+"_fcz.index").c_str(), static_cast<unsigned int>(par.threads), false, LocalParameters::DBTYPE_GENERIC_DB);
+        foldcompWriter->open();
+    }
+
     SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
     Debug::Progress progress(par.filenames.size());
     std::map<std::string, std::pair<size_t, unsigned int>> entrynameToFileId;
@@ -1010,7 +1023,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         int localThreads = par.threads;
 #endif
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -1150,7 +1163,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter
+                        mappingWriter, foldcompWriter
                     );
                 }
             } // end while
@@ -1164,7 +1177,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -1195,7 +1208,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                 par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                 globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                mappingWriter
+                mappingWriter, foldcompWriter
             );
         }
     }
@@ -1219,7 +1232,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter, foldcompWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1258,7 +1271,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                                     alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                                     par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                                     globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                                    mappingWriter
+                                    mappingWriter, foldcompWriter
                                 );
                             }
                         }
@@ -1273,7 +1286,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1309,7 +1322,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter
+                        mappingWriter, foldcompWriter
                     );
                 }
             }
@@ -1324,6 +1337,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     if (par.writeMapping) {
         mappingWriter->close(true);
         delete mappingWriter;
+    }
+    if (par.writeFoldcomp) {
+        foldcompWriter->close(true);
+        delete foldcompWriter;
     }
 
     if (needsReorderingAtTheEnd) {
@@ -1391,11 +1408,22 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             DBReader<unsigned int> mappingReader_reorder((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
             mappingReader_reorder.open(DBReader<unsigned int>::NOSORT);
             mappingReader_reorder.readMmapedDataInMemory();
-            DBWriter mappingWriter_reorder((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
+            DBWriter mappingWriter_reorder((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_OMIT_FILE);
             mappingWriter_reorder.open();
             reorderDbByIdOrder(mappingWriter_reorder, mappingReader_reorder, mappingOrder);
             mappingWriter_reorder.close(true);
             mappingReader_reorder.close();
+        }
+
+        if (par.writeFoldcomp) {
+            DBReader<unsigned int> foldcompReader_reorder((outputName+"_fcz").c_str(), (outputName+"_fcz.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+            foldcompReader_reorder.open(DBReader<unsigned int>::NOSORT);
+            foldcompReader_reorder.readMmapedDataInMemory();
+            DBWriter foldcompWriter_reorder((outputName+"_fcz").c_str(), (outputName+"_fcz.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_OMIT_FILE);
+            foldcompWriter_reorder.open();
+            reorderDbByIdOrder(foldcompWriter_reorder, foldcompReader_reorder, mappingOrder);
+            foldcompWriter_reorder.close(true);
+            foldcompReader_reorder.close();
         }
     } else {
         DBWriter::createRenumberedDB((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
@@ -1404,6 +1432,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBWriter::createRenumberedDB((outputName).c_str(), (outputName+".index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         if (par.writeMapping) {
             DBWriter::createRenumberedDB((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+        }
+        if (par.writeFoldcomp) {
+            DBWriter::createRenumberedDB((outputName+"_fcz").c_str(), (outputName+"_fcz.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         }
     }
 
@@ -1518,7 +1549,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         Debug(Debug::ERROR) << "No structures found in given input.\n";
         EXIT(EXIT_FAILURE);
     }
-    
+
     Debug(Debug::INFO) << "Ignore " << (tooShort+incorrectFiles+notProtein) << " out of " << globalCnt << ".\n";
     Debug(Debug::INFO) << "Too short: " << tooShort << ", incorrect: " << incorrectFiles << ", not proteins: " << notProtein << ".\n";
     return EXIT_SUCCESS;
