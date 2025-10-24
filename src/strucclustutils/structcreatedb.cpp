@@ -1047,7 +1047,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             size_t bufferSize = 1024 * 1024;
             char *dataBuffer = (char *) malloc(bufferSize);
             size_t inflateSize = 1024 * 1024;
-            char *inflateBuffer = (char *) malloc(inflateSize);
             bool proceed = true;
             PatternCompiler includeThread(par.fileInclude.c_str());
             PatternCompiler excludeThread(par.fileExclude.c_str());
@@ -1156,7 +1155,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     );
                 }
             } // end while
-            free(inflateBuffer);
+#ifdef HAVE_ZLIB
+            inflateEnd(&strm);
+#endif
             free(dataBuffer);
         } // end omp open
         mtar_close(&tar);
