@@ -258,14 +258,16 @@ char threeToOneAA(const std::string& three) {
 
 std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document& doc) {
     std::unordered_map<std::string, int> entity_to_taxid;
-    static const std::vector<std::pair<std::string, std::string>> loops_with_taxids = {
-        { "_entity_src_nat.", "?pdbx_ncbi_taxonomy_id"},
-        { "_entity_src_gen.", "?pdbx_gene_src_ncbi_taxonomy_id"},
-        { "_pdbx_entity_src_syn.", "?ncbi_taxonomy_id"}
+    static const std::vector<std::tuple<std::string, std::string, std::string>> loops_with_taxids = {
+        { "_entity_src_nat.", "?pdbx_ncbi_taxonomy_id", "entity_id"},
+        { "_entity_src_gen.", "?pdbx_gene_src_ncbi_taxonomy_id", "entity_id"},
+        { "_pdbx_entity_src_syn.", "?ncbi_taxonomy_id", "entity_id"},
+        // afdb
+        { "_ma_target_ref_db_details.", "?ncbi_taxonomy_id", "target_entity_id"},
     };
     for (gemmi::cif::Block& block : doc.blocks) {
-        for (auto&& [loop, taxid] : loops_with_taxids) {
-            for (auto row : block.find(loop, {"entity_id", taxid})) {
+        for (auto&& [loop, taxid, entity] : loops_with_taxids) {
+            for (auto row : block.find(loop, {entity, taxid})) {
                 if (row.has2(1) == false) {
                     continue;
                 }
