@@ -176,7 +176,7 @@ public:
     int alignmentType;
     int chainNameMode;
     int modelNameMode;
-    bool writeMapping;
+    int writeMapping;
     int tmAlignFast;
     int exactTMscore;
     int nsample;
