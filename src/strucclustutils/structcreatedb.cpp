@@ -659,8 +659,10 @@ cleanup:
     return entriesAdded;
 }
 
-void sortDatafileByIdOrder(DBWriter & dbw,
-                           DBReader<unsigned int> &dbr,  std::vector<std::pair<std::string, unsigned int>> & order) {
+void reorderDbByIdOrder(
+    DBWriter& dbw,
+    DBReader<unsigned int>& dbr,
+    std::vector<std::pair<std::string, unsigned int>>& order) {
 #pragma omp parallel
     {
         int thread_idx = 0;
@@ -673,7 +675,8 @@ void sortDatafileByIdOrder(DBWriter & dbw,
             size_t id = order[i].second;
             char *data = dbr.getData(id, thread_idx);
             size_t length = dbr.getEntryLen(id);
-            dbw.writeData(data, (length == 0 ? 0 : length - 1), dbr.getDbKey(id), thread_idx);
+            // replace key with new sequential key
+            dbw.writeData(data, length, i, thread_idx, false);
         }
     }
 }
@@ -979,6 +982,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
     // Process tar files!
     for (size_t i = 0; i < tarFiles.size(); i++) {
+        needsReorderingAtTheEnd = true;
         mtar_t tar;
         if (Util::endsWith(".tar.gz", tarFiles[i]) || Util::endsWith(".tgz", tarFiles[i])) {
 #ifdef HAVE_ZLIB
@@ -1002,13 +1006,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
         }
         progress.updateProgress();
+
 #ifdef OPENMP
         int localThreads = par.threads;
-        if (localThreads > 1) {
-            needsReorderingAtTheEnd = true;
-        }
 #endif
-
 #pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
@@ -1350,32 +1351,12 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 mappingOrder[i].second = i;
             }
         }
+
         SORT_PARALLEL(mappingOrder.begin(), mappingOrder.end());
-        std::string lookupFile = outputName + ".lookup";
-        FILE* file = FileUtil::openAndDelete(lookupFile.c_str(), "w");
-        std::string buffer;
-        buffer.reserve(2048);
-        for (unsigned int id = 0; id < header_reorder.getSize(); id++) {
-            DBReader<unsigned int>::LookupEntry entry;
-            entry.id = id;
-            entry.entryName = mappingOrder[id].first;
-            entry.fileNumber = 0;
-            header_reorder.lookupEntryToBuffer(buffer, entry);
-            size_t written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), file);
-            if (written != buffer.size()) {
-                Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
-                EXIT(EXIT_FAILURE);
-            }
-            buffer.clear();
-        }
-        if (fclose(file) != 0) {
-            Debug(Debug::ERROR) << "Cannot close lookup file " << lookupFile << "\n";
-            EXIT(EXIT_FAILURE);
-        }
 
         DBWriter hdbw_reorder((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
         hdbw_reorder.open();
-        sortDatafileByIdOrder(hdbw_reorder, header_reorder, mappingOrder);
+        reorderDbByIdOrder(hdbw_reorder, header_reorder, mappingOrder);
         hdbw_reorder.close(true);
         header_reorder.close();
 
@@ -1384,7 +1365,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         torsiondbr_reorder.readMmapedDataInMemory();
         DBWriter torsiondbw_reorder((outputName+"_ss").c_str(), (outputName+"_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
         torsiondbw_reorder.open();
-        sortDatafileByIdOrder(torsiondbw_reorder, torsiondbr_reorder, mappingOrder);
+        reorderDbByIdOrder(torsiondbw_reorder, torsiondbr_reorder, mappingOrder);
         torsiondbw_reorder.close(true);
         torsiondbr_reorder.close();
 
@@ -1393,7 +1374,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         cadbr_reorder.readMmapedDataInMemory();
         DBWriter cadbw_reorder((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
         cadbw_reorder.open();
-        sortDatafileByIdOrder(cadbw_reorder, cadbr_reorder, mappingOrder);
+        reorderDbByIdOrder(cadbw_reorder, cadbr_reorder, mappingOrder);
         cadbw_reorder.close(true);
         cadbr_reorder.close();
 
@@ -1402,7 +1383,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         aadbr_reorder.readMmapedDataInMemory();
         DBWriter aadbw_reorder((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
         aadbw_reorder.open();
-        sortDatafileByIdOrder(aadbw_reorder, aadbr_reorder, mappingOrder);
+        reorderDbByIdOrder(aadbw_reorder, aadbr_reorder, mappingOrder);
         aadbw_reorder.close(true);
         aadbr_reorder.close();
 
@@ -1412,7 +1393,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             mappingReader_reorder.readMmapedDataInMemory();
             DBWriter mappingWriter_reorder((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
             mappingWriter_reorder.open();
-            sortDatafileByIdOrder(mappingWriter_reorder, mappingReader_reorder, mappingOrder);
+            reorderDbByIdOrder(mappingWriter_reorder, mappingReader_reorder, mappingOrder);
             mappingWriter_reorder.close(true);
             mappingReader_reorder.close();
         }
