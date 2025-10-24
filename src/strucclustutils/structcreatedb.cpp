@@ -532,8 +532,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             }
             if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
                 header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
-            }
-            else {
+            } else {
                 header.append(Util::remove_extension(readStructure.names[ch]));
             } 
             if (readStructure.modelCount > 1 || par.modelNameMode == LocalParameters::MODEL_MODE_ADD) {
@@ -545,12 +544,14 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                 header.push_back('_');
                 header.append(readStructure.chainNames[ch]);
             }
-            if (readStructure.title.size() > 0) {
+            if (readStructure.title.empty() == false) {
                 header.push_back(' ');
                 header.append(readStructure.title);
+            } else if (readStructure.chainDescriptions[ch].empty() == false) {
+                header.push_back(' ');
+                header.append(readStructure.chainDescriptions[ch]);
             }
-        }
-        else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
+        } else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
             if (readStructure.names[ch] == "ALLX") {
                 notProtein++;
                 continue;

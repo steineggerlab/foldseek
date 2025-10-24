@@ -286,6 +286,29 @@ std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document&
     return entity_to_taxid;
 }
 
+std::unordered_map<std::string, std::string> getEntityDescriptionMapping(gemmi::cif::Document& doc) {
+    std::unordered_map<std::string, std::string> entity_to_description;
+    static const std::vector<std::tuple<std::string, std::string, std::string>> loops_with_desc = {
+        { "_entity.", "?pdbx_description", "id"},
+    };
+    for (gemmi::cif::Block& block : doc.blocks) {
+        for (auto&& [loop, taxid, entity] : loops_with_desc) {
+            for (auto row : block.find(loop, {entity, taxid})) {
+                if (row.has2(1) == false) {
+                    continue;
+                }
+                std::string entity_id = gemmi::cif::as_string(row[0]);
+                if (entity_to_description.find(entity_id) != entity_to_description.end()) {
+                    continue;
+                }
+                std::string description = gemmi::cif::as_string(row[1]);
+                entity_to_description.emplace(entity_id, description);
+            }
+        }
+    }
+    return entity_to_description;
+}
+
 GemmiWrapper::Format mapFormat(gemmi::CoorFormat format) {
     switch (format) {
         case gemmi::CoorFormat::Pdb:
@@ -333,6 +356,7 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
         }
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
+        std::unordered_map<std::string, std::string> entity_to_description;
         switch (format) {
             case Format::Mmcif: {
                 gemmi::CharArray mem = gemmi::read_into_buffer(infile);
@@ -357,25 +381,28 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
 
                 gemmi::cif::Document doc = gemmi::cif::read_memory(mem.data(), mem.size(), infile.path().c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
             }
             case Format::Mmjson: {
                 gemmi::cif::Document doc = gemmi::cif::read_mmjson(infile);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
             }
             case Format::ChemComp: {
                 gemmi::cif::Document doc = gemmi::cif::read(infile);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure_from_chemcomp_doc(doc);
                 break;
             }
             default:
                 st = gemmi::read_pdb(infile);
         }
-        updateStructure((void*) &st, filename, entity_to_tax_id);
+        updateStructure((void*) &st, filename, entity_to_tax_id, entity_to_description);
     } catch (...) {
         return false;
     }
@@ -423,6 +450,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
 
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
+        std::unordered_map<std::string, std::string> entity_to_description;
         switch (format) {
             case Format::Pdb:
                 st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(newBuffer, newBufferSize), newName, gemmi::PdbReadOptions());
@@ -455,6 +483,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 }
                 gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, newBufferSize, newName.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
             }
@@ -470,6 +499,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 bufferCopy[newBufferSize] = '\0';
                 gemmi::cif::Document doc = gemmi::cif::read_mmjson_insitu(bufferCopy, newBufferSize, newName);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 free(bufferCopy);
                 break;
@@ -477,13 +507,14 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             case Format::ChemComp: {
                 gemmi::cif::Document doc = gemmi::cif::read_memory(newBuffer, newBufferSize, newName.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure_from_chemcomp_doc(doc);
                 break;
             }
             default:
                 return false;
         }
-        updateStructure((void*) &st, newName, entity_to_tax_id);
+        updateStructure((void*) &st, newName, entity_to_tax_id, entity_to_description);
     } catch (...) {
         return false;
     }
@@ -571,7 +602,12 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     return true;
 }
 
-void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, std::unordered_map<std::string, int>& entity_to_tax_id) {
+void GemmiWrapper::updateStructure(
+    void * void_st,
+    const std::string& filename,
+    std::unordered_map<std::string, int>& entity_to_tax_id,
+    std::unordered_map<std::string, std::string>& entity_to_description
+) {
     gemmi::Structure * st = (gemmi::Structure *) void_st;
 
     title.clear();
@@ -580,6 +616,7 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
     chainNames.clear();
     chainStartResId.clear();
     chainStartSerial.clear();
+    chainDescriptions.clear();
     modelIndices.clear();
     modelCount = 0;
     ca.clear();
@@ -615,6 +652,8 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
 
             bool hasResId = false;
             bool hasSerial = false;
+            bool triedDescription = false;
+            std::string description;
 
             for (const gemmi::Residue &res : ch.first_conformer()) {
                 // only consider polymers and unknowns
@@ -672,7 +711,6 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 cb.push_back(cb_atom);
                 n.push_back(n_atom);
                 c.push_back(c_atom);
-
                 ami.push_back(threeToOneAA(res.name));
 
                 if (taxId == -1) {
@@ -681,9 +719,18 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                         taxId = it->second;
                     }
                 }
+
+                if (triedDescription == false) {
+                    triedDescription = true;
+                    auto it_desc = entity_to_description.find(res.entity_id);
+                    if (it_desc != entity_to_description.end()) {
+                        description = it_desc->second;
+                    }
+                }
                 currPos++;
             }
             taxIds.push_back(taxId == -1 ? 0 : taxId);
+            chainDescriptions.push_back(description);
             chain.push_back(std::make_pair(chainStartPos, currPos));
         }
     }
@@ -727,7 +774,11 @@ bool GemmiToFoldcomp(
     }
 
     Foldcomp comp;
-    comp.strTitle = gw.title;
+    if (gw.title.empty()) {
+        comp.strTitle = gw.chainDescriptions[ci];
+    } else {
+        comp.strTitle = gw.title;
+    }
     comp.anchorThreshold = anchorResidueThreshold;
     comp.compress(tcb::span<AtomCoordinate>(chainAtoms.data(), chainAtoms.size()));
     std::ostringstream oss;
