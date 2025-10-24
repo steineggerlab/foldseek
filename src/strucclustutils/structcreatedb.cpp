@@ -1046,7 +1046,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             mtar_header_t tarHeader;
             size_t bufferSize = 1024 * 1024;
             char *dataBuffer = (char *) malloc(bufferSize);
-            size_t inflateSize = 1024 * 1024;
             bool proceed = true;
             PatternCompiler includeThread(par.fileInclude.c_str());
             PatternCompiler excludeThread(par.fileExclude.c_str());
