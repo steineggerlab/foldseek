@@ -43,7 +43,8 @@ StructureSmithWaterman::StructureSmithWaterman(size_t maxSequenceLength, int aaS
     this->subMat3Di = sub3DiMat;
     this->aaBiasCorrection = aaBiasCorrection;
     this->aaBiasCorrectionScale = aaBiasCorrectionScale;
-    const int segSize = (maxSequenceLength+7)/8;
+	// int32_t alignment needs larger seqSize, was +7/8 for word before
+    const int segSize = (maxSequenceLength+3)/4;
     vHStore = (simd_int*) mem_align(ALIGN_INT, segSize * sizeof(simd_int));
     vHLoad  = (simd_int*) mem_align(ALIGN_INT, segSize * sizeof(simd_int));
     vE      = (simd_int*) mem_align(ALIGN_INT, segSize * sizeof(simd_int));
