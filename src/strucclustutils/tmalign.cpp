@@ -141,6 +141,7 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
     } else {
         tmaligner.resize(par.threads);
     }
+    
 
 #pragma omp parallel
     {
