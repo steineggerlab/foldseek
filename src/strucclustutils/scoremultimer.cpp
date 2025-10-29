@@ -156,10 +156,26 @@ struct NeighborsWithDist {
 };
 
 bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
-    if (first.dbChain.complexId < second.dbChain.complexId)
+    if (first.dbChain.complexId < second.dbChain.complexId) {
         return true;
-    if (first.dbChain.complexId > second.dbChain.complexId)
+    }
+    if (first.dbChain.complexId > second.dbChain.complexId) {
         return false;
+    }
+
+    if (first.qChain.chainKey < second.qChain.chainKey) {
+        return true;
+    }
+    if (first.qChain.chainKey > second.qChain.chainKey) {
+        return false;
+    }
+
+    if (first.dbChain.chainKey < second.dbChain.chainKey) {
+        return true;
+    }
+    if (first.dbChain.chainKey > second.dbChain.chainKey) {
+        return false;
+    }
     return false;
 }
 
