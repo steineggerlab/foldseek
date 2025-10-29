@@ -178,6 +178,7 @@ struct AAMatrix *block_new_simple_aamatrix(int8_t match_score, int8_t mismatch_s
  */
 void block_set_aamatrix(struct AAMatrix *matrix, uint8_t a, uint8_t b, int8_t score);
 
+void block_set_aamatrix_num(struct AAMatrix *matrix, int8_t a, int8_t b, int8_t score);
 /**
  * Frees an AAMatrix.
  */
@@ -214,6 +215,44 @@ void block_clear_aaprofile(struct AAProfile *profile, uintptr_t str_len);
 void block_set_aaprofile(struct AAProfile *profile, uintptr_t i, uint8_t b, int8_t score);
 
 /**
+ * Set the scores for all positions in the position specific scoring matrix.
+ *
+ * The profile should be first `clear`ed before it is reused with different lengths.
+ *
+ * Use `order` to specify the order of bytes that is used in the `scores` matrix.
+ * Scores (in `scores`) should be stored in row-major order, where each row is a different position
+ * and each column is a different byte.
+ */
+void block_set_all_aaprofile(struct AAProfile *profile,
+                             const uint8_t *order,
+                             uintptr_t order_len,
+                             const int8_t *scores,
+                             uintptr_t scores_len,
+                             uintptr_t left_shift,
+                             uintptr_t right_shift);
+
+/**
+ * Set the scores for all positions in reverse in the position specific scoring matrix.
+ *
+ * The profile should be first `clear`ed before it is reused with different lengths.
+ *
+ * Use `order` to specify the order of bytes that is used in the `scores` matrix.
+ * Scores (in `scores`) should be stored in row-major order, where each row is a different position
+ * and each column is a different byte.
+ */
+void block_set_all_rev_aaprofile(struct AAProfile *profile,
+                                 const uint8_t *order,
+                                 uintptr_t order_len,
+                                 const int8_t *scores,
+                                 uintptr_t scores_len,
+                                 uintptr_t left_shift,
+                                 uintptr_t right_shift);
+                                 
+int8_t* aaprofile_pos_aa(struct AAProfile *profile);
+
+int16_t* aaprofile_aa_pos(struct AAProfile *profile);
+
+/**
  * Set the gap open cost for a column.
  *
  * When aligning a sequence `q` to a profile `r`, this is the gap open cost at column `i` for a
@@ -241,6 +280,21 @@ void block_set_gap_close_C_aaprofile(struct AAProfile *profile, uintptr_t i, int
 void block_set_gap_open_R_aaprofile(struct AAProfile *profile, uintptr_t i, int8_t gap);
 
 /**
+ * Set the gap open cost for all column transitions.
+ */
+ void block_set_all_gap_open_C_aaprofile(struct AAProfile *profile, int8_t gap);
+
+ /**
+  * Set the gap close cost for all column transitions.
+  */
+ void block_set_all_gap_close_C_aaprofile(struct AAProfile *profile, int8_t gap);
+ 
+ /**
+  * Set the gap open cost for all row transitions.
+  */
+ void block_set_all_gap_open_R_aaprofile(struct AAProfile *profile, int8_t gap);
+
+/**
  * Get the score for a position and byte.
  */
 int8_t block_get_aaprofile(const struct AAProfile *profile, uintptr_t i, uint8_t b);
@@ -249,6 +303,8 @@ int8_t block_get_aaprofile(const struct AAProfile *profile, uintptr_t i, uint8_t
  * Get the gap extend cost.
  */
 int8_t block_get_gap_extend_aaprofile(const struct AAProfile *profile);
+
+size_t block_get_curr_len_aaprofile(const struct AAProfile *profile);
 
 /**
  * Frees an AAProfile.
@@ -288,6 +344,10 @@ void block_set_bytes_padded_aa(struct PaddedBytes *padded,
                                uintptr_t len,
                                uintptr_t max_size);
 
+void block_set_bytes_padded_aa_numsequence(struct PaddedBytes *padded,
+                               const uint8_t *s,
+                               uintptr_t len,
+                               uintptr_t max_size);
 /**
  * Frees a padded amino acid string.
  */
@@ -542,7 +602,21 @@ void block_align_profile_aa_trace_xdrop(BlockHandle b,
                                         struct SizeRange s,
                                         int32_t x);
 
+
 /**
+ *X-drop alignment of two amino acid strings with posbias with traceback.
+ */
+ void block_align_aa_trace_xdrop_posbias(BlockHandle b,
+  const struct PaddedBytes *q,
+  const struct PosBias *q_bias,
+  const struct PaddedBytes *r,
+  const struct PosBias *r_bias,
+  const struct AAMatrix *m,
+  struct Gaps g,
+  struct SizeRange s,
+  int32_t x);
+
+                                        /**
  *X-drop alignment of two amino acid strings with 3di, with traceback.
  */
 void block_align_3di_aa_trace_xdrop(BlockHandle b,
