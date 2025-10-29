@@ -1,7 +1,7 @@
 # Minimal Cargo.toml to avoid downloading dependencies.
 
 [package]
-name = "block-aligner-c"
+name = "block_aligner_c"
 version = "0.4.0"
 authors = ["c0deb0t <daniel.liu02@gmail.com>"]
 edition = "2018"
