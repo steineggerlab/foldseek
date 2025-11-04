@@ -59,11 +59,6 @@ if [ -e "${IN}.dbtype" ]; then
         rm "${OUT}_mapping"
         awk 'FNR==NR{map[$1]=$2; next}BEGIN{num=0}{print num"\t"map[$1]; num++}' "${IN}_mapping" "${TMP_PATH}/contactlist_2"  > "${OUT}_mapping"
     fi
-
-    if exists "${OUT}_taxonomy"; then
-        rm "${OUT}_taxonomy"
-        #TODO: taxonomy
-    fi
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
