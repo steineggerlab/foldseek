@@ -114,12 +114,14 @@ int tmalign(int argc, const char **argv, const Command& command) {
         swResults.clear();
         finalHits.clear();
         dbKeys.clear();
+        resultBuffer.clear();
+        size_t queryKey = resultReader.getDbKey(id);
         char *data = resultReader.getData(id,0);
         if (*data == '\0') {
+            dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, 0);
             continue;
         }
 
-        size_t queryKey = resultReader.getDbKey(id);
         unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
         char *querySeq = qdbr.sequenceReader->getData(queryId, 0);
         int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
@@ -256,8 +258,6 @@ int tmalign(int argc, const char **argv, const Command& command) {
         } // end chunk
 
         SORT_SERIAL(finalHits.begin(), finalHits.end(), compareHitsByTMScore);
-        resultBuffer.clear();
-
         char buffer[32768];
         for (size_t i = 0; i < finalHits.size(); i++) {
             size_t len = Matcher::resultToBuffer(buffer, finalHits[i], par.addBacktrace, false);

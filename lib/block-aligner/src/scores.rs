@@ -12,6 +12,9 @@ use crate::simd128::*;
 #[cfg(feature = "simd_neon")]
 use crate::neon::*;
 
+#[cfg(feature = "no_simd")]
+use crate::fallback::*;
+
 use std::i8;
 
 pub trait Matrix {
@@ -23,6 +26,8 @@ pub trait Matrix {
     fn new() -> Self;
     /// Set the score for a pair of bytes.
     fn set(&mut self, a: u8, b: u8, score: i8);
+
+    fn set_num(&mut self, a: u8, b: u8, score: i8);
     /// Get the score for a pair of bytes.
     fn get(&self, a: u8, b: u8) -> i8;
     /// Get the pointer for a specific index.
@@ -35,6 +40,8 @@ pub trait Matrix {
 }
 
 /// Amino acid scoring matrix.
+///
+/// Supports characters `A` to `Z`. Lowercase characters are uppercased.
 #[repr(C, align(32))]
 #[derive(Clone, PartialEq, Debug)]
 pub struct AAMatrix {
@@ -95,6 +102,13 @@ impl Matrix for AAMatrix {
         self.scores[idx] = score;
     }
 
+    fn set_num(&mut self, a: u8, b: u8, score: i8) {
+        let idx = (a as usize)* 32 + (b as usize);
+        self.scores[idx] = score;
+        let idx = (b as usize)* 32 + (a as usize);
+        self.scores[idx] = score;
+    }
+
     fn get(&self, a: u8, b: u8) -> i8 {
         let a = a.to_ascii_uppercase();
         let b = b.to_ascii_uppercase();
@@ -133,6 +147,10 @@ impl Matrix for AAMatrix {
 }
 
 /// Nucleotide scoring matrix.
+///
+/// Supports characters `A`, `C`, `G`, `N`, and `T`. Lowercase characters are uppercased.
+///
+/// If a larger alphabet is needed (for example, with IUPAC characters), use `AAMatrix` instead.
 #[repr(C, align(32))]
 #[derive(Clone, PartialEq, Debug)]
 pub struct NucMatrix {
@@ -174,6 +192,10 @@ impl Matrix for NucMatrix {
         self.scores[idx] = score;
         let idx = ((b & 0b111) as usize) * 16 + ((a & 0b1111) as usize);
         self.scores[idx] = score;
+    }
+
+    fn set_num(&mut self, _a: u8, _b: u8, _score: i8) {
+        unimplemented!();
     }
 
     fn get(&self, a: u8, b: u8) -> i8 {
@@ -244,6 +266,10 @@ impl Matrix for ByteMatrix {
         if a == b { self.match_score } else { self.mismatch_score }
     }
 
+    fn set_num(&mut self, _a: u8, _b: u8, _score: i8) {
+        unimplemented!();
+    }
+    
     #[inline]
     fn as_ptr(&self, _i: usize) -> *const i8 {
         unimplemented!()
@@ -336,7 +362,7 @@ pub trait Profile {
     /// Byte to use as padding.
     const NULL: u8;
 
-    /// Create a new profile of some maximum length, with default (large negative) values.
+    /// Create a new profile of a specific length, with default (large negative) values.
     ///
     /// Note that internally, the created profile is longer than a conventional position-specific scoring
     /// matrix (and `str_len`) by 1, so the profile will have the same length as the number of
@@ -349,14 +375,38 @@ pub trait Profile {
 
     /// Get the length of the profile.
     fn len(&self) -> usize;
-    /// Clear the profile so it can be used for profile lengths less than or equal
+    /// Clear the profile so it can be reused for profile lengths less than or equal
     /// to the length this struct was created with.
-    fn clear(&mut self, str_len: usize);
+    fn clear(&mut self, str_len: usize, block_size: usize);
+
     /// Set the score for a position and byte.
+    ///
+    /// The profile should be first `clear`ed before it is reused with different lengths.
     ///
     /// The first column (`i = 0`) should be padded with large negative values.
     /// Therefore, set values starting from `i = 1`.
     fn set(&mut self, i: usize, b: u8, score: i8);
+    /// Set the scores for all positions in the position specific scoring matrix.
+    ///
+    /// The profile should be first `clear`ed before it is reused with different lengths.
+    ///
+    /// Use `order` to specify the order of bytes that is used in the `scores` matrix.
+    /// Scores (in `scores`) should be stored in row-major order, where each row is a different position
+    /// and each column is a different byte.
+    ///
+    /// Use `left_shift` and `right_shift` to scale all the scores.
+    fn set_all(&mut self, order: &[u8], scores: &[i8], left_shift: usize, right_shift: usize);
+    /// Set the scores for all positions in reverse in the position specific scoring matrix.
+    ///
+    /// The profile should be first `clear`ed before it is reused with different lengths.
+    ///
+    /// Use `order` to specify the order of bytes that is used in the `scores` matrix.
+    /// Scores (in `scores`) should be stored in row-major order, where each row is a different position
+    /// and each column is a different byte.
+    ///
+    /// Use `left_shift` and `right_shift` to scale all the scores.
+    fn set_all_rev(&mut self, order: &[u8], scores: &[i8], left_shift: usize, right_shift: usize);
+
     /// Set the gap open cost for a column.
     ///
     /// When aligning a sequence `q` to a profile `r`, this is the gap open cost at column `i` for a
@@ -376,10 +426,18 @@ pub trait Profile {
     /// This represents starting a gap in `r`.
     fn set_gap_open_R(&mut self, i: usize, gap: i8);
 
+    /// Set the gap open cost for all column transitions.
+    fn set_all_gap_open_C(&mut self, gap: i8);
+    /// Set the gap close cost for all column transitions.
+    fn set_all_gap_close_C(&mut self, gap: i8);
+    /// Set the gap open cost for all row transitions.
+    fn set_all_gap_open_R(&mut self, gap: i8);
+    
     /// Get the score for a position and byte.
     fn get(&self, i: usize, b: u8) -> i8;
     /// Get the gap extend cost.
     fn get_gap_extend(&self) -> i8;
+    fn get_curr_len(&self) -> usize;
     /// Get the pointer for a specific index.
     fn as_ptr_pos(&self, i: usize) -> *const i8;
     /// Get the pointer for a specific amino acid.
@@ -409,8 +467,9 @@ pub trait Profile {
     fn convert_char(c: u8) -> u8;
 }
 
-
 /// Amino acid position specific scoring matrix.
+///
+/// Supports characters `A` to `Z`. Lowercase characters are uppercased.
 #[allow(non_snake_case)]
 #[derive(Clone, PartialEq, Debug)]
 pub struct AAProfile {
@@ -420,7 +479,12 @@ pub struct AAProfile {
     pos_gap_open_C: Vec<i16>,
     pos_gap_close_C: Vec<i16>,
     pos_gap_open_R: Vec<i16>,
-    len: usize,
+    // length used for underlying allocated vectors
+    max_len: usize,
+    // length used for the current padded profile
+    curr_len: usize,
+    // length of the profile without padding (same length as the consensus sequence of the position
+    // specific scoring matrix)
     str_len: usize
 }
 
@@ -428,15 +492,16 @@ impl Profile for AAProfile {
     const NULL: u8 = b'A' + 26u8;
 
     fn new(str_len: usize, block_size: usize, gap_extend: i8) -> Self {
-        let len = str_len + block_size + 1;
+        let max_len = str_len + block_size + 1;
         Self {
-            aa_pos: vec![i8::MIN as i16; 32 * len],
-            pos_aa: vec![i8::MIN; len * 32],
+            aa_pos: vec![i8::MIN as i16; 32 * max_len],
+            pos_aa: vec![i8::MIN; max_len * 32],
             gap_extend,
-            pos_gap_open_C: vec![i8::MIN as i16; len * 32],
-            pos_gap_close_C: vec![i8::MIN as i16; len * 32],
-            pos_gap_open_R: vec![i8::MIN as i16; len * 32],
-            len,
+            pos_gap_open_C: vec![i8::MIN as i16; max_len],
+            pos_gap_close_C: vec![i8::MIN as i16; max_len],
+            pos_gap_open_R: vec![i8::MIN as i16; max_len],
+            max_len,
+            curr_len: max_len,
             str_len
         }
     }
@@ -464,14 +529,16 @@ impl Profile for AAProfile {
         self.str_len
     }
 
-    fn clear(&mut self, str_len: usize) {
-        assert!(str_len <= self.len);
-        self.aa_pos.fill(i8::MIN as i16);
-        self.pos_aa.fill(i8::MIN);
-        self.pos_gap_open_C.fill(i8::MIN as i16);
-        self.pos_gap_close_C.fill(i8::MIN as i16);
-        self.pos_gap_open_R.fill(i8::MIN as i16);
+    fn clear(&mut self, str_len: usize, block_size: usize) {
+        let curr_len = str_len + block_size + 1;
+        assert!(curr_len <= self.max_len);
+        self.aa_pos[..32 * curr_len].fill(i8::MIN as i16);
+        self.pos_aa[..curr_len * 32].fill(i8::MIN);
+        self.pos_gap_open_C[..curr_len].fill(i8::MIN as i16);
+        self.pos_gap_close_C[..curr_len].fill(i8::MIN as i16);
+        self.pos_gap_open_R[..curr_len].fill(i8::MIN as i16);
         self.str_len = str_len;
+        self.curr_len = curr_len;
     }
 
     fn set(&mut self, i: usize, b: u8, score: i8) {
@@ -479,8 +546,16 @@ impl Profile for AAProfile {
         assert!(b'A' <= b && b <= b'Z' + 1);
         let idx = i * 32 + ((b - b'A') as usize);
         self.pos_aa[idx] = score;
-        let idx = ((b - b'A') as usize) * self.len + i;
+        let idx = ((b - b'A') as usize) * self.curr_len + i;
         self.aa_pos[idx] = score as i16;
+    }
+
+    fn set_all(&mut self, order: &[u8], scores: &[i8], left_shift: usize, right_shift: usize) {
+        self.set_all_core::<false>(order, scores, left_shift, right_shift);
+    }
+
+    fn set_all_rev(&mut self, order: &[u8], scores: &[i8], left_shift: usize, right_shift: usize) {
+        self.set_all_core::<true>(order, scores, left_shift, right_shift);
     }
 
     fn set_gap_open_C(&mut self, i: usize, gap: i8) {
@@ -497,6 +572,20 @@ impl Profile for AAProfile {
         self.pos_gap_open_R[i] = gap as i16;
     }
 
+    fn set_all_gap_open_C(&mut self, gap: i8) {
+        assert!(gap < 0, "Gap open cost must be negative!");
+        self.pos_gap_open_C[..self.curr_len].fill(gap as i16);
+    }
+
+    fn set_all_gap_close_C(&mut self, gap: i8) {
+        self.pos_gap_close_C[..self.curr_len].fill(gap as i16);
+    }
+
+    fn set_all_gap_open_R(&mut self, gap: i8) {
+        assert!(gap < 0, "Gap open cost must be negative!");
+        self.pos_gap_open_R[..self.curr_len].fill(gap as i16);
+    }
+
     fn get(&self, i: usize, b: u8) -> i8 {
         let b = b.to_ascii_uppercase();
         assert!(b'A' <= b && b <= b'Z' + 1);
@@ -508,16 +597,20 @@ impl Profile for AAProfile {
         self.gap_extend
     }
 
+    fn get_curr_len(&self) -> usize {
+        self.curr_len
+    }
+
     #[inline]
     fn as_ptr_pos(&self, i: usize) -> *const i8 {
-        debug_assert!(i < self.len);
+        debug_assert!(i < self.curr_len);
         unsafe { self.pos_aa.as_ptr().add(i * 32) }
     }
 
     #[inline]
     fn as_ptr_aa(&self, a: usize) -> *const i16 {
         debug_assert!(a < 27);
-        unsafe { self.aa_pos.as_ptr().add(a * self.len) }
+        unsafe { self.aa_pos.as_ptr().add(a * self.curr_len) }
     }
 
     #[cfg_attr(feature = "simd_sse2", target_feature(enable = "sse2"))]
@@ -643,5 +736,54 @@ impl PosBias {
     #[inline]
     pub unsafe fn get_biases(&self, i: usize) -> Simd {
         simd_loadu(self.bias.as_ptr().add(i) as *const Simd)
+    }
+}
+
+impl AAProfile {
+    fn set_all_core<const REV: bool>(&mut self, order: &[u8], scores: &[i8], left_shift: usize, right_shift: usize) {
+        #[repr(align(32))]
+        struct A([u8; 32]);
+        let mut o = A([Self::NULL - b'A'; 32]);
+        assert!(order.len() <= 32);
+
+        for (i, &b) in order.iter().enumerate() {
+            let b = b.to_ascii_uppercase();
+            assert!(b'A' <= b && b <= b'Z' + 1);
+            o.0[i] = b - b'A';
+        }
+        assert_eq!(scores.len() / order.len(), self.str_len);
+
+        let mut i = if REV { self.str_len } else { 1 };
+        let mut score_idx = 0;
+
+        while if REV { i >= 1 } else { i <= self.str_len } {
+            let mut j = 0;
+
+            while j < order.len() {
+                unsafe {
+                    let score = ((*scores.as_ptr().add(score_idx)) << left_shift) >> right_shift;
+                    let b = *o.0.as_ptr().add(j) as usize;
+                    *self.pos_aa.as_mut_ptr().add(i * 32 + b) = score;
+                    *self.aa_pos.as_mut_ptr().add(b * self.curr_len + i) = score as i16;
+                }
+
+                score_idx += 1;
+                j += 1;
+            }
+
+            if REV {
+                i -= 1;
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    pub fn pos_aa_mut_ptr(&mut self) -> *mut i8 {
+        self.pos_aa.as_mut_ptr()
+    }
+    
+    pub fn aa_pos_mut_ptr(&mut self) -> *mut i16 {
+        self.aa_pos.as_mut_ptr()
     }
 }

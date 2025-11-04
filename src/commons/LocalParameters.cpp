@@ -18,6 +18,7 @@ LocalParameters::LocalParameters() :
         PARAM_CHAIN_NAME_MODE(PARAM_CHAIN_NAME_MODE_ID,"--chain-name-mode", "Chain name mode", "Add chain to name:\n0: auto\n1: always add\n",typeid(int), (void *) &chainNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_MODEL_NAME_MODE(PARAM_MODEL_NAME_MODE_ID,"--model-name-mode", "Model name mode", "Add model to name:\n0: auto\n1: always add\n",typeid(int), (void *) &modelNameMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_WRITE_MAPPING(PARAM_WRITE_MAPPING_ID, "--write-mapping", "Write mapping file", "write _mapping file containing mapping from internal id to taxonomic identifier", typeid(int), (void *) &writeMapping, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_WRITE_FOLDCOMP(PARAM_WRITE_FOLDCOMP_ID, "--write-foldcomp", "Write Foldcomp", "write _fcz Foldcomp database", typeid(int), (void *) &writeFoldcomp, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
         PARAM_TMALIGN_FAST(PARAM_TMALIGN_FAST_ID,"--tmalign-fast", "TMalign fast","turn on fast search in TM-align" ,typeid(int), (void *) &tmAlignFast, "^[0-1]{1}$"),
         PARAM_EXACT_TMSCORE(PARAM_EXACT_TMSCORE_ID,"--exact-tmscore", "Exact TMscore","turn on fast exact TMscore (slow), default is approximate" ,typeid(int), (void *) &exactTMscore, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
@@ -38,9 +39,9 @@ LocalParameters::LocalParameters() :
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
 	    PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-alpha below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
         PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN(PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN_ID, "--min-interface-residues-perchain", "Minimum number of interface residues per chain","save dimer/interface if there are N numbers of residues per chain" ,typeid(int), (void *) &minResidueNum, "^[0-9]{1}[0-9]*$"),
-        PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultimerTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
         PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$")
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
@@ -92,6 +93,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_MODEL_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
+    structurecreatedb.push_back(&PARAM_WRITE_FOLDCOMP);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
     structurecreatedb.push_back(&PARAM_SAVE_RES_INDEX);
@@ -184,16 +186,13 @@ LocalParameters::LocalParameters() :
     scoremultimer.push_back(&PARAM_MONOMER_INCLUDE_MODE);
     scoremultimer.push_back(&PARAM_THREADS);
     scoremultimer.push_back(&PARAM_V);
-
-    //filtermultimer
-    filtermultimer.push_back(&PARAM_C);
-    filtermultimer.push_back(&PARAM_COV_MODE);
-    filtermultimer.push_back(&PARAM_MULTIMER_TM_THRESHOLD);
-    filtermultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
-    filtermultimer.push_back(&PARAM_INTERFACE_LDDT_THRESHOLD);
-    filtermultimer.push_back(&PARAM_THREADS);
-    filtermultimer.push_back(&PARAM_V);
-
+    scoremultimer.push_back(&PARAM_C);
+    scoremultimer.push_back(&PARAM_COV_MODE);
+    scoremultimer.push_back(&PARAM_INTERFACE_LDDT_THRESHOLD);
+    scoremultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
+    scoremultimer.push_back(&PARAM_TMSCORE_THRESHOLD);
+    scoremultimer.push_back(&PARAM_MIN_ALIGNED_CHAINS);
+    
     //makepaddeddb
     makepaddeddb.push_back(&PARAM_SUB_MAT);
     makepaddeddb.push_back(&PARAM_SCORE_BIAS);
@@ -328,8 +327,7 @@ LocalParameters::LocalParameters() :
     easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
 
     // multimerclusterworkflow
-    multimerclusterworkflow = combineList(multimersearchworkflow, filtermultimer);
-    multimerclusterworkflow  = combineList(multimerclusterworkflow, clust);
+    multimerclusterworkflow  = combineList(multimersearchworkflow, clust);
 
     //easymultimerclusterworkflow
     easymultimerclusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
@@ -346,6 +344,7 @@ LocalParameters::LocalParameters() :
     chainNameMode = 0;
     modelNameMode = 0;
     writeMapping = 0;
+    writeFoldcomp = 0;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     inputFormat = 0; // auto detect
     fileInclude = ".*";
@@ -381,9 +380,9 @@ LocalParameters::LocalParameters() :
     multimerReportMode = 1;
     distanceThreshold = 10.0;
     minResidueNum = 4;
-    filtMultimerTmThr = 0.0;
     filtChainTmThr = 0.0;
     filtInterfaceLddtThr = 0.0;
+    minAlignedChains = 2;
 
     // LoLalign
     multiDomain = 1;
@@ -393,7 +392,7 @@ LocalParameters::LocalParameters() :
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
     
     //rewrite param vals.
-    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,q3di,t3di,qheader,theader,qaln,taln,q3dialn,t3dialn,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,complexassignid\n";
+    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,q3di,t3di,qheader,theader,qaln,taln,q3dialn,t3dialn,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,qcomplexcoverage,tcomplexcoverage,qchaintms,tchaintms,qchains,tchains,interfacelddt,complexassignid\n";
 
     // allow higher values for GGML debug trace
     PARAM_V.regex = "^[0-4]{1}$";
@@ -470,6 +469,13 @@ std::vector<int> LocalParameters::getOutputFormat(
         else if (outformatSplit[i].compare("complexassignid")==0 || outformatSplit[i].compare("multimerassignid")==0){code=LocalParameters::OUTFMT_ASSIGN_ID;}
         else if (outformatSplit[i].compare("complexu")==0 || outformatSplit[i].compare("multimeru")==0){code=LocalParameters::OUTFMT_COMPLEX_U;}
         else if (outformatSplit[i].compare("complext")==0 || outformatSplit[i].compare("multimert")==0){code=LocalParameters::OUTFMT_COMPLEX_T;}
+        else if (outformatSplit[i].compare("qcomplexcoverage")==0 || outformatSplit[i].compare("qmultimercoverage")==0){code=LocalParameters::OUTFMT_Q_COMPLEX_COV;}
+        else if (outformatSplit[i].compare("tcomplexcoverage")==0 || outformatSplit[i].compare("tmultimercoverage")==0){code=LocalParameters::OUTFMT_T_COMPLEX_COV;}
+        else if (outformatSplit[i].compare("qchaintms")==0 ){code=LocalParameters::OUTFMT_COMPLEX_QCHAINTMS;}
+        else if (outformatSplit[i].compare("tchaintms")==0 ){code=LocalParameters::OUTFMT_COMPLEX_TCHAINTMS;}
+        else if (outformatSplit[i].compare("qchains")==0 ){code=LocalParameters::OUTFMT_COMPLEX_QNAME;}
+        else if (outformatSplit[i].compare("tchains")==0 ){code=LocalParameters::OUTFMT_COMPLEX_TNAME;}
+        else if (outformatSplit[i].compare("interfacelddt")==0 ){code=LocalParameters::OUTFMT_INTERFACE_LDDT;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);

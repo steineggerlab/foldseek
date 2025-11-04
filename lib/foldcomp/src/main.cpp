@@ -13,7 +13,7 @@
  *    foldcomp compress input.pdb output.fcz
  *    foldcomp decompress input.fcz output.pdb
  * ---
- * Last Modified: 2024-08-08 20:54:36
+ * Last Modified: 2025-07-30 15:44:47
  * Modified By: Hyunbin Kim (khb7840@gmail.com)
  * ---
  * Copyright © 2021 Hyunbin Kim, All rights reserved
@@ -60,7 +60,7 @@ static int ext_use_title = 0;
 static int overwrite = 0;
 
 // version
-#define FOLDCOMP_VERSION "0.0.8"
+#define FOLDCOMP_VERSION "0.1.0"
 
 int print_usage(void) {
     std::cout << "Usage: foldcomp compress <pdb|cif> [<fcz>]" << std::endl;
@@ -83,6 +83,7 @@ int print_usage(void) {
     std::cout << " -d, --db                 save as database [default=false]" << std::endl;
     std::cout << " -y, --overwrite          overwrite existing files [default=false]" << std::endl;
     std::cout << " -l, --id-list            a file of id list to be processed (only for database input)" << std::endl;
+    std::cout << " -m, --id-mode            id mode for database input. 0: database keys, 1: names (.lookup) [default=1]" << std::endl;
     std::cout << " --skip-discontinuous     skip PDB with with discontinuous residues (only batch compression)" << std::endl;
     std::cout << " --check                  check FCZ before and skip entries with error (only for batch decompression)" << std::endl;
     std::cout << " --plddt                  extract pLDDT score (only for extraction mode)" << std::endl;
@@ -92,6 +93,7 @@ int print_usage(void) {
     std::cout << " --no-merge               do not merge output files (only for extraction mode)" << std::endl;
     std::cout << " --use-title              use TITLE as the output file name (only for extraction mode)" << std::endl;
     std::cout << " --time                   measure time for compression/decompression" << std::endl;
+    std::cout << " --use-cache              use cached index for database input [default=false]" << std::endl;
     return 0;
 }
 
@@ -150,7 +152,11 @@ int main(int argc, char* const *argv) {
     int measure_time = 0;
     int skip_discontinuous = 0;
     int check_before_decompression = 0;
-    std::string user_id_list = "";
+    int id_mode = 1;
+    int use_cache = 0;
+    std::string user_id_file = "";
+    std::vector<std::string> user_names;
+    std::vector<uint32_t> user_ids;
 
     // Mode - non-optional argument
     enum {
@@ -182,7 +188,9 @@ int main(int argc, char* const *argv) {
             {"threads",      required_argument,                           0, 't'},
             {"break",        required_argument,                           0, 'b'},
             {"id-list",      required_argument,                           0, 'l'},
+            {"id-mode",      required_argument,                           0, 'm'},
             {"plddt-digits", required_argument,                           0, 'p'},
+            {"use-cache",      no_argument,                          &use_cache,  1 },
             {0,                              0,                           0,  0 }
     };
 
@@ -214,7 +222,14 @@ int main(int argc, char* const *argv) {
                 anchor_residue_threshold = atoi(optarg);
                 break;
             case 'l':
-                user_id_list = std::string(optarg);
+                user_id_file = std::string(optarg);
+                break;
+            case 'm':
+                id_mode = atoi(optarg);
+                if (id_mode != 0 && id_mode != 1) {
+                    std::cerr << "[Error] Invalid id mode. Please use 0 or 1." << std::endl;
+                    return print_usage();
+                }
                 break;
             case 'd':
                 db_output = 1;
@@ -398,8 +413,8 @@ int main(int argc, char* const *argv) {
                     processor = new TarProcessor(input);
                 }
                 else if (stat((input + ".dbtype").c_str(), &st) == 0) {
-                    if (user_id_list.size() > 0) {
-                        processor = new DatabaseProcessor(input, user_id_list);
+                    if (user_id_file.size() > 0) {
+                        processor = new DatabaseProcessor(input, user_id_file, id_mode, use_cache);
                     }
                     else {
                         processor = new DatabaseProcessor(input);
@@ -570,8 +585,8 @@ int main(int argc, char* const *argv) {
                     processor = new TarProcessor(input);
                 }
                 else if (stat((input + ".dbtype").c_str(), &st) == 0) {
-                    if (user_id_list.size() > 0) {
-                        processor = new DatabaseProcessor(input, user_id_list);
+                    if (user_id_file.size() > 0) {
+                        processor = new DatabaseProcessor(input, user_id_file, id_mode, use_cache);
                     }
                     else {
                         processor = new DatabaseProcessor(input);
@@ -736,8 +751,8 @@ int main(int argc, char* const *argv) {
                     processor = new TarProcessor(input);
                 }
                 else if (stat((input + ".dbtype").c_str(), &st) == 0) {
-                    if (user_id_list.size() > 0) {
-                        processor = new DatabaseProcessor(input, user_id_list);
+                    if (user_id_file.size() > 0) {
+                        processor = new DatabaseProcessor(input, user_id_file, id_mode, use_cache);
                     }
                     else {
                         processor = new DatabaseProcessor(input);
@@ -868,8 +883,8 @@ int main(int argc, char* const *argv) {
                     processor = new TarProcessor(input);
                 }
                 else if (stat((input + ".dbtype").c_str(), &st) == 0) {
-                    if (user_id_list.size() > 0) {
-                        processor = new DatabaseProcessor(input, user_id_list);
+                    if (user_id_file.size() > 0) {
+                        processor = new DatabaseProcessor(input, user_id_file, id_mode, use_cache);
                     }
                     else {
                         processor = new DatabaseProcessor(input);

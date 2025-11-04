@@ -258,14 +258,16 @@ char threeToOneAA(const std::string& three) {
 
 std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document& doc) {
     std::unordered_map<std::string, int> entity_to_taxid;
-    static const std::vector<std::pair<std::string, std::string>> loops_with_taxids = {
-        { "_entity_src_nat.", "?pdbx_ncbi_taxonomy_id"},
-        { "_entity_src_gen.", "?pdbx_gene_src_ncbi_taxonomy_id"},
-        { "_pdbx_entity_src_syn.", "?ncbi_taxonomy_id"}
+    static const std::vector<std::tuple<std::string, std::string, std::string>> loops_with_taxids = {
+        { "_entity_src_nat.", "?pdbx_ncbi_taxonomy_id", "entity_id"},
+        { "_entity_src_gen.", "?pdbx_gene_src_ncbi_taxonomy_id", "entity_id"},
+        { "_pdbx_entity_src_syn.", "?ncbi_taxonomy_id", "entity_id"},
+        // afdb
+        { "_ma_target_ref_db_details.", "?ncbi_taxonomy_id", "target_entity_id"},
     };
     for (gemmi::cif::Block& block : doc.blocks) {
-        for (auto&& [loop, taxid] : loops_with_taxids) {
-            for (auto row : block.find(loop, {"entity_id", taxid})) {
+        for (auto&& [loop, taxid, entity] : loops_with_taxids) {
+            for (auto row : block.find(loop, {entity, taxid})) {
                 if (row.has2(1) == false) {
                     continue;
                 }
@@ -284,103 +286,28 @@ std::unordered_map<std::string, int> getEntityTaxIDMapping(gemmi::cif::Document&
     return entity_to_taxid;
 }
 
-/*std::unordered_map<std::string, unsigned int> getResidueIndices(gemmi::cif::Document & doc) {
-    std::unordered_map<std::string, unsigned int> residueIndices;
-    for (gemmi::cif::Block & block : doc.blocks) {
-        for (auto row : block.find("_atom_site.", {"label_asym_id",
-                                                   "?label_seq_id", 
-                                                   "?auth_seq_id",
-                                                   "?auth_asym_id"})) {
- 
-            std::string resLabel;
- 
-
-            if (row.has2(4) == true) {
- 
-
-                //If auth chain label exists, start map key with it
- 
-
-                resLabel = gemmi::cif::as_string(row[4]);
- 
-
+std::unordered_map<std::string, std::string> getEntityDescriptionMapping(gemmi::cif::Document& doc) {
+    std::unordered_map<std::string, std::string> entity_to_description;
+    static const std::vector<std::tuple<std::string, std::string, std::string>> loops_with_desc = {
+        { "_entity.", "?pdbx_description", "id"},
+    };
+    for (gemmi::cif::Block& block : doc.blocks) {
+        for (auto&& [loop, taxid, entity] : loops_with_desc) {
+            for (auto row : block.find(loop, {entity, taxid})) {
+                if (row.has2(1) == false) {
+                    continue;
+                }
+                std::string entity_id = gemmi::cif::as_string(row[0]);
+                if (entity_to_description.find(entity_id) != entity_to_description.end()) {
+                    continue;
+                }
+                std::string description = gemmi::cif::as_string(row[1]);
+                entity_to_description.emplace(entity_id, description);
             }
- 
-
-            else {
- 
-
-                //If auth chain label does not exist, start map key with asym label
- 
-
-                resLabel = gemmi::cif:as_string(row[0]);
- 
-
-            }
- 
-
-            if (row.has2(3) == true) {
- 
-
-                //If auth seq id exists, append to chain id as the map key
- 
-
-                resLabel.append(gemmi::cif::as_string(row[3]));
- 
-
-            }
- 
-
-            else {
- 
-
-                //If auth seq id does not exist, append label seq id
- 
-
-                resLabel.append(gemmi::cif::as_string(row[2]));
- 
-
-            }
- 
-
-            if (residueIndices.find(resLabel) != residueIndices.end()) {
- 
-
-                //skip residue label if already mapped
- 
-
-                continue;
- 
-
-            }
- 
-
-            const char* endptr = NULL;
- 
-
-            unsigned int resId = gemmi::no_sign_atoi(row[1].c_str(), &endptr);
- 
-
-            if (endptr != NULL && *endptr == '\0') {
- 
-
-                residueIndices.emplace(resLabel, resId);
- 
-
-            }
- 
-
         }
- 
-
     }
- 
-
-    return residueIndices;
- 
-
-}*/
- 
+    return entity_to_description;
+}
 
 GemmiWrapper::Format mapFormat(gemmi::CoorFormat format) {
     switch (format) {
@@ -429,7 +356,7 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
         }
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
-        //std::unordered_map<std::string, unsigned int> residueIndices;
+        std::unordered_map<std::string, std::string> entity_to_description;
         switch (format) {
             case Format::Mmcif: {
                 gemmi::CharArray mem = gemmi::read_into_buffer(infile);
@@ -454,13 +381,14 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
 
                 gemmi::cif::Document doc = gemmi::cif::read_memory(mem.data(), mem.size(), infile.path().c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
-                //residueIndices = getResidueIndices(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
             }
             case Format::Mmjson: {
                 gemmi::cif::Document doc = gemmi::cif::read_mmjson(infile);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 //residueIndices = getResidueIndices(doc);
                 break;
@@ -468,6 +396,7 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
             case Format::ChemComp: {
                 gemmi::cif::Document doc = gemmi::cif::read(infile);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure_from_chemcomp_doc(doc);
                 //residueIndices = getResidueIndices(doc);
                 break;
@@ -475,7 +404,7 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
             default:
                 st = gemmi::read_pdb(infile);
         }
-        updateStructure((void*) &st, filename, entity_to_tax_id, saveResIndex);
+        updateStructure((void*) &st, filename, entity_to_tax_id, entity_to_description, saveResIndex);
     } catch (...) {
         return false;
     }
@@ -519,10 +448,9 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         if (format == Format::Detect) {
             format = mapFormat(gemmi::coor_format_from_ext(infile.basepath()));
         }
-
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
-        //std::unordered_map<std::string, unsigned int> residueIndices;
+        std::unordered_map<std::string, std::string> entity_to_description;
         switch (format) {
             case Format::Pdb:
                 st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(newBuffer, newBufferSize), newName, gemmi::PdbReadOptions());
@@ -555,7 +483,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 }
                 gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, newBufferSize, newName.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
-                //residueIndices = getResidueIndices(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 break;
             }
@@ -571,7 +499,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 bufferCopy[newBufferSize] = '\0';
                 gemmi::cif::Document doc = gemmi::cif::read_mmjson_insitu(bufferCopy, newBufferSize, newName);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
-                //residueIndices = getResidueIndices(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
                 free(bufferCopy);
                 break;
@@ -579,14 +507,14 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             case Format::ChemComp: {
                 gemmi::cif::Document doc = gemmi::cif::read_memory(newBuffer, newBufferSize, newName.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
-                //residueIndices = getResidueIndices(doc);
+                entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure_from_chemcomp_doc(doc);
                 break;
             }
             default:
                 return false;
         }
-        updateStructure((void*) &st, newName, entity_to_tax_id, saveResIndex);
+        updateStructure((void*) &st, newName, entity_to_tax_id, entity_to_description, saveResIndex);
     } catch (...) {
         return false;
     }
@@ -674,13 +602,22 @@ bool GemmiWrapper::loadFoldcompStructure(std::istream& stream, const std::string
     return true;
 }
 
-void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, std::unordered_map<std::string, int>& entity_to_tax_id, bool saveResIndex) {
+void GemmiWrapper::updateStructure(
+    void * void_st,
+    const std::string& filename,
+    std::unordered_map<std::string, int>& entity_to_tax_id,
+    std::unordered_map<std::string, std::string>& entity_to_description,
+    bool saveResIndex
+) {
     gemmi::Structure * st = (gemmi::Structure *) void_st;
 
     title.clear();
     chain.clear();
     names.clear();
     chainNames.clear();
+    chainStartResId.clear();
+    chainStartSerial.clear();
+    chainDescriptions.clear();
     modelIndices.clear();
     modelCount = 0;
     ca.clear();
@@ -714,6 +651,12 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
 
             names.push_back(name);
             int taxId = -1;
+
+            bool hasResId = false;
+            bool hasSerial = false;
+            bool triedDescription = false;
+            std::string description;
+
             for (const gemmi::Residue &res : ch.first_conformer()) {
                 // only consider polymers and unknowns
                 if (res.entity_type != gemmi::EntityType::Polymer && res.entity_type != gemmi::EntityType::Unknown) {
@@ -724,13 +667,24 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                     continue;
                 }
 
+                if (hasResId == false) {
+                    chainStartResId.push_back(res.seqid.num.has_value() ? *res.seqid.num : 1);
+                    hasResId = true;
+                }
+
                 Vec3 ca_atom = {NAN, NAN, NAN};
                 Vec3 cb_atom = {NAN, NAN, NAN};
                 Vec3 n_atom  = {NAN, NAN, NAN};
                 Vec3 c_atom  = {NAN, NAN, NAN};
                 float ca_atom_bfactor = 0.0f;
+                int atom_serial = 0;
                 bool hasCA = false;
                 for (const gemmi::Atom &atom : res.atoms) {
+                    if (hasSerial == false) {
+                        chainStartSerial.push_back(atom.serial);
+                        hasSerial = true;
+                    }
+
                     if (atom.name == "CA") {
                         ca_atom.x = atom.pos.x;
                         ca_atom.y = atom.pos.y;
@@ -759,7 +713,6 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                 cb.push_back(cb_atom);
                 n.push_back(n_atom);
                 c.push_back(c_atom);
-
                 ami.push_back(threeToOneAA(res.name));
 
                 if (saveResIndex) {
@@ -773,7 +726,6 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                         unsigned int resId = unsigned(tmpResId);
                         resIds.push_back(resId);
                     }
-                    //std::cout << ch.name << " " << resId << std::endl;
                 }
 
                 if (taxId == -1) {
@@ -782,10 +734,71 @@ void GemmiWrapper::updateStructure(void * void_st, const std::string& filename, 
                         taxId = it->second;
                     }
                 }
+
+                if (triedDescription == false) {
+                    triedDescription = true;
+                    auto it_desc = entity_to_description.find(res.entity_id);
+                    if (it_desc != entity_to_description.end()) {
+                        description = it_desc->second;
+                    }
+                }
                 currPos++;
             }
             taxIds.push_back(taxId == -1 ? 0 : taxId);
+            chainDescriptions.push_back(description);
             chain.push_back(std::make_pair(chainStartPos, currPos));
         }
     }
+}
+
+extern const char *singleLetterToThree(char singleLetterAminoacid);
+bool GemmiToFoldcomp(
+    const GemmiWrapper& gw,
+    size_t chainIndex,
+    std::string& outBlob,
+    int anchorResidueThreshold) {
+    outBlob.clear();
+
+    if (gw.chain.empty() || gw.ca.empty()) {
+        return false;
+    }
+
+    size_t ci = chainIndex;
+    const size_t start = gw.chain[ci].first;
+    const size_t end   = gw.chain[ci].second;
+    if (start >= end || end > gw.ca.size()) {
+        return false;
+    }
+
+    std::vector<AtomCoordinate> chainAtoms;
+    chainAtoms.reserve((end - start) * 3);
+
+    std::string chainName = gw.chainNames[ci];
+    int serial = gw.chainStartSerial[ci];
+    int resid  = gw.chainStartResId[ci];
+    for (size_t r = start; r < end; ++r, ++resid) {
+        const std::string resName = singleLetterToThree(gw.ami[r]);
+        chainAtoms.emplace_back("N", resName, chainName, serial++, resid, gw.n[r].x, gw.n[r].y, gw.n[r].z, 0.0f, 0.0f);
+        chainAtoms.emplace_back("CA", resName, chainName, serial++, resid, gw.ca[r].x, gw.ca[r].y, gw.ca[r].z, 0.0f, gw.ca_bfactor[r]);
+        chainAtoms.emplace_back("C", resName, chainName, serial++, resid, gw.c[r].x, gw.c[r].y, gw.c[r].z, 0.0f, 0.0f);
+        // chainAtoms.emplace_back("CB", resName, chainName, serial++, resid, gw.cb[r].x, gw.cb[r].y, gw.cb[r].z, 0.0f, 0.0f);
+    }
+
+    if (chainAtoms.empty()) {
+        return false;
+    }
+
+    Foldcomp comp;
+    if (gw.title.empty()) {
+        comp.strTitle = gw.chainDescriptions[ci];
+    } else {
+        comp.strTitle = gw.title;
+    }
+    comp.anchorThreshold = anchorResidueThreshold;
+    comp.compress(tcb::span<AtomCoordinate>(chainAtoms.data(), chainAtoms.size()));
+    std::ostringstream oss;
+    comp.writeStream(oss);
+    outBlob.assign(oss.str());
+
+    return true;
 }

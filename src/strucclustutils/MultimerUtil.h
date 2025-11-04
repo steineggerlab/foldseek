@@ -24,6 +24,8 @@ typedef std::vector<unsigned int> cluster_t;
 typedef std::string resultToWrite_t;
 typedef std::string chainName_t;
 typedef std::pair<unsigned int, resultToWrite_t> resultToWriteWithKey_t;
+typedef std::map<unsigned int, chainName_t> chainKeyToChainName_t;
+typedef std::pair<unsigned int, unsigned int> chainToResidue;
 
 struct Chain {
     Chain() {}
@@ -148,14 +150,19 @@ static bool compareComplexResultByQuery(const ScoreComplexResult &first, const S
 }
 
 struct ComplexDataHandler {
-    ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), isValid(isValid) {}
-    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string &uString, std::string &tString, bool isValid)
-            : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), uString(uString), tString(tString), isValid(isValid) {}
+    ComplexDataHandler(bool isValid): assId(UINT_MAX), qTmScore(0.0f), tTmScore(0.0f), qComplexCov(0.0f), tComplexCov(0.0f), isValid(isValid) {}
+    ComplexDataHandler(unsigned int assId, double qTmScore, double tTmScore, std::string &uString, std::string &tString, double qComplexCov, double tComplexCov, std::string &qChainTms, std::string &tChainTms, std::string &interfaceLddtScore, bool isValid)
+            : assId(assId), qTmScore(qTmScore), tTmScore(tTmScore), uString(uString), tString(tString), qComplexCov(qComplexCov), tComplexCov(tComplexCov), qChainTms(qChainTms), tChainTms(tChainTms), interfaceLddtScore(interfaceLddtScore), isValid(isValid) {}
     unsigned int assId;
     double qTmScore;
     double tTmScore;
     std::string uString;
     std::string tString;
+    double qComplexCov;
+    double tComplexCov;
+    std::string qChainTms;
+    std::string tChainTms;
+    std::string interfaceLddtScore;
     bool isValid;
 };
 
@@ -176,7 +183,6 @@ auto getChainId(ReaderType &dbr, unsigned int chainKey) -> decltype(dbr.sequence
 
 template <typename ReaderType>
 static void getKeyToIdMapIdToKeysMapIdVec(
-    DBReader<unsigned int> &alnDbr,
     ReaderType &dbr,
     const std::string &file,
     std::map<unsigned int, unsigned int> &chainKeyToComplexIdLookup,
@@ -190,7 +196,23 @@ static void getKeyToIdMapIdToKeysMapIdVec(
     char *data = (char *) lookupDB.getData();
     char *end = data + lookupDB.mappedSize();
     const char *entry[255];
-    std::vector<bool> isVistedSet(alnDbr.getLastKey() + 1, false);
+    unsigned int maxSet = 0;
+    while (data < end && *data != '\0') {
+        const size_t columns = Util::getWordsOfLine(data, entry, 255);
+        if (columns < 3) {
+            Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
+            continue;
+        }
+        unsigned int complexId = Util::fast_atoi<int>(entry[2]);
+        if (complexId > maxSet) {
+            maxSet = complexId;
+        }
+        data = Util::skipLine(data);
+    }
+    data = (char *) lookupDB.getData();
+    end = data + lookupDB.mappedSize();
+    std::vector<bool> isVistedSet(maxSet + 1, false);
+
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -200,7 +222,7 @@ static void getKeyToIdMapIdToKeysMapIdVec(
         auto chainKey = Util::fast_atoi<int>(entry[0]);
         unsigned int chainDbId = getChainId(dbr, chainKey);
         if (chainDbId != NOT_AVAILABLE_CHAIN_KEY) {
-            auto complexId = Util::fast_atoi<int>(entry[2]);
+            size_t complexId = Util::fast_atoi<int>(entry[2]);
             chainKeyToComplexIdLookup.emplace(chainKey, complexId);
             if (isVistedSet[complexId] == 0){
                 complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
@@ -217,57 +239,71 @@ static void getKeyToIdMapIdToKeysMapIdVec(
 static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
-    if (columns!=16)
+    if (columns==21){
+        char key[255];
+        ptrdiff_t keySize =  (entry[1] - data);
+        strncpy(key, data, keySize);
+        key[keySize] = '\0';
+        auto dbKey = Util::fast_atoi<unsigned int>(key);
+        int score = Util::fast_atoi<int>(entry[1]);
+        float seqId = strtof(entry[2],NULL);
+        double eval = strtod(entry[3],NULL);
+        int qStartPos =  Util::fast_atoi<int>(entry[4]);
+        int qEndPos = Util::fast_atoi<int>(entry[5]);
+        int qLen = Util::fast_atoi<int>(entry[6]);
+        int dbStartPos = Util::fast_atoi<int>(entry[7]);
+        int dbEndPos = Util::fast_atoi<int>(entry[8]);
+        int dbLen = Util::fast_atoi<int>(entry[9]);
+        auto backtrace = std::string(entry[10], entry[11] - entry[10]);
+        float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
+        float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
+        size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
+        double qTmScore = strtod(entry[11], NULL);
+        double tTmScore = strtod(entry[12], NULL);
+        std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
+        std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
+        double qComplexCov = strtod(entry[15], NULL);
+        double tComplexCov = strtod(entry[16], NULL);
+        std::string qChainTms = std::string(entry[17], entry[18] - entry[17]-1);
+        std::string tChainTms = std::string(entry[18], entry[19] - entry[18]-1);
+        std::string interfaceLddtScore = std::string(entry[19], entry[20] - entry[19]-1);
+        auto assId = Util::fast_atoi<unsigned int>(entry[20]);
+        res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
+        return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
+    } else if(columns == 16) {
+        char key[255];
+        ptrdiff_t keySize =  (entry[1] - data);
+        strncpy(key, data, keySize);
+        key[keySize] = '\0';
+        auto dbKey = Util::fast_atoi<unsigned int>(key);
+        int score = Util::fast_atoi<int>(entry[1]);
+        float seqId = strtof(entry[2],NULL);
+        double eval = strtod(entry[3],NULL);
+        int qStartPos =  Util::fast_atoi<int>(entry[4]);
+        int qEndPos = Util::fast_atoi<int>(entry[5]);
+        int qLen = Util::fast_atoi<int>(entry[6]);
+        int dbStartPos = Util::fast_atoi<int>(entry[7]);
+        int dbEndPos = Util::fast_atoi<int>(entry[8]);
+        int dbLen = Util::fast_atoi<int>(entry[9]);
+        auto backtrace = std::string(entry[10], entry[11] - entry[10]);
+        float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
+        float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
+        size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
+        double qTmScore = strtod(entry[11], NULL);
+        double tTmScore = strtod(entry[12], NULL);
+        std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
+        std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
+        double qComplexCov = 0;
+        double tComplexCov = 0;
+        std::string qChainTms = "";
+        std::string tChainTms = "";
+        std::string interfaceLddtScore = "";
+        auto assId = Util::fast_atoi<unsigned int>(entry[15]);
+        res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
+        return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
+    } else {
         return {false};
-    char key[255];
-    ptrdiff_t keySize =  (entry[1] - data);
-    strncpy(key, data, keySize);
-    key[keySize] = '\0';
-    auto dbKey = Util::fast_atoi<unsigned int>(key);
-    int score = Util::fast_atoi<int>(entry[1]);
-    float seqId = strtof(entry[2],NULL);
-    double eval = strtod(entry[3],NULL);
-    int qStartPos =  Util::fast_atoi<int>(entry[4]);
-    int qEndPos = Util::fast_atoi<int>(entry[5]);
-    int qLen = Util::fast_atoi<int>(entry[6]);
-    int dbStartPos = Util::fast_atoi<int>(entry[7]);
-    int dbEndPos = Util::fast_atoi<int>(entry[8]);
-    int dbLen = Util::fast_atoi<int>(entry[9]);
-    auto backtrace = std::string(entry[10], entry[11] - entry[10]);
-    float qCov = SmithWaterman::computeCov(qStartPos==-1 ? 0 : qStartPos, qEndPos, qLen);
-    float dbCov = SmithWaterman::computeCov(dbStartPos==-1 ? 0 : dbStartPos, dbEndPos, dbLen);
-    size_t alnLength = Matcher::computeAlnLength(qStartPos==-1 ? 0 : qStartPos, qEndPos, dbStartPos==-1 ? 0 : dbStartPos, dbEndPos);
-    double qTmScore = strtod(entry[11], NULL);
-    double tTmScore = strtod(entry[12], NULL);
-    std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
-    std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
-    auto assId = Util::fast_atoi<unsigned int>(entry[15]);
-    res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
-    return {assId, qTmScore, tTmScore, uString, tString, true};
-}
-
-static char* fastfloatToBuffer(float value, char* buffer) {
-    if (value < 0) {
-        value *= -1;
-        *(buffer) = '-';
-        buffer++;
     }
-    int value1 = (int)(value);
-    buffer = Itoa::i32toa_sse2(value1, buffer);
-    *(buffer) = '.';
-    buffer++;
-
-    double value2 = value - value1;
-    if (value2 < 0.1){
-        *(buffer) = '0';
-        buffer++;
-    }
-    if (value2 < 0.01){
-        *(buffer) = '0';
-        buffer++;
-    }
-    buffer = Itoa::i32toa_sse2((int)(value2 * 1000), buffer);
-    return buffer;
 }
 
 static void findInterface(std::vector<size_t> & resIdx, float squareThreshold, float* qdata1, float* tdata1, unsigned int qChainLen, unsigned int tChainLen) {

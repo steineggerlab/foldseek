@@ -28,7 +28,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
     std::vector<unsigned int> qComplexIndices;
     chainKeyToComplexId_t qChainKeyToComplexIdMap;
     complexIdToChainKeys_t qComplexIdToChainKeysMap;
-    getKeyToIdMapIdToKeysMapIdVec(qDbr, qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
+    getKeyToIdMapIdToKeysMapIdVec(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
     qChainKeyToComplexIdMap.clear();
 
 
