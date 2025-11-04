@@ -275,8 +275,8 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                     size_t & fileidCnt, std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
                     std::map<size_t, std::string> & fileIdToName,
-                    DBWriter* mappingWriter, DBWriter* foldcompWriter, DBWriter* idbw) {
-
+                    DBWriter* mappingWriter, 
+                    DBWriter* foldcompWriter, DBWriter* idbw) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
     size_t entriesAdded = 0;
@@ -799,6 +799,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             }
         }
         progress.updateProgress();
+
 #ifdef OPENMP
         int localThreads = par.threads;
 #endif
@@ -842,6 +843,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             bool proceed = true;
             PatternCompiler includeThread(par.fileInclude.c_str());
             PatternCompiler excludeThread(par.fileExclude.c_str());
+
             while (proceed) {
                 bool writeEntry = true;
 #pragma omp critical
@@ -935,6 +937,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         incorrectFiles++;
                         continue;
                     }
+
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di, pulchra,
@@ -1267,6 +1270,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
         DBReader<unsigned int>::removeDb(outputName + "_mapping_tmp");
     }
+    
     if (par.writeLookup == true) {
         DBReader<unsigned int> readerHeader((outputName + "_h").c_str(), (outputName + "_h.index").c_str(),
                                             1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);

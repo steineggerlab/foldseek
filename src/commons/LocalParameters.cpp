@@ -380,7 +380,7 @@ LocalParameters::LocalParameters() :
     multimerReportMode = 1;
     distanceThreshold = 10.0;
     minResidueNum = 4;
-    filtChainTmThr = 0.0;
+    filtChainTmThr = 0.3;
     filtInterfaceLddtThr = 0.0;
     minAlignedChains = 2;
 

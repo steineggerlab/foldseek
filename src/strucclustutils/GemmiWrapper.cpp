@@ -390,7 +390,6 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure(doc);
-                //residueIndices = getResidueIndices(doc);
                 break;
             }
             case Format::ChemComp: {
@@ -398,7 +397,6 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 entity_to_description = getEntityDescriptionMapping(doc);
                 st = gemmi::make_structure_from_chemcomp_doc(doc);
-                //residueIndices = getResidueIndices(doc);
                 break;
             }
             default:
@@ -448,6 +446,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         if (format == Format::Detect) {
             format = mapFormat(gemmi::coor_format_from_ext(infile.basepath()));
         }
+        
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
         std::unordered_map<std::string, std::string> entity_to_description;

@@ -58,7 +58,6 @@ private:
     int chainIt;
 
     bool loadFoldcompStructure(std::istream& stream, const std::string& filename);
-
     void updateStructure(
         void * structure,
         const std::string & filename,

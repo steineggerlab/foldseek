@@ -315,7 +315,6 @@ static void findInterface(std::vector<size_t> & resIdx, float squareThreshold, f
         yesInterFace = false;
         yesSameRes = false;
         for (unsigned int tRes = 0; tRes < tChainLen; tRes ++) {
-            // float distance = MathUtil::squareDist(qdata1[qRes], qdata1[qChainLen + qRes], qdata1[qChainLen * 2 + qRes], tdata1[tRes], tdata1[tChainLen + tRes], tdata1[tChainLen * 2 + tRes]);
             float dx = qdata1[qRes] - tdata1[tRes];
             float dy = qdata1[qChainLen + qRes] - tdata1[tChainLen + tRes];
             float dz = qdata1[qChainLen * 2 + qRes] - tdata1[tChainLen * 2 + tRes];
