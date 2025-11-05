@@ -97,7 +97,7 @@ private:
     int startAnchorLength = 3;
     float lolGo = -1.5;
     float lolGe = -0.0;
-    float lolMinP = 0.4;
+    float lolMinP = 0.7;
     float lolT = 4;
     float** hiddenLayer;
     int* startAnchorIndex;
@@ -111,6 +111,7 @@ private:
     int* finalAnchorQuery;
     int* finalAnchorTarget;
     float qqScore;
+    int maxAnchorLen;
 
     unsigned char* queryNumAA;
     unsigned char* queryNum3Di;
@@ -123,7 +124,7 @@ private:
     float b1[3] = {0.7043129 , 0.374659  , 0.39905924};
 
     float w2[3] = {-0.776632  ,  0.61055756, 0.5823986};
-    float b2 = -0.11200039 +0.5;
+    float b2 = 0.38799961;
 
     // Load weights and biases into SIMD registers
    

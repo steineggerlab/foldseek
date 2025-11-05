@@ -280,6 +280,8 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
                             float *tdata = tcoords[thread_idx]->read(tcadata, targetLen, tCaLength);
 
                             float TMscore;
+
+
                             if (runLoLAlign) {
                                 if (targetLen <= 10) {
                                     lolaligner[thread_idx]->setStartAnchorLength(1);
@@ -293,6 +295,7 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
                                 } else {
                                     tmpResult = lolaligner[thread_idx]->align(dbKeys[i], tdata, &tdata[targetLen], &tdata[targetLen + targetLen], *tSeqAAs[thread_idx], *tSeq3Dis[thread_idx], targetLen, *subMatAA, fwbwAligner[thread_idx], par.multiDomain);
                                 }
+
                             } else {
                                 tmpResult = tmaligner[thread_idx]->align(dbKeys[i],
                                                                         tdata, &tdata[targetLen],
@@ -343,8 +346,10 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
 
                 bool hasCov    = Util::hasCoverage(par.covThr, par.covMode, r.qcov, r.dbcov);
                 bool hasSeqId  = (r.seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon()));
-                bool hasTMscore= (r.eval >= par.tmScoreThr);
-
+		        bool hasTMscore = (r.eval >= par.tmScoreThr);
+                if(runLoLAlign){
+			        hasTMscore = true;
+		        }
                 if (hasCov && hasSeqId && hasTMscore) {
                     finalHits.push_back(r);
                     passedNum++;
