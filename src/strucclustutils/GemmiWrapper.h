@@ -32,8 +32,6 @@ public:
 
     bool load(const std::string& filename, Format format = Format::Detect);
 
-    std::pair<size_t, size_t> nextChain();
-
     std::vector<Vec3> ca;
     std::vector<float> ca_bfactor;
     std::vector<Vec3> n;
@@ -43,9 +41,12 @@ public:
     std::vector<char> seq3di;
     std::vector<std::string> names;
     std::vector<std::string> chainNames;
+    std::vector<int> chainStartSerial;
+    std::vector<int> chainStartResId;
+    std::vector<std::string> chainDescriptions;
     std::vector<unsigned int> modelIndices;
     unsigned int modelCount = 0;
-    std::vector<std::pair<size_t ,size_t>> chain;
+    std::vector<std::pair<size_t, size_t>> chain;
     std::vector<int> taxIds;
     std::string title;
 
@@ -57,8 +58,19 @@ private:
     int chainIt;
 
     bool loadFoldcompStructure(std::istream& stream, const std::string& filename);
-    void updateStructure(void * structure, const std::string & filename, std::unordered_map<std::string, int>& entity_to_tax_id);
+    void updateStructure(
+        void * structure,
+        const std::string & filename,
+        std::unordered_map<std::string, int>& entity_to_tax_id,
+        std::unordered_map<std::string, std::string>& entity_to_description
+    );
 };
 
+bool GemmiToFoldcomp(
+    const GemmiWrapper& gw,
+    size_t chainIndex,
+    std::string& outBlob,
+    int anchorResidueThreshold = 25
+);
 
 #endif //FOLDSEEK_GEMMIWRAPPER_H

@@ -183,12 +183,14 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
         swResults.clear();
         finalHits.clear();
         dbKeys.clear();
+        resultBuffer.clear();
+        size_t queryKey = resultReader.getDbKey(id);
         char *data = resultReader.getData(id,0);
         if (*data == '\0') {
+            dbw.writeData(resultBuffer.c_str(), resultBuffer.size(), queryKey, 0);
             continue;
         }
 
-        size_t queryKey = resultReader.getDbKey(id);
         unsigned int queryId = qdbr.sequenceReader->getId(queryKey);
         char *querySeq = qdbr.sequenceReader->getData(queryId, 0);
         int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));

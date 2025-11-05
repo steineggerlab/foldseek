@@ -40,15 +40,20 @@ if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
     fi
     RESULT="${TMP_PATH}/result_expand_aligned"
 fi
-if notExists "${OUTPUT}.dbtype"; then
+
+if notExists "${TMP_PATH}/scoremultimer.dbtype"; then
     # shellcheck disable=SC2086
-    $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${OUTPUT}" ${SCOREMULTIMER_PAR} \
+    $MMSEQS scoremultimer "${QUERYDB}" "${TARGETDB}" "${RESULT}" "${TMP_PATH}/scoremultimer" ${SCOREMULTIMER_PAR} \
         || fail "scoremultimer died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" mvdb "${TMP_PATH}/scoremultimer" "${OUTPUT}" \
+        || fail "mvdb died"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
+
     if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}

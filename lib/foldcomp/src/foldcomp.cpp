@@ -7,7 +7,7 @@
  *     This file contains main data structures for torsion angle compression and
  *     functions for handling them.
  * ---
- * Last Modified: 2024-08-08 19:43:31
+ * Last Modified: 2025-04-21 15:37:18
  * Modified By: Hyunbin Kim (khb7840@gmail.com)
  * ---
  * Copyright © 2021 Hyunbin Kim, All rights reserved
@@ -1282,12 +1282,27 @@ int Foldcomp::extract(std::string& data, int type, int digits) {
             reserving = this->tempFactors.size() * 6;
         }
         data.reserve(reserving);
+        // Check if the max value is 0.0-1.0 or 1-100
+        bool isZeroToOne = false;
+        float maxval = this->tempFactorsDisc.cont_f * (pow(2, NUM_BITS_TEMP) - 1) + this->tempFactorsDisc.min;
+        if (maxval <= 1.0f && digits <= 2) {
+            isZeroToOne = true;
+        }
 
         for (size_t i = 0; i < this->tempFactors.size(); i++) {
-            float clamped = (std::clamp(this->tempFactors[i], 0.0f, 100.0f));
-            char digit1 = (char)(clamped / 10.0f) + '0';
-            char digit2 = (char)((int)clamped % 10) + '0';
+            float clamped;
+            char digit1, digit2;
 
+            if (isZeroToOne) {
+                clamped = (std::clamp(this->tempFactors[i], 0.0f, 1.0f));
+                digit1 = (char)((int)(clamped * 10.0f) % 10) + '0';
+                digit2 = (char)((int)(clamped * 100.0f) % 10) + '0';
+            } else {
+                clamped = (std::clamp(this->tempFactors[i], 0.0f, 100.0f));
+                digit1 = (char)(clamped / 10.0f) + '0';
+                digit2 = (char)((int)clamped % 10) + '0';
+            }
+            // Append digits to data
             data.append(1, digit1);
             if (digits > 1) {
                 data.append(1, digit2);

@@ -313,18 +313,6 @@ std::vector<Command> foldseekCommands = {
         {"scorecomplex", scoremultimer, &localPar.scoremultimer, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
         },
-        {"filtermultimer", filtermultimer, &localPar.filtermultimer, COMMAND_HIDDEN,
-                "Filters multimers satisfying given coverage",
-                "foldseek filtermultimer queryDB targetDB alignmentDB complexDB -c 0.8 --cov-mode 1\n",
-                "Seongeun  Kim <seamustard52@gmail.com> & Sooyoung Cha <ellen2g77@gmail.com>",
-                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:clustDB>",
-                CITATION_FOLDSEEK_MULTIMER, {
-                                           {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
-                                           {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
-                                           {"clustDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb }
-                                   }
-        },
         {"multimercluster", multimercluster, &localPar.multimerclusterworkflow, COMMAND_MAIN, 
                 "Multimer level cluster",
                 "#Clustering of PDB DB\n"
@@ -444,7 +432,7 @@ std::vector<Command> foldseekCommands = {
         },
         {"expandcomplex", expandmultimer, &localPar.expandmultimer, COMMAND_HIDDEN,
                 "", NULL, "", "", CITATION_FOLDSEEK_MULTIMER, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}
-        },
+        },        
         {"version",              versionstring,        &localPar.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,
