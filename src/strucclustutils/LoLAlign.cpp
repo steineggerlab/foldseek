@@ -187,7 +187,7 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
     for (int startAnchor = 0; startAnchor < numStartAnchors; startAnchor++) {
         anchorLength[startAnchor] = 0;
         newAnchorLength[startAnchor] = 0;
-        for(int i = 0; i <= maxAnchorLen; i++){
+        for(int i = 0; i < maxAnchorLen; i++){
             anchorQuery[startAnchor][i] = 0;
             anchorTarget[startAnchor][i] = 0;
 
