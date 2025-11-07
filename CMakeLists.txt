@@ -87,11 +87,12 @@ if(RUST_FEATURE STREQUAL "")
     message(FATAL_ERROR "No SIMD support for this architecture")
 endif()
 message("-- Rust Feature: ${RUST_FEATURE}")
-corrosion_import_crate(
-    MANIFEST_PATH lib/block-aligner/c/Cargo.toml
-    FEATURES "${RUST_FEATURE}"
-    CRATE_TYPES staticlib
-)
+# block_aligner is already imported by mmseqs, so we don't need to import it again
+# corrosion_import_crate(
+#     MANIFEST_PATH lib/block-aligner/c/Cargo.toml
+#     FEATURES "${RUST_FEATURE}"
+#     CRATE_TYPES staticlib
+# )
 include_directories(lib/block-aligner/c)
 if(EMSCRIPTEN)
     corrosion_add_target_local_rustflags(block_aligner_c "-Clink-args=--no-entry -sRELOCATABLE=1")
