@@ -6,6 +6,7 @@
 #include "CommandCaller.h"
 #include "Util.h"
 #include "Debug.h"
+#include "DBReader.h"
 #include "Parameters.h"
 #include "easystructuresearch.sh.h"
 
@@ -45,7 +46,6 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     setEasyStructureSearchDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setEasyStructureSearchMustPassAlong(&par);
-
     bool needBacktrace = false;
     bool needTaxonomy = false;
     bool needTaxonomyMapping = false;
@@ -108,6 +108,10 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
             EXIT(EXIT_FAILURE);
         }
     }
+
+    int dbtype = FileUtil::parseDbType((target+"_ss").c_str());
+    int padded = (DBReader<unsigned int>::getExtendedDbtype(dbtype) & Parameters::DBTYPE_EXTENDED_GPU);
+    cmd.addVariable("NOTPADDED", padded ? NULL : "TRUE");
 
     const bool isIndex = PrefilteringIndexReader::searchForIndex(target).empty() == false;
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
