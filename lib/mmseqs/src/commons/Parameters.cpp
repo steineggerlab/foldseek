@@ -97,7 +97,7 @@ Parameters::Parameters():
         PARAM_CASCADED(PARAM_CASCADED_ID, "--single-step-clustering", "Single step clustering", "Switch from cascaded to simple clustering workflow", typeid(bool), (void *) &singleStepClustering, "", MMseqsParameter::COMMAND_CLUST),
         PARAM_CLUSTER_REASSIGN(PARAM_CLUSTER_REASSIGN_ID, "--cluster-reassign", "Cluster reassign", "Cascaded clustering can cluster sequence that do not fulfill the clustering criteria.\nCluster reassignment corrects these errors", typeid(bool), (void *) &clusterReassignment, "", MMseqsParameter::COMMAND_CLUST),
         PARAM_CLUSTER_SET_MODE(PARAM_CLUSTER_SET_MODE_ID, "--set-mode", "Set mode", "0: Cluster by each entry\n1: Cluster by set", typeid(bool), (void *) &clusteringSetMode, "[0-1]{1}$", MMseqsParameter::COMMAND_CLUST),
-
+        PARAM_CLUSTER_MODULE(PARAM_CLUSTER_MODULE_ID, "--cluster-module", "Cluster module", "0: Linclust\n1: Clust", typeid(int), (void *) &clusterModule, "^[0-1]{1}$", MMseqsParameter::COMMAND_CLUST | MMseqsParameter::COMMAND_CLUST),
         // affinity clustering
         PARAM_MAXITERATIONS(PARAM_MAXITERATIONS_ID, "--max-iterations", "Max connected component depth", "Maximum depth of breadth first search in connected component clustering", typeid(int), (void *) &maxIteration, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUST | MMseqsParameter::COMMAND_EXPERT),
         PARAM_SIMILARITYSCORE(PARAM_SIMILARITYSCORE_ID, "--similarity-type", "Similarity type", "Type of score used for clustering. 1: alignment score 2: sequence identity", typeid(int), (void *) &similarityScoreType, "^[1-2]{1}$", MMseqsParameter::COMMAND_CLUST | MMseqsParameter::COMMAND_EXPERT),
@@ -198,7 +198,7 @@ Parameters::Parameters():
         // indexdb
         PARAM_CHECK_COMPATIBLE(PARAM_CHECK_COMPATIBLE_ID, "--check-compatible", "Check compatible", "0: Always recreate index, 1: Check if recreating index is needed, 2: Fail if index is incompatible", typeid(int), (void *) &checkCompatible, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_SEARCH_TYPE(PARAM_SEARCH_TYPE_ID, "--search-type", "Search type", "Search type 0: auto 1: amino acid, 2: translated, 3: nucleotide, 4: translated nucleotide alignment", typeid(int), (void *) &searchType, "^[0-4]{1}"),
-        PARAM_INDEX_SUBSET(PARAM_INDEX_SUBSET_ID, "--index-subset", "Index subset", "Create specialized index with subset of entries\n0: normal index\n1: index without headers\n2: index without prefiltering data\n4: index without aln (for cluster db)\n8: no sequence lookup (good for GPU only searches)\nFlags can be combined bit wise", typeid(int), (void *) &indexSubset, "^[0-7]{1}", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_INDEX_SUBSET(PARAM_INDEX_SUBSET_ID, "--index-subset", "Index subset", "Create specialized index with subset of entries\n0: normal index\n1: index without headers\n2: index without prefiltering data\n4: index without aln (for cluster db)\n8: no sequence lookup (good for GPU only searches)\nFlags can be combined bit wise", typeid(int), (void *) &indexSubset, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_INDEX_DBSUFFIX(PARAM_INDEX_DBSUFFIX_ID, "--index-dbsuffix", "Index dbsuffix", "A suffix of the db (used for cluster dbs)", typeid(std::string), (void *) &indexDbsuffix, "", MMseqsParameter::COMMAND_HIDDEN),
         // createdb
         PARAM_USE_HEADER(PARAM_USE_HEADER_ID, "--use-fasta-header", "Use fasta header", "Use the id parsed from the fasta header as the index key instead of using incrementing numeric identifiers", typeid(bool), (void *) &useHeader, ""),
@@ -319,6 +319,19 @@ Parameters::Parameters():
         PARAM_TEMPERATURE(PARAM_TEMPERATURE_ID, "--temperature", "Temperature", "Temperature for forward-backward", typeid(float), (void *) &temperature, "^(0\\.[0-9]+|[1-9][0-9]*\\.?[0-9]*)$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_BLOCKLEN(PARAM_BLOCKLEN_ID, "--blocklen", "Block length", "Block length for forward-backward", typeid(int), (void *) &blocklen, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_FWBW_BACKTRACE_MODE(PARAM_FWBW_BACKTRACE_MODE_ID, "--fwbw-backtrace-mode", "Backtrace mode", "Backtrace mode 0: no backtrace, 1: local", typeid(int), (void *) &fwbwBacktraceMode, "^[01]$", MMseqsParameter::COMMAND_EXPERT),
+        // touchdb
+        PARAM_TOUCH_LOCK(PARAM_TOUCH_LOCK_ID, "--touch-lock", "Touch lock", "Lock touched database or database entries into memory. Process will not exit until killed.", typeid(bool), (void *) &touchLock, "", MMseqsParameter::COMMAND_EXPERT),
+        // proteomecluster
+        PARAM_PPS_WEIGHT_FILE(PARAM_PPS_WEIGHT_FILE_ID, "--ppsWeights", "PPS Weight file name", "Weights used for proteome cluster priorization", typeid(std::string), (void*) &ppsWeightFile, "",MMseqsParameter::COMMAND_HIDDEN ),
+        PARAM_WEIGHT_CLUSTER_COUNT(PARAM_WEIGHT_CLUSTER_COUNT_ID, "--weight-clustercount", "Weight cluster count", "Weight of cluster count in clustering", typeid(float), (void *) &weightClusterCount, "^-?[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
+        PARAM_PROTEOME_SIMILARITY(PARAM_PROTEOME_SIMILARITY_ID, "--proteome-similarity", "Proteome similarity", "Proteome similarity threshold", typeid(float), (void *) &proteomeSimThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_PROTEOME_RELATIVE_SIMILARITY(PARAM_PROTEOME_RELATIVE_SIMILARITY_ID, "--proteome-relative-similarity", "Proteome relative similarity", "Proteome relative similarity threshold normalized by proteome size", typeid(float), (void *) &proteomeRelativeSimThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUSTPROTEOME),
+        PARAM_PROTEOME_CASCADED_CLUSTERING(PARAM_PROTEOME_CASCADED_CLUSTERING_ID, "--proteome-cascaded-clustering", "Proteome cascaded clustering", "Cascaded clustering", typeid(bool), (void *) &proteomeCascadedClustering, "", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_INCLUDE_ALIGN_FILES(PARAM_INCLUDE_ALIGN_FILES_ID, "--include-align-files", "Include align files in proteomecluster", "Include align files", typeid(bool), (void *) &includeAlignFiles, "", MMseqsParameter::COMMAND_HIDDEN),
+        PARAM_PROTEOME_WEIGHT_FILE(PARAM_PROTEOME_WEIGHT_FILE_ID, "--proteome-weights", "Proteome Weight file name", "Weights used for proteome priorization", typeid(std::string), (void*) &proteomeWeightFile, "",MMseqsParameter::COMMAND_EXPERT ),
+        PARAM_PROTEOME_WEIGHT_CLUSTER_COUNT(PARAM_PROTEOME_WEIGHT_CLUSTER_COUNT_ID, "--proteome-weight-clustercount", "Weight cluster count in proteome clustering", "Weight of cluster count in proteome clustering", typeid(float), (void *) &proteomeWeightClusterCount, "^-?[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_PROTEOME_INCLUDE_ALIGN_FILES(PARAM_PROTEOME_INCLUDE_ALIGN_FILES_ID, "--proteome-include-align-files", "Include align files in proteomecluster", "Include align files", typeid(bool), (void *) &proteomeIncludeAlignFiles, "", MMseqsParameter::COMMAND_EXPERT),
+        PARAM_PROTEOME_HIDDEN_REPORT(PARAM_PROTEOME_HIDDEN_REPORT_ID, "--proteome-hidden-report", "Hidden report", "Hidden proteome alignment result against the reference proteome", typeid(bool), (void *) &proteomeHiddenReport, "", MMseqsParameter::COMMAND_HIDDEN),
         // for modules that should handle -h themselves
         PARAM_HELP(PARAM_HELP_ID, "-h", "Help", "Help", typeid(bool), (void *) &help, "", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_HELP_LONG(PARAM_HELP_LONG_ID, "--help", "Help", "Help", typeid(bool), (void *) &help, "", MMseqsParameter::COMMAND_HIDDEN)
@@ -1319,6 +1332,41 @@ Parameters::Parameters():
     fwbw.push_back(&PARAM_COMPRESSED);
     fwbw.push_back(&PARAM_V);
 
+    //proteomecluster
+    proteomecluster.push_back(&PARAM_SUB_MAT);
+    proteomecluster.push_back(&PARAM_ADD_BACKTRACE);
+    proteomecluster.push_back(&PARAM_ALIGNMENT_MODE);
+    proteomecluster.push_back(&PARAM_REALIGN_SCORE_BIAS); 
+    proteomecluster.push_back(&PARAM_E);
+    proteomecluster.push_back(&PARAM_MIN_SEQ_ID);
+    proteomecluster.push_back(&PARAM_MIN_ALN_LEN);
+    proteomecluster.push_back(&PARAM_SEQ_ID_MODE);
+    proteomecluster.push_back(&PARAM_C);
+    proteomecluster.push_back(&PARAM_COV_MODE);
+    proteomecluster.push_back(&PARAM_MAX_SEQ_LEN);
+    proteomecluster.push_back(&PARAM_NO_COMP_BIAS_CORR);
+    proteomecluster.push_back(&PARAM_NO_COMP_BIAS_CORR_SCALE);
+    proteomecluster.push_back(&PARAM_WEIGHT_CLUSTER_COUNT);
+    proteomecluster.push_back(&PARAM_PPS_WEIGHT_FILE);
+    proteomecluster.push_back(&PARAM_PROTEOME_WEIGHT_FILE);
+    proteomecluster.push_back(&PARAM_PROTEOME_WEIGHT_CLUSTER_COUNT);
+    proteomecluster.push_back(&PARAM_PROTEOME_INCLUDE_ALIGN_FILES);
+    proteomecluster.push_back(&PARAM_PROTEOME_HIDDEN_REPORT);
+    proteomecluster.push_back(&PARAM_PROTEOME_SIMILARITY);
+    proteomecluster.push_back(&PARAM_PROTEOME_RELATIVE_SIMILARITY);
+    proteomecluster.push_back(&PARAM_PROTEOME_CASCADED_CLUSTERING);
+    proteomecluster.push_back(&PARAM_INCLUDE_ALIGN_FILES);
+    proteomecluster.push_back(&PARAM_REALIGN);
+    proteomecluster.push_back(&PARAM_INCLUDE_IDENTITY);
+    proteomecluster.push_back(&PARAM_PRELOAD_MODE);
+    proteomecluster.push_back(&PARAM_SCORE_BIAS);
+    proteomecluster.push_back(&PARAM_GAP_OPEN);
+    proteomecluster.push_back(&PARAM_GAP_EXTEND);
+    proteomecluster.push_back(&PARAM_ZDROP);
+    proteomecluster.push_back(&PARAM_THREADS);
+    proteomecluster.push_back(&PARAM_COMPRESSED);
+    proteomecluster.push_back(&PARAM_V);
+
     // WORKFLOWS
     searchworkflow = combineList(align, prefilter);
     searchworkflow = combineList(searchworkflow, ungappedprefilter);
@@ -1403,6 +1451,10 @@ Parameters::Parameters():
 
     // easyclusterworkflow
     easyclusterworkflow = combineList(clusterworkflow, createdb);
+
+    // easyproteomeclusterworkflow
+    easyproteomeclusterworkflow = combineList(easyclusterworkflow, proteomecluster);
+    easyproteomeclusterworkflow.push_back(&PARAM_CLUSTER_MODULE);
 
     // taxonomy
     taxonomy.push_back(&PARAM_ORF_FILTER);
@@ -1493,6 +1545,8 @@ Parameters::Parameters():
     appenddbtoindex.push_back(&PARAM_V);
 
     // touchdb
+    touchdb.push_back(&PARAM_ID_LIST);
+    touchdb.push_back(&PARAM_TOUCH_LOCK);
     touchdb.push_back(&PARAM_THREADS);
     touchdb.push_back(&PARAM_V);
 
@@ -2707,6 +2761,23 @@ void Parameters::setDefaults() {
     temperature = 1;
     blocklen = 16;
     fwbwBacktraceMode = 1;
+
+    // touchdb
+    touchLock = false;
+
+
+    // proteomecluster
+    ppsWeightFile = "";
+    proteomeWeightFile = "";
+    weightClusterCount = 0.0;
+    proteomeWeightClusterCount = 0.0;
+    proteomeSimThr = 0.9;
+    proteomeRelativeSimThr = 0.9;
+    proteomeCascadedClustering = 0;
+    includeAlignFiles = false;
+    proteomeIncludeAlignFiles = false;
+    proteomeHiddenReport = false;
+
     // help
     help = 0;
 
@@ -2727,7 +2798,7 @@ void Parameters::setDefaults() {
             { CITATION_PLASS,    "Steinegger M, Mirdita M, Soding J: Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, 16(7), 603-606 (2019)" },
             { CITATION_SERVER,   "Mirdita M, Steinegger M, Soding J: MMseqs2 desktop and local web server app for fast, interactive sequence searches. Bioinformatics, 35(16), 2856-2858 (2019)" },
             { CITATION_TAXONOMY, "Mirdita M, Steinegger M, Breitwieser F, Soding J, Levy Karin E: Fast and sensitive taxonomic assignment to metagenomic contigs. Bioinformatics, btab184 (2021)" },
-            { CITATION_GPU,      "Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, 2024.11.13.623350 (2024)" },
+            { CITATION_GPU,      "Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. Nature Methods (2025)" },
     };
 }
 

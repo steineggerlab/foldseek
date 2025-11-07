@@ -38,6 +38,7 @@ struct MMseqsParameter {
     static const unsigned int COMMAND_CLUSTLINEAR = 64;
     static const unsigned int COMMAND_EXPERT = 128;
     static const unsigned int COMMAND_HIDDEN = 256;
+    static const unsigned int COMMAND_CLUSTPROTEOME= 512;
 
 
     MMseqsParameter(int uid, const char * n, const char *display,
@@ -478,6 +479,7 @@ public:
     bool   singleStepClustering;
     int    clusterReassignment;
     bool    clusteringSetMode;
+    int    clusterModule;
 
     // SEARCH WORKFLOW
     int numIterations;
@@ -740,6 +742,23 @@ public:
     float temperature;
     int blocklen;
     int fwbwBacktraceMode;
+
+    // touchdb
+    bool touchLock;
+
+
+    // proteomecluster
+    std::string  ppsWeightFile;
+    std::string  proteomeWeightFile;
+    float        weightClusterCount;
+    float        proteomeWeightClusterCount;
+    float        proteomeSimThr;      
+    float        proteomeRelativeSimThr;
+    bool         proteomeCascadedClustering;
+    bool         includeAlignFiles;
+    bool         proteomeIncludeAlignFiles;
+    bool         proteomeHiddenReport;
+
     // for modules that should handle -h themselves
     bool help;
 
@@ -834,6 +853,7 @@ public:
     PARAMETER(PARAM_CASCADED)
     PARAMETER(PARAM_CLUSTER_REASSIGN)
     PARAMETER(PARAM_CLUSTER_SET_MODE)
+    PARAMETER(PARAM_CLUSTER_MODULE)
 
     // affinity clustering
     PARAMETER(PARAM_MAXITERATIONS)
@@ -1107,6 +1127,23 @@ public:
     PARAMETER(PARAM_TEMPERATURE)
     PARAMETER(PARAM_BLOCKLEN)
     PARAMETER(PARAM_FWBW_BACKTRACE_MODE)
+
+    // touchdb
+    PARAMETER(PARAM_TOUCH_LOCK)
+
+
+    // proteomecluster
+    PARAMETER(PARAM_PPS_WEIGHT_FILE)
+    PARAMETER(PARAM_WEIGHT_CLUSTER_COUNT)
+    PARAMETER(PARAM_PROTEOME_SIMILARITY)
+    PARAMETER(PARAM_PROTEOME_RELATIVE_SIMILARITY)
+    PARAMETER(PARAM_PROTEOME_CASCADED_CLUSTERING)
+    PARAMETER(PARAM_INCLUDE_ALIGN_FILES)
+    PARAMETER(PARAM_PROTEOME_WEIGHT_FILE)
+    PARAMETER(PARAM_PROTEOME_WEIGHT_CLUSTER_COUNT)
+    PARAMETER(PARAM_PROTEOME_INCLUDE_ALIGN_FILES)
+    PARAMETER(PARAM_PROTEOME_HIDDEN_REPORT)
+
     // for modules that should handle -h themselves
     PARAMETER(PARAM_HELP)
     PARAMETER(PARAM_HELP_LONG)
@@ -1234,6 +1271,8 @@ public:
     std::vector<MMseqsParameter*> gpuserver;
     std::vector<MMseqsParameter*> tsv2exprofiledb;
     std::vector<MMseqsParameter*> fwbw;
+    std::vector<MMseqsParameter*> proteomecluster;
+    std::vector<MMseqsParameter*> easyproteomeclusterworkflow;
 
     std::vector<MMseqsParameter*> combineList(const std::vector<MMseqsParameter*> &par1,
                                              const std::vector<MMseqsParameter*> &par2);
