@@ -1,2 +1,0 @@
-[build]
-rustflags = ["--cfg=some_cargo_config_rustflag"]
