@@ -702,11 +702,41 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
         par.shuffleDatabase = true;
         par.PARAM_SHUFFLE.wasSet = true;
-        int status = createdb(argc, argv, command);
+        int origGpu = par.gpu;
+        par.gpu = 0;
+        par.PARAM_GPU.wasSet = true;
+        par.maskMode = 0;
+        par.PARAM_MASK_RESIDUES.wasSet = true;
+        par.maskNrepeats = 0;
+        par.PARAM_MASK_N_REPEAT.wasSet = true;
+        std::vector<const char*> newArgv;
+        newArgv.reserve(argc + 1);
+        for (int i = 0; i < argc; ++i) {
+            const char* arg = argv[i];
+            if (strcmp(arg, par.PARAM_GPU.name) == 0
+             || strcmp(arg, par.PARAM_MASK_RESIDUES.name) == 0
+             || strcmp(arg, par.PARAM_MASK_N_REPEAT.name) == 0) {
+                if (i + 1 < argc) {
+                    ++i;
+                }
+                continue;
+            }
+            if (strcmp(arg, par.PARAM_SHUFFLE.name) == 0) {
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    ++i;
+                }
+                continue;
+            }
+            newArgv.push_back(arg);
+        }
+        int newArgc = static_cast<int>(newArgv.size());
+        newArgv.push_back(NULL);
+        int status = createdb(newArgc, newArgv.data(), command);
         if (status != EXIT_SUCCESS) {
             return status;
         }
         fflush(stdout);
+        par.gpu = origGpu;
 
         std::vector<std::string> prefix = { "", "/model" };
         std::vector<std::string> suffix = { "", "/prostt5-f16.gguf" };
