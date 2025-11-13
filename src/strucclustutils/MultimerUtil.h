@@ -236,8 +236,6 @@ static void getKeyToIdMapIdToKeysMapIdVec(
     lookupDB.close();
 }
 
-// TOOD: flexible
-// TOOD: remove assId
 static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::result_t &res) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
