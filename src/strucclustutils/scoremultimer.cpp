@@ -840,6 +840,7 @@ void filterassignment(unsigned int assignmentId, Assignment &assignment, LocalPa
             tchain.y[residx - matchLen] = assignment.dbCaYVec[residx];
             tchain.z[residx - matchLen] = assignment.dbCaZVec[residx];
         }
+        // fill t and u
         float t[3];
         float u[3][3];
         std::string tmp;
@@ -875,6 +876,7 @@ void filterassignment(unsigned int assignmentId, Assignment &assignment, LocalPa
                 uj = 0;
             }
         }
+        // based on t and u, calculate chain tm
         BasicFunction::do_rotation(tchain, tmt, qmatchLen, t, u);
         float d0 = 1.24*(cbrt(dbChainLengths[qidx]-15)) -1.8;
         float d02 = d0*d0;
@@ -933,7 +935,9 @@ void filterassignment(unsigned int assignmentId, Assignment &assignment, LocalPa
     }
     
     // interface-lddt, only check if aligned chains > 1
-    // TODO: 여기 잘 된건지 확인
+    // if the interface lddt parameter is set and aligned chain num ==1, then this assignment doesn't pass
+    // if the interface lddt parameter isn't set, interfacelddt is printed out as 0 if aligned chain num ==1
+    // if aligned chain num > 1, always calculate
     float interfaceLddt = 0;
     if (alnChainNum == 1 && par.filtInterfaceLddtThr > 0) {
         return;
@@ -1014,7 +1018,7 @@ void filterassignment(unsigned int assignmentId, Assignment &assignment, LocalPa
             return;
         }
     }
-    
+    // write down qcov, tcov, qchaintms, tchaintms, interface lddt if everything passed
     std::string result;
     result.append(SSTR(qCov));
     result.append("\t");
@@ -1151,15 +1155,17 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
             resultToWriteLines.resize(qChainKeys.size());
-            // for each assignment
             std::vector<std::vector<unsigned int>> qInterfaceVec(qChainKeys.size());
             std::map<unsigned int, unsigned int> qChainKeyTochainIdx;
+            // get interface region for query complex
             getInterfaceRegion(qInterfaceVec, qChainKeys, q3DiDbr, qCaDbr, 0, qChainKeyTochainIdx);
             std::map<unsigned int, std::pair<Assignment, unsigned int>> tCompBestAssignment;
+            // for each assignment, filter
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
                 Assignment &assignment = assignments[assignmentId];
                 filterassignment(assignmentId, assignment, par, qChainKeys.size(), dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, qChainKeyTochainIdx, tCompBestAssignment, qInterfaceVec);
             }
+            // for the assignments, write
             for(const auto &pair : tCompBestAssignment) {
                 const Assignment &assignment = pair.second.first;
                 const std::string &resultToWrite2 = assignment.resultToWriteLines2;
@@ -1176,7 +1182,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 unsigned int & qKey = qChainKeys[qChainKeyIdx];
                 resultWriter.writeData(resultToWrite.c_str(),resultToWrite.length(),qKey,thread_idx);
             }
-            // TODO: what if there is no self-alignment when using sameDB, and put it into clust?
             assignments.clear();
             searchResults.clear();
             resultToWriteLines.clear();
