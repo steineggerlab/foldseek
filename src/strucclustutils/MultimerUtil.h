@@ -264,12 +264,12 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
         double tTmScore = strtod(entry[12], NULL);
         std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
         std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
-        double qComplexCov = strtod(entry[15], NULL);
-        double tComplexCov = strtod(entry[16], NULL);
-        std::string qChainTms = std::string(entry[17], entry[18] - entry[17]-1);
-        std::string tChainTms = std::string(entry[18], entry[19] - entry[18]-1);
-        std::string interfaceLddtScore = std::string(entry[19], entry[20] - entry[19]-1);
-        auto assId = Util::fast_atoi<unsigned int>(entry[20]);
+        auto assId = Util::fast_atoi<unsigned int>(entry[15]);
+        double qComplexCov = strtod(entry[16], NULL);
+        double tComplexCov = strtod(entry[17], NULL);
+        std::string qChainTms = std::string(entry[18], entry[19] - entry[18]-1);
+        std::string tChainTms = std::string(entry[19], entry[20] - entry[19]-1);
+        std::string interfaceLddtScore = std::string(entry[20], entry[21] - entry[20]-1);
         res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
         return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
     } else if(columns == 16) {

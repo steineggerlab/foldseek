@@ -77,6 +77,7 @@ struct Assignment {
     std::vector<float> dbCaXVec;
     std::vector<float> dbCaYVec;
     std::vector<float> dbCaZVec;
+    std::vector<unsigned int> matchLenVec; 
     double qTmScore;
     double dbTmScore;
     std::string tString;
@@ -84,6 +85,7 @@ struct Assignment {
     std::string backtrace;
     std::string assignmentInfo;
     std::vector<resultToWriteWithKey_t> resultToWriteLines;
+    std::string resultToWriteLines2;
     TMaligner::TMscoreResult tmResult;
 
     void appendChainToChainAln(ChainToChainAln &aln) {
@@ -94,6 +96,7 @@ struct Assignment {
         dbCaXVec.insert(dbCaXVec.end(), aln.dbChain.caVecX.begin(), aln.dbChain.caVecX.end());
         dbCaYVec.insert(dbCaYVec.end(), aln.dbChain.caVecY.begin(), aln.dbChain.caVecY.end());
         dbCaZVec.insert(dbCaZVec.end(), aln.dbChain.caVecZ.begin(), aln.dbChain.caVecZ.end());
+        matchLenVec.push_back(aln.matches);
         resultToWriteLines.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
     }
 
@@ -117,13 +120,13 @@ struct Assignment {
         tmResult = tmAligner.computeTMscore(&dbCaXVec[0], &dbCaYVec[0], &dbCaZVec[0],matches,0,0, backtrace,normLen);
         qTmScore = tmResult.tmscore * normLen / qResidueLength;
         dbTmScore = tmResult.tmscore * normLen / dbResidueLength;
-        qCaXVec.clear();
-        qCaYVec.clear();
-        qCaZVec.clear();
-        dbCaXVec.clear();
-        dbCaYVec.clear();
-        dbCaZVec.clear();
-        backtrace.clear();
+        // qCaXVec.clear();
+        // qCaYVec.clear();
+        // qCaZVec.clear();
+        // dbCaXVec.clear();
+        // dbCaYVec.clear();
+        // dbCaZVec.clear();
+        // backtrace.clear();
     }
 
     void updateResultToWriteLines() {
@@ -611,7 +614,7 @@ public:
             assignment.getTmScore(*tmAligner);
             assignment.updateResultToWriteLines();
             assignments.emplace_back(assignment);
-            assignment.reset();
+            // assignment.reset();
         }
         finalClusters.clear();
     }
@@ -693,7 +696,6 @@ static void getlookupInfo(
     end = data + lookupDB.mappedSize();
     std::vector<bool> isVistedSet(maxSet + 1, false);
 
-    int nComplex = 0;
     while (data < end && *data != '\0') {
         const size_t columns = Util::getWordsOfLine(data, entry, 255);
         if (columns < 3) {
@@ -713,11 +715,7 @@ static void getlookupInfo(
             if (isVistedSet[complexId] == 0){
                 complexIdToChainKeysLookup.emplace(complexId, std::vector<unsigned int>());
                 complexIdVec.emplace_back(complexId);
-                Complex complex;
-                complex.complexId = complexId;
-                complex.complexName = complexName;
                 isVistedSet[complexId] = 1;
-                nComplex++;
             }
             complexIdToChainKeysLookup.at(complexId).emplace_back(chainKey);
         }
@@ -726,7 +724,13 @@ static void getlookupInfo(
     lookupDB.close();
 }
 
-void getInterfaceRegion(std::vector<std::vector<unsigned int>>& qInterfaceVec, std::vector<unsigned int> &qChainKeys, IndexReader *qDbr, DBReader<unsigned int> *qStructDbr, float threshold = INTERFACE_THRESHOLD, std::map<unsigned int, unsigned int>& qChainKeyTochainIdx){
+void getInterfaceRegion(std::vector<std::vector<unsigned int>>& qInterfaceVec, 
+                        std::vector<unsigned int> &qChainKeys, 
+                        IndexReader *qDbr, 
+                        DBReader<unsigned int> *qStructDbr, 
+                        unsigned int thread_idx, 
+                        std::map<unsigned int, unsigned int>& qChainKeyTochainIdx,
+                        float threshold = INTERFACE_THRESHOLD){
     float d2 = threshold * threshold;
     Coordinate16 coords, coords2;
     for (size_t chainIdx = 0; chainIdx < qChainKeys.size(); chainIdx++) {
@@ -738,55 +742,55 @@ void getInterfaceRegion(std::vector<std::vector<unsigned int>>& qInterfaceVec, s
         size_t chainLen = qDbr->sequenceReader->getSeqLen(chainDbId);
         float* chainData = coords.read(cadata, chainLen, caLength);
         
-        for (size_t chainIdx2 = chainIdx+1; chainIdx2 < qChainKeys.size(); chainIdx2++) {
-            unsigned int chainKey2 = qChainKeys[chainIdx2];
-            unsigned int chainDbId2 = qDbr->sequenceReader->getId(chainKey2);
-            char *cadata2 = qStructDbr->getData(chainDbId2, thread_idx);
-            size_t caLength2 = qStructDbr->getEntryLen(chainDbId2);
-            size_t chainLen2 = qDbr->sequenceReader->getSeqLen(chainDbId2);
-            float* chainData2 = coords2.read(cadata2, chainLen2, caLength2);
-            for (size_t chainResIdx=0; chainResIdx < chainLen; chainResIdx++) {
-                bool isInterface = false;
-                for (size_t chainResIdx2=0; chainResIdx2 < chainLen2; chainResIdx2++) {
-                    float dist = BasicFunction::dist(chainData[chainResIdx], chainData[chainLen + chainResIdx], chainData[2*chainLen + chainResIdx],
-                                                    chainData2[chainResIdx2], chainData2[chainLen2 + chainResIdx2], chainData2[2*chainLen2 + chainResIdx2]);
-                    if (dist < d2) {
-                        isInterface = true;
-                        qInterfaceVec[chainIdx].push_back(chainResIdx);
-                        break;
+        for (size_t chainIdx2 = 0; chainIdx2 < qChainKeys.size(); chainIdx2++) {
+            if (chainIdx != chainIdx2) {
+                unsigned int chainKey2 = qChainKeys[chainIdx2];
+                unsigned int chainDbId2 = qDbr->sequenceReader->getId(chainKey2);
+                char *cadata2 = qStructDbr->getData(chainDbId2, thread_idx);
+                size_t caLength2 = qStructDbr->getEntryLen(chainDbId2);
+                size_t chainLen2 = qDbr->sequenceReader->getSeqLen(chainDbId2);
+                float* chainData2 = coords2.read(cadata2, chainLen2, caLength2);
+                for (size_t chainResIdx=0; chainResIdx < chainLen; chainResIdx++) {
+                    for (size_t chainResIdx2=0; chainResIdx2 < chainLen2; chainResIdx2++) {
+                        float dist = BasicFunction::dist(chainData[chainResIdx], chainData[chainLen + chainResIdx], chainData[2*chainLen + chainResIdx],
+                                                        chainData2[chainResIdx2], chainData2[chainLen2 + chainResIdx2], chainData2[2*chainLen2 + chainResIdx2]);
+                        if (dist < d2) {
+                            qInterfaceVec[chainIdx].push_back(chainResIdx);
+                            break;
+                        }
                     }
                 }
             }
         }
     }
 }
-void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int qChainNum, chainKeyToComplexId_t& dbChainKeyToComplexIdMap, complexIdToChainKeys_t& dbComplexIdToChainKeysMap, std::map<unsigned int, unsigned int>& qChainKeyTochainIdx, std::map<unsigned int, std::pair<Assignment, unsigned int>> &tCompBestAssignment){
-    //return true or false
-    //matchlen: matches
+void filterassignment(unsigned int assignmentId, Assignment &assignment, LocalParameters &par, unsigned int qChainNum, chainKeyToComplexId_t& dbChainKeyToComplexIdMap, complexIdToChainKeys_t& dbComplexIdToChainKeysMap, std::map<unsigned int, unsigned int>& qChainKeyTochainIdx, std::map<unsigned int, std::pair<Assignment, unsigned int>> &tCompBestAssignment, std::vector<std::vector<unsigned int>> &qInterfaceVec){
     unsigned int tComplexId;
-    unsigned int qalnlen, talnlen;
+    unsigned int qalnlen = 0;
+    unsigned int talnlen = 0;
     unsigned int adjustAlnLen;
-    unsigned int alnChainNum = assignment.resultToWriteLines.size();
+    size_t alnChainNum = assignment.resultToWriteLines.size();
     std::vector<int> qChainLengths(alnChainNum);
     std::vector<int> dbChainLengths(alnChainNum);
     std::vector<std::string> backtraceVec(alnChainNum);
     std::vector<int> qStartPosVec(alnChainNum);
     std::vector<int> dbStartPosVec(alnChainNum);
-    std::vector<double> qTMscores(alnChainNum);
-    std::vector<double> dbTMscores(alnChainNum);
-    std::vector<size_t> alnLenvec(alnChainNum);
+    std::vector<float> qTMscores(alnChainNum);
+    std::vector<float> dbTMscores(alnChainNum);
     std::vector<size_t> qidxToqChainKey(alnChainNum);
+    std::string uString, tString;
     // check if aligned chain # is sufficient
-    if(alnChainNum < par.minAlignedChains) {
+    if(alnChainNum < static_cast<size_t>(par.minAlignedChains)) {
         return;
     }
-    unsigned int dbChainNum;
-
+    unsigned int dbChainNum = 0;
     // get infos from resultToWrite, such as algned length of each chain
     for (size_t resultToWriteIdx = 0; resultToWriteIdx < alnChainNum; resultToWriteIdx++) {
-        unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;
+        const unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;
         resultToWrite_t &resultToWrite = assignment.resultToWriteLines[resultToWriteIdx].second;
-        const char* data = resultToWrite.c_str();
+        resultToWrite+= "\t" + SSTR(assignmentId);
+        const char* data = resultToWrite.c_str();   
+        Matcher::result_t res;
         ComplexDataHandler retComplex = parseScoreComplexResult(data, res);
         unsigned int tChainKey = res.dbKey;
         tComplexId = dbChainKeyToComplexIdMap.at(tChainKey);
@@ -795,16 +799,17 @@ void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int
         qChainLengths[resultToWriteIdx] = res.qLen;
         dbChainLengths[resultToWriteIdx] = res.dbLen;
         backtraceVec[resultToWriteIdx] = res.backtrace;
-        alnLenvec[resultToWriteIdx] = res.alnLength;
         qStartPosVec[resultToWriteIdx] = res.qStartPos;
         dbStartPosVec[resultToWriteIdx] = res.dbStartPos;
-        std::vector<unsigned int> &dbChainKeys = dbChainKeyToComplexIdMap.at(tComplexId);
+        uString = retComplex.uString;
+        tString = retComplex.tString;
+        std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(tComplexId);
         dbChainNum = dbChainKeys.size();
         qidxToqChainKey[resultToWriteIdx] = qKey;
     }
 
     // check if multimer tm matches the threshold parameter
-    if (par.covMode == Parameters::COV_MODE_BIDIRECTION && (assignment.qTmScore < par.tmScoreThr || assignment.dbTmScore < par.tmScoreThr)) {
+    if (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL && (assignment.qTmScore < par.tmScoreThr || assignment.dbTmScore < par.tmScoreThr)) {
         return;
     } else if (par.covMode == Parameters::COV_MODE_TARGET && assignment.dbTmScore < par.tmScoreThr) {
         return;
@@ -815,7 +820,7 @@ void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int
     // check if multimer coverage matches the threshold parameter
     float qCov = static_cast<float>(qalnlen)/static_cast<float>(assignment.qResidueLength);
     float tCov = static_cast<float>(talnlen)/static_cast<float>(assignment.dbResidueLength);
-    if (par.covMode == Parameters::COV_MODE_BIDIRECTION) {
+    if (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL) {
         adjustAlnLen = (qCov+tCov)/2;
     } else if (par.covMode == Parameters::COV_MODE_TARGET) {
         adjustAlnLen = tCov;
@@ -825,28 +830,76 @@ void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int
     if(! Util::hasCoverage(par.covThr, par.covMode, qCov, tCov)){
         return;
     }
-
     // chain by chain tmscore
-    TMaligner *tmAligner;
     unsigned int matchLen = 0;
-    for (size_t qidx = 0; qidx < alnChainNum; qidx++) {
-        std::string backtrace = std::string(alnLenvec[qidx], 'M');
-        unsigned int normLen = std::min(qChainLengths[qidx], dbChainLengths[qidx]);
-        tmAligner = new TMaligner(qChainLengths[qidx] + dbChainLengths[qidx], false, true, false);
-        tmAligner.initQuery(&assignment.qCaXVec[matchLen], &assignment.qCaYVec[matchLen], &assignment.qCaZVec[matchLen], NULL, alnLenvec[qidx]);
-        TMaligner::TMscoreResult tmResult = tmAligner.computeTMscore(&assignment.dbCaXVec[matchLen], &assignment.dbCaXVec[matchLen], &assignment.dbCaXVec[matchLen], alnLenvec[qidx], 0, 0, backtrace, normLen);
-        double qTmScore = tmResult.tmscore * normLen / qChainLengths[qidx];
-        double dbTmScore = tmResult.tmscore * normLen / dbChainLengths[qidx];
-        delete tmAligner;
+    for (unsigned int qidx = 0; qidx < alnChainNum; qidx++) {
+        unsigned int qmatchLen = assignment.matchLenVec[qidx];
+        Coordinates tmt(qmatchLen), tchain(qmatchLen);
+        for (unsigned int residx = matchLen; residx< qmatchLen + matchLen; residx++) {
+            tchain.x[residx - matchLen] = assignment.dbCaXVec[residx];
+            tchain.y[residx - matchLen] = assignment.dbCaYVec[residx];
+            tchain.z[residx - matchLen] = assignment.dbCaZVec[residx];
+        }
+        float t[3];
+        float u[3][3];
+        std::string tmp;
+        int ti = 0;
+        const int tlen = static_cast<int>(tString.size());
+        for (int k=0; k<tlen; k++) {
+            if (k ==tlen-1) {
+                t[ti] = std::stof(tmp);
+            } else if (tString[k] == ',') {
+                t[ti] = std::stof(tmp);
+                tmp.clear();
+                ti++;
+            } else {
+                tmp.push_back(tString[k]);
+            }
+        }
+        std::string tmp2;
+        int ui = 0;
+        int uj = 0;
+        const int ulen = static_cast<int>(uString.size());
+        for (int k=0; k < ulen; k++) {
+            if (k==ulen-1) {
+                u[ui][uj] = std::stof(tmp2);
+            } else if (uString[k] == ',') {
+                u[ui][uj] = std::stof(tmp2);
+                tmp2.clear();
+                uj++;
+            } else {
+                tmp2.push_back(uString[k]);
+            }
+            if (uj == 3) {
+                ui++;
+                uj = 0;
+            }
+        }
+        BasicFunction::do_rotation(tchain, tmt, qmatchLen, t, u);
+        float d0 = 1.24*(cbrt(dbChainLengths[qidx]-15)) -1.8;
+        float d02 = d0*d0;
+        float tmScore = 0;
+        for (unsigned int ci=0; ci<qmatchLen; ci++) {
+            float xa_x = assignment.qCaXVec[matchLen + ci];
+            float xa_y = assignment.qCaYVec[matchLen + ci];
+            float xa_z = assignment.qCaZVec[matchLen + ci];
+            float ya_x = tmt.x[ci];
+            float ya_y = tmt.y[ci];
+            float ya_z = tmt.z[ci];
+            float di = BasicFunction::dist(xa_x, xa_y, xa_z, ya_x, ya_y, ya_z);
+            float oneDividedDist = 1/(1+di/d02);
+            tmScore += oneDividedDist;
+        }
+        float qTmScore = tmScore / qChainLengths[qidx];
+        float dbTmScore = tmScore / dbChainLengths[qidx];
         qTMscores[qidx] = qTmScore;
         dbTMscores[qidx] = dbTmScore;
-        matchLen+=alnLenvec[qidx];
+        matchLen+=qmatchLen;
     }
-
     // check chain-tm-threshold 
     // if cov-mode 0, every chain should be aligned, every tm scores should be higher than the threshold
-    unsigned int chainpassNum = 0;
-    if (par.covMode == Parameters::COV_MODE_BIDIRECTION) {
+    int chainpassNum = 0;
+    if (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL) {
         if (dbChainNum != qChainNum || dbChainNum != alnChainNum) {
             return;
         }
@@ -858,7 +911,7 @@ void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int
                 return;
             }
         }
-        // if cov-mode 1 or 2, min-aligned-chains should have tm higher than the threshold.
+    // if cov-mode 1 or 2, min-aligned-chains should have tm higher than the threshold.
     } else if (par.covMode == Parameters::COV_MODE_TARGET) {
         for (size_t qidx = 0; qidx < alnChainNum; qidx++) {
             if (dbTMscores[qidx]>= par.filtChainTmThr) {
@@ -878,11 +931,15 @@ void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int
             return;
         }
     }
-
+    
     // interface-lddt, only check if aligned chains > 1
-    if (alnChainNum > 1) {
-        std::vector<int> qcaToResidue(assignment.qCaXVec.size(), -1);
-        std::vector<int> dbcaToResidue(assignment.dbCaXVec.size(), -1);
+    // TODO: 여기 잘 된건지 확인
+    float interfaceLddt = 0;
+    if (alnChainNum == 1 && par.filtInterfaceLddtThr > 0) {
+        return;
+    } else if (alnChainNum > 1) {
+        std::vector<int> qcaToResidue(assignment.qResidueLength, -1);
+        std::vector<int> dbcaToResidue(assignment.dbResidueLength, -1);
         unsigned int numIncrease = 0;
         unsigned int alnChainSum = 0;
         for (size_t qidx = 0; qidx < alnChainNum; qidx++) {
@@ -890,37 +947,45 @@ void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int
             unsigned int qStart = qStartPosVec[qidx];
             unsigned int dbStart = dbStartPosVec[qidx];
             unsigned int qPos = 0;
-            for (size_t btPos = 0; btPos < backtrace.size(); btPos++) {
-                if (backtrace[btPos] == 'M') {
+            unsigned int dbPos = 0;
+            for (size_t btPos = 0; btPos < backtraceString.size(); btPos++) {
+                if (backtraceString[btPos] == 'M') {
                     qcaToResidue[alnChainSum + qStart + qPos] = numIncrease;
                     dbcaToResidue[alnChainSum + dbStart + dbPos] = numIncrease++;
-                } else if (backtrace[btPos] == 'I') {
                     qPos++;
-                } else if (backtrace[btPos] == 'D') {
+                    dbPos++;
+                } else if (backtraceString[btPos] == 'I') {
+                    qPos++;
+                } else if (backtraceString[btPos] == 'D') {
                     dbPos++;
                 }
             }
-            alnChainSum += alnLenvec[qidx];
+            alnChainSum += assignment.matchLenVec[qidx];
         }
         std::vector<float> qIntVecX, qIntVecY, qIntVecZ, dbIntVecX, dbIntVecY, dbIntVecZ;
         alnChainSum = 0;
+        unsigned int wholeIntLen = 0;
         for (size_t qidx = 0; qidx < alnChainNum; qidx++) {
             std::string backtraceString = Matcher::uncompressAlignment(backtraceVec[qidx]);
             std::vector<int> qchainIsMatch(qChainLengths[qidx], -1);
             std::vector<bool> qchainIsVisited(qChainLengths[qidx], 0);
             unsigned int qStart = qStartPosVec[qidx];
             unsigned int dbStart = dbStartPosVec[qidx];
-            unsigned int qPos, dbPos;
-            for (size_t btPos = 0; btPos < backtrace.size(); btPos++) {
-                if (backtrace[btPos] == 'M') {
-                    qchainIsMatch[qStart + btPos + qPos] = dbStart + btPos + dbPos;
-                } else if (backtrace[btPos] == 'I') {
+            unsigned int qPos = 0;
+             unsigned int dbPos = 0;
+            for (size_t btPos = 0; btPos < backtraceString.size(); btPos++) {
+                if (backtraceString[btPos] == 'M') {
+                    qchainIsMatch[qStart + qPos] = dbStart + dbPos;
                     qPos++;
-                } else if (backtrace[btPos] == 'D') {
+                    dbPos++;
+                } else if (backtraceString[btPos] == 'I') {
+                    qPos++;
+                } else if (backtraceString[btPos] == 'D') {
                     dbPos++;
                 }
             }
             std::vector<unsigned int>& qChainInterfaceVec =  qInterfaceVec[qChainKeyTochainIdx[qidxToqChainKey[qidx]]];
+            wholeIntLen += qChainInterfaceVec.size();
             for (size_t resIdIdx = 0; resIdIdx< qChainInterfaceVec.size(); resIdIdx++) {
                 if(qchainIsMatch[qChainInterfaceVec[resIdIdx]] > -1 && qchainIsVisited[qChainInterfaceVec[resIdIdx]] == 0) {
                     qIntVecX.push_back(assignment.qCaXVec[qcaToResidue[alnChainSum + qChainInterfaceVec[resIdIdx]]]);
@@ -932,26 +997,51 @@ void filterassignment(Assignment &assignment, LocalParameters &par, unsigned int
                     qchainIsVisited[qChainInterfaceVec[resIdIdx]] = 1;
                 }
             }
-            alnChainSum += alnLenvec[qidx];
+            alnChainSum += assignment.matchLenVec[qidx];
         }
         unsigned int intAlnLen = dbIntVecX.size();
-        std::string alnbt(intAlnLen, 'M');
-        LDDTCalculator lddtcalculator(intAlnLen+1, intAlnLen+1);
-        lddtcalculator.initQuery(intAlnLen, &qIntVecX[0], &qIntVecY[0], &qIntVecZ[0]);
-        LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator.computeLDDTScore(intAlnLen, 0, 0, bt, &dbIntVecX[0], &dbIntVecY[0], &dbIntVecZ[0]);
-        interfaceLddt = lddtres.avgLddtScore * lddtres.scoreLength / qChainInterfaceVec.size();
+        if (intAlnLen > 0) {
+            std::string alnbt(intAlnLen, 'M');
+            LDDTCalculator lddtcalculator(intAlnLen+1, intAlnLen+1);
+            lddtcalculator.initQuery(intAlnLen, &qIntVecX[0], &qIntVecY[0], &qIntVecZ[0]);
+            LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator.computeLDDTScore(intAlnLen, 0, 0, alnbt, &dbIntVecX[0], &dbIntVecY[0], &dbIntVecZ[0]);
+            interfaceLddt = lddtres.avgLddtScore * lddtres.scoreLength / wholeIntLen;
 
-        if(interfaceLddt < par.filtInterfaceLddtThr) {
+            if(interfaceLddt < par.filtInterfaceLddtThr) {
+                return;
+            }
+        } else if (par.filtInterfaceLddtThr > 0) {
             return;
         }
     }
+    
+    std::string result;
+    result.append(SSTR(qCov));
+    result.append("\t");
+    result.append(SSTR(tCov));
+    result.append("\t");
+    for (unsigned int i = 0; i < qTMscores.size(); i++) {
+        result.append(SSTR(qTMscores[i]));
+        if(i < qTMscores.size() - 1) {
+            result.append(",");
+        }
+    }
+    result.append("\t");
+    for (unsigned int i = 0; i < dbTMscores.size(); i++) {
+        result.append(SSTR(dbTMscores[i]));
+        if(i < dbTMscores.size() - 1) {
+            result.append(",");
+        }
+    }
+    result.append("\t");
+    result.append(SSTR(interfaceLddt));
+    assignment.resultToWriteLines2 = result;
+
     auto it = tCompBestAssignment.find(tComplexId);
     if (it == tCompBestAssignment.end() ||
         adjustAlnLen > it->second.second) {
         tCompBestAssignment[tComplexId] = {assignment,adjustAlnLen};
     }
-
-    return;
 }
 
 int scoremultimer(int argc, const char **argv, const Command &command) {
@@ -1037,31 +1127,17 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         Coordinate16 qcoords;
         Coordinate16 tcoords;
         Matcher::result_t res;
-        std::map<unsigned int, ComplexFilterCriteria> localComplexMap;
-        std::map<unsigned int, std::vector<unsigned int>> cmplIdToBestAssId;
-        std::vector<unsigned int> selectedAssIDs;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
-        std::vector<std::vector<resultToWrite_t>> resultToWriteLines;
-        std::vector<resultToWrite_t> resultToWriteLinesFinal;
+        std::vector<resultToWrite_t> resultToWriteLines;
         ComplexScorer complexScorer(q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
-            localComplexMap.clear();
-            cmplIdToBestAssId.clear();
-            selectedAssIDs.clear();
-            searchResults.clear();
-            assignments.clear();
-            resultToWriteLines.clear();
-            resultToWriteLinesFinal.clear();
-
-            Complex qComplex = qComplexes[qCompIdx];
             unsigned int qComplexId = qComplexIndices[qCompIdx];
-            std::map<std::vector<unsigned int>, unsigned int> qalnchain2intlen;
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
             if (monomerIncludeMode == SKIP_MONOMERS && qChainKeys.size() < MULTIPLE_CHAINED_COMPLEX) {
                 progress.updateProgress();
@@ -1075,25 +1151,24 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
             resultToWriteLines.resize(qChainKeys.size());
-            resultToWriteLinesFinal.resize(qChainKeys.size());
             // for each assignment
             std::vector<std::vector<unsigned int>> qInterfaceVec(qChainKeys.size());
             std::map<unsigned int, unsigned int> qChainKeyTochainIdx;
-            getInterfaceRegion(qInterfaceVec, qChainKeys, q3DiDbr, qCaDbr, 0, INTERFACE_THRESHOLD, qChainKeyTochainIdx);
+            getInterfaceRegion(qInterfaceVec, qChainKeys, q3DiDbr, qCaDbr, 0, qChainKeyTochainIdx);
             std::map<unsigned int, std::pair<Assignment, unsigned int>> tCompBestAssignment;
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
                 Assignment &assignment = assignments[assignmentId];
-                filterassignment(assignment, par, qChainKeys.size(), dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, qChainKeyTochainIdx, tCompBestAssignment);
+                filterassignment(assignmentId, assignment, par, qChainKeys.size(), dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, qChainKeyTochainIdx, tCompBestAssignment, qInterfaceVec);
             }
-            // TODO: should write chain tm, interface lddt, qCov, tCov
             for(const auto &pair : tCompBestAssignment) {
-                Assignment &assignment = pair.first;
+                const Assignment &assignment = pair.second.first;
+                const std::string &resultToWrite2 = assignment.resultToWriteLines2;
                 for (size_t resultToWriteIdx = 0; resultToWriteIdx < assignment.resultToWriteLines.size(); resultToWriteIdx++) {
-                    unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;
-                    resultToWrite_t &resultToWrite = assignment.resultToWriteLines[resultToWriteIdx].second;
-                    snprintf(buffer, sizeof(buffer), "%s\n", resultToWrite.c_str());
+                    const unsigned int &qKey = assignment.resultToWriteLines[resultToWriteIdx].first;
+                    const resultToWrite_t &resultToWrite = assignment.resultToWriteLines[resultToWriteIdx].second;
+                    snprintf(buffer, sizeof(buffer), "%s\t%s\n", resultToWrite.c_str(), resultToWrite2.c_str());
                     unsigned int currIdx = std::find(qChainKeys.begin(), qChainKeys.end(), qKey) - qChainKeys.begin();
-                    resultToWriteLines[currIdx].emplace_back(buffer);
+                    resultToWriteLines[currIdx].append(buffer);
                 }
             }
             for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
@@ -1102,6 +1177,9 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 resultWriter.writeData(resultToWrite.c_str(),resultToWrite.length(),qKey,thread_idx);
             }
             // TODO: what if there is no self-alignment when using sameDB, and put it into clust?
+            assignments.clear();
+            searchResults.clear();
+            resultToWriteLines.clear();
             progress.updateProgress();
         }
     }
@@ -1114,6 +1192,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         qCaDbr->close();
         delete qCaDbr;
     }
-    resultWriter.close();
+    resultWriter.close(false);
     return EXIT_SUCCESS;
 }
