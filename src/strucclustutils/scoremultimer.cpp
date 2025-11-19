@@ -29,6 +29,10 @@ struct SearchResult {
     unsigned int dbResidueLen;
     std::vector<ChainToChainAln> alnVec;
 
+    void set(std::vector<unsigned int> &qChainKeys, unsigned int qResidueLen, std::vector<unsigned int> &dbChainKeys, unsigned int dbResidueLen, const std::vector<ChainToChainAln> &alnVec)
+    : qChainKeys(qChainKeys), dbChainKeys(dbChainKeys), qResidueLen(qResidueLen), dbResidueLen(dbResidueLen), alnVec(alnVec) {}
+
+
     void resetDbComplex(std::vector<unsigned int> &chainKeys, unsigned int residueLen) {
         dbChainKeys = chainKeys;
         dbResidueLen = residueLen;
@@ -60,6 +64,12 @@ struct SearchResult {
                 aln.superposition[i] = cv < TOO_SMALL_CV ? FILTERED_OUT : (aln.superposition[i] - mean) / sd;
             }
         }
+    }
+
+    void clear() {
+        alnVec.clear();
+        qChainKeys.clear();
+        dbChainKeys.clear();
     }
 };
 
@@ -151,14 +161,37 @@ struct NeighborsWithDist {
     float dist;
 };
 
-bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
-    if (first.dbChain.complexId < second.dbChain.complexId) {
-        return true;
-    }
-    if (first.dbChain.complexId > second.dbChain.complexId) {
-        return false;
-    }
+// bool compareChainToChainAlnByDbComplexId(const ChainToChainAln &first, const ChainToChainAln &second) {
+//     if (first.dbChain.complexId < second.dbChain.complexId) {
+//         return true;
+//     }
+//     if (first.dbChain.complexId > second.dbChain.complexId) {
+//         return false;
+//     }
+//
+//     if (first.qChain.chainKey < second.qChain.chainKey) {
+//         return true;
+//     }
+//     if (first.qChain.chainKey > second.qChain.chainKey) {
+//         return false;
+//     }
+//
+//     if (first.dbChain.chainKey < second.dbChain.chainKey) {
+//         return true;
+//     }
+//     if (first.dbChain.chainKey > second.dbChain.chainKey) {
+//         return false;
+//     }
+//     return false;
+// }
 
+bool compareChainToChainAln(const ChainToChainAln &first, const ChainToChainAln &second) {
+    // if (first.dbChain.complexId < second.dbChain.complexId) {
+    //     return true;
+    // }
+    // if (first.dbChain.complexId > second.dbChain.complexId) {
+    //     return false;
+    // }
     if (first.qChain.chainKey < second.qChain.chainKey) {
         return true;
     }
@@ -500,14 +533,14 @@ public:
     ~ComplexScorer() {
         delete tmAligner;
     }
-
-    void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
+    void getSearchResultByDbComplex(unsigned int qComplexId, unsigned int dbComplexId, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &dbChainKeys, SearchResult &searchResult) {
         bool hasBacktrace = false;
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
-        if (qResLen == 0) {
+        unsigned int dbResLen = getDbResidueLength(dbChainKeys);
+        if (qResLen == 0 || dbResLen == 0) {
             return;
         }
-        SearchResult paredSearchResult(qChainKeys, qResLen);
+
         // for each chain from the query Complex
         Coordinate16 qCoords;
         Coordinate16 tCoords;
@@ -527,7 +560,7 @@ public:
             size_t qCaLength = qCaDbr->getEntryLen(qDbId);
             unsigned int qLen = qAlnResult.qLen;
             float *queryCaData = qCoords.read(qCaData, qAlnResult.qLen, qCaLength);
-            
+
             Chain qChain(qComplexId, qChainKey);
             tmAligner->initQuery(queryCaData, &queryCaData[qLen], &queryCaData[qLen * 2], NULL, qLen);
             // for each alignment from the query chain
@@ -535,7 +568,10 @@ public:
             while (*data != '\0') {
                 Util::parseKey(data, dbKeyBuffer);
                 const unsigned int dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-                const unsigned int dbComplexId = dbChainKeyToComplexIdLookup.at(dbChainKey);
+                // If current line doesn't belong to current db complex, skip the line.
+                if (std::find(dbChainKeys.begin(), dbChainKeys.end(), dbChainKey) == dbChainKeys.end()) {
+                    continue;
+                }
                 Matcher::result_t dbAlnResult = Matcher::parseAlignmentRecord(data);
                 data = Util::skipLine(data);
                 if (dbAlnResult.backtrace.empty()) {
@@ -552,43 +588,20 @@ public:
                 currAlns.emplace_back(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
             } // while end
         } // for end
+
+        // When no alignment is found.
         if (currAlns.empty()) {
             return;
         }
+
         // When alignments have no backtrace
         if (!hasBacktrace) {
             Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
             EXIT(EXIT_FAILURE);
         }
 
-        SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAlnByDbComplexId);
-        unsigned int currDbComplexId = currAlns[0].dbChain.complexId;
-
-        std::vector<unsigned int> currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
-        unsigned int currDbResLen = getDbResidueLength(currDbChainKeys);
-        paredSearchResult.resetDbComplex(currDbChainKeys, currDbResLen);
-        for (auto &aln : currAlns) {
-            if (aln.dbChain.complexId == currDbComplexId) {
-                paredSearchResult.alnVec.emplace_back(aln);
-                continue;
-            }
-            paredSearchResult.standardize(monomerIncludeMode);
-            if (!paredSearchResult.alnVec.empty())
-                searchResults.emplace_back(paredSearchResult);
-
-            paredSearchResult.alnVec.clear();
-            currDbComplexId = aln.dbChain.complexId;
-            currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
-            currDbResLen = getDbResidueLength(currDbChainKeys);
-            paredSearchResult.resetDbComplex(currDbChainKeys, currDbResLen);
-            paredSearchResult.alnVec.emplace_back(aln);
-        }
-        currAlns.clear();
-        paredSearchResult.standardize(monomerIncludeMode);
-        if (!paredSearchResult.alnVec.empty())
-            searchResults.emplace_back(paredSearchResult);
-
-        paredSearchResult.alnVec.clear();
+        SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAln);
+        searchResult.set(qChainKeys, qResLen, dbChainKeys, dbResLen, currAlns);
     }
 
     void getAssignments(SearchResult &searchResult, std::vector<Assignment> &assignments) {
@@ -631,7 +644,7 @@ private:
     std::vector<ChainToChainAln> currAlns;
     std::set<cluster_t> finalClusters;
 
-    unsigned int getQueryResidueLength(std::vector<unsigned int> &qChainKeys) {
+    unsigned int getQueryResidueLength(const std::vector<unsigned int> &qChainKeys) {
         unsigned int qResidueLen = 0;
         size_t qDbId;
         for (auto qChainKey: qChainKeys) {
@@ -1302,7 +1315,8 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        std::vector<SearchResult> searchResults;
+        // std::vector<SearchResult> searchResults;
+        SearchResult searchResult;
         std::vector<Assignment> assignments;
         std::vector<std::vector<resultToWrite_t>> resultToWriteLines;
         std::vector<resultToWrite_t> resultToWriteLinesFinal;
@@ -1313,12 +1327,12 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             localComplexMap.clear();
             cmplIdToBestAssId.clear();
             selectedAssIDs.clear();
-            searchResults.clear();
+            searchResult.clear();
             assignments.clear();
             resultToWriteLines.clear();
             resultToWriteLinesFinal.clear();
 
-            Complex qComplex = qComplexes[qCompIdx];
+            Complex &qComplex = qComplexes[qCompIdx];
             unsigned int qComplexId = qComplexIndices[qCompIdx];
             std::map<std::vector<unsigned int>, unsigned int> qalnchain2intlen;
             std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
@@ -1326,10 +1340,12 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 progress.updateProgress();
                 continue;
             }
-            complexScorer.getSearchResults(qComplexId, qChainKeys, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, searchResults);
-            // for each db complex
-            for (size_t dbId = 0; dbId < searchResults.size(); dbId++) {
-                complexScorer.getAssignments(searchResults[dbId], assignments);
+            for (size_t dbId = 0; dbId < dbComplexIndices.size(); dbId++) {
+                unsigned int dbComplexId = dbComplexIndices[dbId];
+                std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(dbComplexId);
+                complexScorer.getSearchResultByDbComplex(qComplexId, dbComplexId, qChainKeys, dbChainKeys, searchResult);
+                complexScorer.getAssignments(searchResult, assignments);
+                searchResult.clear();
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
