@@ -21,22 +21,17 @@
 // carrying chainToChainAlignments from the same query and target complex
 struct SearchResult {
     SearchResult() {}
-    SearchResult(std::vector<unsigned int> &chainKeys) : qChainKeys(chainKeys), alnVec({}) {}
-    SearchResult(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen) : qChainKeys(chainKeys), qResidueLen(qResidueLen), alnVec({}) {}
+    SearchResult(std::vector<unsigned int> &qChainKeys, unsigned int qResidueLen, std::vector<unsigned int> &dbChainKeys, unsigned int dbResidueLen, const std::vector<ChainToChainAln> &alnVec) : qChainKeys(qChainKeys), dbChainKeys(dbChainKeys), qResidueLen(qResidueLen), dbResidueLen(dbResidueLen), alnVec(alnVec) {}
     std::vector<unsigned int> qChainKeys;
     std::vector<unsigned int> dbChainKeys;
     unsigned int qResidueLen;
     unsigned int dbResidueLen;
     std::vector<ChainToChainAln> alnVec;
 
-    void set(std::vector<unsigned int> &qChainKeys, unsigned int qResidueLen, std::vector<unsigned int> &dbChainKeys, unsigned int dbResidueLen, const std::vector<ChainToChainAln> &alnVec)
-    : qChainKeys(qChainKeys), dbChainKeys(dbChainKeys), qResidueLen(qResidueLen), dbResidueLen(dbResidueLen), alnVec(alnVec) {}
-
-
-    void resetDbComplex(std::vector<unsigned int> &chainKeys, unsigned int residueLen) {
-        dbChainKeys = chainKeys;
-        dbResidueLen = residueLen;
-    }
+    // void resetDbComplex(std::vector<unsigned int> &chainKeys, unsigned int residueLen) {
+    //     dbChainKeys = chainKeys;
+    //     dbResidueLen = residueLen;
+    // }
 
     void standardize(int MonomerIncludeMode) {
         if (dbResidueLen == 0)
@@ -186,12 +181,6 @@ struct NeighborsWithDist {
 // }
 
 bool compareChainToChainAln(const ChainToChainAln &first, const ChainToChainAln &second) {
-    // if (first.dbChain.complexId < second.dbChain.complexId) {
-    //     return true;
-    // }
-    // if (first.dbChain.complexId > second.dbChain.complexId) {
-    //     return false;
-    // }
     if (first.qChain.chainKey < second.qChain.chainKey) {
         return true;
     }
@@ -601,7 +590,7 @@ public:
         }
 
         SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAln);
-        searchResult.set(qChainKeys, qResLen, dbChainKeys, dbResLen, currAlns);
+        searchResult = SearchResult(qChainKeys, qResLen, dbChainKeys, dbResLen, currAlns);
     }
 
     void getAssignments(SearchResult &searchResult, std::vector<Assignment> &assignments) {
@@ -1315,7 +1304,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        // std::vector<SearchResult> searchResults;
         SearchResult searchResult;
         std::vector<Assignment> assignments;
         std::vector<std::vector<resultToWrite_t>> resultToWriteLines;
