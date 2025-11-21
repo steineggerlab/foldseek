@@ -559,6 +559,7 @@ public:
                 const unsigned int dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
                 // If current line doesn't belong to current db complex, skip the line.
                 if (std::find(dbChainKeys.begin(), dbChainKeys.end(), dbChainKey) == dbChainKeys.end()) {
+                    data = Util::skipLine(data);
                     continue;
                 }
                 Matcher::result_t dbAlnResult = Matcher::parseAlignmentRecord(data);
