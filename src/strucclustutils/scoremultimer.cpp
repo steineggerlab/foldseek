@@ -1017,9 +1017,6 @@ public:
             tCompBestAssignment[tComplexId] = {assignment, adjustAlnLen};
     }
 
-    const std::vector<std::vector<unsigned int>>& getInterfaceVec() const { return qInterfaceVec_; }
-    const std::map<unsigned int, unsigned int>& getChainIdxMap() const { return qChainKeyTochainIdx_; }
-
 private:
     const std::vector<unsigned int> &qChainKeys_;
     IndexReader *qDbr_;
@@ -1181,6 +1178,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         std::vector<SearchResult> searchResults;
         std::vector<Assignment> assignments;
         std::vector<resultToWrite_t> resultToWriteLines;
+        std::map<unsigned int, std::pair<Assignment, unsigned int>> tCompBestAssignment;
         ComplexScorer complexScorer(q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
@@ -1201,7 +1199,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             resultToWriteLines.resize(qChainKeys.size());
             ComplexFilter filter(qChainKeys, q3DiDbr, qCaDbr, par);
             filter.computeInterfaceRegion();
-            std::map<unsigned int, std::pair<Assignment, unsigned int>> tCompBestAssignment;
             // for each assignment, filter
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
                 filter.filterAssignment(assignmentId, assignments[assignmentId], tCompBestAssignment, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap);
@@ -1226,6 +1223,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             assignments.clear();
             searchResults.clear();
             resultToWriteLines.clear();
+            tCompBestAssignment.clear();
             progress.updateProgress();
         }
     }
