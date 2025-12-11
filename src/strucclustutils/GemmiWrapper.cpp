@@ -324,7 +324,7 @@ GemmiWrapper::Format mapFormat(gemmi::CoorFormat format) {
     }
 }
 
-bool GemmiWrapper::load(const std::string& filename, Format format) {
+bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format format) {
     if ((format == Format::Foldcomp) || (format == Format::Detect && gemmi::iends_with(filename, ".fcz"))) {
         std::ifstream in(filename, std::ios::binary);
         if (!in) {
@@ -343,7 +343,7 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
             if (format == Format::Unknown) {
                 format = Format::Pdb;
             }
-            return loadFromBuffer(out, len, name, format);
+            return loadFromBuffer(out, len, name, saveResIndex, format);
         }
 
 #ifdef HAVE_ZLIB
@@ -402,7 +402,7 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
             default:
                 st = gemmi::read_pdb(infile);
         }
-        updateStructure((void*) &st, filename, entity_to_tax_id, entity_to_description);
+        updateStructure((void*) &st, filename, entity_to_tax_id, entity_to_description, saveResIndex);
     } catch (...) {
         return false;
     }
@@ -417,8 +417,7 @@ struct OneShotReadBuf : public std::streambuf
         setg(s, s, s + n);
     }
 };
-
-bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, GemmiWrapper::Format format) {
+bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, bool saveResIndex, GemmiWrapper::Format format) {
     if ((format == Format::Foldcomp) || (format == Format::Detect && (bufferSize > MAGICNUMBER_LENGTH && strncmp(buffer, MAGICNUMBER, MAGICNUMBER_LENGTH) == 0))) {
         OneShotReadBuf buf((char *) buffer, bufferSize);
         std::istream istr(&buf);
@@ -447,7 +446,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         if (format == Format::Detect) {
             format = mapFormat(gemmi::coor_format_from_ext(infile.basepath()));
         }
-
+        
         gemmi::Structure st;
         std::unordered_map<std::string, int> entity_to_tax_id;
         std::unordered_map<std::string, std::string> entity_to_description;
@@ -514,7 +513,7 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             default:
                 return false;
         }
-        updateStructure((void*) &st, newName, entity_to_tax_id, entity_to_description);
+        updateStructure((void*) &st, newName, entity_to_tax_id, entity_to_description, saveResIndex);
     } catch (...) {
         return false;
     }
@@ -606,7 +605,8 @@ void GemmiWrapper::updateStructure(
     void * void_st,
     const std::string& filename,
     std::unordered_map<std::string, int>& entity_to_tax_id,
-    std::unordered_map<std::string, std::string>& entity_to_description
+    std::unordered_map<std::string, std::string>& entity_to_description,
+    bool saveResIndex
 ) {
     gemmi::Structure * st = (gemmi::Structure *) void_st;
 
@@ -626,6 +626,7 @@ void GemmiWrapper::updateStructure(
     n.clear();
     ami.clear();
     taxIds.clear();
+    resIds.clear();
     title.append(st->get_info("_struct.title"));
     size_t currPos = 0;
     for (gemmi::Model& model : st->models){
@@ -712,6 +713,19 @@ void GemmiWrapper::updateStructure(
                 n.push_back(n_atom);
                 c.push_back(c_atom);
                 ami.push_back(threeToOneAA(res.name));
+
+                if (saveResIndex) {
+                    if (!res.label_seq){
+                        int tmpResId = static_cast<int>(res.seqid.num);
+                        unsigned int resId = unsigned(tmpResId);
+                        resIds.push_back(resId);
+                    }
+                    else {
+                        int tmpResId = static_cast<int>(res.label_seq);
+                        unsigned int resId = unsigned(tmpResId);
+                        resIds.push_back(resId);
+                    }
+                }
 
                 if (taxId == -1) {
                     auto it = entity_to_tax_id.find(res.entity_id);
