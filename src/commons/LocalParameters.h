@@ -162,7 +162,7 @@ public:
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_DB_EXTRACTION_MODE)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
-    // PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
+    PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
     PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
@@ -193,7 +193,7 @@ public:
     double eValueThrExpandMultimer;
     int inputFormat;
     int pdbOutputMode;
-    // float filtMultimerTmThr;
+    float filtMultTmThr;
     float filtChainTmThr;
     float filtInterfaceLddtThr;
     std::string prostt5Model;
