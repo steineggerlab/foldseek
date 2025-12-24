@@ -780,11 +780,11 @@ public:
         }
 
         // check if multimer tm matches the threshold parameter
-        if (par_.covMode == Parameters::COV_MODE_BIDIRECTIONAL && (assignment.qTmScore < par_.tmScoreThr || assignment.dbTmScore < par_.tmScoreThr)) {
+        if (par_.covMode == Parameters::COV_MODE_BIDIRECTIONAL && (assignment.qTmScore < par_.filtMultTmThr || assignment.dbTmScore < par_.filtMultTmThr)) {
             return;
-        } else if (par_.covMode == Parameters::COV_MODE_TARGET && assignment.dbTmScore < par_.tmScoreThr) {
+        } else if (par_.covMode == Parameters::COV_MODE_TARGET && assignment.dbTmScore < par_.filtMultTmThr) {
             return;
-        } else if (par_.covMode == Parameters::COV_MODE_QUERY && assignment.qTmScore < par_.tmScoreThr) {
+        } else if (par_.covMode == Parameters::COV_MODE_QUERY && assignment.qTmScore < par_.filtMultTmThr) {
             return;
         }
 

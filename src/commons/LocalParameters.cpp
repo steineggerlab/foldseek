@@ -38,6 +38,7 @@ LocalParameters::LocalParameters() :
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
         PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
         PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-beta below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
+        PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "whole structure's TMscore threshold", "accept alignments with a multimer tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold", "accept alignments with a minimum chain tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
@@ -190,7 +191,7 @@ LocalParameters::LocalParameters() :
     scoremultimer.push_back(&PARAM_COV_MODE);
     scoremultimer.push_back(&PARAM_INTERFACE_LDDT_THRESHOLD);
     scoremultimer.push_back(&PARAM_CHAIN_TM_THRESHOLD);
-    scoremultimer.push_back(&PARAM_TMSCORE_THRESHOLD);
+    scoremultimer.push_back(&PARAM_MULTIMER_TM_THRESHOLD);
     scoremultimer.push_back(&PARAM_MIN_ALIGNED_CHAINS);
     
     //makepaddeddb
@@ -352,7 +353,7 @@ LocalParameters::LocalParameters() :
     multimerReportMode = 1;
     dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
     distanceThreshold = 10.0;
-    // filtMultimerTmThr = 0.0;
+    filtMultTmThr = 0.0;
     filtChainTmThr = 0.3;
     filtInterfaceLddtThr = 0;
     minAlignedChains = 2;
