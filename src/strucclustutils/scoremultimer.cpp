@@ -21,8 +21,8 @@
 // carrying chainToChainAlignments from the same query and target complex
 struct SearchResult {
     SearchResult() {}
-    SearchResult(std::vector<unsigned int> &chainKeys) : qChainKeys(chainKeys), alnVec({}) {}
-    SearchResult(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen) : qChainKeys(chainKeys), qResidueLen(qResidueLen), alnVec({}) {}
+    // SearchResult(std::vector<unsigned int> &chainKeys) : qChainKeys(chainKeys), alnVec({}) {}
+    // SearchResult(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen) : qChainKeys(chainKeys), qResidueLen(qResidueLen), alnVec({}) {}
     SearchResult(std::vector<unsigned int> &qChainKeys, unsigned int qResidueLen, std::vector<unsigned int> &dbChainKeys, unsigned int dbResidueLen, const std::vector<ChainToChainAln> &alnVec) : qChainKeys(qChainKeys), dbChainKeys(dbChainKeys), qResidueLen(qResidueLen), dbResidueLen(dbResidueLen), alnVec(alnVec) {}
 
     std::vector<unsigned int> qChainKeys;
@@ -91,13 +91,12 @@ struct Assignment {
     std::string tString;
     std::string uString;
     std::string backtrace;
-    std::string assignmentResult;
-    std::vector<resultToWriteWithKey_t> resultToWriteLines;
-    std::string resultToWriteLines2;
+    resultToWrite_t assignmentResult;
+    // std::vector<resultToWriteWithKey_t> resultToWriteLines;
+    // std::string resultToWriteLines2;
     TMaligner::TMscoreResult tmResult;
-    // TODO
     std::vector<resultToWriteWithKey_t> chainToChainResults;
-    std::string filterResult;
+    resultToWrite_t filterResult;
     unsigned int assignmentId;
 
     void appendChainToChainAln(ChainToChainAln &aln) {
@@ -109,8 +108,7 @@ struct Assignment {
         dbCaYVec.insert(dbCaYVec.end(), aln.dbChain.caVecY.begin(), aln.dbChain.caVecY.end());
         dbCaZVec.insert(dbCaZVec.end(), aln.dbChain.caVecZ.begin(), aln.dbChain.caVecZ.end());
         matchLenVec.push_back(aln.matches);
-        resultToWriteLines.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
-        //TODO
+        // resultToWriteLines.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
         chainToChainResults.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
     }
 
@@ -122,10 +120,9 @@ struct Assignment {
         dbCaXVec.clear();
         dbCaYVec.clear();
         dbCaZVec.clear();
-        resultToWriteLines.clear();
+        // resultToWriteLines.clear();
         uString.clear();
         tString.clear();
-        //TODO
         chainToChainResults.clear();
         assignmentResult.clear();
         filterResult.clear();
@@ -641,7 +638,7 @@ public:
     //     paredSearchResult.alnVec.clear();
     // }
 
-    void getSearchResultByDbComplex(unsigned int qComplexId, unsigned int dbComplexId, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &dbChainKeys, SearchResult &searchResult, chainKeyToComplexId_t &dbChainKeyToComplexIdMap) {
+    void getSearchResultByDbComplex(unsigned int qComplexId, unsigned int dbComplexId, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &dbChainKeys, SearchResult &searchResult) {
         bool hasBacktrace = false;
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
         unsigned int dbResLen = getDbResidueLength(dbChainKeys);
@@ -713,7 +710,7 @@ public:
         searchResult = SearchResult(qChainKeys, qResLen, dbChainKeys, dbResLen, currAlns);
         searchResult.standardize(monomerIncludeMode);
     }
-    
+
     void getAssignments(SearchResult &searchResult, std::vector<Assignment> &assignments) {
         if (maxResLen < maxChainLen * std::min(searchResult.qChainKeys.size(),  searchResult.dbChainKeys.size())) {
             delete tmAligner;
@@ -852,10 +849,9 @@ public:
         unsigned int qalnlen = 0;
         unsigned int talnlen = 0;
         unsigned int adjustAlnLen;
-        // size_t alnChainNum = assignment.resultToWriteLines.size();
-        //TODO
         assignment.assignmentId = assignmentId;
         assignment.filterResult.clear();
+        // size_t alnChainNum = assignment.resultToWriteLines.size();
         size_t alnChainNum = assignment.chainToChainResults.size();
 
         std::vector<int> qChainLengths(alnChainNum);
@@ -1310,7 +1306,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         std::vector<Assignment> assignments;
         std::map<unsigned int, std::pair<Assignment, unsigned int>> tCompBestAssignment;
         ComplexScorer complexScorer(q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
-        //TODO
         // std::vector<SearchResult> searchResults;
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
@@ -1326,7 +1321,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 searchResult.clear();
                 unsigned int dbComplexId = dbComplexIndices[dbId];
                 std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(dbComplexId);
-                complexScorer.getSearchResultByDbComplex(qComplexId, dbComplexId, qChainKeys, dbChainKeys, searchResult, dbChainKeyToComplexIdMap);
+                complexScorer.getSearchResultByDbComplex(qComplexId, dbComplexId, qChainKeys, dbChainKeys, searchResult);
                 complexScorer.getAssignments(searchResult, assignments);
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
@@ -1356,7 +1351,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             resultToWrite.clear();
             tCompBestAssignment.clear();
             progress.updateProgress();
-            //TODO
             // searchResults.clear();
         }
     }
