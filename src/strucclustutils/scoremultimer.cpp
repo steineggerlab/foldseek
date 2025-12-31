@@ -873,7 +873,6 @@ public:
 
             // const unsigned int &qKey = assignment.resultToWriteLines[i].first;
             // auto &resultToWrite = assignment.resultToWriteLines[i].second;
-            //TODO
             const unsigned int &qKey = assignment.chainToChainResults[i].first;
             std::string resultToWrite = assignment.chainToChainResults[i].second+"\t"+assignment.assignmentResult+"\t"+std::to_string(assignment.assignmentId);
 
@@ -1134,7 +1133,6 @@ public:
         result.append("\t");
         result.append(SSTR(interfaceLddt));
         // assignment.resultToWriteLines2 = result;
-        //TODO
         assignment.filterResult = result;
 
         auto it = tCompBestAssignment.find(tComplexId);
@@ -1306,7 +1304,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         std::vector<Assignment> assignments;
         std::map<unsigned int, std::pair<Assignment, unsigned int>> tCompBestAssignment;
         ComplexScorer complexScorer(q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
-        // std::vector<SearchResult> searchResults;
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
@@ -1322,6 +1319,9 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 unsigned int dbComplexId = dbComplexIndices[dbId];
                 std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(dbComplexId);
                 complexScorer.getSearchResultByDbComplex(qComplexId, dbComplexId, qChainKeys, dbChainKeys, searchResult);
+                if (searchResult.alnVec.empty()) {
+                    continue;
+                }
                 complexScorer.getAssignments(searchResult, assignments);
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
@@ -1351,7 +1351,6 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             resultToWrite.clear();
             tCompBestAssignment.clear();
             progress.updateProgress();
-            // searchResults.clear();
         }
     }
     alnDbr.close();
