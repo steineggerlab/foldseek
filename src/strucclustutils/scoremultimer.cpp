@@ -638,7 +638,7 @@ public:
     //     paredSearchResult.alnVec.clear();
     // }
 
-    void getSearchResultByDbComplex(unsigned int qComplexId, unsigned int dbComplexId, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &dbChainKeys, SearchResult &searchResult) {
+    void getSearchResultByDbComplex(unsigned int qComplexId, unsigned int dbComplexId, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &dbChainKeys, SearchResult &searchResult, chainKeyToComplexId_t &dbChainKeyToComplexIdMap) {
         bool hasBacktrace = false;
         unsigned int qResLen = getQueryResidueLength(qChainKeys);
         unsigned int dbResLen = getDbResidueLength(dbChainKeys);
@@ -674,7 +674,9 @@ public:
                 Util::parseKey(data, dbKeyBuffer);
                 const unsigned int dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
                 // If current line doesn't belong to current db complex, skip the line.
-                if (std::find(dbChainKeys.begin(), dbChainKeys.end(), dbChainKey) == dbChainKeys.end()) {
+                // Estimation: maximum number of chains is 100, and the number of protein complexes is 1,000,000 (100 > log1,000,000)
+                if (dbChainKeyToComplexIdMap.at(dbChainKey) != dbComplexId) {
+                // if (std::find(dbChainKeys.begin(), dbChainKeys.end(), dbChainKey) == dbChainKeys.end()) {
                     data = Util::skipLine(data);
                     continue;
                 }
@@ -1286,12 +1288,13 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     } else {
         getlookupInfo(t3DiDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices, dbChainKeyToChainNameMap);
     }
+    // seems not used
+    // qChainKeyToChainNameMap.clear();
     Debug::Progress progress(qComplexIndices.size());
 
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
-        char buffer[4096];
         Coordinate16 qcoords;
         Coordinate16 tcoords;
         Matcher::result_t res;
@@ -1315,14 +1318,14 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             }
             // for each db complex
             for (size_t dbId = 0; dbId < dbComplexIndices.size(); dbId++) {
-                searchResult.clear();
                 unsigned int dbComplexId = dbComplexIndices[dbId];
                 std::vector<unsigned int> &dbChainKeys = dbComplexIdToChainKeysMap.at(dbComplexId);
-                complexScorer.getSearchResultByDbComplex(qComplexId, dbComplexId, qChainKeys, dbChainKeys, searchResult);
+                complexScorer.getSearchResultByDbComplex(qComplexId, dbComplexId, qChainKeys, dbChainKeys, searchResult, dbChainKeyToComplexIdMap);
                 if (searchResult.alnVec.empty()) {
                     continue;
                 }
                 complexScorer.getAssignments(searchResult, assignments);
+                searchResult.clear();
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
