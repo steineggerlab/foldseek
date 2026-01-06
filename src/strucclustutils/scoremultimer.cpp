@@ -1290,6 +1290,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     }
     // seems not used
     // qChainKeyToChainNameMap.clear();
+    // dbChainKeyToChainNameMap.clear();
     Debug::Progress progress(qComplexIndices.size());
 
 #pragma omp parallel
