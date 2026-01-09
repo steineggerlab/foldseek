@@ -32,12 +32,23 @@ if notExists "${TARGET}.dbtype"; then
     TARGET="${TMP_PATH}/target"
 
     if [ -n "${GPU}" ]; then
-        if notExists "${TMP_PATH}/target_pad"; then
-            # shellcheck disable=SC2086
-            "$MMSEQS" makepaddedseqdb "${TMP_PATH}/target" "${TMP_PATH}/target_pad" ${MAKEPADDEDSEQDB_PAR} \
-                || fail "makepaddedseqdb died"
-        fi
+        # shellcheck disable=SC2086
+        "$MMSEQS" makepaddedseqdb "${TMP_PATH}/target" "${TMP_PATH}/target_pad" ${MAKEPADDEDSEQDB_PAR} \
+            || fail "makepaddedseqdb died"
         TARGET="${TMP_PATH}/target_pad"
+    fi
+else
+    if [ -n "${GPU}" ] ; then
+        if  [ -n "${NOTPADDED}" ]; then
+            if notExists "${TMP_PATH}/target_pad.dbtype"; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" makepaddedseqdb "${TARGET}" "${TMP_PATH}/target_pad" ${MAKEPADDEDSEQDB_PAR} \
+                    || fail "makepaddedseqdb died"
+                TARGET="${TMP_PATH}/target_pad"
+            else
+                TARGET="${TMP_PATH}/target_pad";
+            fi
+        fi
     fi
 fi
 

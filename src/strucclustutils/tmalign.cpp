@@ -9,13 +9,14 @@
 #include "StructureUtil.h"
 #include "StructureSmithWaterman.h"
 #include "TMaligner.h"
+#include "LoLAlign.h"
 #include "Coordinate16.h"
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
 
-bool compareHitsByTMScore(const Matcher::result_t &first, const Matcher::result_t &second) {
+bool compareHitsByScore(const Matcher::result_t &first, const Matcher::result_t &second) {
     if (first.eval != second.eval) {
         return first.eval > second.eval;
     }
@@ -28,9 +29,28 @@ bool compareHitsByTMScore(const Matcher::result_t &first, const Matcher::result_
     return first.dbKey < second.dbKey;
 }
 
-int tmalign(int argc, const char **argv, const Command& command) {
+int runStructureAligner(int argc, const char **argv, const Command& command, bool runLoLAlign) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_ALIGN);
+    SubstitutionMatrix *subMat3Di = nullptr;
+    SubstitutionMatrix *subMatAA  = nullptr;
+    if (runLoLAlign) {
+        subMat3Di = new SubstitutionMatrix(par.scoringMatrixFile.values.aminoacid().c_str(), 2.1, par.scoreBias);
+
+        std::string blosum;
+        for (size_t i = 0; i < par.substitutionMatrices.size(); i++) {
+            if (par.substitutionMatrices[i].name == "blosum62.out")  {
+                std::string matrixData((const char *)par.substitutionMatrices[i].subMatData, par.substitutionMatrices[i].subMatDataLen);
+                std::string matrixName = par.substitutionMatrices[i].name;
+                char *serializedMatrix = BaseMatrix::serialize(matrixName, matrixData);
+                blosum.assign(serializedMatrix);
+                free(serializedMatrix);
+                break;
+            }
+        }
+        float aaFactor = (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA) ? 1.4 : 0.0;
+        subMatAA = new SubstitutionMatrix(blosum.c_str(), aaFactor, par.scoreBias);
+    }
 
     Debug(Debug::INFO) << "Query database: " << par.db1 << "\n";
     Debug(Debug::INFO) << "Target database: " << par.db2 << "\n";
@@ -46,8 +66,16 @@ int tmalign(int argc, const char **argv, const Command& command) {
             "_ca"
     );
 
+    IndexReader *qdbr3Di = NULL;
+
+    if (runLoLAlign) {
+        qdbr3Di = new IndexReader(StructureUtil::getIndexWithSuffix(par.db1, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+    }
+
     IndexReader *tdbr = NULL;
     IndexReader *tcadbr = NULL;
+    IndexReader *tdbr3Di = NULL;
+
     bool sameDB = false;
     uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
     bool alignmentIsExtended = extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC;
@@ -55,6 +83,9 @@ int tmalign(int argc, const char **argv, const Command& command) {
         sameDB = true;
         tdbr = &qdbr;
         tcadbr = &qcadbr;
+        if (runLoLAlign) {
+            tdbr3Di = qdbr3Di;
+        }
     } else {
         tdbr = new IndexReader(
                 par.db2, par.threads,
@@ -70,6 +101,9 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA,
                 alignmentIsExtended ? "_seq_ca" : "_ca"
         );
+        if (runLoLAlign) {
+            tdbr3Di = new IndexReader(StructureUtil::getIndexWithSuffix(par.db2, "_ss"), par.threads, IndexReader::SEQUENCES, touch ? IndexReader::PRELOAD_INDEX : 0);
+        }
     }
 
     DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(),
@@ -86,10 +120,28 @@ int tmalign(int argc, const char **argv, const Command& command) {
 
     Debug::Progress progress(resultReader.getSize());
 
-    std::vector<TMaligner *> tmaligner;
     std::vector<Coordinate16 *> tcoords;
-    tmaligner.resize(par.threads);
+
+    std::vector<LoLAlign *> lolaligner;
+    std::vector<FwBwAligner *> fwbwAligner;
+    std::vector<Sequence *> tSeqAAs;
+    std::vector<Sequence *> tSeq3Dis;
+
+    std::vector<TMaligner *> tmaligner;
     tcoords.resize(par.threads);
+
+    int max_targetLen = static_cast<int>(tdbr->sequenceReader->getMaxSeqLen() + 1);
+    max_targetLen = ((max_targetLen + par.blocklen -1) / par.blocklen) * par.blocklen;
+        
+    if (runLoLAlign){
+        lolaligner.resize(par.threads);
+        fwbwAligner.resize(par.threads);
+        tSeqAAs.resize(par.threads);
+        tSeq3Dis.resize(par.threads);
+    } else {
+        tmaligner.resize(par.threads);
+    }
+    
 
 #pragma omp parallel
     {
@@ -97,9 +149,18 @@ int tmalign(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        tmaligner[thread_idx] = new TMaligner(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,
-                                                       tdbr->sequenceReader->getMaxSeqLen() + 1),
-                                              par.tmAlignFast, false, false);
+        if (runLoLAlign) {
+            lolaligner[thread_idx] = new LoLAlign(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,
+                                                       tdbr->sequenceReader->getMaxSeqLen() + 1), false);
+            fwbwAligner[thread_idx] = new FwBwAligner(-par.fwbwGapopen, -par.fwbwGapextend, par.temperature, 0, qdbr.sequenceReader->getMaxSeqLen() + 1, tdbr->sequenceReader->getMaxSeqLen() + 1, par.blocklen, 0);                
+            tSeqAAs[thread_idx] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, subMatAA, 0, false, par.compBiasCorrection);
+            tSeq3Dis[thread_idx] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, subMat3Di, 0, false, par.compBiasCorrection);
+           
+        } else {
+            tmaligner[thread_idx] = new TMaligner(std::max(qdbr.sequenceReader->getMaxSeqLen() + 1,
+                                                        tdbr->sequenceReader->getMaxSeqLen() + 1),
+                                                par.tmAlignFast, false, false);
+        }
         tcoords[thread_idx] = new Coordinate16();
     }
 
@@ -108,6 +169,14 @@ int tmalign(int argc, const char **argv, const Command& command) {
     std::vector<Matcher::result_t> finalHits;
     std::vector<unsigned int> dbKeys;
     std::string resultBuffer;
+
+    Sequence * qSeqAA = nullptr;
+    Sequence * qSeq3Di = nullptr;
+
+    if (runLoLAlign) {
+        qSeqAA = new Sequence(par.maxSeqLen, qdbr.sequenceReader->getDbtype(), (const BaseMatrix *) subMatAA, 0, false, par.compBiasCorrection);
+        qSeq3Di = new Sequence(par.maxSeqLen, qdbr3Di->getDbtype(), (const BaseMatrix *) subMat3Di, 0, false, par.compBiasCorrection);
+    }
 
     for (size_t id = 0; id < resultReader.getSize(); id++) {
         progress.updateProgress();
@@ -126,10 +195,16 @@ int tmalign(int argc, const char **argv, const Command& command) {
         char *querySeq = qdbr.sequenceReader->getData(queryId, 0);
         int queryLen = static_cast<int>(qdbr.sequenceReader->getSeqLen(queryId));
 
+        if (runLoLAlign) {
+            char *query3diSeq = qdbr3Di->sequenceReader->getData(queryId, 0);
+            qSeqAA->mapSequence(id, queryKey, querySeq, queryLen);
+            qSeq3Di->mapSequence(id, queryKey, query3diSeq, queryLen);
+        }
+    
         char *qcadata = qcadbr.sequenceReader->getData(queryId, 0);
         size_t qCaLength = qcadbr.sequenceReader->getEntryLen(queryId);
 
-        Coordinate16 qcoords;
+        Coordinate16 qcoords; // gyuri // gg
         float* qdata = qcoords.read(qcadata, queryLen, qCaLength);
 
         while (*data != '\0') {
@@ -147,8 +222,12 @@ int tmalign(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
             thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-            tmaligner[thread_idx]->initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen],
+            if (runLoLAlign) {
+                lolaligner[thread_idx]->initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen], *qSeqAA, *qSeq3Di, queryLen, *subMatAA, max_targetLen, par.multiDomain);
+            } else {
+                tmaligner[thread_idx]->initQuery(qdata, &qdata[queryLen], &qdata[queryLen + queryLen],
                                              querySeq, queryLen);
+            }
         }
         int passedNum = 0;
         int rejected = 0;
@@ -184,51 +263,75 @@ int tmalign(int argc, const char **argv, const Command& command) {
                         tmpResult.dbKey = dbKeys[i];
                         char *targetSeq = tdbr->sequenceReader->getData(targetId, thread_idx);
                         int targetLen = static_cast<int>(tdbr->sequenceReader->getSeqLen(targetId));
-                        if (!Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen)) {
+                        if (!Util::canBeCovered(par.covThr, par.covMode, queryLen, targetLen) && runLoLAlign == false) {
                             tmpResult.eval = -1.0f; // this should avoid that the hit is added
                             tmpResult.score = -1.0f;
                             tmpResult.seqId = -1.0f;
                             tmpResult.qcov = 0.0f;
                             tmpResult.dbcov = 0.0f;
                         } else {
+                            if (runLoLAlign) {
+                                tSeqAAs[thread_idx]->mapSequence(targetId, dbKeys[i], targetSeq, targetLen);
+
+                                char *target3diSeq = tdbr3Di->sequenceReader->getData(targetId, thread_idx);
+                                tSeq3Dis[thread_idx]->mapSequence(targetId, dbKeys[i], target3diSeq, targetLen);
+                            }
                             char *tcadata = tcadbr->sequenceReader->getData(targetId, thread_idx);
                             size_t tCaLength = tcadbr->sequenceReader->getEntryLen(targetId);
 
                             float *tdata = tcoords[thread_idx]->read(tcadata, targetLen, tCaLength);
 
                             float TMscore;
-                            tmpResult = tmaligner[thread_idx]->align(dbKeys[i],
-                                                                     tdata, &tdata[targetLen],
-                                                                     &tdata[targetLen + targetLen],
-                                                                     targetSeq, targetLen, TMscore);
-                            // TM-align could not align
-                            if (TMscore == std::numeric_limits<float>::min()) {
-                                tmpResult.eval = -1.0f; // this should avoid that the hit is added
-                                tmpResult.score = -1.0f;
-                                tmpResult.seqId = -1.0f;
-                                tmpResult.qcov = 0.0f;
-                                tmpResult.dbcov = 0.0f;
-                            } else {
-                                float qTM = (float) tmpResult.score / 100000.0f;
-                                float tTM = tmpResult.eval;
-                                switch (par.tmAlignHitOrder) {
-                                    case LocalParameters::TMALIGN_HIT_ORDER_AVG:
-                                        tmpResult.eval = (qTM + tTM) / 2.0f;
-                                        break;
-                                    case LocalParameters::TMALIGN_HIT_ORDER_QUERY:
-                                        tmpResult.eval = qTM;
-                                        break;
-                                    case LocalParameters::TMALIGN_HIT_ORDER_TARGET:
-                                        tmpResult.eval = tTM;
-                                        break;
-                                    case LocalParameters::TMALIGN_HIT_ORDER_MIN:
-                                        tmpResult.eval = std::min(qTM, tTM);
-                                        break;
-                                    case LocalParameters::TMALIGN_HIT_ORDER_MAX:
-                                        tmpResult.eval = std::max(qTM, tTM);
-                                        break;
+
+
+                            if (runLoLAlign) {
+                                if (targetLen <= 10) {
+                                    lolaligner[thread_idx]->setStartAnchorLength(1);
+                                    if (targetLen < 4) {
+                                        lolaligner[thread_idx]->setStartAnchorLength(0);
+                                    }
+                                    tmpResult = lolaligner[thread_idx]->align(dbKeys[i], tdata, &tdata[targetLen], &tdata[targetLen + targetLen], *tSeqAAs[thread_idx], *tSeq3Dis[thread_idx], targetLen, *subMatAA, fwbwAligner[thread_idx], par.multiDomain);
+                                    if (queryLen > 10) {
+                                        lolaligner[thread_idx]->setStartAnchorLength(3);
+                                    }
+                                } else {
+                                    tmpResult = lolaligner[thread_idx]->align(dbKeys[i], tdata, &tdata[targetLen], &tdata[targetLen + targetLen], *tSeqAAs[thread_idx], *tSeq3Dis[thread_idx], targetLen, *subMatAA, fwbwAligner[thread_idx], par.multiDomain);
                                 }
-                                tmpResult.score = static_cast<int>(qTM * 100.0f); // e.g. scaled
+
+                            } else {
+                                tmpResult = tmaligner[thread_idx]->align(dbKeys[i],
+                                                                        tdata, &tdata[targetLen],
+                                                                        &tdata[targetLen + targetLen],
+                                                                        targetSeq, targetLen, TMscore);
+                                // TM-align could not align
+                                if (TMscore == std::numeric_limits<float>::min()) {
+                                    tmpResult.eval = -1.0f; // this should avoid that the hit is added
+                                    tmpResult.score = -1.0f;
+                                    tmpResult.seqId = -1.0f;
+                                    tmpResult.qcov = 0.0f;
+                                    tmpResult.dbcov = 0.0f;
+                                } else {
+                                    float qTM = (float) tmpResult.score / 100000.0f;
+                                    float tTM = tmpResult.eval;
+                                    switch (par.tmAlignHitOrder) {
+                                        case LocalParameters::TMALIGN_HIT_ORDER_AVG:
+                                            tmpResult.eval = (qTM + tTM) / 2.0f;
+                                            break;
+                                        case LocalParameters::TMALIGN_HIT_ORDER_QUERY:
+                                            tmpResult.eval = qTM;
+                                            break;
+                                        case LocalParameters::TMALIGN_HIT_ORDER_TARGET:
+                                            tmpResult.eval = tTM;
+                                            break;
+                                        case LocalParameters::TMALIGN_HIT_ORDER_MIN:
+                                            tmpResult.eval = std::min(qTM, tTM);
+                                            break;
+                                        case LocalParameters::TMALIGN_HIT_ORDER_MAX:
+                                            tmpResult.eval = std::max(qTM, tTM);
+                                            break;
+                                    }
+                                    tmpResult.score = static_cast<int>(qTM * 100.0f); // e.g. scaled
+                                }
                             }
                         }
                     }
@@ -245,8 +348,10 @@ int tmalign(int argc, const char **argv, const Command& command) {
 
                 bool hasCov    = Util::hasCoverage(par.covThr, par.covMode, r.qcov, r.dbcov);
                 bool hasSeqId  = (r.seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon()));
-                bool hasTMscore= (r.eval >= par.tmScoreThr);
-
+		        bool hasTMscore = (r.eval >= par.tmScoreThr);
+                if(runLoLAlign){
+			        hasTMscore = true;
+		        }
                 if (hasCov && hasSeqId && hasTMscore) {
                     finalHits.push_back(r);
                     passedNum++;
@@ -256,8 +361,10 @@ int tmalign(int argc, const char **argv, const Command& command) {
                 }
             }
         } // end chunk
+        SORT_SERIAL(finalHits.begin(), finalHits.end(), compareHitsByScore);
+        
+        resultBuffer.clear();
 
-        SORT_SERIAL(finalHits.begin(), finalHits.end(), compareHitsByTMScore);
         char buffer[32768];
         for (size_t i = 0; i < finalHits.size(); i++) {
             size_t len = Matcher::resultToBuffer(buffer, finalHits[i], par.addBacktrace, false);
@@ -271,14 +378,44 @@ int tmalign(int argc, const char **argv, const Command& command) {
     resultReader.close();
 
     for (int i = 0; i < par.threads; i++) {
-        delete tmaligner[i];
+        if (runLoLAlign) {
+            delete lolaligner[i];
+            delete fwbwAligner[i];
+            delete tSeqAAs[i];
+            delete tSeq3Dis[i];
+        } else {
+            delete tmaligner[i];
+        }
+        
         delete tcoords[i];
     }
 
     if (sameDB == false) {
         delete tdbr;
         delete tcadbr;
+        if (runLoLAlign) {
+            delete tdbr3Di;
+        }
+    } 
+
+    if (runLoLAlign) {
+        delete subMat3Di;
+        delete subMatAA;
+
+        delete qdbr3Di;
+
+        delete qSeqAA;
+        delete qSeq3Di;
     }
 
     return EXIT_SUCCESS;
+}
+
+
+int tmalign(int argc, const char **argv, const Command &command) {
+    return runStructureAligner(argc, argv, command, false);
+}
+
+int lolalign(int argc, const char **argv, const Command &command) {
+    return runStructureAligner(argc, argv, command, true);
 }
