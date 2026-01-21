@@ -26,6 +26,7 @@ typedef std::string chainName_t;
 typedef std::pair<unsigned int, resultToWrite_t> resultToWriteWithKey_t;
 typedef std::map<unsigned int, chainName_t> chainKeyToChainName_t;
 typedef std::pair<unsigned int, unsigned int> chainToResidue;
+typedef std::map<std::pair<unsigned int, unsigned int>, std::string> alignmentLinesMap_t;
 
 struct Chain {
     Chain() {}
