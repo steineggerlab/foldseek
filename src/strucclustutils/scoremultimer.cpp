@@ -913,14 +913,14 @@ public:
         IndexReader *qDbr,
         DBReader<unsigned int> *qStructDbr,
         LocalParameters &par,
-        // for avoid data race
+        // to avoid data race
         unsigned int thread_idx
     )
         : qChainKeys_(qChainKeys),
           qDbr_(qDbr),
           qStructDbr_(qStructDbr),
           par_(par),
-          // for avoid data race
+          // to avoid data race
           thread_idx(thread_idx)
     {
         qInterfaceVec_.resize(qChainKeys_.size());
@@ -937,7 +937,7 @@ public:
             qChainKeyTochainIdx_[chainKey] = chainIdx;
 
             unsigned int chainDbId = qDbr_->sequenceReader->getId(chainKey);
-            // for avoid data race
+            // to avoid data race
             char *cadata = qStructDbr_->getData(chainDbId, thread_idx);
             size_t caLength = qStructDbr_->getEntryLen(chainDbId);
             size_t chainLen = qDbr_->sequenceReader->getSeqLen(chainDbId);
@@ -948,7 +948,7 @@ public:
 
                 unsigned int chainKey2 = qChainKeys_[chainIdx2];
                 unsigned int chainDbId2 = qDbr_->sequenceReader->getId(chainKey2);
-                // for avoid data race
+                // to avoid data race
                 char *cadata2 = qStructDbr_->getData(chainDbId2, thread_idx);
                 size_t caLength2 = qStructDbr_->getEntryLen(chainDbId2);
                 size_t chainLen2 = qDbr_->sequenceReader->getSeqLen(chainDbId2);
@@ -1280,7 +1280,7 @@ private:
 
     std::vector<std::vector<unsigned int>> qInterfaceVec_;
     std::map<unsigned int, unsigned int> qChainKeyTochainIdx_;
-    // for avoid data race
+    // to avoid data race
     unsigned int thread_idx;
 };
 
