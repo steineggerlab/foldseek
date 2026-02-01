@@ -128,7 +128,11 @@ struct Assignment {
         filterResult.clear();
     }
 
-    void getTmScore(TMaligner &tmAligner) {
+    bool getTmScore(TMaligner &tmAligner) {
+        // for safety
+        if (matches == 0) {
+            return false;
+        }
         backtrace = std::string(matches, 'M');
         unsigned int normLen = std::min(qResidueLength, dbResidueLength);
         tmAligner.initQuery(&qCaXVec[0], &qCaYVec[0], &qCaZVec[0], NULL, matches);
@@ -142,6 +146,7 @@ struct Assignment {
         // dbCaYVec.clear();
         // dbCaZVec.clear();
         // backtrace.clear();
+        return true;
     }
 
     void updateResultToWriteLines() {
@@ -826,9 +831,12 @@ public:
             for (auto alnIdx : cluster) {
                 assignment.appendChainToChainAln(searchResult.alnVec[alnIdx]);
             }
-            assignment.getTmScore(*tmAligner);
+            // matches==0 ? skip
+            if (!assignment.getTmScore(*tmAligner)) {
+                continue;
+            }
             assignment.updateResultToWriteLines();
-            assignments.emplace_back(assignment);
+            assignments.emplace_back(std::move(assignment));
             // assignment.reset();
         }
         finalClusters.clear();
@@ -904,12 +912,14 @@ public:
         const std::vector<unsigned int> &qChainKeys,
         IndexReader *qDbr,
         DBReader<unsigned int> *qStructDbr,
-        LocalParameters &par
+        LocalParameters &par,
+        unsigned int thread_idx
     )
         : qChainKeys_(qChainKeys),
           qDbr_(qDbr),
           qStructDbr_(qStructDbr),
-          par_(par)
+          par_(par),
+          thread_idx(thread_idx)
     {
         qInterfaceVec_.resize(qChainKeys_.size());
     }
@@ -1266,6 +1276,8 @@ private:
 
     std::vector<std::vector<unsigned int>> qInterfaceVec_;
     std::map<unsigned int, unsigned int> qChainKeyTochainIdx_;
+    //
+    unsigned int thread_idx;
 };
 
 
@@ -1452,7 +1464,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
             // for each query chain key
-            ComplexFilter filter(qChainKeys, q3DiDbr, qCaDbr, par);
+            ComplexFilter filter(qChainKeys, q3DiDbr, qCaDbr, par, thread_idx);
             filter.computeInterfaceRegion();
             // for each assignment, filter
             for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
