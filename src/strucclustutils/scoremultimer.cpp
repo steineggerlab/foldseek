@@ -1486,6 +1486,14 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                     }
                     getResult(resultToWrite, currentResultToWrite, assignment);
                 }
+                //TODO: not filtered
+                // for (auto &assignment: assignments) {
+                //     assignment.getChainToChainResult(qKey, currentResultToWrite);
+                //     if (currentResultToWrite.empty()) {
+                //         continue;
+                //     }
+                //     getResult(resultToWrite, currentResultToWrite, assignment);
+                // }
                 resultWriter.writeData(resultToWrite.c_str(), resultToWrite.length(), qKey, thread_idx);
             }
             alignmentLinesMap.clear();
