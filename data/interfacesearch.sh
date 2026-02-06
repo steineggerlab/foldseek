@@ -43,7 +43,8 @@ if exists "${TARGET}.dbtype" ; then
             TARGET="${TMP_PATH}/interfacedb_target_pad"
         fi
     fi
-
+fi
+if exists "${QUERY}.dbtype" ; then
     if [ -z "${ISINTERFACEDB_QUERY}" ]; then
         if [ -z "${NOTPADDED_QUERY}" ]; then
             fail "We cannot make an interface db out of padded db"
@@ -56,11 +57,11 @@ if exists "${TARGET}.dbtype" ; then
             || fail "createinterfacedb died"
         QUERY="${TMP_PATH}/interfacedb_query"
     fi
-
-    # shellcheck disable=SC2086
-    "$MMSEQS" multimersearch "${QUERY}" "${TARGET}" "${OUT}" "${TMP_PATH}/multimersearch_tmp" ${MULTIMERSEARCH_PAR} \
-        || fail "multimersearch died"
 fi
+
+# shellcheck disable=SC2086
+"$MMSEQS" multimersearch "${QUERY}" "${TARGET}" "${OUT}" "${TMP_PATH}/multimersearch_tmp" ${MULTIMERSEARCH_PAR} \
+    || fail "multimersearch died"
 
 if [ -n "${REMOVE_TMP}" ]; then
     # TODO: remove all the dbs

@@ -13,9 +13,9 @@ void setEasyInterfaceSearchDefaults(LocalParameters *p) {
     p->distanceThreshold = 10;
     p->minResidueNum = 4;
     //TODO: set paramters
-    p->filtInterfaceLddtThr = 0.0;
-    p->filtMultTmThr = 0.4;
-    p->filtChainTmThr = 0.0;
+    // p->filtInterfaceLddtThr = 0.0;
+    // p->filtMultTmThr = 0.4;
+    // p->filtChainTmThr = 0.0;
 }
 
 void mustsetEasyInterfaceSearch(LocalParameters *p) {
@@ -65,7 +65,7 @@ int easyinterfacesearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
-    cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str()); 
+    cmd.addVariable("EASYMULTIMERSEARCH_PAR", par.createParameterString(par.easymultimersearchworkflow, true).c_str()); 
 
     std::string program = tmpDir + "/easyinterfacesearch.sh";
     FileUtil::writeFile(program, easyinterfacesearch_sh, easyinterfacesearch_sh_len);
