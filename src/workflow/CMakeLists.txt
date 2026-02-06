@@ -12,5 +12,6 @@ set(workflow_source_files
         workflow/EasyMultimerCluster.cpp
         workflow/CreateDimerDb.cpp
         workflow/InterfaceCluster.cpp
+        workflow/EasyInterfaceCluster.cpp
         PARENT_SCOPE
         )

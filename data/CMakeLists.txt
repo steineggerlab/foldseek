@@ -24,6 +24,7 @@ set(COMPILED_RESOURCES
         createdimerdb.sh
         createinterfacedb.sh
         interfacecluster.sh
+        easyinterfacecluster.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")
