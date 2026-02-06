@@ -27,6 +27,7 @@ public:
 
     static const int DBTYPE_CA_ALPHA;
     static const int DBTYPE_TMSCORE;
+    static const unsigned int DBTYPE_EXTENDED_INTERFACE = 1024;
 
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
@@ -132,6 +133,8 @@ public:
     std::vector<MMseqsParameter *> createdimerdbworkflow;
     std::vector<MMseqsParameter *> filterdimerdb;
     std::vector<MMseqsParameter *> lolalign;
+    std::vector<MMseqsParameter *> interfaceclusterworkflow;
+    std::vector<MMseqsParameter *> easyinterfaceclusterworkflow;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)

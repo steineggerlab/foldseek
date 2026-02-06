@@ -330,9 +330,16 @@ LocalParameters::LocalParameters() :
     // multimerclusterworkflow
     multimerclusterworkflow  = combineList(multimersearchworkflow, clust);
 
+    // interfaceclusterworkflow
+    interfaceclusterworkflow  = combineList(multimerclusterworkflow, createdimerdbworkflow);
+    interfaceclusterworkflow  = combineList(interfaceclusterworkflow, createinterfacedb);
+
     //easymultimerclusterworkflow
     easymultimerclusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
     easymultimerclusterworkflow = combineList(easymultimerclusterworkflow, result2repseq);
+
+    // easyinterfaceclusterworkflow
+    easyinterfaceclusterworkflow  = combineList(easymultimerclusterworkflow, easyinterfaceclusterworkflow);
 
     // set masking
     maskMode = 0;

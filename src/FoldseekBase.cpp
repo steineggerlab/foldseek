@@ -384,6 +384,24 @@ std::vector<Command> foldseekCommands = {
                                         {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
                 }
         },     
+        {"interfacecluster", interfacecluster, &localPar.interfaceclusterworkflow, COMMAND_MAIN, 
+                "Interface level cluster",
+                "#Clustering of PDB DB interface\n"
+                "foldseek interfacecluster queryDB clusterDB tmp\n"
+                "#                  --cov-mode \n"
+                "# Sequence         0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "# Cutoff -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:sequenceDB|interfaceDB> <o:clusterDB> <tmpDir>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                        {"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
+                                        {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
+                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
+                }
+        },     
         {"multimersearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_MAIN,
                 "Multimer level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get multimer level alignments\n"

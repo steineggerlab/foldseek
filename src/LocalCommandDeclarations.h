@@ -23,6 +23,7 @@ extern int compressca(int argc, const char** argv, const Command &command);
 extern int scoremultimer(int argc, const char **argv, const Command& command);
 extern int easymultimercluster(int argc, const char** argv, const Command &command);
 extern int multimercluster(int argc, const char** argv, const Command &command);
+extern int interfacecluster(int argc, const char** argv, const Command &command);
 extern int easymultimersearch(int argc, const char **argv, const Command &command);
 extern int createmultimerreport(int argc, const char **argv, const Command &command);
 extern int expandmultimer(int argc, const char **argv, const Command &command);

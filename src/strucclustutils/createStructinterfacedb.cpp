@@ -65,15 +65,24 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
     getKeyToIdMapIdToKeysMapIdVec(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
     qChainKeyToComplexIdMap.clear();
     
-    DBWriter ssdbw((par.db2 + "_ss").c_str(), (par.db2 + "_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
+    int aadbType = Parameters::DBTYPE_AMINO_ACIDS;
+    int cadbType = LocalParameters::DBTYPE_CA_ALPHA;
+
+    aadbType = DBReader<unsigned int>::setExtendedDbtype(aadbType, LocalParameters::DBTYPE_EXTENDED_INTERFACE);
+    cadbType = DBReader<unsigned int>::setExtendedDbtype(cadbType, LocalParameters::DBTYPE_EXTENDED_INTERFACE);
+
+    DBWriter ssdbw((par.db2 + "_ss").c_str(), (par.db2 + "_ss.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, aadbType);
     ssdbw.open();
-    DBWriter cadbw((par.db2 + "_ca").c_str(), (par.db2 + "_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, LocalParameters::DBTYPE_CA_ALPHA);
+    DBWriter cadbw((par.db2 + "_ca").c_str(), (par.db2 + "_ca.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, cadbType);
     cadbw.open();
-    DBWriter aadbw((par.db2).c_str(), (par.db2 + ".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
+    DBWriter aadbw((par.db2).c_str(), (par.db2 + ".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, aadbType);
     aadbw.open();
-    DBWriter* idbw = NULL; 
+    DBWriter* idbw = NULL;
+
     if (saveResIndex) {
-        idbw = new DBWriter((par.db2 + "_id").c_str(), (par.db2 + "_id.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
+        int iddbType = Parameters::DBTYPE_GENERIC_DB;
+        iddbType = DBReader<unsigned int>::setExtendedDbtype(iddbType, LocalParameters::DBTYPE_EXTENDED_INTERFACE);
+        idbw = new DBWriter((par.db2 + "_id").c_str(), (par.db2 + "_id.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, iddbType);
         idbw->open();
     }
 
