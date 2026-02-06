@@ -24,6 +24,8 @@ extern int scoremultimer(int argc, const char **argv, const Command& command);
 extern int easymultimercluster(int argc, const char** argv, const Command &command);
 extern int multimercluster(int argc, const char** argv, const Command &command);
 extern int interfacecluster(int argc, const char** argv, const Command &command);
+extern int interfacesearch(int argc, const char** argv, const Command &command);
+extern int easyinterfacesearch(int argc, const char** argv, const Command &command);
 extern int easyinterfacecluster(int argc, const char** argv, const Command &command);
 extern int easymultimersearch(int argc, const char **argv, const Command &command);
 extern int createmultimerreport(int argc, const char **argv, const Command &command);

@@ -16,7 +16,6 @@ void setInterfaceClusterDefaults(LocalParameters *p) {
     p->filtMultTmThr = 0.4;
     p->filtChainTmThr = 0.0;
 }
-   
 
 void mustseInterfaceCluster(LocalParameters *p) {
     p->clusteringSetMode = 1;
@@ -26,7 +25,6 @@ void mustseInterfaceCluster(LocalParameters *p) {
 int interfacecluster(int argc, const char **argv, const Command &command) {
 
     LocalParameters &par = LocalParameters::getLocalInstance();
-
 
     setInterfaceClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
@@ -55,7 +53,6 @@ int interfacecluster(int argc, const char **argv, const Command &command) {
     cmd.addVariable("NOTPADDED", padded ? NULL : "TRUE");
 
     cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
-    cmd.addVariable("INTERFACECLUSTER_PAR", par.createParameterString(par.interfaceclusterworkflow, true).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

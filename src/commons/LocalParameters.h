@@ -135,6 +135,8 @@ public:
     std::vector<MMseqsParameter *> lolalign;
     std::vector<MMseqsParameter *> interfaceclusterworkflow;
     std::vector<MMseqsParameter *> easyinterfaceclusterworkflow;
+    std::vector<MMseqsParameter *> interfacesearchworkflow;
+    std::vector<MMseqsParameter *> easyinterfacesearchworkflow;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)

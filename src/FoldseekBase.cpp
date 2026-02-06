@@ -423,7 +423,45 @@ std::vector<Command> foldseekCommands = {
                                         {"clusterPrefix", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                         {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
                 }
-        },      
+        },       
+        {"interfacesearch", interfacesearch, &localPar.interfacesearchworkflow, COMMAND_MAIN,
+                "Interface level search",
+                "# Search a single/multiple PDB file's interface against a set of PDB files and get interface-multimer level alignments\n"
+                "foldseek interfacesearch queryDB(sequence or interface db) targetDB(sequence or interface db) result tmp\n"
+                "# Format output differently\n"
+                "foldseek interfacesearch queryDB targetDB result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "# Align with TMalign (global)\n"
+                "foldseek interfacesearch queryDB targetDB result tmp --alignment-type 1\n"
+                "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
+                "foldseek interfacesearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                           {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                                           {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
+                                           {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
+                                   }
+        },   
+        {"easy-interfacesearch", easyinterfacesearch, &localPar.easyinterfacesearchworkflow, COMMAND_EASY,
+                "Interface level search",
+                "# Search a single/multiple PDB file's interface against a set of PDB files and get interface-multimer level alignments\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
+                "# Format output differently\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "# Align with TMalign (global)\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --alignment-type 1\n"
+                "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                           {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder},
+                                           {"outputFileName", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
+                                           {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
+                                   }
+        },  
         {"multimersearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_MAIN,
                 "Multimer level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get multimer level alignments\n"

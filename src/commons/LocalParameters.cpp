@@ -330,6 +330,13 @@ LocalParameters::LocalParameters() :
     // multimerclusterworkflow
     multimerclusterworkflow  = combineList(multimersearchworkflow, clust);
 
+    // interfacesearchworkflow
+    interfacesearchworkflow  = combineList(multimersearchworkflow, createdimerdbworkflow);
+    interfacesearchworkflow  = combineList(interfacesearchworkflow, createinterfacedb);
+
+    // easyinterfacesearchworkflow
+    easyinterfacesearchworkflow  = combineList(easymultimersearchworkflow, interfacesearchworkflow);
+
     // interfaceclusterworkflow
     interfaceclusterworkflow  = combineList(multimerclusterworkflow, createdimerdbworkflow);
     interfaceclusterworkflow  = combineList(interfaceclusterworkflow, createinterfacedb);

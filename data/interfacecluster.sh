@@ -43,7 +43,7 @@ if exists "${INPUT}.dbtype" ; then
         fi
     fi
     # shellcheck disable=SC2086
-    "$MMSEQS" multimercluster "${QUERYDB}" "${OUT}" "${TMP_PATH}/multimercluster_tmp" ${INTERFACECLUSTER_PAR} \
+    "$MMSEQS" multimercluster "${QUERYDB}" "${OUT}" "${TMP_PATH}/multimercluster_tmp" ${MULTIMERCLUSTER_PAR} \
         || fail "multimercluster died"
 fi
 
