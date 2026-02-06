@@ -9,6 +9,7 @@
 #include "interfacecluster.sh.h"
 
 void setInterfaceClusterDefaults(LocalParameters *p) {
+    p->removeTmpFiles = true;
     p->distanceThreshold = 10;
     p->minResidueNum = 4;
     p->filtInterfaceLddtThr = 0.0;
@@ -19,6 +20,7 @@ void setInterfaceClusterDefaults(LocalParameters *p) {
 
 void mustseInterfaceCluster(LocalParameters *p) {
     p->clusteringSetMode = 1;
+    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
 
 int interfacecluster(int argc, const char **argv, const Command &command) {

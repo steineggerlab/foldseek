@@ -49,14 +49,32 @@ fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     if [ -z "${ISINTERFACEDB}" ]; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/dimerdb" ${VERBOSITY}
-        # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/interfacedb" ${VERBOSITY}
         if [ -n "${GPU}" ]; then
             # shellcheck disable=SC2086
-            "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_pad" ${VERBOSITY}
+            "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_pad" ${VERBOSITY_PAR} 
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_pad_ss" ${VERBOSITY_PAR} 
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_pad_ca" ${VERBOSITY_PAR} 
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_pad_h" ${VERBOSITY_PAR} 
         fi
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/interfacedb" ${VERBOSITY_PAR} 
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_h" ${VERBOSITY_PAR} 
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_ss" ${VERBOSITY_PAR} 
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/interfacedb_ca" ${VERBOSITY_PAR} 
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/dimerdb" ${VERBOSITY_PAR} 
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/dimerdb_h" ${VERBOSITY_PAR} 
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/dimerdb_ss" ${VERBOSITY_PAR} 
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/dimerdb_ca" ${VERBOSITY_PAR}
         rm -rf "${TMP_PATH}/dimertmp"
     fi
     rm -rf -- "${TMP_PATH}/multimercluster_tmp"
