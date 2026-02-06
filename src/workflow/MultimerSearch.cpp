@@ -4,6 +4,7 @@
 #include "FileUtil.h"
 #include "CommandCaller.h"
 #include "Util.h"
+#include "DBReader.h"
 #include "Debug.h"
 
 #include "multimersearch.sh.h"
@@ -94,7 +95,8 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
-    cmd.addVariable("TARGETDB", par.filenames.back().c_str());
+    std::string target = par.filenames.back().c_str();
+    cmd.addVariable("INPUT", target.c_str());
     par.filenames.pop_back();
     cmd.addVariable("QUERYDB", par.filenames.back().c_str());
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
@@ -104,6 +106,12 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     par.addBacktrace = par.exhaustiveSearch;
     par.alignmentType = par.exhaustiveSearch ? par.alignmentType : LocalParameters::ALIGNMENT_TYPE_3DI_AA;
 
+    int dbtype = FileUtil::parseDbType((target+"_ss").c_str());
+    int padded = (DBReader<unsigned int>::getExtendedDbtype(dbtype) & Parameters::DBTYPE_EXTENDED_GPU);
+    cmd.addVariable("NOTPADDED", padded ? NULL : "TRUE");
+    cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
+
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
     cmd.addVariable("SCOREMULTIMER_PAR", par.createParameterString(par.scoremultimer).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

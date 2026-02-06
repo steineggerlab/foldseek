@@ -266,215 +266,18 @@ void addMissingAtomsInStructure(GemmiWrapper &readStructure, PulchraWrapper &pul
     chainNames.clear();
 }
 
-void findInterfaceResidues(GemmiWrapper &readStructure, std::pair<size_t, size_t> res1, std::pair<size_t, size_t> res2,
-                           std::vector<size_t> & resIdx1, float distanceThreshold)
-{
-    std::vector<Vec3> coord1, coord2;
-    size_t sameRes = 0;
-    size_t chainLen = res1.second - res1.first;
-    bool noSameRes = true;
-    const float squareThreshold = distanceThreshold * distanceThreshold;
-    for (size_t res1Idx = res1.first; res1Idx < res1.second; res1Idx++) {
-        float x1, y1, z1;
-        if (readStructure.ami[res1Idx] == 'G') {
-            x1 = readStructure.ca[res1Idx].x;
-            y1 = readStructure.ca[res1Idx].y;
-            z1 = readStructure.ca[res1Idx].z;
-        }
-        else {
-            x1 = readStructure.cb[res1Idx].x;
-            y1 = readStructure.cb[res1Idx].y;
-            z1 = readStructure.cb[res1Idx].z;
-        }
-        for (size_t res2Idx = res2.first; res2Idx < res2.second; res2Idx++) {
-            float x2, y2, z2;
-            if (readStructure.ami[res2Idx] == 'G') {
-                x2 = readStructure.ca[res2Idx].x;
-                y2 = readStructure.ca[res2Idx].y;
-                z2 = readStructure.ca[res2Idx].z;
-            }
-            else {
-                x2 = readStructure.cb[res2Idx].x;
-                y2 = readStructure.cb[res2Idx].y;
-                z2 = readStructure.cb[res2Idx].z;
-            }
-            float distance = MathUtil::squareDist(x1, y1, z1, x2, y2, z2);
-            if (distance < 0.01) {
-                noSameRes = false;
-                sameRes++;
-                break;
-            }
-            if (distance < squareThreshold) {
-                resIdx1.push_back(res1Idx);
-                if (noSameRes) {
-                    break;
-                }
-            } 
-        }
-    }
-    if (sameRes / chainLen > 0.9){
-        resIdx1.clear();
-    }
-}
-
-void compute3DiInterfaces(GemmiWrapper &readStructure, PulchraWrapper &pulchra, StructureTo3Di &structureTo3Di, SubstitutionMatrix & mat3Di, int chainNameMode, float distanceThreshold) {
-    size_t prevInterfaceChainLen = 0;
-    std::vector<char> interfaceSeq3di, interfaceAmi;
-    std::vector<size_t> resIdx1, resIdx2;
-    std::vector<std::string> notProteinChains;
-    std::vector<int> interfacetaxIds;
-    std::vector<unsigned int> interfaceModelIndices;
-    std::vector<Vec3> ca, n, c, cb;
-    std::vector<Vec3> interfaceCa;
-    std::vector<std::string> interfaceNames, interfaceChainNames;
-    std::vector<std::pair<size_t, size_t>> interfaceChain;
-    std::unordered_map<unsigned int, unsigned int> modelToInterfaceNum;
-    addMissingAtomsInStructure(readStructure, pulchra);
-    for (size_t ch1 = 0; ch1 < readStructure.chain.size(); ch1++) {
-        if (readStructure.chainNames[ch1] == "SKIP") {
-            interfaceCa.push_back(Vec3(0,0,0));
-            interfaceAmi.push_back('X');
-            interfaceSeq3di.push_back('X');
-            interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen+1));
-            interfaceNames.push_back("ALLX");
-            interfaceChainNames.push_back(readStructure.chainNames[ch1]);
-            interfacetaxIds.push_back(readStructure.taxIds[ch1]);
-            interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
-            prevInterfaceChainLen++;
-            continue;
-        }
-        for (size_t ch2 = ch1 + 1; ch2 < readStructure.chain.size(); ch2++) {
-            if (readStructure.chainNames[ch2] == "SKIP") {
-                continue;
-            }
-            if (readStructure.modelIndices[ch1] == readStructure.modelIndices[ch2]) {
-                findInterfaceResidues(readStructure, readStructure.chain[ch1], readStructure.chain[ch2], resIdx1, distanceThreshold);
-                findInterfaceResidues(readStructure, readStructure.chain[ch2], readStructure.chain[ch1], resIdx2, distanceThreshold);
-                if (resIdx1.size() >= 4 && resIdx2.size() >= 4) {
-                    modelToInterfaceNum[readStructure.modelIndices[ch2]]++;
-                    for (size_t i = 0; i < resIdx1.size(); i++) {
-                        ca.push_back(readStructure.ca[resIdx1[i]]);
-                        n.push_back(readStructure.n[resIdx1[i]]);
-                        c.push_back(readStructure.c[resIdx1[i]]);
-                        cb.push_back(readStructure.cb[resIdx1[i]]);
-                    }
-                    // std::sort(resIdx2.begin(), resIdx2.end());
-                    for (size_t i = 0; i < resIdx2.size(); i++) {
-                        ca.push_back(readStructure.ca[resIdx2[i]]);
-                        n.push_back(readStructure.n[resIdx2[i]]);
-                        c.push_back(readStructure.c[resIdx2[i]]);
-                        cb.push_back(readStructure.cb[resIdx2[i]]);
-                    }
-                    char *states = structureTo3Di.structure2states(ca.data(),
-                                                                n.data(),
-                                                                c.data(),
-                                                                cb.data(),
-                                                                resIdx1.size() + resIdx2.size());
-                    for (size_t i = 0; i < resIdx1.size(); i++) {
-                        interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[i])]);
-                        interfaceAmi.push_back(readStructure.ami[resIdx1[i]]);
-                        interfaceCa.push_back(readStructure.ca[resIdx1[i]]);
-                    }
-                    for (size_t i = 0; i < resIdx2.size(); i++) {
-                        interfaceSeq3di.push_back(mat3Di.num2aa[static_cast<int>(states[resIdx1.size()+i])]);
-                        interfaceAmi.push_back(readStructure.ami[resIdx2[i]]);
-                        interfaceCa.push_back(readStructure.ca[resIdx2[i]]);
-                    }
-                    interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx1.size()));
-                    prevInterfaceChainLen += resIdx1.size();
-                    interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen + resIdx2.size()));
-                    prevInterfaceChainLen += resIdx2.size();
-                    std::string interfaceName;
-                    if (Util::endsWith(".gz", readStructure.names[ch1]) || Util::endsWith(".zstd", readStructure.names[ch1]) || Util::endsWith(".zst", readStructure.names[ch1])) {
-                        interfaceName.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch1])));
-                    } else {
-                        interfaceName.append(Util::remove_extension(readStructure.names[ch1]));
-                    } 
-                    if (readStructure.modelCount > 1) {
-                        interfaceName.append("_MODEL_");
-                        interfaceName.append(SSTR(readStructure.modelIndices[ch1]));
-                    }
-                    interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
-                    interfaceModelIndices.push_back(readStructure.modelIndices[ch2]);
-                    interfaceName.append("_INT_");
-                    interfaceName.append(SSTR(modelToInterfaceNum[readStructure.modelIndices[ch2]]));
-                    std::string interfaceNameFirst = interfaceName;
-                    std::string interfaceNameSecond = interfaceName;
-                    if (chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-                        (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)) {
-                        interfaceNameFirst.push_back('_');
-                        interfaceNameFirst.append(readStructure.chainNames[ch1]);
-                        interfaceNameSecond.push_back('_');
-                        interfaceNameSecond.append(readStructure.chainNames[ch2]);
-                    }
-                    if (readStructure.title.size() > 0) {
-                        interfaceNameFirst.push_back(' ');
-                        interfaceNameFirst.append(readStructure.title);
-                        interfaceNameSecond.push_back(' ');
-                        interfaceNameSecond.append(readStructure.title);
-                    }   
-                    interfaceNames.push_back(interfaceNameFirst);
-                    interfaceNames.push_back(interfaceNameSecond);
-                    interfaceChainNames.push_back(readStructure.chainNames[ch1]);
-                    interfaceChainNames.push_back(readStructure.chainNames[ch2]);
-                    interfacetaxIds.push_back(readStructure.taxIds[ch1]);
-                    interfacetaxIds.push_back(readStructure.taxIds[ch2]);
-                }
-                else {
-                    interfaceCa.push_back(Vec3(0,0,0));
-                    interfaceAmi.push_back('X');
-                    interfaceSeq3di.push_back('X');
-                    interfaceChain.push_back(std::make_pair(prevInterfaceChainLen, prevInterfaceChainLen+1));
-                    interfaceNames.push_back("SHORT");
-                    interfaceChainNames.push_back(readStructure.chainNames[ch1]);
-                    interfacetaxIds.push_back(readStructure.taxIds[ch1]);
-                    interfaceModelIndices.push_back(readStructure.modelIndices[ch1]);
-                    prevInterfaceChainLen++;
-                }
-                resIdx1.clear();
-                resIdx2.clear();
-                ca.clear();
-                n.clear();
-                c.clear();
-                cb.clear();
-            }
-        }
-    }
-    // copy interface data to readStructure
-    // this overwrites the original data (clear and push_back)
-    readStructure.ca.clear();
-    readStructure.ca.insert(readStructure.ca.begin(), interfaceCa.begin(), interfaceCa.end());
-    readStructure.ami.clear();
-    readStructure.ami.insert(readStructure.ami.begin(), interfaceAmi.begin(), interfaceAmi.end());
-    readStructure.seq3di.clear();
-    readStructure.seq3di.insert(readStructure.seq3di.begin(), interfaceSeq3di.begin(), interfaceSeq3di.end());
-    readStructure.chain.clear();
-    readStructure.chain.insert(readStructure.chain.begin(), interfaceChain.begin(), interfaceChain.end());
-    readStructure.names.clear();
-    readStructure.names.insert(readStructure.names.begin(), interfaceNames.begin(), interfaceNames.end());
-    readStructure.chainNames.clear();
-    readStructure.chainNames.insert(readStructure.chainNames.begin(), interfaceChainNames.begin(), interfaceChainNames.end());
-    readStructure.taxIds.clear();
-    readStructure.taxIds.insert(readStructure.taxIds.begin(), interfacetaxIds.begin(), interfacetaxIds.end());
-    readStructure.modelIndices.clear();
-    readStructure.modelIndices.insert(readStructure.modelIndices.begin(), interfaceModelIndices.begin(), interfaceModelIndices.end());
-}
-
 size_t
 writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, StructureTo3Di & structureTo3Di,
                     PulchraWrapper & pulchra, std::vector<char> & alphabet3di, std::vector<char> & alphabetAA,
-                    std::vector<int8_t> & camol, std::string & header, 
+                    std::vector<int8_t> & camol, std::string & header, std::vector<unsigned int> & resId,
                     DBWriter & aadbw, DBWriter & hdbw, DBWriter & torsiondbw, DBWriter & cadbw, int chainNameMode,
                     float maskBfactorThreshold, size_t & tooShort, size_t & notProtein, size_t & globalCnt, int thread_idx, int coordStoreMode,
                     size_t & fileidCnt, std::map<std::string, std::pair<size_t, unsigned int>> & entrynameToFileId,
                     std::map<std::string, size_t> & filenameToFileId,
                     std::map<size_t, std::string> & fileIdToName,
-                    DBWriter* mappingWriter,
-                    DBWriter* foldcompWriter) {
+                    DBWriter* mappingWriter, 
+                    DBWriter* foldcompWriter, DBWriter* idbw) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
-        compute3DiInterfaces(readStructure, pulchra, structureTo3Di, mat, chainNameMode, par.distanceThreshold);
-    }
     size_t id = __sync_fetch_and_add(&globalCnt, readStructure.chain.size());
     size_t entriesAdded = 0;
     for (size_t ch = 0; ch < readStructure.chain.size(); ch++) {
@@ -483,136 +286,107 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         size_t chainEnd = readStructure.chain[ch].second;
         size_t chainLen = chainEnd - chainStart;
         header.clear();
-        if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN) {
-            if (chainLen <= 3) {
-                tooShort++;
-                continue;
+        if (chainLen <= 3) {
+            tooShort++;
+            continue;
+        }
+        bool allX = true;
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            const char aa = readStructure.ami[chainStart+pos];
+            if (aa != 'X' && aa != 'x') {
+                allX = false;
+                break;
             }
-            bool allX = true;
-            for (size_t pos = 0; pos < chainLen; pos++) {
-                const char aa = readStructure.ami[chainStart+pos];
-                if (aa != 'X' && aa != 'x') {
-                    allX = false;
-                    break;
-                }
-            }
-            if (allX) {
-                notProtein++;
-                continue;
-            }
-            // Detect if structure is Ca only
-            if (std::isnan(readStructure.n[chainStart + 0].x) &&
-                std::isnan(readStructure.n[chainStart + 1].x) &&
-                std::isnan(readStructure.n[chainStart + 2].x) &&
-                std::isnan(readStructure.n[chainStart + 3].x) &&
-                std::isnan(readStructure.c[chainStart + 0].x) &&
-                std::isnan(readStructure.c[chainStart + 1].x) &&
-                std::isnan(readStructure.c[chainStart + 2].x) &&
-                std::isnan(readStructure.c[chainStart + 3].x)) {
-                pulchra.rebuildBackbone(&readStructure.ca[chainStart],
-                                        &readStructure.n[chainStart],
-                                        &readStructure.c[chainStart],
-                                        &readStructure.ami[chainStart],
-                                        chainLen);
+        }
+        if (allX) {
+            notProtein++;
+            continue;
+        }
+        // Detect if structure is Ca only
+        if (std::isnan(readStructure.n[chainStart + 0].x) &&
+            std::isnan(readStructure.n[chainStart + 1].x) &&
+            std::isnan(readStructure.n[chainStart + 2].x) &&
+            std::isnan(readStructure.n[chainStart + 3].x) &&
+            std::isnan(readStructure.c[chainStart + 0].x) &&
+            std::isnan(readStructure.c[chainStart + 1].x) &&
+            std::isnan(readStructure.c[chainStart + 2].x) &&
+            std::isnan(readStructure.c[chainStart + 3].x)) {
+            pulchra.rebuildBackbone(&readStructure.ca[chainStart],
+                                    &readStructure.n[chainStart],
+                                    &readStructure.c[chainStart],
+                                    &readStructure.ami[chainStart],
+                                    chainLen);
 
-            }
-            char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
-                                                            &readStructure.n[chainStart],
-                                                            &readStructure.c[chainStart],
-                                                            &readStructure.cb[chainStart],
-                                                            chainLen);
-            for (size_t pos = 0; pos < chainLen; pos++) {
-                if (readStructure.ca_bfactor[pos] < maskBfactorThreshold) {
-                    alphabet3di.push_back(tolower(mat.num2aa[static_cast<int>(states[pos])]));
-                    alphabetAA.push_back(tolower(readStructure.ami[chainStart+pos]));
-                } else {
-                    alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
-                    alphabetAA.push_back(readStructure.ami[chainStart+pos]);
-                }
-            }
-            if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
-                header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
+        }
+        char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
+                                                        &readStructure.n[chainStart],
+                                                        &readStructure.c[chainStart],
+                                                        &readStructure.cb[chainStart],
+                                                        chainLen);
+        for (size_t pos = 0; pos < chainLen; pos++) {
+            if (readStructure.ca_bfactor[pos] < maskBfactorThreshold) {
+                alphabet3di.push_back(tolower(mat.num2aa[static_cast<int>(states[pos])]));
+                alphabetAA.push_back(tolower(readStructure.ami[chainStart+pos]));
             } else {
-                header.append(Util::remove_extension(readStructure.names[ch]));
-            } 
-            if (readStructure.modelCount > 1 || par.modelNameMode == LocalParameters::MODEL_MODE_ADD) {
-                header.append("_MODEL_");
-                header.append(SSTR(readStructure.modelIndices[ch]));
-            }
-            if (chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
-                (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)) {
-                header.push_back('_');
-                header.append(readStructure.chainNames[ch]);
-            }
-            if (readStructure.title.empty() == false) {
-                header.push_back(' ');
-                header.append(readStructure.title);
-            } else if (readStructure.chainDescriptions[ch].empty() == false) {
-                header.push_back(' ');
-                header.append(readStructure.chainDescriptions[ch]);
-            }
-        } else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
-            if (readStructure.names[ch] == "ALLX") {
-                notProtein++;
-                continue;
-            }
-            if (readStructure.names[ch] == "SHORT") {
-                tooShort++;
-                continue;
-            }
-            for (size_t pos = 0; pos < chainLen; pos++) {
-                alphabet3di.push_back(readStructure.seq3di[chainStart+pos]);
+                alphabet3di.push_back(mat.num2aa[static_cast<int>(states[pos])]);
                 alphabetAA.push_back(readStructure.ami[chainStart+pos]);
             }
-            header.append(readStructure.names[ch]);
+            if (idbw != NULL) {
+                resId.push_back(readStructure.resIds[chainStart+pos]);
+            }
+        }
+        if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
+            header.append(Util::remove_extension(Util::remove_extension(readStructure.names[ch])));
+        } else {
+            header.append(Util::remove_extension(readStructure.names[ch]));
+        } 
+        if (readStructure.modelCount > 1 || par.modelNameMode == LocalParameters::MODEL_MODE_ADD) {
+            header.append("_MODEL_");
+            header.append(SSTR(readStructure.modelIndices[ch]));
+        }
+        if (chainNameMode == LocalParameters::CHAIN_MODE_ADD ||
+            (chainNameMode == LocalParameters::CHAIN_MODE_AUTO && readStructure.names.size() > 1)) {
+            header.push_back('_');
+            header.append(readStructure.chainNames[ch]);
+        }
+        if (readStructure.title.empty() == false) {
+            header.push_back(' ');
+            header.append(readStructure.title);
+        } else if (readStructure.chainDescriptions[ch].empty() == false) {
+            header.push_back(' ');
+            header.append(readStructure.chainDescriptions[ch]);
         }
         alphabet3di.push_back('\n');
         alphabetAA.push_back('\n');
         torsiondbw.writeData(alphabet3di.data(), alphabet3di.size(), dbKey, thread_idx);
         aadbw.writeData(alphabetAA.data(), alphabetAA.size(), dbKey, thread_idx);
+        if (idbw != NULL) {
+            idbw->writeData((const char*)resId.data(), chainLen * sizeof(unsigned int), dbKey, thread_idx);
+            resId.clear();
+        }
         header.push_back('\n');
         std::string entryName = Util::parseFastaHeader(header.c_str());
 #pragma omp critical
         {
-            if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN) {
-                std::string filenameWithExtension;
-                if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
-                    filenameWithExtension = Util::remove_extension(Util::remove_extension(readStructure.names[ch]));
-                } else {
-                    filenameWithExtension = Util::remove_extension(readStructure.names[ch]);
-                }
-                std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
-                std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
-                size_t fileid;
-                if (it != filenameToFileId.end()) {
-                    fileid = it->second;
-                } else {
-                    fileid = fileidCnt;
-                    filenameToFileId[filenameWithoutExtension] = fileid;
-                    fileIdToName[fileid] = filenameWithoutExtension;
-                    fileidCnt++;
-                }
-                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
-            } else if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_INTERFACE) {
-                std::string filenameWithoutExtension;
-                if (chainNameMode == LocalParameters::CHAIN_MODE_ADD || chainNameMode == LocalParameters::CHAIN_MODE_AUTO) {
-                    size_t firstUnderscore = readStructure.names[ch].find_last_of('_');
-                    filenameWithoutExtension = readStructure.names[ch].substr(0, firstUnderscore);
-                } else {
-                    filenameWithoutExtension = readStructure.names[ch];
-                }
-                std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
-                size_t fileid;
-                if (it != filenameToFileId.end()) {
-                    fileid = it->second;
-                } else {
-                    fileid = fileidCnt;
-                    filenameToFileId[filenameWithoutExtension] = fileid;
-                    fileIdToName[fileid] = filenameWithoutExtension;
-                    fileidCnt++;
-                }
-                entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
+            std::string filenameWithExtension;
+            if (Util::endsWith(".gz", readStructure.names[ch] )) {
+                filenameWithExtension = Util::remove_extension(Util::remove_extension(readStructure.names[ch]));
             }
+            else {
+                filenameWithExtension = Util::remove_extension(readStructure.names[ch]);
+            }
+            std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);
+            std::map<std::string, size_t>::iterator it = filenameToFileId.find(filenameWithoutExtension);
+            size_t fileid;
+            if (it != filenameToFileId.end()) {
+                fileid = it->second;
+            } else {
+                fileid = fileidCnt;
+                filenameToFileId[filenameWithoutExtension] = fileid;
+                fileIdToName[fileid] = filenameWithoutExtension;
+                fileidCnt++;
+            }
+            entrynameToFileId[entryName] = std::make_pair(fileid, readStructure.modelIndices[ch]);
         }
         hdbw.writeData(header.c_str(), header.size(), dbKey, thread_idx);
 
@@ -970,6 +744,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     cadbw.open();
     DBWriter aadbw((outputName).c_str(), (outputName+".index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aadbw.open();
+    DBWriter* idbw = NULL;
+    if (par.saveResIndex) {
+        idbw = new DBWriter((outputName+"_id").c_str(), (outputName+"_id.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
+        idbw->open();
+    }
     DBWriter* mappingWriter = NULL;
     if (par.writeMapping) {
         mappingWriter = new DBWriter((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), static_cast<unsigned int>(par.threads), false, LocalParameters::DBTYPE_OMIT_FILE);
@@ -1054,7 +833,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         int localThreads = par.threads;
 #endif
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, idbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -1084,6 +863,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             std::vector<char> alphabet3di;
             std::vector<char> alphabetAA;
             std::vector<int8_t> camol;
+            std::vector<unsigned int> resId;
             std::string header;
             std::string name;
             std::string pdbFile;
@@ -1183,7 +963,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     } else {
                         pdbFile.append(dataBuffer, tarHeader.size);
                     }
-                    if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name, (GemmiWrapper::Format)inputFormat) == false) {
+                    if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name, par.saveResIndex, (GemmiWrapper::Format)inputFormat) == false) {
                         incorrectFiles++;
                         continue;
                     }
@@ -1191,10 +971,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di, pulchra,
-                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
+                        alphabet3di, alphabetAA, camol, header, resId, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter, foldcompWriter
+                        mappingWriter, foldcompWriter, idbw
                     );
                 }
             } // end while
@@ -1208,7 +988,8 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, idbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -1221,6 +1002,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         std::vector<char> alphabet3di;
         std::vector<char> alphabetAA;
         std::vector<int8_t> camol;
+        std::vector<unsigned int> resId;
         std::string header;
         std::string name;
 
@@ -1228,7 +1010,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
 
-            if (readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false) {
+            if (readStructure.load(looseFiles[i], par.saveResIndex, (GemmiWrapper::Format)inputFormat) == false) {
                 incorrectFiles++;
                 continue;
             }
@@ -1236,10 +1018,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             // clear memory
             writeStructureEntry(
                 mat, readStructure, structureTo3Di,  pulchra,
-                alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
+                alphabet3di, alphabetAA, camol, header, resId, aadbw, hdbw, torsiondbw, cadbw,
                 par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                 globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                mappingWriter, foldcompWriter
+                mappingWriter, foldcompWriter, idbw
             );
         }
     }
@@ -1263,7 +1045,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter, foldcompWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, idbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter, foldcompWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1271,6 +1053,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             std::vector<char> alphabet3di;
             std::vector<char> alphabetAA;
             std::vector<int8_t> camol;
+            std::vector<unsigned int> resId;
             std::string header;
             std::string name;
 
@@ -1293,16 +1076,16 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                             Debug(Debug::ERROR) << reader.status().message() << "\n";
                         } else {
                             std::string contents{std::istreambuf_iterator<char>{reader}, {}};
-                            if (readStructure.loadFromBuffer(contents.c_str(), contents.size(), obj_name, inputFormat) == false) {
+                            if (readStructure.loadFromBuffer(contents.c_str(), contents.size(), obj_name, par.saveResIndex, inputFormat) == false) {
                                 incorrectFiles++;
                             } else {
                                 __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                                 writeStructureEntry(
                                     mat, readStructure, structureTo3Di,  pulchra,
-                                    alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
+                                    alphabet3di, alphabetAA, camol, header, resId, aadbw, hdbw, torsiondbw, cadbw,
                                     par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                                     globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                                    mappingWriter, foldcompWriter
+                                    mappingWriter, foldcompWriter, idbw
                                 );
                             }
                         }
@@ -1312,12 +1095,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
     }
 #endif
-
     for (size_t i = 0; i < dbs.size(); ++i) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, idbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1325,6 +1107,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             std::vector<char> alphabet3di;
             std::vector<char> alphabetAA;
             std::vector<int8_t> camol;
+            std::vector<unsigned int> resId;
             std::string header;
             std::string name;
 
@@ -1344,16 +1127,16 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 size_t lookupId = reader.getLookupIdByKey(reader.getDbKey(i));
                 std::string name = reader.getLookupEntryName(lookupId);
 
-                if (readStructure.loadFromBuffer(data, len, name, (GemmiWrapper::Format)inputFormat) == false) {
+                if (readStructure.loadFromBuffer(data, len, name, par.saveResIndex, (GemmiWrapper::Format)inputFormat) == false) {
                     incorrectFiles++;
                 } else {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di,  pulchra,
-                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
+                        alphabet3di, alphabetAA, camol, header, resId, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter, foldcompWriter
+                        mappingWriter, foldcompWriter, idbw
                     );
                 }
             }
@@ -1365,6 +1148,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
     hdbw.close(true);
     cadbw.close(true);
     aadbw.close(true);
+    if (par.saveResIndex) {
+        idbw->close(true);
+        delete idbw;
+    }
     if (par.writeMapping) {
         mappingWriter->close(true);
         delete mappingWriter;
@@ -1435,6 +1222,17 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         aadbw_reorder.close(true);
         aadbr_reorder.close();
 
+        if (par.saveResIndex) {
+            DBReader<unsigned int> idbr_reorder((outputName+"_id").c_str(), (outputName+"_id.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+            idbr_reorder.open(DBReader<unsigned int>::NOSORT);
+            idbr_reorder.readMmapedDataInMemory();
+            DBWriter idbw_reorder((outputName+"_id").c_str(), (outputName+"_id.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
+            idbw_reorder.open();
+            reorderDbByIdOrder(idbw_reorder, idbr_reorder, mappingOrder);
+            idbw_reorder.close(true);
+            idbr_reorder.close();
+        }
+
         if (par.writeMapping) {
             DBReader<unsigned int> mappingReader_reorder((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
             mappingReader_reorder.open(DBReader<unsigned int>::NOSORT);
@@ -1461,6 +1259,9 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBWriter::createRenumberedDB((outputName+"_h").c_str(), (outputName+"_h.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         DBWriter::createRenumberedDB((outputName+"_ca").c_str(), (outputName+"_ca.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         DBWriter::createRenumberedDB((outputName).c_str(), (outputName+".index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+        if (par.saveResIndex) {
+            DBWriter::createRenumberedDB((outputName+"_id").c_str(), (outputName+"_id.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+        }
         if (par.writeMapping) {
             DBWriter::createRenumberedDB((outputName+"_mapping_tmp").c_str(), (outputName+"_mapping_tmp.index").c_str(), "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
         }
@@ -1499,7 +1300,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         }
         DBReader<unsigned int>::removeDb(outputName + "_mapping_tmp");
     }
-
+    
     if (par.writeLookup == true) {
         DBReader<unsigned int> readerHeader((outputName + "_h").c_str(), (outputName + "_h.index").c_str(),
                                             1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);

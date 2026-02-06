@@ -23,6 +23,7 @@ LocalParameters::LocalParameters() :
         PARAM_EXACT_TMSCORE(PARAM_EXACT_TMSCORE_ID,"--exact-tmscore", "Exact TMscore","turn on fast exact TMscore (slow), default is approximate" ,typeid(int), (void *) &exactTMscore, "^[0-1]{1}$"),
         PARAM_N_SAMPLE(PARAM_N_SAMPLE_ID, "--n-sample", "Sample size","pick N random sample" ,typeid(int), (void *) &nsample, "^[0-9]{1}[0-9]*$"),
         PARAM_COORD_STORE_MODE(PARAM_COORD_STORE_MODE_ID, "--coord-store-mode", "Coord store mode", "Coordinate storage mode: \n1: C-alpha as float\n2: C-alpha as difference (uint16_t)", typeid(int), (void *) &coordStoreMode, "^[1-2]{1}$",MMseqsParameter::COMMAND_EXPERT),
+        PARAM_SAVE_RES_INDEX(PARAM_SAVE_RES_INDEX_ID, "--save-res-index", "Save residue indices", "Saves PDB residue indices of all residues in the input structures", typeid(bool), (void *) & saveResIndex, ""),
         PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD_ID, "--min-assigned-chains-ratio", "Minimum assigned chains percentage Threshold", "Minimum ratio of assigned chains out of all query chains > thr [0.0,1.0]", typeid(float), (void *) & minAssignedChainsThreshold, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_MONOMER_INCLUDE_MODE(PARAM_MONOMER_INCLUDE_MODE_ID, "--monomer-include-mode", "Monomer inclusion Mode for MultimerSerch", "Monomer Complex Inclusion 0: include monomers, 1: NOT include monomers", typeid(int), (void *) & monomerIncludeMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_CLUSTER_SEARCH(PARAM_CLUSTER_SEARCH_ID, "--cluster-search", "Cluster search", "first find representative then align all cluster members", typeid(int), (void *) &clusterSearch, "^[0-1]{1}$",MMseqsParameter::COMMAND_MISC),
@@ -36,10 +37,10 @@ LocalParameters::LocalParameters() :
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
-        PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
-        PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-beta below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
+	    PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-alpha below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
+        PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN(PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN_ID, "--min-interface-residues-perchain", "Minimum number of interface residues per chain","save dimer/interface if there are N numbers of residues per chain" ,typeid(int), (void *) &minResidueNum, "^[0-9]{1}[0-9]*$"),
         PARAM_MULTIMER_TM_THRESHOLD(PARAM_MULTIMER_TM_THRESHOLD_ID,"--multimer-tm-threshold", "whole structure's TMscore threshold", "accept alignments with a multimer tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtMultTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-        PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold", "accept alignments with a minimum chain tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold for filtermultimer", "accept alignments with a tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
         PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$")
@@ -92,12 +93,11 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_PROSTT5_MODEL);
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_MODEL_NAME_MODE);
-    structurecreatedb.push_back(&PARAM_DB_EXTRACTION_MODE);
-    structurecreatedb.push_back(&PARAM_DISTANCE_THRESHOLD);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
     structurecreatedb.push_back(&PARAM_WRITE_FOLDCOMP);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
+    structurecreatedb.push_back(&PARAM_SAVE_RES_INDEX);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
     structurecreatedb.push_back(&PARAM_INPUT_FORMAT);
     // protein chain only
@@ -238,6 +238,33 @@ LocalParameters::LocalParameters() :
     createstructsubdb.push_back(&PARAM_SUBDB_MODE);
     createstructsubdb.push_back(&PARAM_ID_MODE);
     createstructsubdb.push_back(&PARAM_V);
+
+    //createinterfacedb
+    createinterfacedb.push_back(&PARAM_V);
+    createinterfacedb.push_back(&PARAM_THREADS);
+    createinterfacedb.push_back(&PARAM_PRELOAD_MODE);
+    createinterfacedb.push_back(&PARAM_DISTANCE_THRESHOLD);
+    createinterfacedb.push_back(&PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN);
+
+    //createStructinterfacedb
+    createStructinterfacedb.push_back(&PARAM_V);
+    createStructinterfacedb.push_back(&PARAM_THREADS);
+    createStructinterfacedb.push_back(&PARAM_PRELOAD_MODE);
+    createStructinterfacedb.push_back(&PARAM_DISTANCE_THRESHOLD);
+    createStructinterfacedb.push_back(&PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN);
+
+    //filterdimerdb
+    filterdimerdb.push_back(&PARAM_THREADS);
+    filterdimerdb.push_back(&PARAM_V);
+    filterdimerdb.push_back(&PARAM_DISTANCE_THRESHOLD);
+    filterdimerdb.push_back(&PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN);
+
+    //createdimerdbworkflow
+    createdimerdbworkflow.push_back(&PARAM_THREADS);
+    createdimerdbworkflow.push_back(&PARAM_V);
+    createdimerdbworkflow.push_back(&PARAM_DISTANCE_THRESHOLD);
+    createdimerdbworkflow.push_back(&PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN);
+    createdimerdbworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     
     // createmultimerreport
     createmultimerreport.push_back(&PARAM_DB_OUTPUT);
@@ -303,9 +330,23 @@ LocalParameters::LocalParameters() :
     // multimerclusterworkflow
     multimerclusterworkflow  = combineList(multimersearchworkflow, clust);
 
+    // interfacesearchworkflow
+    interfacesearchworkflow  = combineList(multimersearchworkflow, createdimerdbworkflow);
+    interfacesearchworkflow  = combineList(interfacesearchworkflow, createinterfacedb);
+
+    // easyinterfacesearchworkflow
+    easyinterfacesearchworkflow  = combineList(easymultimersearchworkflow, interfacesearchworkflow);
+
+    // interfaceclusterworkflow
+    interfaceclusterworkflow  = combineList(multimerclusterworkflow, createdimerdbworkflow);
+    interfaceclusterworkflow  = combineList(interfaceclusterworkflow, createinterfacedb);
+
     //easymultimerclusterworkflow
     easymultimerclusterworkflow = combineList(structurecreatedb, multimerclusterworkflow);
     easymultimerclusterworkflow = combineList(easymultimerclusterworkflow, result2repseq);
+
+    // easyinterfaceclusterworkflow
+    easyinterfaceclusterworkflow  = combineList(easymultimerclusterworkflow, easyinterfaceclusterworkflow);
 
     // set masking
     maskMode = 0;
@@ -325,6 +366,7 @@ LocalParameters::LocalParameters() :
     fileExclude = "^$";
     prostt5SplitLength = 1024;
     prostt5Model = "";
+    saveResIndex = false;
 
     // search parameter
     alignmentType = ALIGNMENT_TYPE_3DI_AA;
@@ -351,11 +393,11 @@ LocalParameters::LocalParameters() :
     // multimer
     eValueThrExpandMultimer = 10000.0;
     multimerReportMode = 1;
-    dbExtractionMode = DB_EXTRACT_MODE_CHAIN;
     distanceThreshold = 10.0;
+    minResidueNum = 4;
     filtMultTmThr = 0.0;
     filtChainTmThr = 0.3;
-    filtInterfaceLddtThr = 0;
+    filtInterfaceLddtThr = 0.0;
     minAlignedChains = 2;
 
     // LoLalign

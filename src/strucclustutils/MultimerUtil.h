@@ -306,4 +306,35 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     }
 }
 
+static void findInterface(std::vector<size_t> & resIdx, float squareThreshold, float* qdata1, float* tdata1, unsigned int qChainLen, unsigned int tChainLen) {
+    bool yesInterFace = false;
+    bool yesSameRes = false;
+    size_t sameRes = 0;
+    
+    for (unsigned int qRes = 0; qRes < qChainLen; qRes ++) {
+        yesInterFace = false;
+        yesSameRes = false;
+        for (unsigned int tRes = 0; tRes < tChainLen; tRes ++) {
+            float dx = qdata1[qRes] - tdata1[tRes];
+            float dy = qdata1[qChainLen + qRes] - tdata1[tChainLen + tRes];
+            float dz = qdata1[qChainLen * 2 + qRes] - tdata1[tChainLen * 2 + tRes];
+            float distance = dx * dx + dy * dy + dz * dz;
+            if (distance < 0.01) {
+                yesSameRes = true;
+                sameRes++;
+                break;
+            }
+            if (distance < squareThreshold) {
+                yesInterFace = true;
+            } 
+        }
+        if (yesInterFace && !yesSameRes) {
+            resIdx.push_back(qRes);
+        }
+    }
+    if (static_cast<float>(sameRes) / qChainLen > 0.9f) {
+        resIdx.clear();
+    }
+}
+
 #endif //FOLDSEEK_MULTIMERUTIL_H

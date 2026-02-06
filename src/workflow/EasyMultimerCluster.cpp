@@ -16,6 +16,7 @@ void setEasyMultimerClusterDefaults(Parameters *p) {
 
 void setEasyMultimerClusterMustPassAlong(Parameters *p) {
     //TODO
+    p->clusteringSetMode = 1;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
     p->PARAM_WRITE_LOOKUP.wasSet = true;
 }
