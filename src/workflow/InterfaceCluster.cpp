@@ -9,14 +9,16 @@
 #include "interfacecluster.sh.h"
 
 void setInterfaceClusterDefaults(LocalParameters *p) {
-    // TODO
-    // residue-per-chain
-    // distance
-    // cluster paramters
+    p->distanceThreshold = 10;
+    p->minResidueNum = 4;
+    p->filtInterfaceLddtThr = 0.0;
+    p->filtMultTmThr = 0.4;
+    p->filtChainTmThr = 0.0;
 }
    
 
 void mustseInterfaceCluster(LocalParameters *p) {
+    p->clusteringSetMode = 1;
 }
 
 int interfacecluster(int argc, const char **argv, const Command &command) {

@@ -10,9 +10,14 @@
 #include "easyinterfacecluster.sh.h"
 
 void setEasyInterfaceClusterDefaults(Parameters *p) {
+    p->removeTmpFiles = true;
+    p->writeLookup = true;
 }
 
 void setEasyInterfaceClusterMustPassAlong(Parameters *p) {
+    p->clusteringSetMode = 1;
+    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
+    p->PARAM_WRITE_LOOKUP.wasSet = true;
 }
 
 int easyinterfacecluster(int argc, const char **argv, const Command &command) {
