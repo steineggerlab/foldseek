@@ -735,12 +735,12 @@ public:
             if (*data == '\0') {
                 continue;
             }
-            char dbKeyBuffer[255 + 1];
-            char lineBuffer[255 + 1];
+            char dbKeyBuffer[256];
+            char lineBuffer[1024];
             while (*data != '\0') {
                 Util::parseKey(data, dbKeyBuffer);
                 const auto dbChainKey = static_cast<unsigned int>(strtoul(dbKeyBuffer, NULL, 10));
-                Util::getLine(data, dataSize, lineBuffer, 256);
+                Util::getLine(data, dataSize, lineBuffer, 1024);
                 alignmentLinesMap.insert({{qChainKey, dbChainKey}, static_cast<std::string>(lineBuffer)});
                 data = Util::skipLine(data);
             } // while end
