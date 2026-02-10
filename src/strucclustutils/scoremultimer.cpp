@@ -21,8 +21,6 @@
 // carrying chainToChainAlignments from the same query and target complex
 struct SearchResult {
     SearchResult() {}
-    // SearchResult(std::vector<unsigned int> &chainKeys) : qChainKeys(chainKeys), alnVec({}) {}
-    // SearchResult(std::vector<unsigned int> &chainKeys, unsigned int qResidueLen) : qChainKeys(chainKeys), qResidueLen(qResidueLen), alnVec({}) {}
     SearchResult(std::vector<unsigned int> &qChainKeys, unsigned int qResidueLen, std::vector<unsigned int> &dbChainKeys, unsigned int dbResidueLen, const std::vector<ChainToChainAln> &alnVec) : qChainKeys(qChainKeys), dbChainKeys(dbChainKeys), qResidueLen(qResidueLen), dbResidueLen(dbResidueLen), alnVec(alnVec) {}
 
     std::vector<unsigned int> qChainKeys;
@@ -92,8 +90,6 @@ struct Assignment {
     std::string uString;
     std::string backtrace;
     resultToWrite_t assignmentResult;
-    // std::vector<resultToWriteWithKey_t> resultToWriteLines;
-    // std::string resultToWriteLines2;
     TMaligner::TMscoreResult tmResult;
     std::vector<resultToWriteWithKey_t> chainToChainResults;
     resultToWrite_t filterResult;
@@ -108,7 +104,6 @@ struct Assignment {
         dbCaYVec.insert(dbCaYVec.end(), aln.dbChain.caVecY.begin(), aln.dbChain.caVecY.end());
         dbCaZVec.insert(dbCaZVec.end(), aln.dbChain.caVecZ.begin(), aln.dbChain.caVecZ.end());
         matchLenVec.push_back(aln.matches);
-        // resultToWriteLines.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
         chainToChainResults.emplace_back(aln.qChain.chainKey, aln.resultToWrite);
     }
 
@@ -120,7 +115,6 @@ struct Assignment {
         dbCaXVec.clear();
         dbCaYVec.clear();
         dbCaZVec.clear();
-        // resultToWriteLines.clear();
         uString.clear();
         tString.clear();
         chainToChainResults.clear();
@@ -139,13 +133,6 @@ struct Assignment {
         tmResult = tmAligner.computeTMscore(&dbCaXVec[0], &dbCaYVec[0], &dbCaZVec[0],matches,0,0, backtrace,normLen);
         qTmScore = tmResult.tmscore * normLen / qResidueLength;
         dbTmScore = tmResult.tmscore * normLen / dbResidueLength;
-        // qCaXVec.clear();
-        // qCaYVec.clear();
-        // qCaZVec.clear();
-        // dbCaXVec.clear();
-        // dbCaYVec.clear();
-        // dbCaZVec.clear();
-        // backtrace.clear();
         return true;
     }
 
@@ -553,171 +540,6 @@ public:
     ~ComplexScorer() {
         delete tmAligner;
     }
-    // void getSearchResults(unsigned int qComplexId, std::vector<unsigned int> &qChainKeys, chainKeyToComplexId_t &dbChainKeyToComplexIdLookup, complexIdToChainKeys_t &dbComplexIdToChainKeysLookup, std::vector<SearchResult> &searchResults) {
-    //     bool hasBacktrace = false;
-    //     unsigned int qResLen = getQueryResidueLength(qChainKeys);
-    //     if (qResLen == 0) {
-    //         return;
-    //     }
-    //     SearchResult paredSearchResult(qChainKeys, qResLen);
-    //     // for each chain from the query Complex
-    //     Coordinate16 qCoords;
-    //     Coordinate16 tCoords;
-    //     currAlns.clear();
-    //     for (auto qChainKey : qChainKeys) {
-    //         unsigned int qKey = alnDbr.getId(qChainKey);
-    //         if (qKey == NOT_AVAILABLE_CHAIN_KEY) {
-    //             continue;
-    //         }
-    //         char *data = alnDbr.getData(qKey, thread_idx);
-    //         if (*data == '\0') {
-    //             continue;
-    //         }
-    //         Matcher::result_t qAlnResult = Matcher::parseAlignmentRecord(data);
-    //         size_t qDbId = qCaDbr->getId(qChainKey);
-    //         char *qCaData = qCaDbr->getData(qDbId, thread_idx);
-    //         size_t qCaLength = qCaDbr->getEntryLen(qDbId);
-    //         unsigned int qLen = qAlnResult.qLen;
-    //         float *queryCaData = qCoords.read(qCaData, qAlnResult.qLen, qCaLength);
-    //
-    //         Chain qChain(qComplexId, qChainKey);
-    //         tmAligner->initQuery(queryCaData, &queryCaData[qLen], &queryCaData[qLen * 2], NULL, qLen);
-    //         // for each alignment from the query chain
-    //         char dbKeyBuffer[255 + 1];
-    //         while (*data != '\0') {
-    //             Util::parseKey(data, dbKeyBuffer);
-    //             const unsigned int dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-    //             const unsigned int dbComplexId = dbChainKeyToComplexIdLookup.at(dbChainKey);
-    //             Matcher::result_t dbAlnResult = Matcher::parseAlignmentRecord(data);
-    //             data = Util::skipLine(data);
-    //             if (dbAlnResult.backtrace.empty()) {
-    //                 continue;
-    //             }
-    //             hasBacktrace = true;
-    //             size_t tCaId = tCaDbr->getId(dbChainKey);
-    //             char *tCaData = tCaDbr->getData(tCaId, thread_idx);
-    //             size_t tCaLength = tCaDbr->getEntryLen(tCaId);
-    //             unsigned int dbLen = dbAlnResult.dbLen;
-    //             float *targetCaData = tCoords.read(tCaData, dbLen, tCaLength);
-    //             Chain dbChain(dbComplexId, dbChainKey);
-    //             TMaligner::TMscoreResult tmResult = tmAligner->computeTMscore(targetCaData, &targetCaData[dbLen], &targetCaData[dbLen * 2], dbLen, dbAlnResult.qStartPos, dbAlnResult.dbStartPos, Matcher::uncompressAlignment(dbAlnResult.backtrace), dbAlnResult.qLen);
-    //             currAlns.emplace_back(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
-    //         } // while end
-    //     } // for end
-    //     if (currAlns.empty()) {
-    //         return;
-    //     }
-    //     // When alignments have no backtrace
-    //     if (!hasBacktrace) {
-    //         Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
-    //         EXIT(EXIT_FAILURE);
-    //     }
-    //
-    //     SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAlnByDbComplexId);
-    //     unsigned int currDbComplexId = currAlns[0].dbChain.complexId;
-    //
-    //     std::vector<unsigned int> currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
-    //     unsigned int currDbResLen = getDbResidueLength(currDbChainKeys);
-    //     paredSearchResult.resetDbComplex(currDbChainKeys, currDbResLen);
-    //     for (auto &aln : currAlns) {
-    //         if (aln.dbChain.complexId == currDbComplexId) {
-    //             paredSearchResult.alnVec.emplace_back(aln);
-    //             continue;
-    //         }
-    //         paredSearchResult.standardize(monomerIncludeMode);
-    //         if (!paredSearchResult.alnVec.empty())
-    //             searchResults.emplace_back(paredSearchResult);
-    //
-    //         paredSearchResult.alnVec.clear();
-    //         currDbComplexId = aln.dbChain.complexId;
-    //         currDbChainKeys = dbComplexIdToChainKeysLookup.at(currDbComplexId);
-    //         currDbResLen = getDbResidueLength(currDbChainKeys);
-    //         paredSearchResult.resetDbComplex(currDbChainKeys, currDbResLen);
-    //         paredSearchResult.alnVec.emplace_back(aln);
-    //     }
-    //     currAlns.clear();
-    //     paredSearchResult.standardize(monomerIncludeMode);
-    //     if (!paredSearchResult.alnVec.empty())
-    //         searchResults.emplace_back(paredSearchResult);
-    //
-    //     paredSearchResult.alnVec.clear();
-    // }
-
-    //     void getSearchResultByDbComplex(unsigned int qComplexId, unsigned int dbComplexId, std::vector<unsigned int> &qChainKeys, std::vector<unsigned int> &dbChainKeys, SearchResult &searchResult, chainKeyToComplexId_t &dbChainKeyToComplexIdMap) {
-    //     bool hasBacktrace = false;
-    //     unsigned int qResLen = getQueryResidueLength(qChainKeys);
-    //     unsigned int dbResLen = getDbResidueLength(dbChainKeys);
-    //     if (qResLen == 0 || dbResLen == 0) {
-    //         return;
-    //     }
-    //
-    //     // for each chain from the query Complex
-    //     Coordinate16 qCoords;
-    //     Coordinate16 tCoords;
-    //     currAlns.clear();
-    //     for (auto qChainKey : qChainKeys) {
-    //         unsigned int qKey = alnDbr.getId(qChainKey);
-    //         if (qKey == NOT_AVAILABLE_CHAIN_KEY) {
-    //             continue;
-    //         }
-    //         char *data = alnDbr.getData(qKey, thread_idx);
-    //         if (*data == '\0') {
-    //             continue;
-    //         }
-    //         Matcher::result_t qAlnResult = Matcher::parseAlignmentRecord(data);
-    //         size_t qDbId = qCaDbr->getId(qChainKey);
-    //         char *qCaData = qCaDbr->getData(qDbId, thread_idx);
-    //         size_t qCaLength = qCaDbr->getEntryLen(qDbId);
-    //         unsigned int qLen = qAlnResult.qLen;
-    //         float *queryCaData = qCoords.read(qCaData, qAlnResult.qLen, qCaLength);
-    //
-    //         Chain qChain(qComplexId, qChainKey);
-    //         tmAligner->initQuery(queryCaData, &queryCaData[qLen], &queryCaData[qLen * 2], NULL, qLen);
-    //         // for each alignment from the query chain
-    //         char dbKeyBuffer[255 + 1];
-    //         while (*data != '\0') {
-    //             Util::parseKey(data, dbKeyBuffer);
-    //             const unsigned int dbChainKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-    //             // If current line doesn't belong to current db complex, skip the line.
-    //             // Estimation: maximum number of chains is 100, and the number of protein complexes is 1,000,000 (100 > log1,000,000)
-    //             // Matcher::result_t foo = Matcher::parseAlignmentRecord(line.c_str());
-    //             if (dbChainKeyToComplexIdMap.at(dbChainKey) != dbComplexId) {
-    //             // if (std::find(dbChainKeys.begin(), dbChainKeys.end(), dbChainKey) == dbChainKeys.end()) {
-    //                 data = Util::skipLine(data);
-    //                 continue;
-    //             }
-    //             Matcher::result_t dbAlnResult = Matcher::parseAlignmentRecord(data);
-    //             data = Util::skipLine(data);
-    //             if (dbAlnResult.backtrace.empty()) {
-    //                 continue;
-    //             }
-    //             hasBacktrace = true;
-    //             size_t tCaId = tCaDbr->getId(dbChainKey);
-    //             char *tCaData = tCaDbr->getData(tCaId, thread_idx);
-    //             size_t tCaLength = tCaDbr->getEntryLen(tCaId);
-    //             unsigned int dbLen = dbAlnResult.dbLen;
-    //             float *targetCaData = tCoords.read(tCaData, dbLen, tCaLength);
-    //             Chain dbChain(dbComplexId, dbChainKey);
-    //             TMaligner::TMscoreResult tmResult = tmAligner->computeTMscore(targetCaData, &targetCaData[dbLen], &targetCaData[dbLen * 2], dbLen, dbAlnResult.qStartPos, dbAlnResult.dbStartPos, Matcher::uncompressAlignment(dbAlnResult.backtrace), dbAlnResult.qLen);
-    //             currAlns.emplace_back(qChain, dbChain, queryCaData, targetCaData, dbAlnResult, tmResult);
-    //         } // while end
-    //     } // for end
-    //
-    //     // When no alignment is found.
-    //     if (currAlns.empty()) {
-    //         return;
-    //     }
-    //
-    //     // When alignments have no backtrace
-    //     if (!hasBacktrace) {
-    //         Debug(Debug::ERROR) << "Backtraces are required. Please run search with '-a' option.\n";
-    //         EXIT(EXIT_FAILURE);
-    //     }
-    //
-    //     SORT_SERIAL(currAlns.begin(), currAlns.end(), compareChainToChainAln);
-    //     searchResult = SearchResult(qChainKeys, qResLen, dbChainKeys, dbResLen, currAlns);
-    //     searchResult.standardize(monomerIncludeMode);
-    // }
 
     void getSearchResultLinesMap(std::vector<unsigned int> &qChainKeys, alignmentLinesMap_t &alignmentLinesMap) {
         qResLen = getQueryResidueLength(qChainKeys);
@@ -837,7 +659,6 @@ public:
             }
             assignment.updateResultToWriteLines();
             assignments.emplace_back(std::move(assignment));
-            // assignment.reset();
         }
         finalClusters.clear();
     }
@@ -913,14 +734,12 @@ public:
         IndexReader *qDbr,
         DBReader<unsigned int> *qStructDbr,
         LocalParameters &par,
-        // to avoid data race
         unsigned int thread_idx
     )
         : qChainKeys_(qChainKeys),
           qDbr_(qDbr),
           qStructDbr_(qStructDbr),
           par_(par),
-          // to avoid data race
           thread_idx(thread_idx)
     {
         qInterfaceVec_.resize(qChainKeys_.size());
@@ -937,7 +756,6 @@ public:
             qChainKeyTochainIdx_[chainKey] = chainIdx;
 
             unsigned int chainDbId = qDbr_->sequenceReader->getId(chainKey);
-            // to avoid data race
             char *cadata = qStructDbr_->getData(chainDbId, thread_idx);
             size_t caLength = qStructDbr_->getEntryLen(chainDbId);
             size_t chainLen = qDbr_->sequenceReader->getSeqLen(chainDbId);
@@ -948,7 +766,6 @@ public:
 
                 unsigned int chainKey2 = qChainKeys_[chainIdx2];
                 unsigned int chainDbId2 = qDbr_->sequenceReader->getId(chainKey2);
-                // to avoid data race
                 char *cadata2 = qStructDbr_->getData(chainDbId2, thread_idx);
                 size_t caLength2 = qStructDbr_->getEntryLen(chainDbId2);
                 size_t chainLen2 = qDbr_->sequenceReader->getSeqLen(chainDbId2);
@@ -983,7 +800,6 @@ public:
         unsigned int adjustAlnLen;
         assignment.assignmentId = assignmentId;
         assignment.filterResult.clear();
-        // size_t alnChainNum = assignment.resultToWriteLines.size();
         size_t alnChainNum = assignment.chainToChainResults.size();
 
         std::vector<int> qChainLengths(alnChainNum);
@@ -1003,12 +819,8 @@ public:
 
         for (size_t i = 0; i < alnChainNum; i++) {
 
-            // const unsigned int &qKey = assignment.resultToWriteLines[i].first;
-            // auto &resultToWrite = assignment.resultToWriteLines[i].second;
             const unsigned int &qKey = assignment.chainToChainResults[i].first;
             std::string resultToWrite = assignment.chainToChainResults[i].second+"\t"+assignment.assignmentResult+"\t"+std::to_string(assignment.assignmentId);
-
-            // resultToWrite += "\t" + SSTR(assignmentId);
             const char* data = resultToWrite.c_str();
 
             Matcher::result_t res;
@@ -1264,7 +1076,6 @@ public:
         }
         result.append("\t");
         result.append(SSTR(interfaceLddt));
-        // assignment.resultToWriteLines2 = result;
         assignment.filterResult = result;
 
         auto it = tCompBestAssignment.find(tComplexId);
@@ -1280,7 +1091,6 @@ private:
 
     std::vector<std::vector<unsigned int>> qInterfaceVec_;
     std::map<unsigned int, unsigned int> qChainKeyTochainIdx_;
-    // to avoid data race
     unsigned int thread_idx;
 };
 
