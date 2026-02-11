@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <cstdlib>
 #include "structureto3di.h"
 
 class GemmiWrapper {
@@ -24,7 +25,7 @@ public:
     GemmiWrapper();
     ~GemmiWrapper() {
         if (fixupBuffer) {
-            delete fixupBuffer;
+            free(fixupBuffer);
         }
     }
 

@@ -20,6 +20,7 @@
 #include <zstd.h>
 
 size_t decompressZstdBuffer(const void* src, size_t srcSize, char*& dst) {
+    dst = NULL;
     if (!src || srcSize == 0) {
         return 0;
     }
@@ -30,7 +31,7 @@ size_t decompressZstdBuffer(const void* src, size_t srcSize, char*& dst) {
         const size_t ret = ZSTD_decompress(dst, frameSize, src, srcSize);
         if (ZSTD_isError(ret)) {
             delete[] dst;
-            dst = nullptr;
+            dst = NULL;
             return 0;
         }
         return ret;
@@ -76,6 +77,7 @@ size_t decompressZstdBuffer(const void* src, size_t srcSize, char*& dst) {
 }
 
 size_t decompressZstdFile(const std::string& path, char*& dst) {
+    dst = NULL;
     struct stat st;
     if (stat(path.c_str(), &st) != 0 || st.st_size <= 0) {
         return 0;
@@ -99,6 +101,7 @@ size_t decompressZstdFile(const std::string& path, char*& dst) {
 
 GemmiWrapper::GemmiWrapper(){
     fixupBuffer = NULL;
+    fixupBufferSize = 0;
 }
 
 // adapted from Gemmi find_tabulated_residue
@@ -335,15 +338,21 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
     try {
         if (gemmi::iends_with(filename, ".zstd") || gemmi::iends_with(filename, ".zst")) {
             std::string name = gemmi::path_basename(filename, { ".zstd", ".zst" });
-            char* out;
+            char* out = NULL;
             size_t len = decompressZstdFile(filename, out);
+            if (len == 0 || out == NULL) {
+                delete[] out;
+                return false;
+            }
             if (format == Format::Detect) {
                 format = mapFormat(gemmi::coor_format_from_ext(name));
             }
             if (format == Format::Unknown) {
                 format = Format::Pdb;
             }
-            return loadFromBuffer(out, len, name, format);
+            bool result = loadFromBuffer(out, len, name, format);
+            delete[] out;
+            return result;
         }
 
 #ifdef HAVE_ZLIB
@@ -427,15 +436,20 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         }
         return loadFoldcompStructure(istr, name);
     }
+    char* zstdBuffer = NULL;
     try {
         std::string newName = name;
         const char* newBuffer = buffer;
         size_t newBufferSize = bufferSize;
-        bool zstd = false;
         if (gemmi::iends_with(name, ".zstd") || gemmi::iends_with(name, ".zst")) {
             newName = gemmi::path_basename(name, { ".zstd", ".zst" });
-            char* tmpBuffer;
+            char* tmpBuffer = NULL;
             newBufferSize = decompressZstdBuffer(buffer, bufferSize, tmpBuffer);
+            if (newBufferSize == 0 || tmpBuffer == NULL) {
+                delete[] zstdBuffer;
+                return false;
+            }
+            zstdBuffer = tmpBuffer;
             newBuffer = tmpBuffer;
         }
 
@@ -490,10 +504,12 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             case Format::Mmjson: {
                 char* bufferCopy = (char*)malloc(newBufferSize + 1 * sizeof(char));
                 if (bufferCopy == NULL) {
+                    delete[] zstdBuffer;
                     return false;
                 }
                 if (memcpy(bufferCopy, newBuffer, newBufferSize) == NULL) {
                     free(bufferCopy);
+                    delete[] zstdBuffer;
                     return false;
                 }
                 bufferCopy[newBufferSize] = '\0';
@@ -512,12 +528,15 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 break;
             }
             default:
+                delete[] zstdBuffer;
                 return false;
         }
         updateStructure((void*) &st, newName, entity_to_tax_id, entity_to_description);
     } catch (...) {
+        delete[] zstdBuffer;
         return false;
     }
+    delete[] zstdBuffer;
     return true;
 }
 
