@@ -34,6 +34,7 @@ LocalParameters::LocalParameters() :
         PARAM_EXPAND_MULTIMER_EVALUE(PARAM_EXPAND_MULTIMER_EVALUE_ID, "--expand-multimer-evalue", "Multimer E-value", "E-value threshold for multimer chain expansion (range 0.0-inf)", typeid(double), (void *) &eValueThrExpandMultimer, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT(PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT_ID, "--expand-complex-evalue", "", "", typeid(double), (void *) &eValueThrExpandMultimer, "^([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)|[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_HIDDEN),
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
+        PARAM_INPUT_COMPRESSION_FORMAT(PARAM_INPUT_COMPRESSION_FORMAT_ID, "--input-compression-format", "Input compression format", "Compression format of input structures:\n0: Auto/File-ending based\n1: gzip\n2: zstd", typeid(int), (void *) &inputCompressionFormat, "^[0-2]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
         PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
@@ -100,6 +101,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_LOOKUP);
     structurecreatedb.push_back(&PARAM_INPUT_FORMAT);
+    structurecreatedb.push_back(&PARAM_INPUT_COMPRESSION_FORMAT);
     // protein chain only
     structurecreatedb.push_back(&PARAM_FILE_INCLUDE);
     structurecreatedb.push_back(&PARAM_FILE_EXCLUDE);
@@ -321,6 +323,7 @@ LocalParameters::LocalParameters() :
     writeFoldcomp = 0;
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     inputFormat = 0; // auto detect
+    inputCompressionFormat = INPUT_COMPRESSION_AUTO;
     fileInclude = ".*";
     fileExclude = "^$";
     prostt5SplitLength = 1024;

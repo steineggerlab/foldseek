@@ -22,6 +22,12 @@ public:
         Unknown
     };
 
+    enum class CompressionFormat {
+        Detect = 0,
+        Gzip = 1,
+        Zstd = 2
+    };
+
     GemmiWrapper();
     ~GemmiWrapper() {
         if (fixupBuffer) {
@@ -29,9 +35,19 @@ public:
         }
     }
 
-    bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, Format format = Format::Detect);
+    bool loadFromBuffer(
+        const char * buffer,
+        size_t bufferSize,
+        const std::string& name,
+        Format format = Format::Detect,
+        CompressionFormat compressionFormat = CompressionFormat::Detect
+    );
 
-    bool load(const std::string& filename, Format format = Format::Detect);
+    bool load(
+        const std::string& filename,
+        Format format = Format::Detect,
+        CompressionFormat compressionFormat = CompressionFormat::Detect
+    );
 
     std::vector<Vec3> ca;
     std::vector<float> ca_bfactor;

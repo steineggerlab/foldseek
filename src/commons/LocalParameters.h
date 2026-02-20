@@ -50,6 +50,10 @@ public:
     static const int MODEL_MODE_AUTO = 0;
     static const int MODEL_MODE_ADD = 1;
 
+    static const int INPUT_COMPRESSION_AUTO = 0;
+    static const int INPUT_COMPRESSION_GZIP = 1;
+    static const int INPUT_COMPRESSION_ZSTD = 2;
+
     static const int OUTFMT_QCA = 40;
     static const int OUTFMT_TCA = 41;
     static const int OUTFMT_U = 42;
@@ -158,6 +162,7 @@ public:
     PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE)
     PARAMETER(PARAM_EXPAND_MULTIMER_EVALUE_BC_COMPAT)
     PARAMETER(PARAM_INPUT_FORMAT)
+    PARAMETER(PARAM_INPUT_COMPRESSION_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_DB_EXTRACTION_MODE)
@@ -192,6 +197,7 @@ public:
     int multimerReportMode;
     double eValueThrExpandMultimer;
     int inputFormat;
+    int inputCompressionFormat;
     int pdbOutputMode;
     float filtMultTmThr;
     float filtChainTmThr;

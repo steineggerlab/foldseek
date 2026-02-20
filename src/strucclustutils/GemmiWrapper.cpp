@@ -5,6 +5,7 @@
 #include "mmread.hpp"
 #ifdef HAVE_ZLIB
 #include "gz.hpp"
+#include <zlib.h>
 #endif
 #include "input.hpp"
 #include "foldcomp.h"
@@ -14,6 +15,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <sys/stat.h>
 
 #define ZSTD_STATIC_LINKING_ONLY
@@ -98,6 +100,85 @@ size_t decompressZstdFile(const std::string& path, char*& dst) {
 
     return decompressZstdBuffer(compressed.data(), fsize, dst);
 }
+
+#ifdef HAVE_ZLIB
+size_t decompressGzipBuffer(const void* src, size_t srcSize, char*& dst) {
+    dst = NULL;
+    if (!src || srcSize == 0) {
+        return 0;
+    }
+
+    z_stream stream;
+    memset(&stream, 0, sizeof(stream));
+    if (inflateInit2(&stream, 16 + MAX_WBITS) != Z_OK) {
+        return 0;
+    }
+
+    const unsigned char* inPtr = static_cast<const unsigned char*>(src);
+    size_t remaining = srcSize;
+    const size_t inChunkMax = static_cast<size_t>(std::numeric_limits<uInt>::max());
+    const size_t outChunk = 1 << 16;
+    std::vector<char> out;
+    out.reserve(outChunk);
+    while (true) {
+        if (stream.avail_in == 0 && remaining > 0) {
+            const size_t chunk = (remaining < inChunkMax) ? remaining : inChunkMax;
+            stream.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(inPtr));
+            stream.avail_in = static_cast<uInt>(chunk);
+            inPtr += chunk;
+            remaining -= chunk;
+        }
+
+        const size_t oldSize = out.size();
+        out.resize(oldSize + outChunk);
+        stream.next_out = reinterpret_cast<Bytef*>(out.data() + oldSize);
+        stream.avail_out = static_cast<uInt>(outChunk);
+
+        const int ret = inflate(&stream, Z_NO_FLUSH);
+        if (ret != Z_OK && ret != Z_STREAM_END && ret != Z_BUF_ERROR) {
+            inflateEnd(&stream);
+            return 0;
+        }
+        out.resize(oldSize + (outChunk - stream.avail_out));
+
+        if (ret == Z_STREAM_END) {
+            break;
+        }
+        if (ret == Z_BUF_ERROR && stream.avail_in == 0 && remaining == 0) {
+            inflateEnd(&stream);
+            return 0;
+        }
+    }
+
+    inflateEnd(&stream);
+    dst = new char[out.size()];
+    memcpy(dst, out.data(), out.size());
+    return out.size();
+}
+
+size_t decompressGzipFile(const std::string& path, char*& dst) {
+    dst = NULL;
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0 || st.st_size <= 0) {
+        return 0;
+    }
+
+    FILE* fp = fopen(path.c_str(), "rb");
+    if (!fp) {
+        return 0;
+    }
+
+    const size_t fsize = static_cast<size_t>(st.st_size);
+    std::vector<char> compressed(fsize);
+    if (fread(compressed.data(), 1, fsize, fp) != fsize) {
+        fclose(fp);
+        return 0;
+    }
+    fclose(fp);
+
+    return decompressGzipBuffer(compressed.data(), fsize, dst);
+}
+#endif
 
 GemmiWrapper::GemmiWrapper(){
     fixupBuffer = NULL;
@@ -327,7 +408,7 @@ GemmiWrapper::Format mapFormat(gemmi::CoorFormat format) {
     }
 }
 
-bool GemmiWrapper::load(const std::string& filename, Format format) {
+bool GemmiWrapper::load(const std::string& filename, Format format, CompressionFormat compressionFormat) {
     if ((format == Format::Foldcomp) || (format == Format::Detect && gemmi::iends_with(filename, ".fcz"))) {
         std::ifstream in(filename, std::ios::binary);
         if (!in) {
@@ -336,8 +417,14 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
         return loadFoldcompStructure(in, filename);
     }
     try {
-        if (gemmi::iends_with(filename, ".zstd") || gemmi::iends_with(filename, ".zst")) {
-            std::string name = gemmi::path_basename(filename, { ".zstd", ".zst" });
+        const bool isGzipFile = gemmi::iends_with(filename, ".gz");
+        const bool isZstdFile = gemmi::iends_with(filename, ".zstd") || gemmi::iends_with(filename, ".zst");
+        const bool decodeAsZstd = compressionFormat == CompressionFormat::Zstd ||
+                                  (compressionFormat == CompressionFormat::Detect && isZstdFile);
+        const bool decodeAsGzipFallback = compressionFormat == CompressionFormat::Gzip && !isGzipFile;
+
+        if (decodeAsZstd) {
+            std::string name = isZstdFile ? gemmi::path_basename(filename, { ".zstd", ".zst" }) : filename;
             char* out = NULL;
             size_t len = decompressZstdFile(filename, out);
             if (len == 0 || out == NULL) {
@@ -354,6 +441,26 @@ bool GemmiWrapper::load(const std::string& filename, Format format) {
             delete[] out;
             return result;
         }
+#ifdef HAVE_ZLIB
+        if (decodeAsGzipFallback) {
+            std::string name = filename;
+            char* out = NULL;
+            size_t len = decompressGzipFile(filename, out);
+            if (len == 0 || out == NULL) {
+                delete[] out;
+                return false;
+            }
+            if (format == Format::Detect) {
+                format = mapFormat(gemmi::coor_format_from_ext(name));
+            }
+            if (format == Format::Unknown) {
+                format = Format::Pdb;
+            }
+            bool result = loadFromBuffer(out, len, name, format);
+            delete[] out;
+            return result;
+        }
+#endif
 
 #ifdef HAVE_ZLIB
         gemmi::MaybeGzipped infile(filename);
@@ -427,7 +534,13 @@ struct OneShotReadBuf : public std::streambuf
     }
 };
 
-bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, GemmiWrapper::Format format) {
+bool GemmiWrapper::loadFromBuffer(
+    const char * buffer,
+    size_t bufferSize,
+    const std::string& name,
+    GemmiWrapper::Format format,
+    GemmiWrapper::CompressionFormat compressionFormat
+) {
     if ((format == Format::Foldcomp) || (format == Format::Detect && (bufferSize > MAGICNUMBER_LENGTH && strncmp(buffer, MAGICNUMBER, MAGICNUMBER_LENGTH) == 0))) {
         OneShotReadBuf buf((char *) buffer, bufferSize);
         std::istream istr(&buf);
@@ -436,22 +549,45 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
         }
         return loadFoldcompStructure(istr, name);
     }
-    char* zstdBuffer = NULL;
+    char* decompressedBuffer = NULL;
     try {
+        const bool isGzipName = gemmi::iends_with(name, ".gz");
+        const bool isZstdName = gemmi::iends_with(name, ".zstd") || gemmi::iends_with(name, ".zst");
+        const bool decodeAsZstd = compressionFormat == CompressionFormat::Zstd ||
+                                  (compressionFormat == CompressionFormat::Detect && isZstdName);
+        const bool decodeAsGzip = compressionFormat == CompressionFormat::Gzip ||
+                                  (compressionFormat == CompressionFormat::Detect && isGzipName);
         std::string newName = name;
         const char* newBuffer = buffer;
         size_t newBufferSize = bufferSize;
-        if (gemmi::iends_with(name, ".zstd") || gemmi::iends_with(name, ".zst")) {
-            newName = gemmi::path_basename(name, { ".zstd", ".zst" });
+        if (decodeAsZstd) {
+            if (isZstdName) {
+                newName = gemmi::path_basename(name, { ".zstd", ".zst" });
+            }
             char* tmpBuffer = NULL;
             newBufferSize = decompressZstdBuffer(buffer, bufferSize, tmpBuffer);
             if (newBufferSize == 0 || tmpBuffer == NULL) {
-                delete[] zstdBuffer;
+                delete[] decompressedBuffer;
                 return false;
             }
-            zstdBuffer = tmpBuffer;
+            decompressedBuffer = tmpBuffer;
             newBuffer = tmpBuffer;
         }
+#ifdef HAVE_ZLIB
+        else if (decodeAsGzip) {
+            if (isGzipName) {
+                newName = gemmi::path_basename(name, { ".gz" });
+            }
+            char* tmpBuffer = NULL;
+            newBufferSize = decompressGzipBuffer(buffer, bufferSize, tmpBuffer);
+            if (newBufferSize == 0 || tmpBuffer == NULL) {
+                delete[] decompressedBuffer;
+                return false;
+            }
+            decompressedBuffer = tmpBuffer;
+            newBuffer = tmpBuffer;
+        }
+#endif
 
 #ifdef HAVE_ZLIB
         gemmi::MaybeGzipped infile(newName);
@@ -504,12 +640,12 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
             case Format::Mmjson: {
                 char* bufferCopy = (char*)malloc(newBufferSize + 1 * sizeof(char));
                 if (bufferCopy == NULL) {
-                    delete[] zstdBuffer;
+                    delete[] decompressedBuffer;
                     return false;
                 }
                 if (memcpy(bufferCopy, newBuffer, newBufferSize) == NULL) {
                     free(bufferCopy);
-                    delete[] zstdBuffer;
+                    delete[] decompressedBuffer;
                     return false;
                 }
                 bufferCopy[newBufferSize] = '\0';
@@ -528,15 +664,15 @@ bool GemmiWrapper::loadFromBuffer(const char * buffer, size_t bufferSize, const 
                 break;
             }
             default:
-                delete[] zstdBuffer;
+                delete[] decompressedBuffer;
                 return false;
         }
         updateStructure((void*) &st, newName, entity_to_tax_id, entity_to_description);
     } catch (...) {
-        delete[] zstdBuffer;
+        delete[] decompressedBuffer;
         return false;
     }
-    delete[] zstdBuffer;
+    delete[] decompressedBuffer;
     return true;
 }
 

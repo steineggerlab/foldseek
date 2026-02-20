@@ -1023,6 +1023,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
     // cannot be const for compatibility with older compilers/openmp and omp shared
     int inputFormat = par.inputFormat;
+    int inputCompressionFormat = par.inputCompressionFormat;
 
     // Process tar files!
     for (size_t i = 0; i < tarFiles.size(); i++) {
@@ -1054,28 +1055,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         int localThreads = par.threads;
 #endif
-#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, std::cerr, std::cout, inputFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(tar, par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, std::cerr, std::cout, inputFormat, inputCompressionFormat) num_threads(localThreads) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             unsigned int thread_idx = 0;
 #ifdef OPENMP
             thread_idx = static_cast<unsigned int>(omp_get_thread_num());
-#endif
-#ifdef HAVE_ZLIB
-            const unsigned int CHUNK = 128 * 1024;
-            unsigned char in[CHUNK];
-            unsigned char out[CHUNK];
-            z_stream strm;
-            memset(&strm, 0, sizeof(z_stream));
-            strm.zalloc = Z_NULL;
-            strm.zfree = Z_NULL;
-            strm.opaque = Z_NULL;
-            strm.next_in = in;
-            strm.avail_in = 0;
-            int status = inflateInit2(&strm, 15 | 32);
-            if (status < 0) {
-                Debug(Debug::ERROR) << "Cannot initialize zlib stream\n";
-                EXIT(EXIT_FAILURE);
-            }
 #endif
             //recon_related
             StructureTo3Di structureTo3Di;
@@ -1153,37 +1137,14 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
                 if (writeEntry) {
                     pdbFile.clear();
-                    if (Util::endsWith(".gz", name)) {
-#ifdef HAVE_ZLIB
-                        inflateReset(&strm);
-                        strm.avail_in = tarHeader.size;
-                        strm.next_in = (unsigned char *) dataBuffer;
-                        do {
-                            unsigned have;
-                            strm.avail_out = CHUNK;
-                            strm.next_out = out;
-                            int err = inflate(&strm, Z_NO_FLUSH);
-                            switch (err) {
-                                case Z_OK:
-                                case Z_STREAM_END:
-                                case Z_BUF_ERROR:
-                                    break;
-                                default:
-                                    inflateEnd(&strm);
-                                    Debug(Debug::ERROR) << "Gzip error " << err << " entry " << name << "\n";
-                                    EXIT(EXIT_FAILURE);
-                            }
-                            have = CHUNK - strm.avail_out;
-                            pdbFile.append((char *) out, have);
-                        } while (strm.avail_out == 0);
-#else
-                        Debug(Debug::ERROR) << "MMseqs2 was not compiled with zlib support. Cannot read compressed input.\n";
-                        EXIT(EXIT_FAILURE);
-#endif
-                    } else {
-                        pdbFile.append(dataBuffer, tarHeader.size);
-                    }
-                    if (readStructure.loadFromBuffer(pdbFile.c_str(), pdbFile.size(), name, (GemmiWrapper::Format)inputFormat) == false) {
+                    pdbFile.append(dataBuffer, tarHeader.size);
+                    if (readStructure.loadFromBuffer(
+                            pdbFile.c_str(),
+                            pdbFile.size(),
+                            name,
+                            (GemmiWrapper::Format)inputFormat,
+                            (GemmiWrapper::CompressionFormat)inputCompressionFormat
+                        ) == false) {
                         incorrectFiles++;
                         continue;
                     }
@@ -1198,9 +1159,6 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     );
                 }
             } // end while
-#ifdef HAVE_ZLIB
-            inflateEnd(&strm);
-#endif
             free(dataBuffer);
         } // end omp open
         mtar_close(&tar);
@@ -1208,7 +1166,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
 
 
     //===================== single_process ===================//__110710__//
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, looseFiles, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, mappingWriter, foldcompWriter, inputFormat, inputCompressionFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
@@ -1228,7 +1186,11 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < looseFiles.size(); i++) {
             progress.updateProgress();
 
-            if (readStructure.load(looseFiles[i], (GemmiWrapper::Format)inputFormat) == false) {
+            if (readStructure.load(
+                    looseFiles[i],
+                    (GemmiWrapper::Format)inputFormat,
+                    (GemmiWrapper::CompressionFormat)inputCompressionFormat
+                ) == false) {
                 incorrectFiles++;
                 continue;
             }
@@ -1263,7 +1225,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             filter = parts[2][0];
         }
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter, foldcompWriter) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel, inputFormat)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter, foldcompWriter, inputFormat, inputCompressionFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1293,7 +1255,13 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                             Debug(Debug::ERROR) << reader.status().message() << "\n";
                         } else {
                             std::string contents{std::istreambuf_iterator<char>{reader}, {}};
-                            if (readStructure.loadFromBuffer(contents.c_str(), contents.size(), obj_name, inputFormat) == false) {
+                            if (readStructure.loadFromBuffer(
+                                    contents.c_str(),
+                                    contents.size(),
+                                    obj_name,
+                                    (GemmiWrapper::Format)inputFormat,
+                                    (GemmiWrapper::CompressionFormat)inputCompressionFormat
+                                ) == false) {
                                 incorrectFiles++;
                             } else {
                                 __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
@@ -1317,7 +1285,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         DBReader<unsigned int> reader(dbs[i].c_str(), (dbs[i]+".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_LOOKUP);
         reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
         progress.reset(reader.getSize());
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, foldcompWriter, inputFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, reader, mappingWriter, foldcompWriter, inputFormat, inputCompressionFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
@@ -1344,7 +1312,13 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                 size_t lookupId = reader.getLookupIdByKey(reader.getDbKey(i));
                 std::string name = reader.getLookupEntryName(lookupId);
 
-                if (readStructure.loadFromBuffer(data, len, name, (GemmiWrapper::Format)inputFormat) == false) {
+                if (readStructure.loadFromBuffer(
+                        data,
+                        len,
+                        name,
+                        (GemmiWrapper::Format)inputFormat,
+                        (GemmiWrapper::CompressionFormat)inputCompressionFormat
+                    ) == false) {
                     incorrectFiles++;
                 } else {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
