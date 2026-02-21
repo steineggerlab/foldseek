@@ -396,13 +396,7 @@ public:
                 }
                 break;
         }
-        kmerHasX = 0;
-
-        const simd_int xChar = simdi8_set(subMat->aa2num[static_cast<int>('X')]);
-        for(size_t i = 0; i < simdKmerRegisterCnt; i++){
-            simd_int kmer = simdi_load((((simd_int *) kmerWindow) + i));
-            kmerHasX |= static_cast<unsigned int>(simdi8_movemask(simdi8_eq(kmer, xChar)));
-        }
+        kmerHasX = kmerWindowContainsX();
         if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_HMM_PROFILE)) {
             nextProfileKmer();
             for (unsigned int i = 0; i < this->kmerSize; i++) {
@@ -564,6 +558,7 @@ private:
     void mapSequence(const char *seq, unsigned int dataLen);
     // read next kmer profile in profile_matrix
     void nextProfileKmer();
+    bool kmerWindowContainsX() const;
 
     size_t id;
     unsigned int dbKey;
