@@ -80,6 +80,17 @@ Prefiltering::Prefiltering(const std::string &queryDB,
             EXIT(EXIT_FAILURE);
     }
 
+    // Detect extended dbtype and load auxiliary matrix for dual ungapped scoring
+    ungappedSubMatAux = NULL;
+    const Sequence::SeqAuxInfo *auxInfo = Sequence::getAuxInfo(targetSeqType);
+    if (auxInfo != NULL && auxInfo->auxMatData != NULL) {
+        std::string matName("aux.out");
+        std::string matData(reinterpret_cast<const char*>(auxInfo->auxMatData), auxInfo->auxMatDataLen);
+        char *serialized = BaseMatrix::serialize(matName, matData);
+        ungappedSubMatAux = new SubstitutionMatrix(serialized, 2.0, -0.2f);
+        free(serialized);
+    }
+
     if (Parameters::isEqualDbtype(FileUtil::parseDbType(targetDB.c_str()), Parameters::DBTYPE_INDEX_DB)) {
         if (preloadMode == Parameters::PRELOAD_MODE_AUTO) {
             if (sensitivity > 6.0) {
@@ -264,6 +275,9 @@ Prefiltering::~Prefiltering() {
         ExtendedSubstitutionMatrix::freeScoreMatrix(_2merSubMatrix);
     }
 
+    if (ungappedSubMatAux != NULL) {
+        delete ungappedSubMatAux;
+    }
     if (kmerSubMat != ungappedSubMat) {
         delete ungappedSubMat;
     }
@@ -796,7 +810,8 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
         Sequence seq(qdbr->getMaxSeqLen(), querySeqType, kmerSubMat, kmerSize, spacedKmer, aaBiasCorrection, true, spacedKmerPattern);
         QueryMatcher matcher(indexTable, sequenceLookup, kmerSubMat,  ungappedSubMat,
                              kmerThr, kmerSize, dbSize, std::max(tdbr->getMaxSeqLen(),qdbr->getMaxSeqLen()), maxResListLen, aaBiasCorrection, aaBiasCorrectionScale,
-                             diagonalScoring, minDiagScoreThr, takeOnlyBestKmer, targetSeqType==Parameters::DBTYPE_NUCLEOTIDES);
+                             diagonalScoring, minDiagScoreThr, takeOnlyBestKmer, targetSeqType==Parameters::DBTYPE_NUCLEOTIDES,
+                             ungappedSubMatAux, targetSeqType);
 
         if (seq.profile_matrix != NULL) {
             matcher.setProfileMatrix(seq.profile_matrix);
@@ -839,7 +854,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
             if (taxonomyHook != NULL) {
                 taxonomyHook->setDbFrom(dbFrom);
             }
-            std::pair<hit_t *, size_t> prefResults = matcher.matchQuery(&seq, targetSeqId, targetSeqType==Parameters::DBTYPE_NUCLEOTIDES);
+            std::pair<hit_t *, size_t> prefResults = matcher.matchQuery(&seq, targetSeqId, targetSeqType == Parameters::DBTYPE_NUCLEOTIDES);
             size_t resultSize = prefResults.second;
             const float queryLength = static_cast<float>(qdbr->getSeqLen(id));
             for (size_t i = 0; i < resultSize; i++) {
@@ -1138,6 +1153,3 @@ std::pair<int, int> Prefiltering::optimizeSplit(size_t totalMemoryInByte, DBRead
 
     return std::make_pair(-1, -1);
 }
-
-
-

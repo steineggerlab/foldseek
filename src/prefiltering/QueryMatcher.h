@@ -56,12 +56,14 @@ public:
                  BaseMatrix *kmerSubMat, BaseMatrix *ungappedAlignmentSubMat,
                  short kmerThr, int kmerSize, size_t dbSize, unsigned int maxSeqLen,
                  size_t maxHitsPerQuery, bool aaBiasCorrection, float aaBiasCorrectionScale, bool diagonalScoringMode,
-                 unsigned int minDiagScoreThr, bool takeOnlyBestKmer, bool isNucleotide);
+                 unsigned int minDiagScoreThr, bool takeOnlyBestKmer, bool isNucleotide,
+                 BaseMatrix *ungappedAlignmentSubMatAux = NULL,
+                 int targetSeqType = 0);
     ~QueryMatcher();
 
     // returns result for the sequence
     // identityId is the id of the identitical sequence in the target database if there is any, UINT_MAX otherwise
-    std::pair<hit_t*, size_t> matchQuery(Sequence *querySeq, unsigned int identityId,  bool isNucleotide);
+    std::pair<hit_t*, size_t> matchQuery(Sequence *querySeq, unsigned int identityId, bool isNucleotide);
 
     void setQueryMatcherHook(QueryMatcherHook* hook) {
         this->hook = hook;
@@ -162,6 +164,7 @@ protected:
 
     // matcher for diagonal
     UngappedAlignment *ungappedAlignment;
+    UngappedAlignment *ungappedAlignmentAux;
 
     // score distribution of current query
     unsigned int *scoreSizes;
@@ -188,6 +191,7 @@ protected:
     size_t maxHitsPerQuery;
 
     float *compositionBias;
+    unsigned int *scoreBackup;
 
     // diagonal scoring active
     bool diagonalScoring;
@@ -202,6 +206,7 @@ protected:
     QueryMatcherHook* hook;
 
     void updateScoreBins(CounterResult *result, size_t elementCount);
+    unsigned int scoreSingleSequenceCombined(CounterResult &result);
 
     static unsigned int computeScoreThreshold(unsigned int * scoreSizes, size_t maxHitsPerQuery) {
         size_t foundHits = 0;
