@@ -26,6 +26,17 @@ abspath() {
     fi
 }
 
+INPUT="${QUERY}"
+if [ -n "${GPU}" ]; then
+    if [ -n "${NOTPADDED}" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" makepaddedseqdb "${QUERY}" "${TMP_PATH}/query_pad" ${MAKEPADDEDSEQDB_PAR} \
+                || fail "makepaddedseqdb died"
+        INPUT="${TMP_PATH}/query_pad"
+    fi
+fi
+
+
 if notExists "${TMP_PATH}/multimer_result.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" multimersearch "${INPUT}" "${INPUT}" "${TMP_PATH}/multimer_result" "${TMP_PATH}/multimersearch_tmp" ${MULTIMERSEARCH_PAR} \
@@ -42,6 +53,13 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY_PAR} \
         || fail "rmdb died"
+    if [ -n "${GPU}" ]; then
+        if [ -z "${PADDED}" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/query_pad" ${VERBOSITY_PAR} \
+                || fail "rmdb died"
+        fi
+    fi
     rm -rf -- "${TMP_PATH}/multimersearch_tmp"
     rm -f -- "${TMP_PATH}/multimercluster.sh"
 fi
