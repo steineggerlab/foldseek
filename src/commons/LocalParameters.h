@@ -27,6 +27,7 @@ public:
 
     static const int DBTYPE_CA_ALPHA;
     static const int DBTYPE_TMSCORE;
+    static const unsigned int DBTYPE_EXTENDED_3DI_12ST;
 
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
@@ -172,6 +173,8 @@ public:
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
     PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
     PARAMETER(PARAM_MULTIDOMAIN)
+    PARAMETER(PARAM_SUBMAT_12ST_SCALE)
+    PARAMETER(PARAM_SS_12ST)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -208,6 +211,8 @@ public:
     int prostt5SplitLength;
     int minAlignedChains;
     int multiDomain;
+    float submat12stScale;
+    int ss12st;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

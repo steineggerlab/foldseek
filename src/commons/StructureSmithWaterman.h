@@ -116,7 +116,8 @@ public:
             int32_t db_length,
             const uint8_t gap_open,
             const uint8_t gap_extend,
-            const int32_t maskLen);
+            const int32_t maskLen,
+            const unsigned char *db_12st_sequence = NULL);
 
     template <unsigned int profile_type>
     s_align alignStartPosBacktrace (
@@ -129,7 +130,8 @@ public:
             std::string & backtrace,
             StructureSmithWaterman::s_align r,
             const int covMode, const float covThr,
-            const int32_t maskLen);
+            const int32_t maskLen,
+            const unsigned char *db_12st_sequence = NULL);
 
     s_align alignStartPosBacktraceBlock (
             const unsigned char *db_aa_sequence,
@@ -138,7 +140,8 @@ public:
             const uint8_t gap_open,
             const uint8_t gap_extend,
             std::string & backtrace,
-            StructureSmithWaterman::s_align r);
+            StructureSmithWaterman::s_align r,
+            const unsigned char *db_12st_sequence = NULL);
 
 
     /*!	@function	Create the query profile using the query sequence.
@@ -159,7 +162,8 @@ public:
      -2 -2 -2  2 //T
      mat is the pointer to the array {2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2}
      */
-    void ssw_init(Sequence *q_aa, Sequence *q_3di, const int8_t *mat_aa, const int8_t *mat_3di, const BaseMatrix *m);
+    void ssw_init(Sequence *q_aa, Sequence *q_3di, const int8_t *mat_aa, const int8_t *mat_3di, const BaseMatrix *m,
+                  Sequence *q_12st = NULL, const int8_t *mat_12st = NULL);
 
 
     static char cigar_int_to_op (uint32_t cigar_int);
@@ -226,12 +230,24 @@ private:
         simd_int* profile_3di_rev_int;
         int8_t* query_3di_sequence;
         int8_t* query_3di_rev_sequence;
+        simd_int* profile_12st_byte;
+        simd_int* profile_12st_word;
+        simd_int* profile_12st_int;
+        simd_int* profile_12st_rev_byte;
+        simd_int* profile_12st_rev_word;
+        simd_int* profile_12st_rev_int;
+        int8_t* query_12st_sequence;
+        int8_t* query_12st_rev_sequence;
         int8_t* composition_bias_ss;
         int8_t* composition_bias_aa;
         int8_t* composition_bias_aa_rev;
         int8_t* composition_bias_ss_rev;
+        int8_t* composition_bias_12st;
+        int8_t* composition_bias_12st_rev;
         int8_t* mat_aa;
         int8_t* mat_3di;
+        int8_t* mat_12st;
+        bool has12St;
         int8_t* rev_alignment_aa_profile;
         int8_t* rev_alignment_3di_profile;
         int8_t* alignment_aa_profile;
@@ -257,6 +273,8 @@ private:
         int32_t ** profile_aa_int_linear;
         short ** profile_3di_word_linear;
         int32_t ** profile_3di_int_linear;
+        short ** profile_12st_word_linear;
+        int32_t ** profile_12st_int_linear;
     };
     simd_int* vHStore;
     simd_int* vHLoad;
@@ -283,7 +301,7 @@ private:
      wight_match > 0, all other weights < 0.
      The returned positions are 0-based.
      */
-    template <const unsigned int type>
+    template <const unsigned int type, bool HAS_12ST = false>
     std::pair<alignment_end, alignment_end> sw_sse2_byte (const unsigned char*db_aa_sequence,
                                                           const unsigned char*db_3di_sequence,
                                                           int8_t ref_dir,	// 0: forward ref; 1: reverse ref
@@ -303,8 +321,10 @@ private:
                                                      alignment beginning point. If this score
                                                      is set to 0, it will not be used */
                                                           uint8_t bias,  /* Shift 0 point to a positive value. */
-                                                          int32_t maskLen);
-    template <const unsigned int type>
+                                                          int32_t maskLen,
+                                                          const unsigned char *db_12st_sequence = NULL,
+                                                          const simd_int *query_12st_profile_byte = NULL);
+    template <const unsigned int type, bool HAS_12ST = false>
     std::pair<alignment_end, alignment_end> sw_sse2_word (const unsigned char* db_aa_sequence,
                                                           const unsigned char* db_3di_sequence,
                                                           int8_t ref_dir,	// 0: forward ref; 1: reverse ref
@@ -320,9 +340,11 @@ private:
                                                           const simd_int*query_aa_profile_byte,
                                                           const simd_int*query_3di_profile_byte,
                                                           uint16_t terminate,
-                                                          int32_t maskLen);
+                                                          int32_t maskLen,
+                                                          const unsigned char *db_12st_sequence = NULL,
+                                                          const simd_int *query_12st_profile_word = NULL);
 
-    template <const unsigned int type>
+    template <const unsigned int type, bool HAS_12ST = false>
     std::pair<alignment_end, alignment_end> sw_sse2_int(
         const unsigned char* db_aa_sequence,
         const unsigned char* db_3di_sequence,
@@ -339,7 +361,9 @@ private:
         const simd_int*query_aa_profile_byte,
         const simd_int*query_3di_profile_byte,
         uint32_t terminate,
-        int32_t maskLen
+        int32_t maskLen,
+        const unsigned char *db_12st_sequence = NULL,
+        const simd_int *query_12st_profile_int = NULL
     );
 
     template <const unsigned int type>
@@ -386,6 +410,8 @@ private:
     int32_t * profile_aa_int_linear_data;
     short * profile_3di_word_linear_data;
     int32_t * profile_3di_int_linear_data;
+    short * profile_12st_word_linear_data;
+    int32_t * profile_12st_int_linear_data;
     bool aaBiasCorrection;
     float aaBiasCorrectionScale;
     SubstitutionMatrix * subMatAA;

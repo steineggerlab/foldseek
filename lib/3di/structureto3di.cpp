@@ -81,7 +81,7 @@ Vec3 StructureTo3DiBase::calcVirtualCenter(Vec3 ca, Vec3 cb, Vec3 n,
 
     Vec3 v = sub(cb, ca);
 
-    // normal angle (between CA-N and CA-VIRT)
+    // Step 1: normal angle (between CA-N and CA-VIRT)
     Vec3 a = sub(cb, ca);
     Vec3 b = sub(n, ca);
     Vec3 k = norm(cross(a, b)); // axis of rotation
@@ -89,8 +89,8 @@ Vec3 StructureTo3DiBase::calcVirtualCenter(Vec3 ca, Vec3 cb, Vec3 n,
     v = add(add(scale(v, cos(alpha)), scale(cross(k, v), sin(alpha))),
             scale(scale(k, dot(k, v)), 1 - cos(alpha)));
 
-    // Dihedral angle (axis: CA-N, CO, VIRT)
-    k = norm(sub(n, ca));
+    // Step 2: dihedral angle (axis: CB-CA, matching Python implementation)
+    k = norm(sub(cb, ca));  // Use CB-CA as rotation axis (matches Python)
     v = add(add(scale(v, cos(beta)), scale(cross(k, v), sin(beta))),
             scale(scale(k, dot(k, v)), 1 - cos(beta)));
 
@@ -107,17 +107,20 @@ double StructureTo3DiBase::calcDistanceBetween(Vec3 & a, Vec3 & b){
 
 void StructureTo3DiBase::replaceCBWithVirtualCenter(Vec3 * ca, Vec3 * n,
                                 Vec3 * c, Vec3 * cb, const size_t len){
-    // fix CB positions and create virtual center
+    // Fix CB positions and create virtual center, but don't modify cb array
+    virtualCenter.resize(len);
     for (size_t i = 0; i < len; i++){
+        Vec3 cbPos = cb[i];
         if (std::isnan(cb[i].x)){
-            cb[i] = approxCBetaPosition(ca[i], n[i], c[i]);
+            cbPos = approxCBetaPosition(ca[i], n[i], c[i]);
+            cb[i] = cbPos;  // Fix missing CB positions
         }
-        Vec3 virtCenter = calcVirtualCenter(ca[i], cb[i], n[i],
+        Vec3 virtCenter = calcVirtualCenter(ca[i], cbPos, n[i],
                 Alphabet3Di::VIRTUAL_CENTER.alpha,
                 Alphabet3Di::VIRTUAL_CENTER.beta,
                 Alphabet3Di::VIRTUAL_CENTER.d);
-        // replace CB with virtual center
-        cb[i] = virtCenter;
+        // Store virtual center in separate array
+        virtualCenter[i] = virtCenter;
     }
 }
 
@@ -133,17 +136,17 @@ void StructureTo3DiBase::createResidueMask(std::vector<bool> & validMask,
     }
 }
 
-void StructureTo3DiBase::findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
+void StructureTo3DiBase::findResiduePartners(std::vector<int> & partnerIdx, std::vector<Vec3> & virtualCenter,
                                          std::vector<bool> & validMask, const size_t n){
     // Pick for each residue the closest neighbour as partner
-    // (in terms of distances between their virtual centers/C_betas).
+    // (in terms of distances between their virtual centers).
     //
     // Ignore the first/last and invalid residues.
     for(size_t i = 1; i < n - 1; i++){
         double minDistance = INFINITY;
         for(size_t j = 1; j < n - 1; j++){
             if (i != j && validMask[j]){
-                double dist = calcDistanceBetween(cb[i], cb[j]);
+                double dist = calcDistanceBetween(virtualCenter[i], virtualCenter[j]);
                 if (dist < minDistance){
                     minDistance = dist;
                     partnerIdx[i] = static_cast<int>(j);
@@ -262,6 +265,7 @@ char * StructureTo3Di::structure2states(Vec3 * ca, Vec3 * n,
     partnerIdx.clear();
     mask.clear();
     embeddings.clear();
+    virtualCenter.clear();
     in = Tensor(Alphabet3Di::FEATURE_CNT);
     out = Tensor(Alphabet3Di::EMBEDDING_DIM);
 
@@ -276,7 +280,7 @@ char * StructureTo3Di::structure2states(Vec3 * ca, Vec3 * n,
 
     replaceCBWithVirtualCenter(ca, n, c, cb, len);
     createResidueMask(mask, ca, n, c, len);
-    findResiduePartners(partnerIdx, cb, mask, len);
+    findResiduePartners(partnerIdx, virtualCenter, mask, len);
     calcConformationDescriptors(features, partnerIdx, ca, mask, len);
     encodeFeatures(embeddings, features, mask, len);
     discretizeEmbeddings(states, embeddings,  mask, len);
