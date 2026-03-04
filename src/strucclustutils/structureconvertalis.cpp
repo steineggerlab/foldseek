@@ -279,7 +279,7 @@ int structureconvertalis(int argc, const char **argv, const Command &command) {
     );
     // FIXME: We don't need the evaluer here at all
     bool needEvaluer = format == Parameters::FORMAT_ALIGNMENT_SAM
-        || std::find(outcodes.begin(), outcodes.end(), Parameters::OUTFMT_RAW) != outcodes.end();
+        || std::find(outcodes.begin(), outcodes.end(), static_cast<int>(Parameters::OUTFMT_RAW)) != outcodes.end();
 
     if(LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED == format){
         needTMaligner = true;
