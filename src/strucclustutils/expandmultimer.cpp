@@ -37,6 +37,7 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
     if (extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC) {
         needSrc = true;
         dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
+        std::cout<<"YESSS"<<std::endl;
     }
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, dbType);
     resultWriter.open();
@@ -65,7 +66,8 @@ int expandmultimer(int argc, const char **argv, const Command &command) {
     complexIdToChainKeys_t qComplexIdToChainKeysMap;
     complexIdToChainKeys_t dbComplexIdToChainKeysMap;
     std::string qLookupFile = par.db1 + ".lookup";
-    std::string dbLookupFile = par.db2 + ".lookup";
+    std::string dbLookupFile = needSrc ? par.db2 + "_seq.lookup" : par.db2 + ".lookup";
+    std::cout<<dbLookupFile<<std::endl;
     getKeyToIdMapIdToKeysMapIdVec(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
     getKeyToIdMapIdToKeysMapIdVec(tDbr, dbLookupFile, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap, dbComplexIndices);
     dbComplexIndices.clear();

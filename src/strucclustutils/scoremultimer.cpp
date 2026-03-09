@@ -1220,7 +1220,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
     complexIdToChainKeys_t dbComplexIdToChainKeysMap, qComplexIdToChainKeysMap;
     chainKeyToChainName_t qChainKeyToChainNameMap, dbChainKeyToChainNameMap;
     std::string qLookupFile = par.db1 + ".lookup";
-    std::string dbLookupFile = par.db2 + ".lookup";
+    std::string dbLookupFile = needSrc ? par.db2 + "_seq.lookup" : par.db2 + ".lookup";
     getlookupInfo(q3DiDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices, qChainKeyToChainNameMap);
     if (sameDB) {
         dbChainKeyToComplexIdMap = qChainKeyToComplexIdMap;
