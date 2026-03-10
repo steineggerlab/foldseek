@@ -16,6 +16,7 @@ void setMultimerClusterDefaults(LocalParameters *p) {
 
 void mustsetMultimerCluster(LocalParameters *p) { 
     p->clusteringSetMode = 1;
+    p->noFilter = 1;
 }
 
 int multimercluster(int argc, const char **argv, const Command &command) {

@@ -1279,35 +1279,50 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 searchResult.clear();
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
-            // for each query chain key
-            ComplexFilter filter(qChainKeys, q3DiDbr, qCaDbr, par, thread_idx);
-            filter.computeInterfaceRegion();
-            // for each assignment, filter
-            for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
-                filter.filterAssignment(assignmentId, assignments[assignmentId], tCompBestAssignment, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap);
-            }
-            for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
-                resultToWrite.clear();
-                unsigned int & qKey = qChainKeys[qChainKeyIdx];
-                for(const auto &pair : tCompBestAssignment) {
-                    const Assignment &assignment = pair.second.first;
-                    currentResultToWrite.clear();
-                    assignment.getChainToChainResult(qKey, currentResultToWrite);
-                    if (currentResultToWrite.empty()) {
-                        continue;
-                    }
-                    getResult(resultToWrite, currentResultToWrite, assignment);
+            if(par.noFilter == 0) {
+                // for each query chain key
+                ComplexFilter filter(qChainKeys, q3DiDbr, qCaDbr, par, thread_idx);
+                filter.computeInterfaceRegion();
+                // for each assignment, filter
+                for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
+                    filter.filterAssignment(assignmentId, assignments[assignmentId], tCompBestAssignment, dbChainKeyToComplexIdMap, dbComplexIdToChainKeysMap);
                 }
-                //TODO: not filtered
-                // for (auto &assignment: assignments) {
-                //     assignment.getChainToChainResult(qKey, currentResultToWrite);
-                //     if (currentResultToWrite.empty()) {
-                //         continue;
-                //     }
-                //     getResult(resultToWrite, currentResultToWrite, assignment);
-                // }
-                resultWriter.writeData(resultToWrite.c_str(), resultToWrite.length(), qKey, thread_idx);
+                for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
+                    resultToWrite.clear();
+                    unsigned int & qKey = qChainKeys[qChainKeyIdx];
+                    for(const auto &pair : tCompBestAssignment) {
+                        const Assignment &assignment = pair.second.first;
+                        currentResultToWrite.clear();
+                        assignment.getChainToChainResult(qKey, currentResultToWrite);
+                        if (currentResultToWrite.empty()) {
+                            continue;
+                        }
+                        getResult(resultToWrite, currentResultToWrite, assignment);
+                    }   
+                    resultWriter.writeData(resultToWrite.c_str(), resultToWrite.length(), qKey, thread_idx);
+                }
+            } else {
+                // for each assignment
+                for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
+                    Assignment &assignment = assignments[assignmentId];
+                    assignment.assignmentId = assignmentId;
+                }
+                for (size_t qChainKeyIdx = 0; qChainKeyIdx < qChainKeys.size(); qChainKeyIdx++) {
+                    resultToWrite.clear();
+                    unsigned int & qKey = qChainKeys[qChainKeyIdx];
+                    for (unsigned int assignmentId = 0; assignmentId < assignments.size(); assignmentId++){
+                        Assignment &assignment = assignments[assignmentId];
+                        currentResultToWrite.clear();
+                        assignment.getChainToChainResult(qKey, currentResultToWrite);
+                        if (currentResultToWrite.empty()) {
+                            continue;
+                        }
+                        getResult(resultToWrite, currentResultToWrite, assignment);
+                    }   
+                    resultWriter.writeData(resultToWrite.c_str(), resultToWrite.length(), qKey, thread_idx);
+                }
             }
+
             alignmentLinesMap.clear();
             assignments.clear();
             currentResultToWrite.clear();
