@@ -227,10 +227,15 @@ bool compareNeighborWithDist(const NeighborsWithDist &first, const NeighborsWith
 }
 
 void getResult(std::string &result, std::string &currentResult, const Assignment &assignment) {
-    currentResult.append("\t" + assignment.assignmentResult + "\t" + std::to_string(assignment.assignmentId));
+    // currentResult.append("\t" + assignment.assignmentResult + "\t" + std::to_string(assignment.assignmentId));
+    // if (!assignment.filterResult.empty()) {
+    //     currentResult.append("\t" + assignment.filterResult);
+    // }
+    currentResult.append("\t" + assignment.assignmentResult);
     if (!assignment.filterResult.empty()) {
         currentResult.append("\t" + assignment.filterResult);
     }
+    currentResult.append(  + "\t" + std::to_string(assignment.assignmentId));
     currentResult.append("\n");
     result.append(currentResult);
 }
