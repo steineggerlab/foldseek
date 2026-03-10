@@ -9,14 +9,14 @@
 
 void setMultimerClusterDefaults(LocalParameters *p) {
     p->tmScoreThr = 0.65; // TODO
-    p->filtChainTmThr = 0.001; // TODO
+    p->filtChainTmThr = 0.3; // TODO
     p->filtInterfaceLddtThr = 0.5; // TODO
 }
    
 
 void mustsetMultimerCluster(LocalParameters *p) { 
     p->clusteringSetMode = 1;
-    p->noFilter = 1;
+    p->noFilter = 0;
 }
 
 int multimercluster(int argc, const char **argv, const Command &command) {
