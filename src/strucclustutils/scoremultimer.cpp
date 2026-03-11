@@ -1284,7 +1284,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
                 searchResult.clear();
             }
             SORT_SERIAL(assignments.begin(), assignments.end(), compareAssignment);
-            if(par.noFilter == 0) {
+            if(par.tmScoreThr + par.filtChainTmThr + par.filtInterfaceLddtThr > 0) {
                 // for each query chain key
                 ComplexFilter filter(qChainKeys, q3DiDbr, qCaDbr, par, thread_idx);
                 filter.computeInterfaceRegion();

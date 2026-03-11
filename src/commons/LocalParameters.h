@@ -172,7 +172,6 @@ public:
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
     PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
     PARAMETER(PARAM_MULTIDOMAIN)
-    PARAMETER(PARAM_NO_FILTER)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -209,7 +208,6 @@ public:
     int prostt5SplitLength;
     int minAlignedChains;
     int multiDomain;
-    bool noFilter;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
