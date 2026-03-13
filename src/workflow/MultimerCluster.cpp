@@ -5,6 +5,7 @@
 #include "Util.h"
 #include "LocalParameters.h"
 #include "Debug.h"
+#include "DBReader.h"
 #include "multimercluster.sh.h"
 
 void setMultimerClusterDefaults(LocalParameters *p) {
@@ -45,13 +46,20 @@ int multimercluster(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     CommandCaller cmd;
-    std::cout<<tmpDir.c_str()<<std::endl;
+    // std::cout<<tmpDir.c_str()<<std::endl;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("RESULT", par.filenames.back().c_str());
     par.filenames.pop_back();
-    cmd.addVariable("INPUT", par.filenames.back().c_str());
+    std::string input = par.filenames.back().c_str();
+    cmd.addVariable("QUERY", input.c_str());
     par.filenames.pop_back();
 
+    int dbtype = FileUtil::parseDbType((input+"_ss").c_str());
+    int padded = (DBReader<unsigned int>::getExtendedDbtype(dbtype) & Parameters::DBTYPE_EXTENDED_GPU);
+    cmd.addVariable("NOTPADDED", padded ? NULL : "TRUE");
+    cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
+
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str()); 
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clust).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);

@@ -8,6 +8,16 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+TARGETDB="${INPUT}"
+if [ -n "${GPU}" ]; then
+    if [ -n "${NOTPADDED}" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" makepaddedseqdb "${TARGETDB}" "${TMP_PATH}/target_pad" ${MAKEPADDEDSEQDB_PAR} \
+                || fail "makepaddedseqdb died"
+        TARGETDB="${TMP_PATH}/target_pad"
+    fi
+fi
+
 if notExists "${TMP_PATH}/result.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" search "${QUERYDB}" "${TARGETDB}" "${TMP_PATH}/result" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
