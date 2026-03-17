@@ -46,9 +46,33 @@ if [ -e "${IN}.dbtype" ]; then
     fi
     
     rm "${OUT}.lookup" "${OUT}.source"
-    awk 'FNR==NR{name[$1]=$2; source[$1]=$3; next} BEGIN{num=0}{print num"\tDI"int(num/2)"_"name[$1]"\t"int(num/2)"\t"source[$1]; num++}' "${IN}.lookup" "${TMP_PATH}/contactlist_2" > "${TMP_PATH}/lookuptmp"
-    awk 'FNR==NR{name[$1]=$2; next} NR%2==1{print $3"\tDI"$3"_"name[$4]}' "${IN}.source" "${TMP_PATH}/lookuptmp" > "${OUT}.source"
-    cut -f1,2,3 "${TMP_PATH}/lookuptmp" > "${OUT}.lookup"
+    awk -v sourcefile="${OUT}.source" '
+        BEGIN { num=0 }
+        FNR==NR {
+            name[$1]=$2
+            next
+        }
+        {
+            id1 = $1
+            c = split(name[id1], a, "_")
+            structname = a[1]
+            for (i=2; i<c; i++) {
+                structname = structname "_" a[i]
+            }
+            chain1 = a[c]
+
+            if (getline <= 0) exit
+
+            id2 = $1
+            d = split(name[id2], b, "_")
+            chain2 = b[d]
+
+            print num "\t" structname "_" chain1 "_" chain2 "_" chain1 "\t" int(num/2)
+            print num+1 "\t" structname "_" chain1 "_" chain2 "_" chain2 "\t" int(num/2)
+            print int(num/2) "\t" structname "_" chain1 "_" chain2 >> sourcefile
+
+            num += 2
+        }'  "${IN}.lookup" "${TMP_PATH}/contactlist_2" > "${OUT}.lookup"
     
     # shellcheck disable=SC2086
     "$MMSEQS" createtsv "${OUT}" "${OUT}_h" "${TMP_PATH}/tmpheader" --threads 1 ${VERBOSITY_PAR}
@@ -68,7 +92,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/contactlist"
     rm "${TMP_PATH}/contactlist_2"
-    rm "${TMP_PATH}/lookuptmp"
     rm "${TMP_PATH}/tmpheader"
     rm "${TMP_PATH}/tmpheader2"
     rm -f "${TMP_PATH}/createdimerdb.sh"
