@@ -136,6 +136,8 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     
     cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
     cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
+    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("QUERY_INPUT", par.filenames[0].c_str());
 
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);

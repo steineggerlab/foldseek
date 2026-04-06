@@ -84,6 +84,43 @@ if [ -n "${TAXONOMY}" ]; then
         || fail "taxonomyreport died"
 fi
 
+# View results with StrucTTY
+if [ -n "${VIEW_RESULTS}" ]; then
+    STRUCTTY_BIN="StrucTTY"
+    if command -v "${STRUCTTY_BIN}" > /dev/null 2>&1; then
+        # Determine query path (original file or temp DB)
+        if [ -f "$1" ] && notExists "${1}.dbtype"; then
+            QUERY_FILE="$1"
+        elif [ -n "${QUERY_INPUT}" ]; then
+            QUERY_FILE="${QUERY_INPUT}"
+        else
+            QUERY_FILE=""
+        fi
+
+        # Determine target DB path for --db option
+        if exists "${TARGET}.dbtype"; then
+            TARGET_DB="${TARGET}"
+        else
+            TARGET_DB=""
+        fi
+
+        # Build structty command
+        STRUCTTY_CMD="${STRUCTTY_BIN}"
+        if [ -n "${QUERY_FILE}" ]; then
+            STRUCTTY_CMD="${STRUCTTY_CMD} \"${QUERY_FILE}\""
+        fi
+        STRUCTTY_CMD="${STRUCTTY_CMD} --foldseek \"${RESULTS}\""
+        if [ -n "${TARGET_DB}" ]; then
+            STRUCTTY_CMD="${STRUCTTY_CMD} --db \"${TARGET_DB}\""
+        fi
+
+        eval ${STRUCTTY_CMD}
+    else
+        echo "Warning: structty not found in PATH. Install StrucTTY to use --view."
+        echo "Results have been saved to: ${RESULTS}"
+    fi
+fi
+
 if [ -n "${REMOVE_TMP}" ]; then
     if [ -n "${GREEDY_BEST_HITS}" ]; then
         # shellcheck disable=SC2086
