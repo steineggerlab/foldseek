@@ -9,6 +9,10 @@
 namespace structureRbh{
 #include "easyrbh.sh.h"
 }
+namespace structtyViewerEasyRbh {
+#include "structty_viewer.sh.h"
+}
+#include "easystructurerbh.sh.h"
 
 
 int structureeasyrbh(int argc, const char **argv, const Command &command) {
@@ -109,8 +113,23 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
 
-    std::string program = tmpDir + "/easyrbh.sh";
-    FileUtil::writeFile(program, structureRbh::easyrbh_sh, structureRbh::easyrbh_sh_len);
+    // --structty implies --view
+    if (!par.structtyPath.empty()) {
+        par.viewResults = 1;
+    }
+    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("STRUCTTY_PATH", par.structtyPath.empty() ? NULL : par.structtyPath.c_str());
+    cmd.addVariable("QUERY_INPUT", par.filenames[0].c_str());
+
+    // Write helper scripts to tmpDir
+    std::string structtyViewer = tmpDir + "/structty_viewer.sh";
+    FileUtil::writeFile(structtyViewer, structtyViewerEasyRbh::structty_viewer_sh, structtyViewerEasyRbh::structty_viewer_sh_len);
+    std::string easyrbhProgram = tmpDir + "/easyrbh.sh";
+    FileUtil::writeFile(easyrbhProgram, structureRbh::easyrbh_sh, structureRbh::easyrbh_sh_len);
+
+    // Use foldseek wrapper that calls easyrbh.sh then StrucTTY viewer
+    std::string program = tmpDir + "/easystructurerbh.sh";
+    FileUtil::writeFile(program, easystructurerbh_sh, easystructurerbh_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here

@@ -9,6 +9,9 @@
 #include "DBReader.h"
 #include "Parameters.h"
 #include "easystructuresearch.sh.h"
+namespace structtyViewerEasySearch {
+#include "structty_viewer.sh.h"
+}
 
 void setEasyStructureSearchDefaults(Parameters *p) {
     // TODO: 7-mer sensitivity is not optimized yet
@@ -136,8 +139,16 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     
     cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
     cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
+    // --structty implies --view
+    if (!par.structtyPath.empty()) {
+        par.viewResults = 1;
+    }
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("STRUCTTY_PATH", par.structtyPath.empty() ? NULL : par.structtyPath.c_str());
     cmd.addVariable("QUERY_INPUT", par.filenames[0].c_str());
+
+    std::string structtyViewer = tmpDir + "/structty_viewer.sh";
+    FileUtil::writeFile(structtyViewer, structtyViewerEasySearch::structty_viewer_sh, structtyViewerEasySearch::structty_viewer_sh_len);
 
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);

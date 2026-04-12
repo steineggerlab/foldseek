@@ -145,6 +145,15 @@ fi
 # shellcheck disable=SC2086
 "$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}" ${VERBOSITY}
 
+# View results with StrucTTY (search workflow)
+if [ -n "${VIEW_RESULTS}" ] || [ -n "${STRUCTTY_PATH}" ]; then
+    VIEWER_M8="${TMP_PATH}/viewer_results.m8"
+    # shellcheck disable=SC2086
+    "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${RESULTS}" "${VIEWER_M8}" ${CONVERT_PAR} ${VERBOSITY} \
+        || fail "convertalis for viewer died"
+    sh "${TMP_PATH}/structty_viewer.sh" "${STRUCTTY_PATH}" "" "${VIEWER_M8}" "${TARGET}"
+fi
+
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
     if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then

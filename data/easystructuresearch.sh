@@ -85,40 +85,26 @@ if [ -n "${TAXONOMY}" ]; then
 fi
 
 # View results with StrucTTY
-if [ -n "${VIEW_RESULTS}" ]; then
-    STRUCTTY_BIN="StrucTTY"
-    if command -v "${STRUCTTY_BIN}" > /dev/null 2>&1; then
-        # Determine query path (original file or temp DB)
-        if [ -f "$1" ] && notExists "${1}.dbtype"; then
-            QUERY_FILE="$1"
-        elif [ -n "${QUERY_INPUT}" ]; then
-            QUERY_FILE="${QUERY_INPUT}"
-        else
-            QUERY_FILE=""
-        fi
-
-        # Determine target DB path for --db option
-        if exists "${TARGET}.dbtype"; then
-            TARGET_DB="${TARGET}"
-        else
-            TARGET_DB=""
-        fi
-
-        # Build structty command
-        STRUCTTY_CMD="${STRUCTTY_BIN}"
-        if [ -n "${QUERY_FILE}" ]; then
-            STRUCTTY_CMD="${STRUCTTY_CMD} \"${QUERY_FILE}\""
-        fi
-        STRUCTTY_CMD="${STRUCTTY_CMD} --foldseek \"${RESULTS}\""
-        if [ -n "${TARGET_DB}" ]; then
-            STRUCTTY_CMD="${STRUCTTY_CMD} --db \"${TARGET_DB}\""
-        fi
-
-        eval ${STRUCTTY_CMD}
+if [ -n "${VIEW_RESULTS}" ] || [ -n "${STRUCTTY_PATH}" ]; then
+    # Determine query structure file (StrucTTY positional arg)
+    if [ -f "$1" ] && notExists "${1}.dbtype"; then
+        VIEWER_QUERY="$1"
+    elif [ -n "${QUERY_INPUT}" ] && [ -f "${QUERY_INPUT}" ]; then
+        VIEWER_QUERY="${QUERY_INPUT}"
     else
-        echo "Warning: structty not found in PATH. Install StrucTTY to use --view."
-        echo "Results have been saved to: ${RESULTS}"
+        VIEWER_QUERY=""
     fi
+
+    # Determine target structure DB (StrucTTY --db for local hit loading)
+    if exists "${TARGET}.dbtype"; then
+        VIEWER_TARGET="${TARGET}"
+    else
+        VIEWER_TARGET=""
+    fi
+
+    # STRUCTTY_PATH: --structty binary path (empty string = PATH search)
+    # RESULTS: convertalis-generated .m8 file (StrucTTY --foldseek)
+    sh "${TMP_PATH}/structty_viewer.sh" "${STRUCTTY_PATH}" "${VIEWER_QUERY}" "${RESULTS}" "${VIEWER_TARGET}"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
