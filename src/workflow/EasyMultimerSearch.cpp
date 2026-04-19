@@ -112,11 +112,14 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     }
     cmd.addVariable("NO_REPORT", par.multimerReportMode == 0 ? "TRUE" : NULL);
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    cmd.addVariable("OUTPUT", par.filenames.back().c_str());
+    const std::string outputPath = par.filenames.back();
+    cmd.addVariable("OUTPUT", outputPath.c_str());
     par.filenames.pop_back();
-    cmd.addVariable("TARGET", par.filenames.back().c_str());
+    const std::string targetInput = par.filenames.back();
+    cmd.addVariable("TARGET", targetInput.c_str());
     par.filenames.pop_back();
-    cmd.addVariable("QUERY", par.filenames.back().c_str());
+    const std::string queryInput = par.filenames.back();
+    cmd.addVariable("QUERY", queryInput.c_str());
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
     cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
     cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
@@ -128,6 +131,15 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+
+    if (par.viewResults && par.multimerReportMode == 0) {
+        Debug(Debug::WARNING)
+            << "--view-structty requires the multimer report, but --multimer-report-mode is 0. "
+            << "StrucTTY launch will be skipped.\n";
+    }
+    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("QUERY_INPUT", queryInput.c_str());
+    cmd.addVariable("TARGET_INPUT", targetInput.c_str());
     std::string program = tmpDir + "/easymultimersearch.sh";
     FileUtil::writeFile(program, easymultimersearch_sh, easymultimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);

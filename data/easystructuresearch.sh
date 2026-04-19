@@ -116,7 +116,7 @@ if [ -n "${VIEW_RESULTS}" ]; then
 
         eval ${STRUCTTY_CMD}
     else
-        echo "Warning: structty not found in PATH. Install StrucTTY to use --view."
+        echo "Warning: StrucTTY not found in PATH. Install StrucTTY to use --view-structty."
         echo "Results have been saved to: ${RESULTS}"
     fi
 fi
