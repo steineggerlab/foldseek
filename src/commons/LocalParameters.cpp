@@ -44,7 +44,8 @@ LocalParameters::LocalParameters() :
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
         PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$"),
-        PARAM_VIEW_RESULTS(PARAM_VIEW_RESULTS_ID, "--view-structty", "View results with StrucTTY", "Launch StrucTTY viewer after result generation (requires StrucTTY in PATH)", typeid(int), (void *) &viewResults, "^[0-1]{1}$")
+        PARAM_VIEW_RESULTS(PARAM_VIEW_RESULTS_ID, "--view-structty", "View results with StrucTTY", "Launch StrucTTY viewer after result generation (requires StrucTTY in PATH)", typeid(int), (void *) &viewResults, "^[0-1]{1}$"),
+        PARAM_STRUCTTY_PATH(PARAM_STRUCTTY_PATH_ID, "--structty", "Path to StrucTTY binary", "Path to StrucTTY binary (implies --view-structty 1)", typeid(std::string), (void *) &structtyPath, "^.*$")
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -275,8 +276,7 @@ LocalParameters::LocalParameters() :
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
-    easystructuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
-    easystructuresearchworkflow.push_back(&PARAM_STRUCTTY_PATH);
+    // PARAM_VIEW_RESULTS / PARAM_STRUCTTY_PATH inherited via structuresearchworkflow (combineList dedupes)
 
     structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
@@ -306,7 +306,7 @@ LocalParameters::LocalParameters() :
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, convertalignments);
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
     easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
-    easymultimersearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    // PARAM_VIEW_RESULTS / PARAM_STRUCTTY_PATH inherited via structuresearchworkflow -> multimersearchworkflow (combineList dedupes)
 
     // multimerclusterworkflow
     multimerclusterworkflow  = combineList(multimersearchworkflow, clust);

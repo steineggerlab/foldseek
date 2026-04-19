@@ -95,28 +95,16 @@ if [ -n "${VIEW_RESULTS}" ] || [ -n "${STRUCTTY_PATH}" ]; then
         VIEWER_QUERY=""
     fi
 
-        # Determine target DB path for --db option
-        if exists "${TARGET}.dbtype"; then
-            TARGET_DB="${TARGET}"
-        else
-            TARGET_DB=""
-        fi
-
-        # Build structty command
-        STRUCTTY_CMD="${STRUCTTY_BIN}"
-        if [ -n "${QUERY_FILE}" ]; then
-            STRUCTTY_CMD="${STRUCTTY_CMD} \"${QUERY_FILE}\""
-        fi
-        STRUCTTY_CMD="${STRUCTTY_CMD} --foldseek \"${RESULTS}\""
-        if [ -n "${TARGET_DB}" ]; then
-            STRUCTTY_CMD="${STRUCTTY_CMD} --db \"${TARGET_DB}\""
-        fi
-
-        eval ${STRUCTTY_CMD}
+    # Determine target structure DB (StrucTTY --db for local hit loading)
+    if exists "${TARGET}.dbtype"; then
+        VIEWER_TARGET="${TARGET}"
     else
-        echo "Warning: StrucTTY not found in PATH. Install StrucTTY to use --view-structty."
-        echo "Results have been saved to: ${RESULTS}"
+        VIEWER_TARGET=""
     fi
+
+    # STRUCTTY_PATH: --structty binary path (empty string = PATH search)
+    # RESULTS: convertalis-generated .m8 file (StrucTTY --foldseek)
+    sh "${TMP_PATH}/structty_viewer.sh" "${STRUCTTY_PATH}" "${VIEWER_QUERY}" "${RESULTS}" "${VIEWER_TARGET}"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
