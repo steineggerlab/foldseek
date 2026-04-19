@@ -85,17 +85,15 @@ if [ -n "${TAXONOMY}" ]; then
 fi
 
 # View results with StrucTTY
-if [ -n "${VIEW_RESULTS}" ]; then
-    STRUCTTY_BIN="StrucTTY"
-    if command -v "${STRUCTTY_BIN}" > /dev/null 2>&1; then
-        # Determine query path (original file or temp DB)
-        if [ -f "$1" ] && notExists "${1}.dbtype"; then
-            QUERY_FILE="$1"
-        elif [ -n "${QUERY_INPUT}" ]; then
-            QUERY_FILE="${QUERY_INPUT}"
-        else
-            QUERY_FILE=""
-        fi
+if [ -n "${VIEW_RESULTS}" ] || [ -n "${STRUCTTY_PATH}" ]; then
+    # Determine query structure file (StrucTTY positional arg)
+    if [ -f "$1" ] && notExists "${1}.dbtype"; then
+        VIEWER_QUERY="$1"
+    elif [ -n "${QUERY_INPUT}" ] && [ -f "${QUERY_INPUT}" ]; then
+        VIEWER_QUERY="${QUERY_INPUT}"
+    else
+        VIEWER_QUERY=""
+    fi
 
         # Determine target DB path for --db option
         if exists "${TARGET}.dbtype"; then

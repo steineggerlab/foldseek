@@ -268,12 +268,15 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
+    structuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    structuresearchworkflow.push_back(&PARAM_STRUCTTY_PATH);
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
     easystructuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    easystructuresearchworkflow.push_back(&PARAM_STRUCTTY_PATH);
 
     structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
@@ -369,6 +372,12 @@ LocalParameters::LocalParameters() :
 
     // view
     viewResults = 0;
+    structtyPath = "";
+
+    // viewworkflow
+    viewworkflow.push_back(&PARAM_STRUCTTY_PATH);
+    viewworkflow.push_back(&PARAM_THREADS);
+    viewworkflow.push_back(&PARAM_V);
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)");

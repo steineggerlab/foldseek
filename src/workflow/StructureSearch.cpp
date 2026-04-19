@@ -9,6 +9,9 @@
 #include "structuresearch.sh.h"
 #include "structureiterativesearch.sh.h"
 #include "structureprofile.sh.h"
+namespace structtyViewerStructSearch {
+#include "structty_viewer.sh.h"
+}
 
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
@@ -151,9 +154,25 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
+    // --structty implies --view
+    if (!par.structtyPath.empty()) {
+        par.viewResults = 1;
+    }
+    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("STRUCTTY_PATH", par.structtyPath.empty() ? NULL : par.structtyPath.c_str());
+    cmd.addVariable("QUERY", query.c_str());
+    cmd.addVariable("TARGET", target.c_str());
+    if (par.viewResults) {
+        cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
+    }
+
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+
+    std::string structtyViewer = tmpDir + "/structty_viewer.sh";
+    FileUtil::writeFile(structtyViewer, structtyViewerStructSearch::structty_viewer_sh, structtyViewerStructSearch::structty_viewer_sh_len);
+
     std::string program;
     if(par.numIterations > 1 || par.numIterations == 0){
 	//par.evalProfile = 0.1;
