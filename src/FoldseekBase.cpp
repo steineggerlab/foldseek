@@ -114,14 +114,14 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileStdinAndFolder },
                                            {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"view",                 structtyview,                  &localPar.viewworkflow,                  COMMAND_EASY,
+        {"structty",             structtyview,                  &localPar.structtyworkflow,              COMMAND_EASY,
                 "Launch StrucTTY viewer for foldseek results",
                 "# View search results with StrucTTY\n"
-                "foldseek view query.pdb result.m8\n"
+                "foldseek structty query.pdb result.m8\n"
                 "# View with target structure DB for local hit loading\n"
-                "foldseek view query.pdb result.m8 targetDB\n"
+                "foldseek structty query.pdb result.m8 targetDB\n"
                 "# Specify StrucTTY binary path\n"
-                "foldseek view query.pdb result.m8 --structty /path/to/StrucTTY\n\n",
+                "foldseek structty query.pdb result.m8 --structty /path/to/StrucTTY\n\n",
                 "Luna Jang",
                 "<i:queryFile> <i:resultM8> [<i:targetDB>]",
                 CITATION_FOLDSEEK, {{"queryFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },

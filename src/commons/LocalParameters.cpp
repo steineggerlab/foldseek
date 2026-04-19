@@ -374,10 +374,10 @@ LocalParameters::LocalParameters() :
     viewResults = 0;
     structtyPath = "";
 
-    // viewworkflow
-    viewworkflow.push_back(&PARAM_STRUCTTY_PATH);
-    viewworkflow.push_back(&PARAM_THREADS);
-    viewworkflow.push_back(&PARAM_V);
+    // structtyworkflow
+    structtyworkflow.push_back(&PARAM_STRUCTTY_PATH);
+    structtyworkflow.push_back(&PARAM_THREADS);
+    structtyworkflow.push_back(&PARAM_V);
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)");
