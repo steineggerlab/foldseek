@@ -82,7 +82,7 @@ if [ -n "${VIEW_RESULTS}" ]; then
                 STRUCTTY_CMD="${STRUCTTY_CMD} --db \"${TARGET}\""
             fi
 
-            eval ${STRUCTTY_CMD}
+            eval "${STRUCTTY_CMD}"
             rm -f "${UT_FILE}"
         fi
     else
