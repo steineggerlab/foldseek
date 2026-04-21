@@ -154,8 +154,8 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
-    // --structty implies --view
-    if (!par.structtyPath.empty()) {
+    // --structty implies --view (wasSet handles empty-string case too)
+    if (par.PARAM_STRUCTTY_PATH.wasSet) {
         par.viewResults = 1;
     }
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);

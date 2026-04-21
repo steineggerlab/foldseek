@@ -120,7 +120,11 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
 
     cmd.addVariable("CREATELININDEX_PAR", NULL);
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
+    {
+        std::vector<MMseqsParameter*> searchParams = removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
+        searchParams = removeParameter(searchParams, par.PARAM_STRUCTTY_PATH);
+        cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
+    }
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
@@ -139,8 +143,8 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     
     cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
     cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
-    // --structty implies --view
-    if (!par.structtyPath.empty()) {
+    // --structty implies --view (wasSet handles empty-string case too)
+    if (par.PARAM_STRUCTTY_PATH.wasSet) {
         par.viewResults = 1;
     }
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
