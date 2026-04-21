@@ -102,7 +102,11 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     }
 
     cmd.addVariable("QUERY", par.filenames.back().c_str());
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
+    {
+        std::vector<MMseqsParameter*> searchParams = removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
+        searchParams = removeParameter(searchParams, par.PARAM_STRUCTTY_PATH);
+        cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
+    }
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
 
@@ -113,8 +117,8 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
 
-    // --structty implies --view
-    if (!par.structtyPath.empty()) {
+    // --structty implies --view (wasSet handles empty-string case too)
+    if (par.PARAM_STRUCTTY_PATH.wasSet) {
         par.viewResults = 1;
     }
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);

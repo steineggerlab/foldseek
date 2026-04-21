@@ -45,7 +45,8 @@ LocalParameters::LocalParameters() :
         PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
         PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$"),
         PARAM_VIEW_RESULTS(PARAM_VIEW_RESULTS_ID, "--view-structty", "View results with StrucTTY", "Launch StrucTTY viewer after result generation (requires StrucTTY in PATH)", typeid(int), (void *) &viewResults, "^[0-1]{1}$"),
-        PARAM_STRUCTTY_PATH(PARAM_STRUCTTY_PATH_ID, "--structty", "Path to StrucTTY binary", "Path to StrucTTY binary (implies --view-structty 1)", typeid(std::string), (void *) &structtyPath, "^.*$")
+        PARAM_STRUCTTY_PATH(PARAM_STRUCTTY_PATH_ID, "--structty", "Path to StrucTTY binary or directory", "Path to StrucTTY binary or directory containing it (implies --view-structty 1). Empty string searches PATH.", typeid(std::string), (void *) &structtyPath, "^.*$"),
+        PARAM_STRUCTTY_DIR(PARAM_STRUCTTY_DIR_ID, "--structty-dir", "Directory containing StrucTTY binary", "Directory containing StrucTTY binary (for foldseek structty standalone command). Empty string searches PATH.", typeid(std::string), (void *) &structtyDirPath, "^.*$")
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -373,9 +374,10 @@ LocalParameters::LocalParameters() :
     // view
     viewResults = 0;
     structtyPath = "";
+    structtyDirPath = "";
 
     // structtyworkflow
-    structtyworkflow.push_back(&PARAM_STRUCTTY_PATH);
+    structtyworkflow.push_back(&PARAM_STRUCTTY_DIR);
     structtyworkflow.push_back(&PARAM_THREADS);
     structtyworkflow.push_back(&PARAM_V);
 

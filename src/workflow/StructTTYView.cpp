@@ -23,7 +23,7 @@ int structtyview(int argc, const char **argv, const Command &command) {
     FileUtil::writeFile(structtyViewer, structtyViewerStandalone::structty_viewer_sh, structtyViewerStandalone::structty_viewer_sh_len);
 
     std::string viewerCmd = "sh \"" + structtyViewer + "\""
-        + " \"" + par.structtyPath + "\""
+        + " \"" + par.structtyDirPath + "\""
         + " \"" + queryFile + "\""
         + " \"" + resultM8 + "\""
         + " \"" + targetDb + "\"";

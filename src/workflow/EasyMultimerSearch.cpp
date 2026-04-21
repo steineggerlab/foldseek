@@ -125,13 +125,21 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     par.filenames.pop_back();
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str());
+    {
+        std::vector<MMseqsParameter*> multiserParams = removeParameter(par.multimersearchworkflow, par.PARAM_VIEW_RESULTS);
+        multiserParams = removeParameter(multiserParams, par.PARAM_STRUCTTY_PATH);
+        cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(multiserParams, true).c_str());
+    }
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
+    // --structty implies --view (wasSet handles empty-string case too)
+    if (par.PARAM_STRUCTTY_PATH.wasSet) {
+        par.viewResults = 1;
+    }
     if (par.viewResults && par.multimerReportMode == 0) {
         Debug(Debug::WARNING)
             << "--view-structty requires the multimer report, but --multimer-report-mode is 0. "

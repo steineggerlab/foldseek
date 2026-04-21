@@ -1,32 +1,31 @@
 #!/bin/sh -e
 # structty_viewer.sh — StrucTTY viewer common helper
-# Usage: structty_viewer.sh [STRUCTTY_BIN_PATH] [QUERY_FILE] [RESULTS_M8] [TARGET_STRUCT_DB]
+# Usage: structty_viewer.sh [STRUCTTY_DIR] [QUERY_FILE] [RESULTS_M8] [TARGET_STRUCT_DB]
 #
 # Arguments:
-#   STRUCTTY_BIN_PATH — Path to StrucTTY binary (from --structty option)
+#   STRUCTTY_DIR      — Directory containing StrucTTY binary (from --structty or --structty-dir option)
 #                       Empty string means search PATH for "StrucTTY"
 #   QUERY_FILE        — Query structure file path (PDB/CIF, empty string if none)
 #   RESULTS_M8        — Foldseek .m8 result file path (required)
 #   TARGET_STRUCT_DB  — Target structure DB path (empty string if none)
 #                       StrucTTY uses --db to read _ca DB directly for local hit loading
 
-STRUCTTY_BIN_PATH="$1"
+STRUCTTY_DIR="$1"
 QUERY_FILE="$2"
 RESULTS_M8="$3"
 TARGET_STRUCT_DB="$4"
 
-# Determine binary: explicit path first, then PATH search
-if [ -n "${STRUCTTY_BIN_PATH}" ]; then
-    if [ -x "${STRUCTTY_BIN_PATH}" ]; then
-        STRUCTTY_BIN="${STRUCTTY_BIN_PATH}"
-    else
-        echo "Error: StrucTTY binary not found or not executable at ${STRUCTTY_BIN_PATH}"
+# Determine binary: explicit directory first, then PATH search
+if [ -n "${STRUCTTY_DIR}" ]; then
+    STRUCTTY_BIN="${STRUCTTY_DIR}/StrucTTY"
+    if [ ! -x "${STRUCTTY_BIN}" ]; then
+        echo "Error: StrucTTY binary not found or not executable at ${STRUCTTY_BIN}"
         exit 1
     fi
 elif command -v "StrucTTY" > /dev/null 2>&1; then
     STRUCTTY_BIN="StrucTTY"
 else
-    echo "Warning: StrucTTY not found in PATH. Install StrucTTY or use --structty <path> to specify the binary location."
+    echo "Warning: StrucTTY not found in PATH. Install StrucTTY or use --structty <dir> to specify the directory containing StrucTTY."
     exit 0
 fi
 

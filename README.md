@@ -174,22 +174,35 @@ If alignment type is set to tmalign (`--alignment-type 1`), the results will be 
 If alignment type is set to lolalign (`--alignment-type 3`), the result will be sorted by the LoLscore, a novel alignment log-odds score without length normalization. When set to single domain mode (`--lolalign-multidomain 0`) the query and target lengths are incorporated. The e-value is a normalized LoLscore (<= 1) while the score is unnormalized. All output fields (e.g., pident, fident, and alnlen) are calculated based on the LoLalign alignment.
 
 ### Visualize Results with StrucTTY
-Foldseek can launch [StrucTTY](https://github.com/steineggerlab/StrucTTY), an interactive terminal-based structure viewer, directly after a search. StrucTTY must be installed and available in your `PATH`, or its path can be specified explicitly with `--structty`.
+Foldseek can launch [StrucTTY](https://github.com/steineggerlab/StrucTTY), an interactive terminal-based structure viewer, directly after a search.
 
-**Launch the viewer automatically after a search** using `--view 1` with `easy-search`, `search`, or `easy-rbh`:
+**Launch the viewer automatically after a search** — StrucTTY must be in your `PATH`:
 ```
-foldseek easy-search query.pdb target/ result.m8 tmp --view 1
+foldseek easy-search query.pdb target/ result.m8 tmp --structty ""
+foldseek search queryDB targetDB result tmp --structty ""
+foldseek easy-rbh query.pdb target/ result.m8 tmp --structty ""
 ```
 
-**Specify a custom StrucTTY binary path** with `--structty` (also implicitly activates the viewer):
+**Specify a directory containing the StrucTTY binary** with `--structty <dir>` (also implicitly activates the viewer):
 ```
-foldseek easy-search query.pdb target/ result.m8 tmp --structty /path/to/StrucTTY
+foldseek easy-search query.pdb target/ result.m8 tmp --structty /path/to/dir
 ```
 
 **View existing results** using the `foldseek structty` command:
 ```
+# StrucTTY in PATH
 foldseek structty query.pdb result.m8 [targetDB]
+
+# StrucTTY in a specific directory
+foldseek structty query.pdb result.m8 [targetDB] --structty-dir /path/to/dir
 ```
+
+**Multimer search** requires `--multimer-report-mode 1` for the viewer to run:
+```
+foldseek easy-multimer-search query.pdb targetDB result tmp --structty "" --multimer-report-mode 1
+```
+
+> Note: `--structty-dir` is only for the `foldseek structty` standalone command. Workflow commands (`easy-search`, `search`, `easy-rbh`, `easy-multimer-search`) use `--structty`.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
