@@ -158,6 +158,23 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"structureclusterupdate", structureclusterupdate, &localPar.structureclusterworkflow, COMMAND_MAIN,
+                "Update structure clustering with new sequences using structural alignment",
+                "# Extend an existing structural clustering with new sequences\n"
+                "# Step 1: concatenate old and new sequence DBs\n"
+                "foldseek concatdbs oldSeqDB newSeqDB allSeqDB\n"
+                "foldseek concatdbs oldSeqDB_h newSeqDB_h allSeqDB_h\n\n"
+                "# Step 2: run structural cluster update\n"
+                "foldseek structureclusterupdate oldSeqDB allSeqDB oldClusterDB newMappedDB newClusterDB tmp\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:oldSequenceDB> <i:newSequenceDB> <i:oldClustResultDB> <o:newMappedSequenceDB> <o:newClustResultDB> <tmpDir>",
+                CITATION_FOLDSEEK,
+                {{"oldSequenceDB",    DbType::ACCESS_MODE_INPUT,  DbType::NEED_DATA|DbType::NEED_HEADER|DbType::NEED_LOOKUP, &DbValidator::sequenceDb},
+                 {"newSequenceDB",    DbType::ACCESS_MODE_INPUT,  DbType::NEED_DATA|DbType::NEED_HEADER|DbType::NEED_LOOKUP, &DbValidator::sequenceDb},
+                 {"oldClustResultDB", DbType::ACCESS_MODE_INPUT,  DbType::NEED_DATA, &DbValidator::clusterDb},
+                 {"newMappedSeqDB",   DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
+                 {"newClustResultDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb},
+                 {"tmpDir",           DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
 
 
 
