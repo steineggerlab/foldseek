@@ -126,8 +126,8 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     {
-        std::vector<MMseqsParameter*> multiserParams = removeParameter(par.multimersearchworkflow, par.PARAM_VIEW_RESULTS);
-        multiserParams = removeParameter(multiserParams, par.PARAM_STRUCTTY_PATH);
+        std::vector<MMseqsParameter*> multiserParams = par.removeParameter(par.multimersearchworkflow, par.PARAM_VIEW_RESULTS);
+        multiserParams = par.removeParameter(multiserParams, par.PARAM_STRUCTTY_PATH);
         cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(multiserParams, true).c_str());
     }
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
