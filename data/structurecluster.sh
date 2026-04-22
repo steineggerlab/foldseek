@@ -147,7 +147,7 @@ if [ "${RUN_ITERATIVE}" = "1" ]; then
       eval TMP="\$$PARAM"
       if notExists "${TMP_PATH}/aln_step$STEP.dbtype"; then
           # shellcheck disable=SC2086
-          $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${INPUT}${ALN_EXTENTION}" "${INPUT}${ALN_EXTENTION}" "${TMP_PATH}/pref_step$STEP" "${TMP_PATH}/aln_step$STEP" ${ALIGNMENT_PAR} \
+          $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${INPUT}${ALN_EXTENSION}" "${INPUT}${ALN_EXTENSION}" "${TMP_PATH}/pref_step$STEP" "${TMP_PATH}/aln_step$STEP" ${ALIGNMENT_PAR} \
               || fail "Alignment step $STEP died"
       fi
       PARAM=CLUSTER${STEP}_PAR
@@ -194,7 +194,7 @@ if [ -n "$REASSIGN" ]; then
     # align to cluster sequences
     if notExists "${TMP_PATH}/aln.dbtype"; then
         # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${SOURCE}${ALN_EXTENTION}" "${SOURCE}${ALN_EXTENTION}" "${TMP_PATH}/clu" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
+        $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${SOURCE}${ALN_EXTENSION}" "${SOURCE}${ALN_EXTENSION}" "${TMP_PATH}/clu" "${TMP_PATH}/aln" ${ALIGNMENT_PAR} \
                 || fail "Alignment step $STEP died"
     fi
     # create file of cluster that do not align based on given criteria
@@ -267,7 +267,7 @@ if [ -n "$REASSIGN" ]; then
         fi
         if notExists "${TMP_PATH}/seq_wrong_assigned_pref_swaped_aln.dbtype"; then
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${TMP_PATH}/seq_seeds.merged${ALN_EXTENTION}" "${TMP_PATH}/seq_wrong_assigned${ALN_EXTENTION}" \
+            $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${TMP_PATH}/seq_seeds.merged${ALN_EXTENSION}" "${TMP_PATH}/seq_wrong_assigned${ALN_EXTENSION}" \
                                               "${TMP_PATH}/seq_wrong_assigned_pref_swaped" "${TMP_PATH}/seq_wrong_assigned_pref_swaped_aln" ${ALIGNMENT_REASSIGN_PAR} \
                      || fail "align2 reassign died"
         fi
