@@ -121,8 +121,8 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     {
-        std::vector<MMseqsParameter*> searchParams = removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
-        searchParams = removeParameter(searchParams, par.PARAM_STRUCTTY_PATH);
+        std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
+        searchParams = par.removeParameter(searchParams, par.PARAM_STRUCTTY_PATH);
         cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
     }
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
