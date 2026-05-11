@@ -213,7 +213,6 @@ public:
     int multiDomain;
     int viewResults;
     std::string structtyPath;
-    std::string structtyDirPath;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
