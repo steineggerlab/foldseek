@@ -84,28 +84,6 @@ if [ -n "${TAXONOMY}" ]; then
         || fail "taxonomyreport died"
 fi
 
-# View results with StrucTTY
-if [ -n "${VIEW_RESULTS}" ] || [ -n "${STRUCTTY_PATH}" ]; then
-    # Determine query structure file (StrucTTY positional arg)
-    if [ -f "$1" ] && notExists "${1}.dbtype"; then
-        VIEWER_QUERY="$1"
-    elif [ -n "${QUERY_INPUT}" ] && [ -f "${QUERY_INPUT}" ]; then
-        VIEWER_QUERY="${QUERY_INPUT}"
-    else
-        VIEWER_QUERY=""
-    fi
-
-    # Determine target structure DB (StrucTTY --db for local hit loading)
-    if exists "${TARGET}.dbtype"; then
-        VIEWER_TARGET="${TARGET}"
-    else
-        VIEWER_TARGET=""
-    fi
-
-    # STRUCTTY_PATH: --structty binary path (empty string = PATH search)
-    # RESULTS: convertalis-generated .m8 file (StrucTTY --foldseek)
-    sh "${TMP_PATH}/structty_viewer.sh" "${STRUCTTY_PATH}" "${VIEWER_QUERY}" "${RESULTS}" "${VIEWER_TARGET}"
-fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     if [ -n "${GREEDY_BEST_HITS}" ]; then
