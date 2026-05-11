@@ -43,6 +43,12 @@ add_subdirectory(lib/kerasify)
 add_subdirectory(lib/tmalign)
 set(BUILD_LIBRARY 1 CACHE INTERNAL "" FORCE)
 add_subdirectory(lib/foldcomp EXCLUDE_FROM_ALL)
+# StrucTTY render+viewer library (ncurses 불필요)
+# Must be added before include_directories(lib) to avoid foldseek's gemmi
+# headers polluting StrucTTY's own gemmi compilation.
+set(STRUCTTY_BUILD_APP OFF CACHE BOOL "" FORCE)
+add_subdirectory(lib/structty)
+
 add_subdirectory(data)
 include_directories(lib)
 include_directories(lib/3di)
