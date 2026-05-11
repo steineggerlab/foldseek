@@ -10,10 +10,6 @@
 #include "structureiterativesearch.sh.h"
 #include "structureprofile.sh.h"
 #include "structty.h"
-namespace structtyViewerStructSearch {
-#include "structty_viewer.sh.h"
-}
-
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
@@ -165,9 +161,6 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-
-    std::string structtyViewer = tmpDir + "/structty_viewer.sh";
-    FileUtil::writeFile(structtyViewer, structtyViewerStructSearch::structty_viewer_sh, structtyViewerStructSearch::structty_viewer_sh_len);
 
     std::string program;
     if(par.numIterations > 1 || par.numIterations == 0){

@@ -21,7 +21,6 @@ set(COMPILED_RESOURCES
         easymultimersearch.sh
         multimercluster.sh
         easymultimercluster.sh
-        structty_viewer.sh
         easystructurerbh.sh
         )
 
