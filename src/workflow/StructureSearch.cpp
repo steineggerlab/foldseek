@@ -253,10 +253,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
         cmd.addVariable("EXPAND", "1");
     }
-    std::vector<const char*> fwd;
-    for (const auto& s : par.filenames) fwd.push_back(s.c_str());
-    int ret = cmd.callProgram(program.c_str(), fwd.size(), fwd.data());
-    if (ret != 0) return ret;
+    std::string argString = program;
+    for (const auto& s : par.filenames) { argString += " "; argString += s; }
+    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
     if (par.viewResults) {
         structty::RunOptions opts;
         opts.foldseek_file = tmpDir + "/viewer_results.m8";

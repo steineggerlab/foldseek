@@ -143,10 +143,9 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);
-    std::vector<const char*> fwd;
-    for (const auto& s : par.filenames) fwd.push_back(s.c_str());
-    int ret = cmd.callProgram(program.c_str(), fwd.size(), fwd.data());
-    if (ret != 0) return ret;
+    std::string argString = program;
+    for (const auto& s : par.filenames) { argString += " "; argString += s; }
+    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
     if (par.viewResults) {
         structty::RunOptions opts;
         opts.input_files.push_back(par.filenames[0]);
