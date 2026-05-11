@@ -9,9 +9,7 @@
 #include "DBReader.h"
 #include "Parameters.h"
 #include "easystructuresearch.sh.h"
-namespace structtyViewerEasySearch {
-#include "structty_viewer.sh.h"
-}
+#include "structty.h"
 
 void setEasyStructureSearchDefaults(Parameters *p) {
     // TODO: 7-mer sensitivity is not optimized yet
@@ -97,6 +95,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
+    std::string resultsPath = par.filenames.back();
     cmd.addVariable("RESULTS", par.filenames.back().c_str());
     par.filenames.pop_back();
     std::string target = par.filenames.back().c_str();
@@ -122,7 +121,6 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     {
         std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
-        searchParams = par.removeParameter(searchParams, par.PARAM_STRUCTTY_PATH);
         cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
     }
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
@@ -143,24 +141,20 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     
     cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
     cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
-    // --structty implies --view (wasSet handles empty-string case too)
-    if (par.PARAM_STRUCTTY_PATH.wasSet) {
-        par.viewResults = 1;
-    }
-    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
-    cmd.addVariable("STRUCTTY_PATH", par.structtyPath.empty() ? NULL : par.structtyPath.c_str());
-    cmd.addVariable("QUERY_INPUT", par.filenames[0].c_str());
-
-    std::string structtyViewer = tmpDir + "/structty_viewer.sh";
-    FileUtil::writeFile(structtyViewer, structtyViewerEasySearch::structty_viewer_sh, structtyViewerEasySearch::structty_viewer_sh_len);
-
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);
-    cmd.execProgram(program.c_str(), par.filenames);
-
-    // Should never get here
-    assert(false);
-    return EXIT_FAILURE;
+    std::vector<const char*> fwd;
+    for (const auto& s : par.filenames) fwd.push_back(s.c_str());
+    int ret = cmd.callProgram(program.c_str(), fwd.size(), fwd.data());
+    if (ret != 0) return ret;
+    if (par.viewResults) {
+        structty::RunOptions opts;
+        opts.input_files.push_back(par.filenames[0]);
+        opts.foldseek_file = resultsPath;
+        opts.foldseek_db = target;
+        structty::run(opts);
+    }
+    return EXIT_SUCCESS;
 }
 
 
