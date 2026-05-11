@@ -2,14 +2,14 @@
 // Created by Martin Steinegger on 6/7/21.
 //
 #include "GemmiWrapper.h"
-#include <gemmi/mmread.hpp>
+#include "mmread.hpp"
 #ifdef HAVE_ZLIB
-#include <gemmi/gz.hpp>
+#include "gz.hpp"
 #include <zlib.h>
 #endif
-#include <gemmi/input.hpp>
+#include "input.hpp"
 #include "foldcomp.h"
-#include <gemmi/cif.hpp>
+#include "cif.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -498,14 +498,14 @@ bool GemmiWrapper::load(const std::string& filename, Format format, CompressionF
                 gemmi::cif::Document doc = gemmi::cif::read_memory(mem.data(), mem.size(), infile.path().c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 entity_to_description = getEntityDescriptionMapping(doc);
-                st = gemmi::make_structure(std::move(doc));
+                st = gemmi::make_structure(doc);
                 break;
             }
             case Format::Mmjson: {
                 gemmi::cif::Document doc = gemmi::cif::read_mmjson(infile);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 entity_to_description = getEntityDescriptionMapping(doc);
-                st = gemmi::make_structure(std::move(doc));
+                st = gemmi::make_structure(doc);
                 break;
             }
             case Format::ChemComp: {
@@ -603,7 +603,7 @@ bool GemmiWrapper::loadFromBuffer(
         std::unordered_map<std::string, std::string> entity_to_description;
         switch (format) {
             case Format::Pdb:
-                st = gemmi::read_pdb_from_memory(newBuffer, newBufferSize, newName);
+                st = gemmi::pdb_impl::read_pdb_from_stream(gemmi::MemoryStream(newBuffer, newBufferSize), newName, gemmi::PdbReadOptions());
                 break;
             case Format::Mmcif: {
                 const char* targetBuffer = newBuffer;
@@ -634,7 +634,7 @@ bool GemmiWrapper::loadFromBuffer(
                 gemmi::cif::Document doc = gemmi::cif::read_memory(targetBuffer, newBufferSize, newName.c_str());
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 entity_to_description = getEntityDescriptionMapping(doc);
-                st = gemmi::make_structure(std::move(doc));
+                st = gemmi::make_structure(doc);
                 break;
             }
             case Format::Mmjson: {
@@ -652,7 +652,7 @@ bool GemmiWrapper::loadFromBuffer(
                 gemmi::cif::Document doc = gemmi::cif::read_mmjson_insitu(bufferCopy, newBufferSize, newName);
                 entity_to_tax_id = getEntityTaxIDMapping(doc);
                 entity_to_description = getEntityDescriptionMapping(doc);
-                st = gemmi::make_structure(std::move(doc));
+                st = gemmi::make_structure(doc);
                 free(bufferCopy);
                 break;
             }
