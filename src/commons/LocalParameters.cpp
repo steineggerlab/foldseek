@@ -372,7 +372,6 @@ LocalParameters::LocalParameters() :
     // view
     viewResults = 0;
     structtyPath = "";
-    structtyDirPath = "";
 
     // structtyworkflow
     structtyworkflow.push_back(&PARAM_THREADS);
