@@ -9,6 +9,7 @@
 #include "structuresearch.sh.h"
 #include "structureiterativesearch.sh.h"
 #include "structureprofile.sh.h"
+#include "structty.h"
 namespace structtyViewerStructSearch {
 #include "structty_viewer.sh.h"
 }
@@ -154,12 +155,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
-    // --structty implies --view (wasSet handles empty-string case too)
-    if (par.PARAM_STRUCTTY_PATH.wasSet) {
-        par.viewResults = 1;
-    }
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
-    cmd.addVariable("STRUCTTY_PATH", par.structtyPath.empty() ? NULL : par.structtyPath.c_str());
     cmd.addVariable("QUERY", query.c_str());
     cmd.addVariable("TARGET", target.c_str());
     if (par.viewResults) {
@@ -264,10 +260,15 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
         cmd.addVariable("EXPAND", "1");
     }
-    cmd.execProgram(program.c_str(), par.filenames);
-
-    // Should never get here
-    assert(false);
-    // Should never get here
-    return EXIT_FAILURE;
+    std::vector<const char*> fwd;
+    for (const auto& s : par.filenames) fwd.push_back(s.c_str());
+    int ret = cmd.callProgram(program.c_str(), fwd.size(), fwd.data());
+    if (ret != 0) return ret;
+    if (par.viewResults) {
+        structty::RunOptions opts;
+        opts.foldseek_file = tmpDir + "/viewer_results.m8";
+        opts.foldseek_db = target;
+        structty::run(opts);
+    }
+    return EXIT_SUCCESS;
 }

@@ -6,6 +6,7 @@
 #include "Util.h"
 #include "Debug.h"
 #include "easymultimersearch.sh.h"
+#include "structty.h"
 
 int easymultimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -127,7 +128,6 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     {
         std::vector<MMseqsParameter*> multiserParams = par.removeParameter(par.multimersearchworkflow, par.PARAM_VIEW_RESULTS);
-        multiserParams = par.removeParameter(multiserParams, par.PARAM_STRUCTTY_PATH);
         cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(multiserParams, true).c_str());
     }
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
@@ -136,22 +136,24 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
-    // --structty implies --view (wasSet handles empty-string case too)
-    if (par.PARAM_STRUCTTY_PATH.wasSet) {
-        par.viewResults = 1;
-    }
     if (par.viewResults && par.multimerReportMode == 0) {
         Debug(Debug::WARNING)
             << "--view-structty requires the multimer report, but --multimer-report-mode is 0. "
             << "StrucTTY launch will be skipped.\n";
+        par.viewResults = 0;
     }
-    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
-    cmd.addVariable("QUERY_INPUT", queryInput.c_str());
-    cmd.addVariable("TARGET_INPUT", targetInput.c_str());
     std::string program = tmpDir + "/easymultimersearch.sh";
     FileUtil::writeFile(program, easymultimersearch_sh, easymultimersearch_sh_len);
-    cmd.execProgram(program.c_str(), par.filenames);
-    // Should never get here
-    assert(false);
-    return EXIT_FAILURE;
+    std::vector<const char*> fwd;
+    for (const auto& s : par.filenames) fwd.push_back(s.c_str());
+    int ret = cmd.callProgram(program.c_str(), fwd.size(), fwd.data());
+    if (ret != 0) return ret;
+    if (par.viewResults) {
+        structty::RunOptions opts;
+        opts.input_files.push_back(queryInput);
+        opts.foldseek_file = outputPath;
+        opts.foldseek_db = targetInput;
+        structty::run(opts);
+    }
+    return EXIT_SUCCESS;
 }
