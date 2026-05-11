@@ -66,6 +66,8 @@ public:
     static const int OUTFMT_PROBTP = 48;
     static const int OUTFMT_QTMSCORE = 49;
     static const int OUTFMT_TTMSCORE = 50;
+    static const int OUTFMT_QKEY = 69;
+    static const int OUTFMT_TKEY = 70;
     // for Foldseek-MM
     static const int OUTFMT_QUERY_COMPLEX = 51;
     static const int OUTFMT_TARGET_COMPLEX = 52;

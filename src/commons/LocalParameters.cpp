@@ -411,7 +411,7 @@ LocalParameters::LocalParameters() :
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
     
     //rewrite param vals.
-    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,q3di,t3di,qheader,theader,qaln,taln,q3dialn,t3dialn,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,qcomplexcoverage,tcomplexcoverage,qchaintms,tchaintms,qchains,tchains,interfacelddt,complexassignid\n";
+    PARAM_FORMAT_OUTPUT.description = "Choose comma separated list of output columns from: query,target,evalue,gapopen,pident,fident,nident,qstart,qend,qlen\ntstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,q3di,t3di,qheader,theader,qaln,taln,q3dialn,t3dialn,mismatch,qcov,tcov\nqset,qsetid,tset,tsetid,taxid,taxname,taxlineage,\nlddt,lddtfull,qca,tca,t,u,qtmscore,ttmscore,alntmscore,rmsd,prob\ncomplexqtmscore,complexttmscore,complexu,complext,qcomplexcoverage,tcomplexcoverage,qchaintms,tchaintms,qchains,tchains,interfacelddt,complexassignid\nqkey,tkey\n";
 
     // allow higher values for GGML debug trace
     PARAM_V.regex = "^[0-4]{1}$";
@@ -495,6 +495,8 @@ std::vector<int> LocalParameters::getOutputFormat(
         else if (outformatSplit[i].compare("qchains")==0 ){code=LocalParameters::OUTFMT_COMPLEX_QNAME;}
         else if (outformatSplit[i].compare("tchains")==0 ){code=LocalParameters::OUTFMT_COMPLEX_TNAME;}
         else if (outformatSplit[i].compare("interfacelddt")==0 ){code=LocalParameters::OUTFMT_INTERFACE_LDDT;}
+        else if (outformatSplit[i].compare("qkey")==0 ){code=LocalParameters::OUTFMT_QKEY;}
+        else if (outformatSplit[i].compare("tkey")==0 ){code=LocalParameters::OUTFMT_TKEY;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";
             EXIT(EXIT_FAILURE);
