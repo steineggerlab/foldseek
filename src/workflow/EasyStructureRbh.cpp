@@ -121,10 +121,9 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
 
     std::string program = tmpDir + "/easystructurerbh.sh";
     FileUtil::writeFile(program, easystructurerbh_sh, easystructurerbh_sh_len);
-    std::vector<const char*> fwd;
-    for (const auto& s : par.filenames) fwd.push_back(s.c_str());
-    int ret = cmd.callProgram(program.c_str(), fwd.size(), fwd.data());
-    if (ret != 0) return ret;
+    std::string argString = program;
+    for (const auto& s : par.filenames) { argString += " "; argString += s; }
+    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
     if (par.viewResults) {
         structty::RunOptions opts;
         opts.input_files.push_back(par.filenames[0]);
