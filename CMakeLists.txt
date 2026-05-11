@@ -47,6 +47,21 @@ add_subdirectory(lib/foldcomp EXCLUDE_FROM_ALL)
 # Must be added before include_directories(lib) to avoid foldseek's gemmi
 # headers polluting StrucTTY's own gemmi compilation.
 set(STRUCTTY_BUILD_APP OFF CACHE BOOL "" FORCE)
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/structty/lib/gemmi/CMakeLists.txt")
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive lib/structty
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            RESULT_VARIABLE GIT_SUBMODULE_RESULT
+        )
+        if(NOT GIT_SUBMODULE_RESULT EQUAL 0)
+            message(FATAL_ERROR "git submodule update --init --recursive lib/structty failed")
+        endif()
+    else()
+        message(FATAL_ERROR "Git not found and lib/structty/lib/gemmi is not initialized. Run: git submodule update --init --recursive lib/structty")
+    endif()
+endif()
 add_subdirectory(lib/structty)
 
 add_subdirectory(data)
