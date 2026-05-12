@@ -11,17 +11,23 @@ namespace cudasw4{
     struct GaplessKernelConfig{
         enum class Approach : int{
             hardcodedzero = 0,
-            kernelparamzero = 1
+            kernelparamzero = 1,
+            unused = 2
         };
-        bool dpx;
+        enum class Datatype : int{
+            Half2 = 0,
+            Short2 = 1,
+            UInt8x4 = 2
+        };
+        Datatype datatype;
         int tilesize;
         int groupsize;
         int numRegs;
         Approach approach;
 
         GaplessKernelConfig() = default;
-        GaplessKernelConfig(int tilesize_, int groupsize_, int numRegs_, int dpx_, Approach approach_)
-            : dpx(dpx_), tilesize(tilesize_), groupsize(groupsize_), numRegs(numRegs_), approach(approach_)
+        GaplessKernelConfig(int tilesize_, int groupsize_, int numRegs_, int datatype_, Approach approach_)
+            : datatype(static_cast<Datatype>(datatype_)), tilesize(tilesize_), groupsize(groupsize_), numRegs(numRegs_), approach(approach_)
         {}
 
         GaplessKernelConfig(const GaplessKernelConfig&) = default;
@@ -33,15 +39,26 @@ namespace cudasw4{
         switch(approach){
             case GaplessKernelConfig::Approach::hardcodedzero: return "hardcodedzero";
             case GaplessKernelConfig::Approach::kernelparamzero: return "kernelparamzero";
+            case GaplessKernelConfig::Approach::unused: return "unused";
         }
         return "to_string: missing case for GaplessKernelConfig::Approach";
+    }
+
+    __inline__
+    std::string to_string(GaplessKernelConfig::Datatype datatype){
+        switch(datatype){
+            case GaplessKernelConfig::Datatype::Half2: return "Half2";
+            case GaplessKernelConfig::Datatype::Short2: return "Short2";
+            case GaplessKernelConfig::Datatype::UInt8x4: return "UInt8x4";
+        }
+        return "to_string: missing case for GaplessKernelConfig::Datatype";
     }
 
     __inline__
     std::ostream& operator<<(std::ostream& os, const GaplessKernelConfig& data){
 
         os << data.tilesize << " " << data.groupsize << " " << data.numRegs 
-            << " " << data.dpx << " " << int(data.approach);
+            << " " << int(data.datatype) << " " << int(data.approach);
         return os;
     }
     
@@ -251,38 +268,78 @@ namespace cudasw4{
     __inline__
     std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_sm120(){
         std::vector<GaplessKernelConfig> configs{
-            { 32, 4, 4, 0, GaplessKernelConfig::Approach::kernelparamzero },
-            { 64, 4, 8, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 96, 4, 12, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 128, 4, 16, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 160, 4, 20, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 192, 4, 24, 1, GaplessKernelConfig::Approach::hardcodedzero },
+            { 32, 4, 4, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 64, 4, 8, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 96, 4, 12, 0, GaplessKernelConfig::Approach::hardcodedzero },
+            { 128, 4, 16, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 160, 4, 20, 0, GaplessKernelConfig::Approach::kernelparamzero },
+            { 192, 4, 24, 1, GaplessKernelConfig::Approach::kernelparamzero },
             { 224, 4, 28, 1, GaplessKernelConfig::Approach::kernelparamzero },
-            { 256, 4, 32, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 288, 4, 36, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 320, 4, 40, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 352, 4, 44, 1, GaplessKernelConfig::Approach::kernelparamzero },
-            { 384, 4, 48, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 416, 4, 52, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 448, 4, 56, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 480, 4, 60, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 512, 4, 64, 1, GaplessKernelConfig::Approach::hardcodedzero },
+            { 256, 4, 32, 0, GaplessKernelConfig::Approach::kernelparamzero },
+            { 288, 4, 36, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 320, 4, 40, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 352, 4, 44, 1, GaplessKernelConfig::Approach::hardcodedzero },
+            { 384, 4, 48, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 416, 4, 52, 0, GaplessKernelConfig::Approach::hardcodedzero },
+            { 448, 4, 56, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 480, 4, 60, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 512, 4, 64, 1, GaplessKernelConfig::Approach::kernelparamzero },
             { 576, 8, 36, 1, GaplessKernelConfig::Approach::kernelparamzero },
-            { 640, 8, 40, 1, GaplessKernelConfig::Approach::hardcodedzero },
+            { 640, 8, 40, 1, GaplessKernelConfig::Approach::kernelparamzero },
             { 704, 8, 44, 1, GaplessKernelConfig::Approach::kernelparamzero },
             { 768, 8, 48, 1, GaplessKernelConfig::Approach::kernelparamzero },
             { 832, 8, 52, 1, GaplessKernelConfig::Approach::kernelparamzero },
             { 896, 8, 56, 1, GaplessKernelConfig::Approach::kernelparamzero },
             { 960, 8, 60, 1, GaplessKernelConfig::Approach::kernelparamzero },
-            { 1024, 8, 64, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 1152, 16, 36, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 1280, 16, 40, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 1408, 16, 44, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 1536, 16, 48, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 1664, 16, 52, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 1792, 16, 56, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 1920, 16, 60, 1, GaplessKernelConfig::Approach::hardcodedzero },
-            { 2048, 16, 64, 1, GaplessKernelConfig::Approach::hardcodedzero }
+            { 1024, 8, 64, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 1152, 16, 36, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 1280, 16, 40, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 1408, 16, 44, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 1536, 16, 48, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 1664, 16, 52, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 1792, 16, 56, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 1920, 16, 60, 1, GaplessKernelConfig::Approach::kernelparamzero },
+            { 2048, 16, 64, 1, GaplessKernelConfig::Approach::kernelparamzero }
+        };
+
+        return configs;
+    }
+
+    __inline__
+    std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_sm120_uint8x4(){
+        std::vector<GaplessKernelConfig> configs{
+            { 64, 4, 4, 2, GaplessKernelConfig::Approach::unused },
+            { 128, 4, 8, 2, GaplessKernelConfig::Approach::unused },
+            { 192, 4, 12, 2, GaplessKernelConfig::Approach::unused },
+            { 256, 4, 16, 2, GaplessKernelConfig::Approach::unused },
+            { 320, 4, 20, 2, GaplessKernelConfig::Approach::unused },
+            { 384, 4, 24, 2, GaplessKernelConfig::Approach::unused },
+            { 448, 4, 28, 2, GaplessKernelConfig::Approach::unused },
+            { 512, 4, 32, 2, GaplessKernelConfig::Approach::unused },
+            { 576, 4, 36, 2, GaplessKernelConfig::Approach::unused },
+            { 640, 4, 40, 2, GaplessKernelConfig::Approach::unused },
+            { 704, 4, 44, 2, GaplessKernelConfig::Approach::unused },
+            { 768, 4, 48, 2, GaplessKernelConfig::Approach::unused },
+            { 832, 4, 52, 2, GaplessKernelConfig::Approach::unused },
+            { 896, 4, 56, 2, GaplessKernelConfig::Approach::unused },
+            { 960, 4, 60, 2, GaplessKernelConfig::Approach::unused },
+            { 1024, 4, 64, 2, GaplessKernelConfig::Approach::unused },
+            { 1152, 8, 36, 2, GaplessKernelConfig::Approach::unused },
+            { 1280, 8, 40, 2, GaplessKernelConfig::Approach::unused },
+            { 1408, 8, 44, 2, GaplessKernelConfig::Approach::unused },
+            { 1536, 8, 48, 2, GaplessKernelConfig::Approach::unused },
+            { 1664, 8, 52, 2, GaplessKernelConfig::Approach::unused },
+            { 1792, 8, 56, 2, GaplessKernelConfig::Approach::unused },
+            { 1920, 8, 60, 2, GaplessKernelConfig::Approach::unused },
+            { 2048, 8, 64, 2, GaplessKernelConfig::Approach::unused },
+            { 2304, 16, 36, 2, GaplessKernelConfig::Approach::unused },
+            { 2560, 16, 40, 2, GaplessKernelConfig::Approach::unused },
+            { 2816, 16, 44, 2, GaplessKernelConfig::Approach::unused },
+            { 3072, 16, 48, 2, GaplessKernelConfig::Approach::unused },
+            { 3328, 16, 52, 2, GaplessKernelConfig::Approach::unused },
+            { 3584, 16, 56, 2, GaplessKernelConfig::Approach::unused },
+            { 3840, 16, 60, 2, GaplessKernelConfig::Approach::unused },
+            { 4096, 16, 64, 2, GaplessKernelConfig::Approach::unused }
         };
 
         return configs;
@@ -328,13 +385,53 @@ namespace cudasw4{
         return configs;
     }
 
+        __inline__
+    std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_sm121_uint8x4(){
+        std::vector<GaplessKernelConfig> configs{
+            { 64, 4, 4, 2, GaplessKernelConfig::Approach::unused },
+            { 128, 4, 8, 2, GaplessKernelConfig::Approach::unused },
+            { 192, 4, 12, 2, GaplessKernelConfig::Approach::unused },
+            { 256, 4, 16, 2, GaplessKernelConfig::Approach::unused },
+            { 320, 4, 20, 2, GaplessKernelConfig::Approach::unused },
+            { 384, 4, 24, 2, GaplessKernelConfig::Approach::unused },
+            { 448, 4, 28, 2, GaplessKernelConfig::Approach::unused },
+            { 512, 4, 32, 2, GaplessKernelConfig::Approach::unused },
+            { 576, 4, 36, 2, GaplessKernelConfig::Approach::unused },
+            { 640, 4, 40, 2, GaplessKernelConfig::Approach::unused },
+            { 704, 4, 44, 2, GaplessKernelConfig::Approach::unused },
+            { 768, 4, 48, 2, GaplessKernelConfig::Approach::unused },
+            { 832, 4, 52, 2, GaplessKernelConfig::Approach::unused },
+            { 896, 4, 56, 2, GaplessKernelConfig::Approach::unused },
+            { 960, 4, 60, 2, GaplessKernelConfig::Approach::unused },
+            { 1024, 4, 64, 2, GaplessKernelConfig::Approach::unused },
+            { 1152, 8, 36, 2, GaplessKernelConfig::Approach::unused },
+            { 1280, 8, 40, 2, GaplessKernelConfig::Approach::unused },
+            { 1408, 8, 44, 2, GaplessKernelConfig::Approach::unused },
+            { 1536, 8, 48, 2, GaplessKernelConfig::Approach::unused },
+            { 1664, 8, 52, 2, GaplessKernelConfig::Approach::unused },
+            { 1792, 8, 56, 2, GaplessKernelConfig::Approach::unused },
+            { 1920, 8, 60, 2, GaplessKernelConfig::Approach::unused },
+            { 2048, 8, 64, 2, GaplessKernelConfig::Approach::unused },
+            { 2304, 16, 36, 2, GaplessKernelConfig::Approach::unused },
+            { 2560, 16, 40, 2, GaplessKernelConfig::Approach::unused },
+            { 2816, 16, 44, 2, GaplessKernelConfig::Approach::unused },
+            { 3072, 16, 48, 2, GaplessKernelConfig::Approach::unused },
+            { 3328, 16, 52, 2, GaplessKernelConfig::Approach::unused },
+            { 3584, 16, 56, 2, GaplessKernelConfig::Approach::unused },
+            { 3840, 16, 60, 2, GaplessKernelConfig::Approach::unused },
+            { 4096, 16, 64, 2, GaplessKernelConfig::Approach::unused }
+        };
+
+        return configs;
+    }
+
     __inline__
     std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_default(){
         return getOptimalKernelConfigs_gapless_sm89();
     }
 
     __inline__
-    std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless(int deviceId){
+    std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless(int deviceId, bool blackwell_int8){
         int ccMajor = 0;
         int ccMinor = 0;
         cudaDeviceGetAttribute(&ccMajor, cudaDevAttrComputeCapabilityMajor, deviceId);
@@ -353,9 +450,17 @@ namespace cudasw4{
         }else if(ccMajor == 10 && ccMinor == 3){
             configs = getOptimalKernelConfigs_gapless_sm103();
         }else if(ccMajor == 12 && ccMinor == 0){
-            configs = getOptimalKernelConfigs_gapless_sm120();
+            if(blackwell_int8){
+                configs = getOptimalKernelConfigs_gapless_sm120_uint8x4();
+            }else{
+                configs = getOptimalKernelConfigs_gapless_sm120();
+            }
         }else if(ccMajor == 12 && ccMinor == 1){
-            configs = getOptimalKernelConfigs_gapless_sm121();
+            if(blackwell_int8){
+                configs = getOptimalKernelConfigs_gapless_sm121_uint8x4();
+            }else{
+                configs = getOptimalKernelConfigs_gapless_sm121();
+            }
         }else{
             configs = getOptimalKernelConfigs_gapless_default();
         }

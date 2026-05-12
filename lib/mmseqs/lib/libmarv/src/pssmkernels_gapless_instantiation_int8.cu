@@ -1,13 +1,11 @@
-#include "pssmkernels_gapless.cuh"
+#include "pssmkernels_gapless_int8.cuh"
 
 namespace cudasw4{
-
-namespace kernelparamzero{
 
     #define ScoreOutputIterator TopNMaximaArray
     #define subjectIsCaseSensitive true
     #define X(g,r) \
-        template void call_GaplessFilter_strided_PSSM_singletile_kernel<short2, 512, g, r, subjectIsCaseSensitive, ScoreOutputIterator>( \
+        template void uint8x4::call_GaplessFilter_strided_PSSM_singletile_uint8x4_kernel<ScoreType_u8x4, 512, g, r, subjectIsCaseSensitive, ScoreOutputIterator>( \
             const char * const, \
             ScoreOutputIterator const, \
             const size_t* const, \
@@ -15,11 +13,12 @@ namespace kernelparamzero{
             PositionsIterator const, \
             const int, \
             const SequenceLengthT, \
-            const PSSM_2D_View<short2>&, \
+            const PSSM_2D_View<ScoreType_u8x4>&, \
+            const int, \
             cudaStream_t \
         );
 
-        PSSM_GAPLESS_SINGLETILE_FOR_EACH_VALID_CONFIG_DO_X
+        PSSM_GAPLESS_INT8_SINGLETILE_FOR_EACH_VALID_CONFIG_DO_X
 
     #undef X
     #undef subjectIsCaseSensitive
@@ -29,7 +28,7 @@ namespace kernelparamzero{
     #define ScoreOutputIterator TopNMaximaArray
     #define subjectIsCaseSensitive true
     #define X(g,r) \
-        template void call_GaplessFilter_strided_PSSM_multitile_kernel<short2, 512, g, r, subjectIsCaseSensitive, ScoreOutputIterator>( \
+        template void uint8x4::call_GaplessFilter_strided_PSSM_multitile_uint8x4_kernel<ScoreType_u8x4, 512, g, r, subjectIsCaseSensitive, ScoreOutputIterator>( \
             int, \
             const char * const, \
             ScoreOutputIterator const, \
@@ -38,19 +37,21 @@ namespace kernelparamzero{
             PositionsIterator const, \
             const int, \
             const SequenceLengthT, \
-            const PSSM_2D_View<short2>&, \
-            float2*, \
+            const PSSM_2D_View<ScoreType_u8x4>&, \
+            const int, \
+            std::uint32_t*, \
             size_t, \
             cudaStream_t \
         );
 
-        PSSM_GAPLESS_MULTITILE_FOR_EACH_VALID_CONFIG_DO_X
+        PSSM_GAPLESS_INT8_MULTITILE_FOR_EACH_VALID_CONFIG_DO_X
 
     #undef X
     #undef subjectIsCaseSensitive
     #undef ScoreOutputIterator
 
-} //namespace hardcodedzero
+
+
 
 
 } //namespace cudasw4
