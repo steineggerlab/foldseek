@@ -66,6 +66,11 @@ add_library(gemmi_cpp INTERFACE)
 add_library(gemmi::gemmi_cpp ALIAS gemmi_cpp)
 target_include_directories(gemmi_cpp INTERFACE ${CMAKE_SOURCE_DIR}/lib)
 add_subdirectory(lib/structty)
+# stdc++fs needed for std::filesystem on cross-compile toolchains using GCC < 9 (e.g. aarch64 buster).
+# GCC 9+ ships an empty compatibility stdc++fs archive so this is safe on all Linux builds.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(structty PUBLIC stdc++fs)
+endif()
 
 add_subdirectory(data)
 include_directories(lib)
