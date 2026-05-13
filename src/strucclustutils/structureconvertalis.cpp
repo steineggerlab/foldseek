@@ -200,6 +200,8 @@ qset        Query set
 tset        Target set
 qca        Query ca
 tca        Target ca
+qkey        Query database key
+tkey        Target database key
  */
 
 std::map<unsigned int, unsigned int> structureReadKeyToSet(const std::string& file) {
@@ -834,6 +836,12 @@ R"html(<!DOCTYPE html>
                                         break;
                                     case Parameters::OUTFMT_TARGET:
                                         result.append(targetId);
+                                        break;
+                                    case LocalParameters::OUTFMT_QKEY:
+                                        result.append(SSTR(queryKey));
+                                        break;
+                                    case LocalParameters::OUTFMT_TKEY:
+                                        result.append(SSTR(res.dbKey));
                                         break;
                                     case Parameters::OUTFMT_EVALUE:
                                         result.append(SSTR(res.eval));

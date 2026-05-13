@@ -58,6 +58,37 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"subsetFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
                                           {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+        {"createinterfacedb",          createinterfacedb,          &localPar.createinterfacedb,          COMMAND_SET,
+                "Create an interface DB of a dimer DB",
+                "# Create a new sequence, 3di, c-alpha DB, header, lookup, source files consisting of interface\n"
+                "foldseek createinterfacedb db_dimer db_int\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:DB> <o:DB>",
+                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+        {"createStructinterfacedb",          createStructinterfacedb,          &localPar.createStructinterfacedb,          COMMAND_SET,
+                "Create an interface DB of a dimer DB",
+                "# Create a new sequence, 3di, c-alpha DB consisting of interface\n"
+                "foldseek createStructinterfacedb db_dimer db_int\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:DB> <o:DB>",
+                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
+        {"createdimerdb",          createdimerdb,          &localPar.createdimerdbworkflow,          COMMAND_SET,
+                "Create a dimer DB of a DB",
+                "foldseek createdimerdb db db_dimer\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:DB> <o:DB> <tmpDir>",
+                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"filterdimerdb",          filterdimerdb,          &localPar.filterdimerdb,          COMMAND_HIDDEN,
+                "Create a dimer database where both monomers are in contact.",
+                "foldseek filterdimerdb dimerdb contactDimerdb\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:DB> <o:DB>",
+                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                                          {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},                           
         {"easy-search",          easystructuresearch,           &localPar.easystructuresearchworkflow,   COMMAND_EASY,
                 "Structual search",
                 "# Search a single/multiple PDB file against a set of PDB files\n"
@@ -353,6 +384,84 @@ std::vector<Command> foldseekCommands = {
                                         {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
                 }
         },     
+        {"interfacecluster", interfacecluster, &localPar.interfaceclusterworkflow, COMMAND_MAIN, 
+                "Interface level cluster",
+                "#Clustering of PDB DB interface\n"
+                "foldseek interfacecluster queryDB clusterDB tmp\n"
+                "#                  --cov-mode \n"
+                "# Sequence         0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "# Cutoff -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:sequenceDB|interfaceDB> <o:clusterDB> <tmpDir>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                        {"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
+                                        {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
+                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
+                }
+        },        
+        {"easy-interfacecluster", easyinterfacecluster, &localPar.easyinterfaceclusterworkflow, COMMAND_EASY,
+                "Interface level cluster",
+                "#Clustering of PDB files\n"
+                "foldseek easy-interfacecluster examples/ result tmp\n"
+                "# Cluster output\n"
+                "#  - result_rep_seq.fasta: Representatives\n"
+                "#  - result_cluster.tsv:   Adjacency list\n\n"
+                "# Important parameter: --cov-mode and -c \n"
+                "#                  --cov-mode \n"
+                "#                  0    1    2\n"
+                "# Q: MAVGTACRPA  60%  IGN  60%\n"
+                "# T: -AVGTAC---  60% 100%  IGN\n"
+                "#        -c 0.7    -    +    -\n"
+                "#        -c 0.6    +    +    +\n\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:clusterPrefix> <tmpDir>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                        {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
+                                        {"clusterPrefix", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
+                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
+                }
+        },       
+        {"interfacesearch", interfacesearch, &localPar.interfacesearchworkflow, COMMAND_MAIN,
+                "Interface level search",
+                "# Search a single/multiple PDB file's interface against a set of PDB files and get interface-multimer level alignments\n"
+                "foldseek interfacesearch queryDB(sequence or interface db) targetDB(sequence or interface db) result tmp\n"
+                "# Format output differently\n"
+                "foldseek interfacesearch queryDB targetDB result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "# Align with TMalign (global)\n"
+                "foldseek interfacesearch queryDB targetDB result tmp --alignment-type 1\n"
+                "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
+                "foldseek interfacesearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                           {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
+                                           {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
+                                           {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
+                                   }
+        },   
+        {"easy-interfacesearch", easyinterfacesearch, &localPar.easyinterfacesearchworkflow, COMMAND_EASY,
+                "Interface level search",
+                "# Search a single/multiple PDB file's interface against a set of PDB files and get interface-multimer level alignments\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp\n"
+                "# Format output differently\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --format-output query,target,qstart,tstart,cigar\n"
+                "# Align with TMalign (global)\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --alignment-type 1\n"
+                "# Skip prefilter and perform an exhaustive alignment (slower but more sensitive)\n"
+                "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
+                "Sooyoung Cha <ellen2g77@gmail.com>",
+                "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
+                CITATION_FOLDSEEK_MULTIMER, {
+                                           {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder},
+                                           {"outputFileName", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
+                                           {"tempDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}
+                                   }
+        },  
         {"multimersearch", multimersearch, &localPar.multimersearchworkflow, COMMAND_MAIN,
                 "Multimer level search",
                 "# Search a single/multiple PDB file against a set of PDB files and get multimer level alignments\n"

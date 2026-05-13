@@ -39,12 +39,14 @@ public:
         const char * buffer,
         size_t bufferSize,
         const std::string& name,
+        bool saveResIndex = false,
         Format format = Format::Detect,
         CompressionFormat compressionFormat = CompressionFormat::Detect
     );
 
     bool load(
         const std::string& filename,
+        bool saveResIndex = false,
         Format format = Format::Detect,
         CompressionFormat compressionFormat = CompressionFormat::Detect
     );
@@ -65,6 +67,7 @@ public:
     unsigned int modelCount = 0;
     std::vector<std::pair<size_t, size_t>> chain;
     std::vector<int> taxIds;
+    std::vector<unsigned int> resIds;
     std::string title;
 
     char* fixupBuffer;
@@ -79,7 +82,8 @@ private:
         void * structure,
         const std::string & filename,
         std::unordered_map<std::string, int>& entity_to_tax_id,
-        std::unordered_map<std::string, std::string>& entity_to_description
+        std::unordered_map<std::string, std::string>& entity_to_description,
+        bool saveResIndex
     );
 };
 
