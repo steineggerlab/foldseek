@@ -15,6 +15,10 @@ void setEasyInterfaceClusterDefaults(Parameters *p) {
     p->filtMultTmThr = 0.4;
     p->filtChainTmThr = 0.0;
     p->filtInterfaceLddtThr = 0;
+    p->exhaustiveSearch = 1;
+    p->evalThr=10000000;
+    p->lddtThr=0.2;
+    p->maxIteration=1;
 }
 
 void setEasyInterfaceClusterMustPassAlong(Parameters *p) {
@@ -28,6 +32,13 @@ void setEasyInterfaceClusterMustPassAlong(Parameters *p) {
     p->PARAM_MULTIMER_TM_THRESHOLD.wasSet = true;
     p->PARAM_CHAIN_TM_THRESHOLD.wasSet = true;
     p->PARAM_INTERFACE_LDDT_THRESHOLD.wasSet = true;
+    p->PARAM_MAXITERATIONS.wasSet = true;
+    p->PARAM_LDDT_THRESHOLD.wasSet = true;
+    p->PARAM_E.wasSet = true;
+    p->PARAM_EXHAUSTIVE_SEARCH.wasSet = true;
+
+
+
 }
 
 int easyinterfacecluster(int argc, const char **argv, const Command &command) {
