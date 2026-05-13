@@ -9,7 +9,7 @@
 
 #include "easyinterfacecluster.sh.h"
 
-void setEasyInterfaceClusterDefaults(Parameters *p) {
+void setEasyInterfaceClusterDefaults(LocalParameters *p) {
     p->removeTmpFiles = true;
     p->writeLookup = true;
     p->filtMultTmThr = 0.4;
@@ -21,7 +21,7 @@ void setEasyInterfaceClusterDefaults(Parameters *p) {
     p->maxIteration=1;
 }
 
-void setEasyInterfaceClusterMustPassAlong(Parameters *p) {
+void setEasyInterfaceClusterMustPassAlong(LocalParameters *p) {
     p->clusteringSetMode = 1;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
     if (p->filtMultTmThr + p->filtChainTmThr + p->filtInterfaceLddtThr == 0 ) {

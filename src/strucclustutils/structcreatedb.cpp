@@ -922,6 +922,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                             pdbFile.c_str(),
                             pdbFile.size(),
                             name,
+                            par.saveResIndex,
                             (GemmiWrapper::Format)inputFormat,
                             (GemmiWrapper::CompressionFormat)inputCompressionFormat
                         ) == false) {
