@@ -456,7 +456,7 @@ bool GemmiWrapper::load(const std::string& filename, bool saveResIndex, Format f
             if (format == Format::Unknown) {
                 format = Format::Pdb;
             }
-            bool result = loadFromBuffer(out, len, name, format);
+            bool result = loadFromBuffer(out, len, name, saveResIndex, format);
             delete[] out;
             return result;
         }
