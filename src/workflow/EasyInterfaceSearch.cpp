@@ -12,14 +12,19 @@ void setEasyInterfaceSearchDefaults(LocalParameters *p) {
     p->removeTmpFiles = true;
     p->distanceThreshold = 10;
     p->minResidueNum = 4;
-    //TODO: set paramters
-    // p->filtInterfaceLddtThr = 0.0;
-    // p->filtMultTmThr = 0.4;
-    // p->filtChainTmThr = 0.0;
+    p->filtInterfaceLddtThr = 0.0;
+    p->filtMultTmThr = 0.4;
+    p->filtChainTmThr = 0.0;
 }
 
 void mustsetEasyInterfaceSearch(LocalParameters *p) {
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
+    p->PARAM_MULTIMER_TM_THRESHOLD.wasSet = true;
+    p->PARAM_CHAIN_TM_THRESHOLD.wasSet = true;
+    p->PARAM_INTERFACE_LDDT_THRESHOLD.wasSet = true;
+    p->PARAM_DISTANCE_THRESHOLD.wasSet = true;
+    p->PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN.wasSet = true;
+
 }
 
 int easyinterfacesearch(int argc, const char **argv, const Command &command) {

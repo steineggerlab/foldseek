@@ -12,12 +12,22 @@
 void setEasyInterfaceClusterDefaults(Parameters *p) {
     p->removeTmpFiles = true;
     p->writeLookup = true;
+    p->filtMultTmThr = 0.4;
+    p->filtChainTmThr = 0.0;
+    p->filtInterfaceLddtThr = 0;
 }
 
 void setEasyInterfaceClusterMustPassAlong(Parameters *p) {
     p->clusteringSetMode = 1;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
+    if (p->filtMultTmThr + p->filtChainTmThr + p->filtInterfaceLddtThr == 0 ) {
+        p->filtMultTmThr = 0.0001;
+    }
     p->PARAM_WRITE_LOOKUP.wasSet = true;
+    p->PARAM_CLUSTER_SET_MODE.wasSet=true;
+    p->PARAM_MULTIMER_TM_THRESHOLD.wasSet = true;
+    p->PARAM_CHAIN_TM_THRESHOLD.wasSet = true;
+    p->PARAM_INTERFACE_LDDT_THRESHOLD.wasSet = true;
 }
 
 int easyinterfacecluster(int argc, const char **argv, const Command &command) {
