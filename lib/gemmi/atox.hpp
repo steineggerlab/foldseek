@@ -13,6 +13,7 @@
 #ifndef GEMMI_ATOX_HPP_
 #define GEMMI_ATOX_HPP_
 
+#include <cstdint>    // for std::uint8_t
 #include <stdexcept>  // for invalid_argument
 #include <string>
 

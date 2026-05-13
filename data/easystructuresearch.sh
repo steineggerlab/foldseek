@@ -84,6 +84,7 @@ if [ -n "${TAXONOMY}" ]; then
         || fail "taxonomyreport died"
 fi
 
+
 if [ -n "${REMOVE_TMP}" ]; then
     if [ -n "${GREEDY_BEST_HITS}" ]; then
         # shellcheck disable=SC2086

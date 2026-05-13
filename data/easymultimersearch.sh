@@ -55,6 +55,7 @@ if [ -z "${NO_REPORT}" ]; then
         || fail "createmultimerreport died"
 fi
 
+
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY}

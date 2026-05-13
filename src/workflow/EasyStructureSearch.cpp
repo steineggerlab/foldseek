@@ -9,6 +9,7 @@
 #include "DBReader.h"
 #include "Parameters.h"
 #include "easystructuresearch.sh.h"
+#include "structty.h"
 
 void setEasyStructureSearchDefaults(Parameters *p) {
     // TODO: 7-mer sensitivity is not optimized yet
@@ -94,6 +95,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
+    std::string resultsPath = par.filenames.back();
     cmd.addVariable("RESULTS", par.filenames.back().c_str());
     par.filenames.pop_back();
     std::string target = par.filenames.back().c_str();
@@ -117,7 +119,10 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
 
     cmd.addVariable("CREATELININDEX_PAR", NULL);
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
+    {
+        std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
+        cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
+    }
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
@@ -136,14 +141,19 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     
     cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
     cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
-
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);
-    cmd.execProgram(program.c_str(), par.filenames);
-
-    // Should never get here
-    assert(false);
-    return EXIT_FAILURE;
+    std::string argString = program;
+    for (const auto& s : par.filenames) { argString += " "; argString += s; }
+    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
+    if (par.viewResults) {
+        structty::RunOptions opts;
+        opts.input_files.push_back(par.filenames[0]);
+        opts.foldseek_file = resultsPath;
+        opts.foldseek_db = target;
+        structty::run(opts);
+    }
+    return EXIT_SUCCESS;
 }
 
 

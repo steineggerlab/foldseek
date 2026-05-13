@@ -9,7 +9,7 @@
 #include "structuresearch.sh.h"
 #include "structureiterativesearch.sh.h"
 #include "structureprofile.sh.h"
-
+#include "structty.h"
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
@@ -151,9 +151,17 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
+    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("QUERY", query.c_str());
+    cmd.addVariable("TARGET", target.c_str());
+    if (par.viewResults) {
+        cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
+    }
+
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+
     std::string program;
     if(par.numIterations > 1 || par.numIterations == 0){
 	//par.evalProfile = 0.1;
@@ -245,10 +253,14 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
         cmd.addVariable("EXPAND", "1");
     }
-    cmd.execProgram(program.c_str(), par.filenames);
-
-    // Should never get here
-    assert(false);
-    // Should never get here
-    return EXIT_FAILURE;
+    std::string argString = program;
+    for (const auto& s : par.filenames) { argString += " "; argString += s; }
+    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
+    if (par.viewResults) {
+        structty::RunOptions opts;
+        opts.foldseek_file = tmpDir + "/viewer_results.m8";
+        opts.foldseek_db = target;
+        structty::run(opts);
+    }
+    return EXIT_SUCCESS;
 }

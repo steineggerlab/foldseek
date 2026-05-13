@@ -71,6 +71,13 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 	STEP=$((STEP+1))
 done
 
+# Produce viewer_results.m8 for StrucTTY (called from C++ after this script)
+if [ -n "${VIEW_RESULTS}" ]; then
+    VIEWER_M8="${TMP_PATH}/viewer_results.m8"
+    # shellcheck disable=SC2086
+    "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${RESULTS}" "${VIEWER_M8}" ${CONVERT_PAR} \
+        || fail "convertalis for viewer died"
+fi
 
 if [ -n "$REMOVE_TMP" ]; then
     STEP=0

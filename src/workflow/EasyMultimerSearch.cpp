@@ -6,6 +6,7 @@
 #include "Util.h"
 #include "Debug.h"
 #include "easymultimersearch.sh.h"
+#include "structty.h"
 
 int easymultimersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -112,26 +113,46 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     }
     cmd.addVariable("NO_REPORT", par.multimerReportMode == 0 ? "TRUE" : NULL);
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    cmd.addVariable("OUTPUT", par.filenames.back().c_str());
+    const std::string outputPath = par.filenames.back();
+    cmd.addVariable("OUTPUT", outputPath.c_str());
     par.filenames.pop_back();
-    cmd.addVariable("TARGET", par.filenames.back().c_str());
+    const std::string targetInput = par.filenames.back();
+    cmd.addVariable("TARGET", targetInput.c_str());
     par.filenames.pop_back();
-    cmd.addVariable("QUERY", par.filenames.back().c_str());
+    const std::string queryInput = par.filenames.back();
+    cmd.addVariable("QUERY", queryInput.c_str());
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
     cmd.addVariable("GPU", par.gpu ? "TRUE" : NULL);
     cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     par.filenames.pop_back();
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.multimersearchworkflow, true).c_str());
+    {
+        std::vector<MMseqsParameter*> multiserParams = par.removeParameter(par.multimersearchworkflow, par.PARAM_VIEW_RESULTS);
+        cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(multiserParams, true).c_str());
+    }
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
+
+    if (par.viewResults && par.multimerReportMode == 0) {
+        Debug(Debug::WARNING)
+            << "--view-structty requires the multimer report, but --multimer-report-mode is 0. "
+            << "StrucTTY launch will be skipped.\n";
+        par.viewResults = 0;
+    }
     std::string program = tmpDir + "/easymultimersearch.sh";
     FileUtil::writeFile(program, easymultimersearch_sh, easymultimersearch_sh_len);
-    cmd.execProgram(program.c_str(), par.filenames);
-    // Should never get here
-    assert(false);
-    return EXIT_FAILURE;
+    std::string argString = program;
+    for (const auto& s : par.filenames) { argString += " "; argString += s; }
+    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
+    if (par.viewResults) {
+        structty::RunOptions opts;
+        opts.input_files.push_back(queryInput);
+        opts.foldseek_file = outputPath;
+        opts.foldseek_db = targetInput;
+        structty::run(opts);
+    }
+    return EXIT_SUCCESS;
 }

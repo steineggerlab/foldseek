@@ -21,6 +21,7 @@ set(COMPILED_RESOURCES
         easymultimersearch.sh
         multimercluster.sh
         easymultimercluster.sh
+        easystructurerbh.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

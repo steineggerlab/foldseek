@@ -114,6 +114,19 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileStdinAndFolder },
                                            {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"structty",             structtyview,                  &localPar.structtyworkflow,              COMMAND_EASY,
+                "Launch StrucTTY viewer for foldseek results",
+                "# View search results with StrucTTY\n"
+                "foldseek structty query.pdb result.m8\n"
+                "# View with target structure DB for local hit loading\n"
+                "foldseek structty query.pdb result.m8 targetDB\n"
+                "# Specify StrucTTY binary path\n"
+                "foldseek structty query.pdb result.m8 --structty /path/to/StrucTTY\n\n",
+                "Luna Jang",
+                "<i:queryFile> <i:resultM8> [<i:targetDB>]",
+                CITATION_FOLDSEEK, {{"queryFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
+                                           {"resultM8", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
+                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::allDbAndFlat }}},
         {"rbh",                  structurerbh,                  &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Reciprocal best hit search",
                 NULL,
