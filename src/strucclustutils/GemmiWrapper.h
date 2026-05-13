@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <cstdlib>
 #include "structureto3di.h"
 
 class GemmiWrapper {
@@ -21,15 +22,34 @@ public:
         Unknown
     };
 
+    enum class CompressionFormat {
+        Detect = 0,
+        Gzip = 1,
+        Zstd = 2
+    };
+
     GemmiWrapper();
     ~GemmiWrapper() {
         if (fixupBuffer) {
-            delete fixupBuffer;
+            free(fixupBuffer);
         }
     }
 
-    bool loadFromBuffer(const char * buffer, size_t bufferSize, const std::string& name, bool saveResIndex = false, Format format = Format::Detect);
-    bool load(const std::string& filename, bool saveResIndex = false, Format format = Format::Detect);
+    bool loadFromBuffer(
+        const char * buffer,
+        size_t bufferSize,
+        const std::string& name,
+        bool saveResIndex = false,
+        Format format = Format::Detect,
+        CompressionFormat compressionFormat = CompressionFormat::Detect
+    );
+
+    bool load(
+        const std::string& filename,
+        bool saveResIndex = false,
+        Format format = Format::Detect,
+        CompressionFormat compressionFormat = CompressionFormat::Detect
+    );
 
     std::vector<Vec3> ca;
     std::vector<float> ca_bfactor;

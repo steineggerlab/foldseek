@@ -7,13 +7,55 @@
 #include "MathUtil.h"
 #include "SubstitutionMatrixProfileStates.h"
 #include "PSSMCalculator.h"
+#include "DBReader.h"
 #include <climits> // short_max
 #include <cstddef>
+
+std::vector<Sequence::SeqAuxInfo> Sequence::auxRegistry;
+
+void Sequence::registerAuxSplit(unsigned int extFlag,
+                                const unsigned char *primary,
+                                const unsigned char *aux,
+                                const unsigned char *matData,
+                                unsigned int matDataLen,
+                                unsigned int auxAlphabetSize) {
+    SeqAuxInfo info;
+    info.extFlag = extFlag;
+    info.primaryRemap = primary;
+    info.auxRemap = aux;
+    info.auxMatData = matData;
+    info.auxMatDataLen = matDataLen;
+    info.auxAlphabetSize = auxAlphabetSize;
+    auxRegistry.push_back(info);
+}
+
+const Sequence::SeqAuxInfo* Sequence::getAuxInfo(int seqType) {
+    unsigned int extDbtype = DBReader<unsigned int>::getExtendedDbtype(seqType);
+    for (size_t i = 0; i < auxRegistry.size(); i++) {
+        if (extDbtype & auxRegistry[i].extFlag) {
+            return &auxRegistry[i];
+        }
+    }
+    return NULL;
+}
 
 Sequence::Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat, const unsigned int kmerSize, const bool spaced, const bool aaBiasCorrection, bool shouldAddPC, const std::string& userSpacedKmerPattern) {
     this->maxLen = maxLen;
     this->numSequence = (unsigned char*)malloc(maxLen + 1);
     this->numConsensusSequence = (unsigned char*)malloc(maxLen + 1);
+    this->numSequenceAux = NULL;
+    this->activePrimaryRemap = NULL;
+    this->activeAuxRemap = NULL;
+    // Check if this sequence type has a registered split
+    const SeqAuxInfo *auxInfo = getAuxInfo(seqType);
+    if (auxInfo != NULL) {
+        this->activePrimaryRemap = auxInfo->primaryRemap;
+        this->activeAuxRemap = auxInfo->auxRemap;
+        if (this->activeAuxRemap != NULL) {
+            this->numSequenceAux = (unsigned char*)malloc(maxLen + 1);
+        }
+    }
+
     this->aaBiasCorrection = aaBiasCorrection;
     this->subMat = (BaseMatrix*)subMat;
     this->spaced = spaced;
@@ -85,6 +127,9 @@ Sequence::~Sequence() {
     delete[] spacedPattern;
     free(numSequence);
     free(numConsensusSequence);
+    if (numSequenceAux != NULL) {
+        free(numSequenceAux);
+    }
     if (kmerWindow) {
         free(kmerWindow);
     }
@@ -224,12 +269,27 @@ void Sequence::mapSequence(size_t id, unsigned int dbKey, std::pair<const unsign
         this->L = data.second;
         if(this->L >= static_cast<int>(maxLen)){
             numSequence = static_cast<unsigned char *>(realloc(numSequence, this->L+1));
+            if (numSequenceAux != NULL) {
+                numSequenceAux = static_cast<unsigned char *>(realloc(numSequenceAux, this->L+1));
+            }
             maxLen = this->L;
         }
-        // map softmasked sequences to regular sequences
-        // softmasked character start at 32
-        for(int i = 0; i < this->L; i++){
-            this->numSequence[i] = ( data.first[i] >= 32) ? data.first[i] - 32 : data.first[i];
+        if (activePrimaryRemap != NULL) {
+            // data contains packed bytes — apply remap
+            for (int i = 0; i < this->L; i++) {
+                this->numSequence[i] = activePrimaryRemap[data.first[i]];
+            }
+            if (activeAuxRemap != NULL) {
+                for (int i = 0; i < this->L; i++) {
+                    this->numSequenceAux[i] = activeAuxRemap[data.first[i]];
+                }
+            }
+        } else {
+            // map softmasked sequences to regular sequences
+            // softmasked character start at 32
+            for(int i = 0; i < this->L; i++){
+                this->numSequence[i] = ( data.first[i] >= 32) ? data.first[i] - 32 : data.first[i];
+            }
         }
     } else {
         Debug(Debug::ERROR) << "Invalid sequence type!\n";
@@ -304,23 +364,50 @@ void Sequence::nextProfileKmer() {
     }
 }
 
+bool Sequence::kmerWindowContainsX() const {
+    const simd_int xVec = simdi8_set(subMat->aa2num[static_cast<int>('X')]);
+    const simd_int *simdKmer = reinterpret_cast<const simd_int *>(kmerWindow);
+    for (unsigned int pos = 0; pos < simdKmerRegisterCnt; pos++) {
+        if (simd_any(simdi8_eq(simdi_load(simdKmer + pos), xVec))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Sequence::mapSequence(const char * sequence, unsigned int dataLen){
     if(dataLen >= maxLen){
         numSequence = static_cast<unsigned char*>(realloc(numSequence, dataLen+1));
+        if (numSequenceAux != NULL) {
+            numSequenceAux = static_cast<unsigned char*>(realloc(numSequenceAux, dataLen+1));
+        }
         maxLen = dataLen;
     }
-    const unsigned char* lookup = subMat->aa2num;  // local pointer for speed
-    unsigned int i = 0;
-    for (; i + 4 <= dataLen; i += 4) {
-        numSequence[i]   = lookup[(unsigned char)sequence[i]];
-        numSequence[i+1] = lookup[(unsigned char)sequence[i+1]];
-        numSequence[i+2] = lookup[(unsigned char)sequence[i+2]];
-        numSequence[i+3] = lookup[(unsigned char)sequence[i+3]];
+    if (activePrimaryRemap != NULL) {
+        for (unsigned int i = 0; i < dataLen; i++) {
+            unsigned char raw = static_cast<unsigned char>(sequence[i]);
+            numSequence[i] = activePrimaryRemap[raw];
+        }
+        if (activeAuxRemap != NULL) {
+            for (unsigned int i = 0; i < dataLen; i++) {
+                unsigned char raw = static_cast<unsigned char>(sequence[i]);
+                numSequenceAux[i] = activeAuxRemap[raw];
+            }
+        }
+    } else {
+        const unsigned char* lookup = subMat->aa2num;  // local pointer for speed
+        unsigned int i = 0;
+        for (; i + 4 <= dataLen; i += 4) {
+            numSequence[i]   = lookup[(unsigned char)sequence[i]];
+            numSequence[i+1] = lookup[(unsigned char)sequence[i+1]];
+            numSequence[i+2] = lookup[(unsigned char)sequence[i+2]];
+            numSequence[i+3] = lookup[(unsigned char)sequence[i+3]];
+        }
+        for (; i < dataLen; i++) {
+            numSequence[i]   = lookup[(unsigned char)sequence[i]];
+        }
     }
-    for (; i < dataLen; i++) {
-        numSequence[i]   = lookup[(unsigned char)sequence[i]];
-    }
-    this->L = i;
+    this->L = dataLen;
 }
 
 void Sequence::printPSSM(){

@@ -13,6 +13,8 @@
 #include <cstdint>
 #include <cstddef>
 #include <utility>
+#include <string>
+#include <vector>
 #include <simd/simd.h>
 
 const int8_t seed_4[]        = {1, 1, 1, 1};
@@ -394,13 +396,7 @@ public:
                 }
                 break;
         }
-        kmerHasX = 0;
-
-        const simd_int xChar = simdi8_set(subMat->aa2num[static_cast<int>('X')]);
-        for(size_t i = 0; i < simdKmerRegisterCnt; i++){
-            simd_int kmer = simdi_load((((simd_int *) kmerWindow) + i));
-            kmerHasX |= static_cast<unsigned int>(simdi8_movemask(simdi8_eq(kmer, xChar)));
-        }
+        kmerHasX = kmerWindowContainsX();
         if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_HMM_PROFILE)) {
             nextProfileKmer();
             for (unsigned int i = 0; i < this->kmerSize; i++) {
@@ -443,6 +439,9 @@ public:
 
     // each amino acid coded as integer
     unsigned char *numSequence;
+
+    // auxiliary numeric sequence (e.g. 12st states), NULL if unused
+    unsigned char *numSequenceAux;
 
     // each consensus amino acid as integer (PROFILE ONLY)
     unsigned char *numConsensusSequence;
@@ -533,10 +532,33 @@ public:
         return userSpacedKmerPattern;
     }
 
+    // Static registry for downstream projects (e.g. Foldseek)
+    struct SeqAuxInfo {
+        unsigned int extFlag;
+        const unsigned char *primaryRemap;   // 256-entry: raw byte -> primary numeric value
+        const unsigned char *auxRemap;       // 256-entry: raw byte -> aux numeric value
+        const unsigned char *auxMatData;     // embedded substitution matrix data
+        unsigned int auxMatDataLen;          // length of embedded matrix data
+        unsigned int auxAlphabetSize;        // number of states in aux alphabet (e.g. 12)
+    };
+    static std::vector<SeqAuxInfo> auxRegistry;
+    static void registerAuxSplit(unsigned int extFlag,
+                                 const unsigned char *primary,
+                                 const unsigned char *aux,
+                                 const unsigned char *matData,
+                                 unsigned int matDataLen,
+                                 unsigned int auxAlphabetSize);
+    static const SeqAuxInfo* getAuxInfo(int seqType);
+
+    // Per-instance remap pointers (NULL if no remap active)
+    const unsigned char *activePrimaryRemap;
+    const unsigned char *activeAuxRemap;
+
 private:
     void mapSequence(const char *seq, unsigned int dataLen);
     // read next kmer profile in profile_matrix
     void nextProfileKmer();
+    bool kmerWindowContainsX() const;
 
     size_t id;
     unsigned int dbKey;

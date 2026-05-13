@@ -26,6 +26,7 @@ typedef std::string chainName_t;
 typedef std::pair<unsigned int, resultToWrite_t> resultToWriteWithKey_t;
 typedef std::map<unsigned int, chainName_t> chainKeyToChainName_t;
 typedef std::pair<unsigned int, unsigned int> chainToResidue;
+typedef std::map<std::pair<unsigned int, unsigned int>, std::string> alignmentLinesMap_t;
 
 struct Chain {
     Chain() {}
@@ -262,12 +263,12 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
         double tTmScore = strtod(entry[12], NULL);
         std::string uString = std::string(entry[13], entry[14] - entry[13]-1);
         std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
-        auto assId = Util::fast_atoi<unsigned int>(entry[15]);
-        double qComplexCov = strtod(entry[16], NULL);
-        double tComplexCov = strtod(entry[17], NULL);
-        std::string qChainTms = std::string(entry[18], entry[19] - entry[18]-1);
-        std::string tChainTms = std::string(entry[19], entry[20] - entry[19]-1);
-        std::string interfaceLddtScore = std::string(entry[20], entry[21] - entry[20]-1);
+        double qComplexCov = strtod(entry[15], NULL);
+        double tComplexCov = strtod(entry[16], NULL);
+        std::string qChainTms = std::string(entry[17], entry[18] - entry[17]-1);
+        std::string tChainTms = std::string(entry[18], entry[19] - entry[18]-1);
+        std::string interfaceLddtScore = std::string(entry[19], entry[20] - entry[19]-1);
+        auto assId = Util::fast_atoi<unsigned int>(entry[20]);
         res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
         return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};
     } else if(columns == 16) {
@@ -295,9 +296,9 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
         std::string tString = std::string(entry[14], entry[15] - entry[14]-1);
         double qComplexCov = 0;
         double tComplexCov = 0;
-        std::string qChainTms = "";
-        std::string tChainTms = "";
-        std::string interfaceLddtScore = "";
+        std::string qChainTms = "0";
+        std::string tChainTms = "0";
+        std::string interfaceLddtScore = "0";
         auto assId = Util::fast_atoi<unsigned int>(entry[15]);
         res = Matcher::result_t(dbKey, score, qCov, dbCov, seqId, eval, alnLength, qStartPos, qEndPos, qLen, dbStartPos, dbEndPos, dbLen, -1, -1, -1, -1, backtrace);
         return {assId, qTmScore, tTmScore, uString, tString, qComplexCov, tComplexCov, qChainTms, tChainTms, interfaceLddtScore, true};

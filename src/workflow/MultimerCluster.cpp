@@ -9,14 +9,21 @@
 #include "multimercluster.sh.h"
 
 void setMultimerClusterDefaults(LocalParameters *p) {
-    p->tmScoreThr = 0.65; // TODO
-    p->filtChainTmThr = 0.001; // TODO
-    p->filtInterfaceLddtThr = 0.5; // TODO
+    p->filtMultTmThr = 0.7; // TODO
+    p->filtChainTmThr = 0.7; // TODO
+    p->filtInterfaceLddtThr = 0.3; // TODO
 }
    
 
 void mustsetMultimerCluster(LocalParameters *p) { 
     p->clusteringSetMode = 1;
+    if (p->filtMultTmThr + p->filtChainTmThr + p->filtInterfaceLddtThr == 0 ) {
+        p->filtMultTmThr = 0.0001;
+    }
+    p->PARAM_CLUSTER_SET_MODE.wasSet=true;
+    p->PARAM_MULTIMER_TM_THRESHOLD.wasSet = true;
+    p->PARAM_CHAIN_TM_THRESHOLD.wasSet = true;
+    p->PARAM_INTERFACE_LDDT_THRESHOLD.wasSet = true;
 }
 
 int multimercluster(int argc, const char **argv, const Command &command) {

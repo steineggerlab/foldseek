@@ -36,6 +36,7 @@ if notExists "${TARGET}.dbtype"; then
         "$MMSEQS" makepaddedseqdb "${TMP_PATH}/target" "${TMP_PATH}/target_pad" ${MAKEPADDEDSEQDB_PAR} \
             || fail "makepaddedseqdb died"
         TARGET="${TMP_PATH}/target_pad"
+        INDEXEXT=""
     fi
 else
     if [ -n "${GPU}" ] ; then
@@ -45,8 +46,10 @@ else
                 "$MMSEQS" makepaddedseqdb "${TARGET}" "${TMP_PATH}/target_pad" ${MAKEPADDEDSEQDB_PAR} \
                     || fail "makepaddedseqdb died"
                 TARGET="${TMP_PATH}/target_pad"
+                INDEXEXT=""
             else
-                TARGET="${TMP_PATH}/target_pad";
+                TARGET="${TMP_PATH}/target_pad"
+                INDEXEXT=""
             fi
         fi
     fi

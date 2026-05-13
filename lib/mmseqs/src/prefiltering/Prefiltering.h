@@ -74,6 +74,7 @@ private:
 
     BaseMatrix *kmerSubMat;
     BaseMatrix *ungappedSubMat;
+    BaseMatrix *ungappedSubMatAux;
     ScoreMatrix _2merSubMatrix;
     ScoreMatrix _3merSubMatrix;
     IndexTable *indexTable;
@@ -142,4 +143,3 @@ private:
 };
 
 #endif
-
