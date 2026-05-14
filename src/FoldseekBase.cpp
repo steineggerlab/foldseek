@@ -3,7 +3,12 @@
 #include "CommandDeclarations.h"
 #include "LocalCommandDeclarations.h"
 #include "LocalParameters.h"
+#include "Sequence.h"
+#include "structureto12st.h"
 #include "structdatabases.sh.h"
+
+static unsigned char remap3Di[256];
+static unsigned char remapAux[256];
 
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 void updateValdiation() {
@@ -11,6 +16,25 @@ void updateValdiation() {
     DbValidator::allDb.push_back(LocalParameters::DBTYPE_TMSCORE);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_CA_ALPHA);
     DbValidator::allDbAndFlat.push_back(LocalParameters::DBTYPE_TMSCORE);
+
+    // Register 3Di+12St sequence splitter for prefilter dual scoring
+    for (int i = 0; i < 256; i++) {
+        remap3Di[i]  = static_cast<unsigned char>(i / Alphabet12St::STATE_CNT);
+        remapAux[i] = static_cast<unsigned char>(i % Alphabet12St::STATE_CNT);
+    }
+    // Find the embedded 12st matrix data (already registered by LocalParameters)
+    const unsigned char *auxMatData = NULL;
+    unsigned int auxMatDataLen = 0;
+    for (size_t i = 0; i < localPar.substitutionMatrices.size(); i++) {
+        if (localPar.substitutionMatrices[i].name == "12st.out") {
+            auxMatData = localPar.substitutionMatrices[i].subMatData;
+            auxMatDataLen = localPar.substitutionMatrices[i].subMatDataLen;
+            break;
+        }
+    }
+    Sequence::registerAuxSplit(LocalParameters::DBTYPE_EXTENDED_3DI_12ST,
+                               remap3Di, remapAux, auxMatData, auxMatDataLen,
+                               Alphabet12St::STATE_CNT);
 }
 void (*validatorUpdate)(void) = updateValdiation;
 

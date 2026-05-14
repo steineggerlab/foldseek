@@ -38,6 +38,7 @@ char * StructureTo3diSeqDist::structure2states(Vec3 * ca, Vec3 * n,
     states.clear();
     partnerIdx.clear();
     mask.clear();
+    virtualCenter.clear();
 
     if(len > states.size()){
         states.resize(len);
@@ -48,7 +49,7 @@ char * StructureTo3diSeqDist::structure2states(Vec3 * ca, Vec3 * n,
 
     replaceCBWithVirtualCenter(ca, n, c, cb, len);
     createResidueMask(mask, ca, n, c, len);
-    findResiduePartners(partnerIdx, cb, mask, len);
+    findResiduePartners(partnerIdx, virtualCenter, mask, len);
     discretizeSeqDistance(states, partnerIdx,  mask, len);
 
     return states.data();

@@ -47,6 +47,8 @@ struct Vec3 {
 
 class StructureTo3DiBase{
 protected:
+    // Store virtual centers separately from CB coordinates
+    std::vector<Vec3> virtualCenter;
 
     Vec3 add(Vec3 a, Vec3 b);
     Vec3 sub(Vec3 a, Vec3 b);
@@ -69,8 +71,8 @@ protected:
 
     void createResidueMask(std::vector<bool> & validMask, Vec3 * ca, Vec3 * n, Vec3 * c, const size_t len);
 
-    // find closest member for every c beta atom
-    void findResiduePartners(std::vector<int> & partnerIdx, Vec3 * cb,
+    // find closest member for every virtual center
+    void findResiduePartners(std::vector<int> & partnerIdx, std::vector<Vec3> & virtualCenter,
                              std::vector<bool> & validMask, const size_t len);
 
 };
