@@ -1,5 +1,6 @@
 set(workflow_source_files
         workflow/StructureCluster.cpp
+        workflow/StructureClusterUpdate.cpp
         workflow/StructureIndex.cpp
         workflow/StructureSearch.cpp
         workflow/StructureRbh.cpp

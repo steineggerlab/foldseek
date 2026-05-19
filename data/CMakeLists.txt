@@ -3,6 +3,7 @@ include(MMseqsResourceCompiler)
 set(COMPILED_RESOURCES
         easystructuresearch.sh
         structurecluster.sh
+        structureclusterupdate.sh
         structureindex.sh
         structuresearch.sh
         structureiterativesearch.sh
