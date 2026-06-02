@@ -105,7 +105,9 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
         std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
         cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
     }
-    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    // When viewing results, defer tmp cleanup so StrucTTY can read the tmp DBs (D10).
+    // Actual cleanup is re-invoked after launch in Step 3.
+    cmd.addVariable("REMOVE_TMP", (par.removeTmpFiles && !par.viewResults) ? "TRUE" : NULL);
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
 
     cmd.addVariable("RUNNER", par.runner.c_str());
@@ -126,10 +128,21 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
     if (par.viewResults) {
         structty::RunOptions opts;
-        opts.input_files.push_back(par.filenames[0]);
-        opts.foldseek_file = resultsPath;
-        opts.foldseek_db = target;
+        const std::string queryInput = par.filenames[0];
+        const bool queryIsDb  = FileUtil::fileExists((queryInput + ".dbtype").c_str());
+        const bool targetIsDb = FileUtil::fileExists((target + ".dbtype").c_str());
+        // Fallback plaintext query load (Step 4 will switch to query DB read).
+        opts.input_files.push_back(queryInput);
+        opts.foldseek_query_db = queryIsDb  ? queryInput : (tmpDir + "/query");
+        opts.foldseek_db       = targetIsDb ? target     : (tmpDir + "/target");
+        opts.foldseek_file     = resultsPath;
         structty::run(opts);
+        // D10: cleanup was deferred past launch (Step 2); re-invoke the workflow
+        // script in cleanup-only mode now that the viewer has closed.
+        if (par.removeTmpFiles) {
+            cmd.addVariable("CLEANUP_ONLY", "TRUE");
+            if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
+        }
     }
     return EXIT_SUCCESS;
 }
