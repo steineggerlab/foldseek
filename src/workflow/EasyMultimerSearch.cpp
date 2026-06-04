@@ -133,7 +133,10 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
-    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    // D10: defer tmp DB cleanup past the StrucTTY launch. When viewing results,
+    // do not pass REMOVE_TMP to the first run so the query/target complex DBs the
+    // viewer reads survive; cleanup happens via a CLEANUP_ONLY re-invocation below.
+    cmd.addVariable("REMOVE_TMP", (par.removeTmpFiles && !par.viewResults) ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
     if (par.viewResults && par.multimerReportMode == 0) {
@@ -149,10 +152,21 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
     if (par.viewResults) {
         structty::RunOptions opts;
-        opts.input_files.push_back(queryInput);
-        opts.foldseek_file = outputPath;
-        opts.foldseek_db = targetInput;
+        // D6: hand off complex query/target tmp DBs + the `_report` (14-col tsv).
+        // query/target are read from DB by complex name → folder/tar/gz inputs work.
+        const bool queryIsDb  = FileUtil::fileExists((queryInput  + ".dbtype").c_str());
+        const bool targetIsDb = FileUtil::fileExists((targetInput + ".dbtype").c_str());
+        opts.foldseek_query_db = queryIsDb  ? queryInput  : (tmpDir + "/query");
+        opts.foldseek_db       = targetIsDb ? targetInput : (tmpDir + "/target");
+        opts.foldseek_file     = outputPath + "_report";
+        opts.report_format     = true;
         structty::run(opts);
+        // D10: cleanup was deferred past launch; re-invoke the workflow script in
+        // cleanup-only mode now that the viewer has closed.
+        if (par.removeTmpFiles) {
+            cmd.addVariable("CLEANUP_ONLY", "TRUE");
+            if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
+        }
     }
     return EXIT_SUCCESS;
 }

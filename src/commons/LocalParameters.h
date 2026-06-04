@@ -210,7 +210,7 @@ public:
     int prostt5SplitLength;
     int minAlignedChains;
     int multiDomain;
-    int viewResults;
+    bool viewResults;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

@@ -260,6 +260,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         structty::RunOptions opts;
         opts.foldseek_file = tmpDir + "/viewer_results.m8";
         opts.foldseek_db = target;
+        opts.foldseek_query_db = query;
         structty::run(opts);
     }
     return EXIT_SUCCESS;
