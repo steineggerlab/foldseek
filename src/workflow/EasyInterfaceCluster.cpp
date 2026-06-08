@@ -9,44 +9,10 @@
 
 #include "easyinterfacecluster.sh.h"
 
-void setEasyInterfaceClusterDefaults(LocalParameters *p) {
-    p->removeTmpFiles = true;
-    p->writeLookup = true;
-    p->filtMultTmThr = 0.4;
-    p->filtChainTmThr = 0.0;
-    p->filtInterfaceLddtThr = 0;
-    p->exhaustiveSearch = 1;
-    p->evalThr=10000000;
-    p->lddtThr=0.2;
-    p->maxIteration=1;
-}
-
-void setEasyInterfaceClusterMustPassAlong(LocalParameters *p) {
-    p->clusteringSetMode = 1;
-    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
-    if (p->filtMultTmThr + p->filtChainTmThr + p->filtInterfaceLddtThr == 0 ) {
-        p->filtMultTmThr = 0.0001;
-    }
-    p->PARAM_WRITE_LOOKUP.wasSet = true;
-    p->PARAM_CLUSTER_SET_MODE.wasSet=true;
-    p->PARAM_MULTIMER_TM_THRESHOLD.wasSet = true;
-    p->PARAM_CHAIN_TM_THRESHOLD.wasSet = true;
-    p->PARAM_INTERFACE_LDDT_THRESHOLD.wasSet = true;
-    p->PARAM_MAXITERATIONS.wasSet = true;
-    p->PARAM_LDDT_THRESHOLD.wasSet = true;
-    p->PARAM_E.wasSet = true;
-    p->PARAM_EXHAUSTIVE_SEARCH.wasSet = true;
-
-
-
-}
-
 int easyinterfacecluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
 
-    setEasyInterfaceClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    setEasyInterfaceClusterMustPassAlong(&par);
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));

@@ -8,19 +8,6 @@
 
 #include "easymultimercluster.sh.h"
 
-void setEasyMultimerClusterDefaults(Parameters *p) {
-    //TODO
-    p->removeTmpFiles = true;
-    p->writeLookup = true;
-}
-
-void setEasyMultimerClusterMustPassAlong(Parameters *p) {
-    //TODO
-    p->clusteringSetMode = 1;
-    p->PARAM_REMOVE_TMP_FILES.wasSet = true;
-    p->PARAM_WRITE_LOOKUP.wasSet = true;
-}
-
 int easymultimercluster(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     //TODO
@@ -38,9 +25,7 @@ int easymultimercluster(int argc, const char **argv, const Command &command) {
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    setEasyMultimerClusterDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    setEasyMultimerClusterMustPassAlong(&par);
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
