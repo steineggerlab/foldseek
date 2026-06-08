@@ -36,6 +36,9 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
     DBWriter resultWriter(par.db2.c_str(), par.db2Index.c_str(), par.threads, 0, db2Type);
     resultWriter.open();
     Debug::Progress progress(qComplexIndices.size());
+    unsigned int minimumResidue = par.minResidueNum;
+    float distanceThreshold = par.distanceThreshold;
+    const float squareThreshold = distanceThreshold * distanceThreshold;
 
 #pragma omp parallel
     {
@@ -69,10 +72,7 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
                     size_t tChainLen = qDbr.getSeqLen(tChainDbId);
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
 
-                    float distanceThreshold = par.distanceThreshold;
-                    unsigned int minimumResidue = par.minResidueNum;
                     std::vector<size_t> resIdx1, resIdx2;
-                    const float squareThreshold = distanceThreshold * distanceThreshold;
                     findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
                     findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
                     if (resIdx1.size() >= minimumResidue && resIdx2.size() >= minimumResidue) {  

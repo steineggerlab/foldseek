@@ -85,6 +85,9 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
         idbw = new DBWriter((par.db2 + "_id").c_str(), (par.db2 + "_id.index").c_str(), static_cast<unsigned int>(par.threads), par.compressed, iddbType);
         idbw->open();
     }
+    float distanceThreshold = par.distanceThreshold;
+    unsigned int minimumResidue = par.minResidueNum;
+    const float squareThreshold = distanceThreshold * distanceThreshold;
 
 #pragma omp parallel
     {
@@ -130,11 +133,7 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                 tiddata = qIdDbr->getData(tChainDbId, thread_idx);
                 tIdVec = getIdVec(tiddata, tChainLen);
             }
-
-            float distanceThreshold = par.distanceThreshold;
-            unsigned int minimumResidue = par.minResidueNum;
             std::vector<size_t> resIdx1, resIdx2;
-            const float squareThreshold = distanceThreshold * distanceThreshold;
             PulchraWrapper pulchra;
             std::vector<Vec3> caB, nB, cB;
             std::vector<char> amiB;
@@ -178,7 +177,6 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                     ami[i] = amiB[resIdx1[i]];
                     if (saveResIndex) {
                         resId1.push_back(qIdVec[resIdx1[i]]);
-                        //std::cout << qIdVec[resIdx1[i]] << std::endl;
                     }
                 }
                 for (size_t i = 0; i < resIdx2.size(); i++) {
@@ -189,7 +187,6 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                     ami[resIdx1.size() + i] = amiB[qChainLen + resIdx2[i]];
                     if (saveResIndex) {
                         resId2.push_back(tIdVec[resIdx2[i]]);
-                        //std::cout << tIdVec[resIdx2[i]] << std::endl;
                     }
                 }
 
