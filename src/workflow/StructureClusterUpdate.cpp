@@ -42,7 +42,7 @@ int structureclusterupdate(int argc, const char **argv, const Command& command) 
     setStructureClusterUpdateMustPassAlong(&par);
 
     std::string tmpDir = par.db6;
-    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.clusterUpdate));
+    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.structureclusterupdate));
     if (par.reuseLatest) {
         hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }
@@ -63,7 +63,6 @@ int structureclusterupdate(int argc, const char **argv, const Command& command) 
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("DIFF_PAR", par.createParameterString(par.diff).c_str());
-    cmd.addVariable("RESULT2REPSEQ_PAR", par.createParameterString(par.result2repseq).c_str());
     cmd.addVariable("CLUST_PAR", par.createParameterString(par.clusterworkflow, true).c_str());
 
     // structural alignment algorithm and parameters

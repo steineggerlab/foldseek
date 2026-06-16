@@ -30,7 +30,7 @@ log() {
 }
 
 # check number of input variables
-[ "$#" -ne 6 ] && echo "Please provide <i:oldSequenceDB> <i:newSequenceDB> <i:oldClusteringDB> <o:newMappedSequenceDB> <o:newClusteringDB> <o:tmpDir>" && exit 1
+[ "$#" -ne 6 ] && echo "Please provide <i:oldSequenceDB> <i:newSequenceDB> <i:oldClusteringDB> <o:newMappedSequenceDB> <o:newClusteringDB> <tmpDir>" && exit 1
 # check if files exist
 [ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1
 [ ! -f "$2.dbtype" ] && echo "$2.dbtype not found!" && exit 1
@@ -81,9 +81,35 @@ if [ -s "${TMP_PATH}/removedSeqs" ]; then
             # shellcheck disable=SC2086
             "$MMSEQS" concatdbs "$NEWDB" "${TMP_PATH}/OLDDB.removedDb" "${TMP_PATH}/NEWDB.withOld" --preserve-keys --threads 1 ${VERBOSITY} \
                 || fail "concatdbs died"
+        fi
+        if notExists "${TMP_PATH}/NEWDB.withOld_h.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" concatdbs "${NEWDB}_h" "${TMP_PATH}/OLDDB.removedDb_h" "${TMP_PATH}/NEWDB.withOld_h" --preserve-keys --threads 1 ${VERBOSITY} \
                 || fail "concatdbs died"
+        fi
+        if [ -f "${OLDDB}_ss.dbtype" ] && [ -f "${NEWDB}_ss.dbtype" ]; then
+            if notExists "${TMP_PATH}/OLDDB.removedDb_ss.dbtype"; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" renamedbkeys "${TMP_PATH}/OLDDB.removedMapping" "${OLDDB}_ss" "${TMP_PATH}/OLDDB.removedDb_ss" --subdb-mode 1 ${VERBOSITY} \
+                    || fail "renamedbkeys for 3Di died"
+            fi
+            if notExists "${TMP_PATH}/NEWDB.withOld_ss.dbtype"; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" concatdbs "${NEWDB}_ss" "${TMP_PATH}/OLDDB.removedDb_ss" "${TMP_PATH}/NEWDB.withOld_ss" --preserve-keys --threads 1 ${VERBOSITY} \
+                    || fail "concatdbs for 3Di died"
+            fi
+        fi
+        if [ -f "${OLDDB}_ca.dbtype" ] && [ -f "${NEWDB}_ca.dbtype" ]; then
+            if notExists "${TMP_PATH}/OLDDB.removedDb_ca.dbtype"; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" renamedbkeys "${TMP_PATH}/OLDDB.removedMapping" "${OLDDB}_ca" "${TMP_PATH}/OLDDB.removedDb_ca" --subdb-mode 1 ${VERBOSITY} \
+                    || fail "renamedbkeys for C-alpha died"
+            fi
+            if notExists "${TMP_PATH}/NEWDB.withOld_ca.dbtype"; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" concatdbs "${NEWDB}_ca" "${TMP_PATH}/OLDDB.removedDb_ca" "${TMP_PATH}/NEWDB.withOld_ca" --preserve-keys --threads 1 ${VERBOSITY} \
+                    || fail "concatdbs for C-alpha died"
+            fi
         fi
         NEWDB="${TMP_PATH}/NEWDB.withOld"
 
@@ -92,6 +118,16 @@ if [ -s "${TMP_PATH}/removedSeqs" ]; then
             rm -f "${TMP_PATH}/OLDDB.removedMapping"
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${TMP_PATH}/OLDDB.removedDb" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/OLDDB.removedDb_h" ${VERBOSITY}
+            if [ -f "${TMP_PATH}/OLDDB.removedDb_ss.dbtype" ]; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" rmdb "${TMP_PATH}/OLDDB.removedDb_ss" ${VERBOSITY}
+            fi
+            if [ -f "${TMP_PATH}/OLDDB.removedDb_ca.dbtype" ]; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" rmdb "${TMP_PATH}/OLDDB.removedDb_ca" ${VERBOSITY}
+            fi
         fi
     else
         if notExists "${TMP_PATH}/REMOVEDMEMBERS.dbtype"; then
@@ -148,6 +184,11 @@ if [ -f "${NEWDB}_ss.dbtype" ] && notExists "${NEWMAPDB}_ss.dbtype"; then
     "$MMSEQS" renamedbkeys "${TMP_PATH}/newMappingSeqs" "${NEWDB}_ss" "${NEWMAPDB}_ss" ${VERBOSITY} \
         || fail "renamedbkeys for 3Di died"
 fi
+if [ -f "${NEWDB}_ca.dbtype" ] && notExists "${NEWMAPDB}_ca.dbtype"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" renamedbkeys "${TMP_PATH}/newMappingSeqs" "${NEWDB}_ca" "${NEWMAPDB}_ca" ${VERBOSITY} \
+        || fail "renamedbkeys for C-alpha died"
+fi
 if [ -f "${NEWDB}_h.dbtype" ] && notExists "${NEWMAPDB}_h.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" renamedbkeys "${TMP_PATH}/newMappingSeqs" "${NEWDB}_h" "${NEWMAPDB}_h" ${VERBOSITY} \
@@ -175,6 +216,13 @@ if [ -f "${NEWDB}_ss.dbtype" ] && notExists "${TMP_PATH}/NEWDB.newSeqs_ss.dbtype
         || fail "createsubdb for 3Di died"
 fi
 
+if [ -f "${NEWDB}_ca.dbtype" ] && notExists "${TMP_PATH}/NEWDB.newSeqs_ca.dbtype"; then
+    log "=== Filter out new from old C-alpha coordinates"
+    # shellcheck disable=SC2086
+    "$MMSEQS" createsubdb "${NEWSEQ}" "${NEWDB}_ca" "${TMP_PATH}/NEWDB.newSeqs_ca" ${VERBOSITY} --subdb-mode 1 \
+        || fail "createsubdb for C-alpha died"
+fi
+
 if notExists "${TMP_PATH}/OLDDB.repSeq.dbtype"; then
     log "=== Extract representative AA sequences"
     # Use createsubdb (not result2repseq): afdb50_clu members are keyed on afdb50_seq (241M),
@@ -191,10 +239,17 @@ if [ -f "${OLDDB}_ss.dbtype" ] && notExists "${TMP_PATH}/OLDDB.repSeq_ss.dbtype"
         || fail "createsubdb for rep 3Di sequences died"
 fi
 
+if [ -f "${OLDDB}_ca.dbtype" ] && notExists "${TMP_PATH}/OLDDB.repSeq_ca.dbtype"; then
+    log "=== Extract representative C-alpha coordinates"
+    # shellcheck disable=SC2086
+    "$MMSEQS" createsubdb "$OLDCLUST" "${OLDDB}_ca" "${TMP_PATH}/OLDDB.repSeq_ca" --subdb-mode 1 ${VERBOSITY} \
+        || fail "createsubdb for rep C-alpha sequences died"
+fi
+
 if notExists "${TMP_PATH}/newSeqsPref.dbtype"; then
     log "=== Prefilter new sequences against cluster representatives"
     # shellcheck disable=SC2086
-    $RUNNER "$MMSEQS" prefilter "${TMP_PATH}/NEWDB.newSeqs" "${TMP_PATH}/OLDDB.repSeq" \
+    $RUNNER "$MMSEQS" prefilter "${TMP_PATH}/NEWDB.newSeqs_ss" "${TMP_PATH}/OLDDB.repSeq_ss" \
         "${TMP_PATH}/newSeqsPref" ${PREFILTER_PAR} \
         || fail "Prefilter died"
 fi
@@ -256,7 +311,7 @@ if notExists "${TMP_PATH}/newClusters.dbtype" && [ -s "${TMP_PATH}/toBeClustered
 fi
 
 if [ -f "${TMP_PATH}/newClusters.dbtype" ]; then
-    if notExists "$NEWCLUST"; then
+    if notExists "${NEWCLUST}.dbtype"; then
         log "=== Merge updated clustering with new clusters"
         # shellcheck disable=SC2086
         "$MMSEQS" concatdbs "${UPDATEDCLUST}" "${TMP_PATH}/newClusters" "$NEWCLUST" --preserve-keys ${THREADS_PAR} \
@@ -277,11 +332,23 @@ if [ -n "$REMOVE_TMP" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/NEWDB.withOld" ${VERBOSITY}
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/NEWDB.withOld_h" ${VERBOSITY}
+        if [ -f "${TMP_PATH}/NEWDB.withOld_ss.dbtype" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/NEWDB.withOld_ss" ${VERBOSITY}
+        fi
+        if [ -f "${TMP_PATH}/NEWDB.withOld_ca.dbtype" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/NEWDB.withOld_ca" ${VERBOSITY}
+        fi
     else
-        # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/OLCLUST.withoutDeletedKeys" ${VERBOSITY}
-        # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/OLCLUST.withoutDeleted" ${VERBOSITY}
+        if [ -f "${TMP_PATH}/OLCLUST.withoutDeletedKeys.dbtype" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/OLCLUST.withoutDeletedKeys" ${VERBOSITY}
+        fi
+        if [ -f "${TMP_PATH}/OLCLUST.withoutDeleted.dbtype" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/OLCLUST.withoutDeleted" ${VERBOSITY}
+        fi
     fi
 
     # shellcheck disable=SC2086
@@ -298,6 +365,14 @@ if [ -n "$REMOVE_TMP" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/toBeClusteredSeparately" ${VERBOSITY}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/NEWDB.newSeqs" ${VERBOSITY}
+    if [ -f "${TMP_PATH}/NEWDB.newSeqs_ss.dbtype" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/NEWDB.newSeqs_ss" ${VERBOSITY}
+    fi
+    if [ -f "${TMP_PATH}/NEWDB.newSeqs_ca.dbtype" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/NEWDB.newSeqs_ca" ${VERBOSITY}
+    fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/newSeqsHits.swapped.all" ${VERBOSITY}
     # shellcheck disable=SC2086
@@ -305,6 +380,10 @@ if [ -n "$REMOVE_TMP" ]; then
     if [ -f "${TMP_PATH}/OLDDB.repSeq_ss.dbtype" ]; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/OLDDB.repSeq_ss" ${VERBOSITY}
+    fi
+    if [ -f "${TMP_PATH}/OLDDB.repSeq_ca.dbtype" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/OLDDB.repSeq_ca" ${VERBOSITY}
     fi
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/updatedClust" ${VERBOSITY}

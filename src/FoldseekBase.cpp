@@ -158,12 +158,14 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK|CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"structureclusterupdate", structureclusterupdate, &localPar.structureclusterworkflow, COMMAND_MAIN,
+        {"structureclusterupdate", structureclusterupdate, &localPar.structureclusterupdate, COMMAND_MAIN,
                 "Update structure clustering with new sequences using structural alignment",
                 "# Extend an existing structural clustering with new sequences\n"
-                "# Step 1: concatenate old and new sequence DBs\n"
+                "# Step 1: concatenate old and new sequence DBs (all sidecars)\n"
                 "foldseek concatdbs oldSeqDB newSeqDB allSeqDB\n"
-                "foldseek concatdbs oldSeqDB_h newSeqDB_h allSeqDB_h\n\n"
+                "foldseek concatdbs oldSeqDB_h newSeqDB_h allSeqDB_h\n"
+                "foldseek concatdbs oldSeqDB_ss newSeqDB_ss allSeqDB_ss\n"
+                "foldseek concatdbs oldSeqDB_ca newSeqDB_ca allSeqDB_ca\n\n"
                 "# Step 2: run structural cluster update\n"
                 "foldseek structureclusterupdate oldSeqDB allSeqDB oldClusterDB newMappedDB newClusterDB tmp\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
