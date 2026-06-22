@@ -248,10 +248,27 @@ fi
 
 if notExists "${TMP_PATH}/newSeqsPref.dbtype"; then
     log "=== Prefilter new sequences against cluster representatives"
-    # shellcheck disable=SC2086
-    $RUNNER "$MMSEQS" prefilter "${TMP_PATH}/NEWDB.newSeqs_ss" "${TMP_PATH}/OLDDB.repSeq_ss" \
-        "${TMP_PATH}/newSeqsPref" ${PREFILTER_PAR} \
-        || fail "Prefilter died"
+    if [ "$PREFMODE" = "UNGAPPED" ]; then
+        REPSEQ_SS="${TMP_PATH}/OLDDB.repSeq_ss"
+        if [ -n "${GPU}" ]; then
+            # pad the representative set for the GPU ungapped prefilter
+            if notExists "${TMP_PATH}/OLDDB.repSeq_pad.dbtype"; then
+                # shellcheck disable=SC2086
+                "$MMSEQS" makepaddedseqdb "${TMP_PATH}/OLDDB.repSeq" "${TMP_PATH}/OLDDB.repSeq_pad" ${THREADS_PAR} \
+                    || fail "makepaddedseqdb died"
+            fi
+            REPSEQ_SS="${TMP_PATH}/OLDDB.repSeq_pad_ss"
+        fi
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" ungappedprefilter "${TMP_PATH}/NEWDB.newSeqs_ss" "${REPSEQ_SS}" \
+            "${TMP_PATH}/newSeqsPref" ${UNGAPPEDPREFILTER_PAR} \
+            || fail "Ungapped prefilter died"
+    else
+        # shellcheck disable=SC2086
+        $RUNNER "$MMSEQS" prefilter "${TMP_PATH}/NEWDB.newSeqs_ss" "${TMP_PATH}/OLDDB.repSeq_ss" \
+            "${TMP_PATH}/newSeqsPref" ${PREFILTER_PAR} \
+            || fail "Prefilter died"
+    fi
 fi
 
 if notExists "${TMP_PATH}/newSeqsHits.dbtype"; then

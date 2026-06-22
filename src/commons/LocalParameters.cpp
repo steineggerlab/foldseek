@@ -287,6 +287,7 @@ LocalParameters::LocalParameters() :
 
     structureclusterupdate = structureclusterworkflow;
     structureclusterupdate.push_back(&PARAM_RECOVER_DELETED);
+    structureclusterupdate = combineList(structureclusterupdate, ungappedprefilter);
 
     easystructureclusterworkflow = combineList(structureclusterworkflow, structurecreatedb);
     easystructureclusterworkflow = combineList(easystructureclusterworkflow, result2repseq);

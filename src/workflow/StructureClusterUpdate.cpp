@@ -5,6 +5,7 @@
 #include "FileUtil.h"
 #include "structureclusterupdate.sh.h"
 #include <cassert>
+#include <limits>
 #include "LocalParameters.h"
 
 void setStructureClusterUpdateDefaults(LocalParameters *p) {
@@ -82,6 +83,28 @@ int structureclusterupdate(int argc, const char **argv, const Command& command) 
 
     // prefilter uses 3Di k-mer lookup
     cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
+
+    double prevEvalueThr = par.evalThr;
+    par.evalThr = std::numeric_limits<double>::max();
+    cmd.addVariable("UNGAPPEDPREFILTER_PAR", par.createParameterString(par.ungappedprefilter).c_str());
+    par.evalThr = prevEvalueThr;
+
+    // GPU can only use the ungapped prefilter
+    if (par.gpu == 1 && par.PARAM_PREF_MODE.wasSet == false) {
+        par.prefMode = Parameters::PREF_MODE_UNGAPPED;
+    }
+    switch (par.prefMode) {
+        case LocalParameters::PREF_MODE_KMER:
+            cmd.addVariable("PREFMODE", "KMER");
+            break;
+        case LocalParameters::PREF_MODE_UNGAPPED:
+            cmd.addVariable("PREFMODE", "UNGAPPED");
+            break;
+        case LocalParameters::PREF_MODE_EXHAUSTIVE:
+            cmd.addVariable("PREFMODE", "EXHAUSTIVE");
+            break;
+    }
+    cmd.addVariable("GPU", par.gpu ? "1" : NULL);
 
     std::string program = tmpDir + "/structureclusterupdate.sh";
     FileUtil::writeFile(program, structureclusterupdate_sh, structureclusterupdate_sh_len);
