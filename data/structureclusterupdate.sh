@@ -246,19 +246,25 @@ if [ -f "${OLDDB}_ca.dbtype" ] && notExists "${TMP_PATH}/OLDDB.repSeq_ca.dbtype"
         || fail "createsubdb for rep C-alpha sequences died"
 fi
 
+# Select the representative DBs for prefilter and alignment. The GPU ungapped prefilter
+# needs a padded representative DB (makepaddedseqdb), which reassigns rep keys to 0..N-1.
+# Both the prefilter and the structural alignment must run against that same padded
+# keyspace; the resulting rep keys are mapped back to the original keys after swapdb below.
+REPSEQ_SS="${TMP_PATH}/OLDDB.repSeq_ss"
+REPSEQ_ALN="${TMP_PATH}/OLDDB.repSeq"
+if [ "$PREFMODE" = "UNGAPPED" ] && [ -n "${GPU}" ]; then
+    if notExists "${TMP_PATH}/OLDDB.repSeq_pad.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" makepaddedseqdb "${TMP_PATH}/OLDDB.repSeq" "${TMP_PATH}/OLDDB.repSeq_pad" ${THREADS_PAR} \
+            || fail "makepaddedseqdb died"
+    fi
+    REPSEQ_SS="${TMP_PATH}/OLDDB.repSeq_pad_ss"
+    REPSEQ_ALN="${TMP_PATH}/OLDDB.repSeq_pad"
+fi
+
 if notExists "${TMP_PATH}/newSeqsPref.dbtype"; then
     log "=== Prefilter new sequences against cluster representatives"
     if [ "$PREFMODE" = "UNGAPPED" ]; then
-        REPSEQ_SS="${TMP_PATH}/OLDDB.repSeq_ss"
-        if [ -n "${GPU}" ]; then
-            # pad the representative set for the GPU ungapped prefilter
-            if notExists "${TMP_PATH}/OLDDB.repSeq_pad.dbtype"; then
-                # shellcheck disable=SC2086
-                "$MMSEQS" makepaddedseqdb "${TMP_PATH}/OLDDB.repSeq" "${TMP_PATH}/OLDDB.repSeq_pad" ${THREADS_PAR} \
-                    || fail "makepaddedseqdb died"
-            fi
-            REPSEQ_SS="${TMP_PATH}/OLDDB.repSeq_pad_ss"
-        fi
         # shellcheck disable=SC2086
         $RUNNER "$MMSEQS" ungappedprefilter "${TMP_PATH}/NEWDB.newSeqs_ss" "${REPSEQ_SS}" \
             "${TMP_PATH}/newSeqsPref" ${UNGAPPEDPREFILTER_PAR} \
@@ -274,7 +280,7 @@ fi
 if notExists "${TMP_PATH}/newSeqsHits.dbtype"; then
     log "=== Structurally align new sequences against cluster representatives"
     # shellcheck disable=SC2086
-    $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${TMP_PATH}/NEWDB.newSeqs" "${TMP_PATH}/OLDDB.repSeq" \
+    $RUNNER "$MMSEQS" $ALIGNMENT_ALGO "${TMP_PATH}/NEWDB.newSeqs" "${REPSEQ_ALN}" \
         "${TMP_PATH}/newSeqsPref" "${TMP_PATH}/newSeqsHits" ${ALIGNMENT_PAR} \
         || fail "Structural alignment died"
 fi
@@ -298,6 +304,36 @@ if [ -s "${TMP_PATH}/newSeqsHits.swapped.hasHits" ] && notExists "${TMP_PATH}/ne
     # shellcheck disable=SC2086
     "$MMSEQS" filterdb "${TMP_PATH}/newSeqsHits.swapped.all" "${TMP_PATH}/newSeqsHits.swapped" --trim-to-one-column ${THREADS_PAR} \
         || fail "filterdb died"
+fi
+
+# In GPU mode the prefilter/alignment ran against the padded representative DB, so the
+# swapped DB is keyed by padded rep keys (0..N-1). Map them back to the original rep keys
+# before merging with OLDCLUST. repSeq_pad.lookup is mmseqs lookup format
+# (col1=paddedKey, col2=name, col3=originalKey); use col3 for the remap target.
+# Gated on a one-shot sentinel: renamedbkeys consumes the padded-keyed swapped DB, so a
+# second pass over the already-remapped DB would build an empty map and wipe the data.
+if [ -n "${GPU}" ] && [ "$PREFMODE" = "UNGAPPED" ] \
+        && [ -f "${TMP_PATH}/newSeqsHits.swapped.dbtype" ] \
+        && notExists "${TMP_PATH}/newSeqsHits.swapped.remapped"; then
+    awk 'NR==FNR { o[$1]=$3; next } ($1 in o) { print $1"\t"o[$1] }' \
+        "${TMP_PATH}/OLDDB.repSeq_pad.lookup" "${TMP_PATH}/newSeqsHits.swapped.index" \
+        > "${TMP_PATH}/repSeqPadKeyMap"
+    # shellcheck disable=SC2086
+    "$MMSEQS" renamedbkeys "${TMP_PATH}/repSeqPadKeyMap" "${TMP_PATH}/newSeqsHits.swapped" \
+        "${TMP_PATH}/newSeqsHits.swapped.orig" ${VERBOSITY} \
+        || fail "renamedbkeys padded->original rep keys died"
+    # filterdb wrote newSeqsHits.swapped as ${THREADS} split parts (.0../.N); renamedbkeys
+    # wrote the remapped DB as a single merged file. mvdb overwrites the merged data/index
+    # but leaves the stale pre-remap split parts behind, and DBReader prefers split parts
+    # over the merged file (FileUtil::findDatafiles), so it would read stale data with the
+    # post-remap index. rmdb clears the split parts (it does not touch the .orig sibling).
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/newSeqsHits.swapped" ${VERBOSITY} \
+        || fail "rmdb stale swapped split parts died"
+    # shellcheck disable=SC2086
+    "$MMSEQS" mvdb "${TMP_PATH}/newSeqsHits.swapped.orig" "${TMP_PATH}/newSeqsHits.swapped" ${VERBOSITY} \
+        || fail "mvdb remapped swapped db died"
+    touch "${TMP_PATH}/newSeqsHits.swapped.remapped"
 fi
 
 UPDATEDCLUST="${TMP_PATH}/updatedClust"
