@@ -1213,20 +1213,30 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
         .set<google::cloud::storage_experimental::HttpVersionOption>("2.0");
     auto client = gcs::Client(options);
     for (size_t i = 0; i < gcsPaths.size(); i++) {
-        std::vector<std::string> parts = Util::split(gcsPaths[i], "/");
-        if (parts.size() == 1) {
-            Debug(Debug::WARNING) << "Skipping invalid URI " << gcsPaths[i] << "\n";
+        // gcs://<bucket>/<manifest>
+	// <manifest> is a local file path listing one object key per line (e.g. AF-A0A024E1E7-F1-model_v6.cif)
+        std::string rest = gcsPaths[i].substr(std::string("gcs://").size());
+        size_t slash = rest.find('/');
+        if (slash == std::string::npos) {
+            Debug(Debug::WARNING) << "Skipping invalid URI " << gcsPaths[i] << " (expected gcs://bucket/manifest)\n";
             continue;
         }
-        std::string bucket_name = parts[1];
-
-        char filter = '\0';
-        if (parts.size >= 3) {
-            filter = parts[2][0];
+        std::string bucket_name = rest.substr(0, slash);
+        std::string manifestPath = rest.substr(slash + 1);
+        FILE* manifest = fopen(manifestPath.c_str(), "r");
+        if (manifest == NULL) {
+            Debug(Debug::WARNING) << "Could not open GCS manifest " << manifestPath << "\n";
+            continue;
         }
+        char* manifestLine = NULL;
+        size_t manifestLen = 0;
         progress.reset(SIZE_MAX);
-#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, gcsPaths, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, filter, mappingWriter, foldcompWriter, inputFormat, inputCompressionFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
+#pragma omp parallel default(none) shared(par, torsiondbw, hdbw, cadbw, aadbw, mat, progress, globalCnt, globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName, client, bucket_name, manifest, manifestLine, manifestLen, mappingWriter, foldcompWriter, inputFormat, inputCompressionFormat) reduction(+:incorrectFiles, tooShort, notProtein, needToWriteModel)
         {
+            unsigned int thread_idx = 0;
+#ifdef OPENMP
+            thread_idx = static_cast<unsigned int>(omp_get_thread_num());
+#endif
             StructureTo3Di structureTo3Di;
             PulchraWrapper pulchra;
             GemmiWrapper readStructure;
@@ -1234,50 +1244,63 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
             std::vector<char> alphabetAA;
             std::vector<int8_t> camol;
             std::string header;
-            std::string name;
+            std::string contents;
+            char probe[64 * 1024];
 
-#pragma omp single
-            for (auto&& object_metadata : client.ListObjects(bucket_name, gcs::Projection::NoAcl(), gcs::MaxResults(15000))) {
-                std::string obj_name = object_metadata->name();
-#pragma omp task firstprivate(obj_name, alphabet3di, alphabetAA, camol, header, name, filter) private(structureTo3Di, pulchra, readStructure)
+            while (true) {
+                std::string obj_name;
+                bool haveWork = false;
+                // pull the next non-empty key from the shared manifest
+#pragma omp critical (gcslist)
                 {
-                    bool skipFilter = filter != '\0' && obj_name.length() >= 9 && obj_name[8] == filter;
-                    bool allowedSuffix = Util::endsWith(".cif", obj_name) || Util::endsWith(".pdb", obj_name);
-                    if (skipFilter && allowedSuffix) {
-                        unsigned int thread_idx = 0;
-#ifdef OPENMP
-                        thread_idx = static_cast<unsigned int>(omp_get_thread_num());
-#endif
-                        progress.updateProgress();
-
-                        auto reader = client.ReadObject(bucket_name, obj_name);
-                        if (!reader.status().ok()) {
-                            Debug(Debug::ERROR) << reader.status().message() << "\n";
-                        } else {
-                            std::string contents{std::istreambuf_iterator<char>{reader}, {}};
-                            if (readStructure.loadFromBuffer(
-                                    contents.c_str(),
-                                    contents.size(),
-                                    obj_name,
-                                    (GemmiWrapper::Format)inputFormat,
-                                    (GemmiWrapper::CompressionFormat)inputCompressionFormat
-                                ) == false) {
-                                incorrectFiles++;
-                            } else {
-                                __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
-                                writeStructureEntry(
-                                    mat, readStructure, structureTo3Di,  pulchra,
-                                    alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
-                                    par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
-                                    globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                                    mappingWriter, foldcompWriter
-                                );
-                            }
+                    ssize_t read;
+                    while ((read = getline(&manifestLine, &manifestLen, manifest)) != -1) {
+                        if (read > 0 && manifestLine[read - 1] == '\n') {
+                            manifestLine[--read] = '\0';
                         }
+                        if (read == 0) {
+                            continue;
+                        }
+                        obj_name.assign(manifestLine, read);
+                        haveWork = true;
+                        break;
                     }
+                }
+                if (haveWork == false) {
+                    break;
+                }
+                progress.updateProgress();
+
+                auto reader = client.ReadObject(bucket_name, obj_name);
+                contents.clear();
+                while (reader.read(probe, sizeof(probe)) || reader.gcount() > 0) {
+                    contents.append(probe, static_cast<size_t>(reader.gcount()));
+                }
+                if (!reader.status().ok()) {
+                    Debug(Debug::ERROR) << reader.status().message() << "\n";
+                    incorrectFiles++;
+                } else if (readStructure.loadFromBuffer(
+                        contents.c_str(),
+                        contents.size(),
+                        obj_name,
+                        (GemmiWrapper::Format)inputFormat,
+                        (GemmiWrapper::CompressionFormat)inputCompressionFormat
+                    ) == false) {
+                    incorrectFiles++;
+                } else {
+                    __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
+                    writeStructureEntry(
+                        mat, readStructure, structureTo3Di, pulchra,
+                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
+                        par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
+                        globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
+                        mappingWriter, foldcompWriter
+                    );
                 }
             }
         }
+        free(manifestLine);
+        fclose(manifest);
     }
 #endif
 

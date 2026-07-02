@@ -31,6 +31,9 @@ add_dependencies(foldseek-framework local-generated)
 if(HAVE_GCS)
         find_package(google_cloud_cpp_storage REQUIRED)
         target_link_libraries(foldseek-framework google-cloud-cpp::storage)
+        target_compile_definitions(foldseek-framework PUBLIC HAVE_GCS)
+        # google-cloud-cpp requires C++17
+        set_property(SOURCE strucclustutils/structcreatedb.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -std=c++17")
 endif()
 
 if (NOT FOLDSEEK_FRAMEWORK_ONLY)
