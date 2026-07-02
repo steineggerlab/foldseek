@@ -17,6 +17,7 @@ void setStructureClusterWorkflowDefaults(LocalParameters *p) {
     p->kmersPerSequence = 300;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->compBiasCorrection = 0;
+    p->linclustVersion = 1;
 }
 
 //TODO this makes no sense for structures
