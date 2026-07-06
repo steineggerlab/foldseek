@@ -174,24 +174,23 @@ If alignment type is set to tmalign (`--alignment-type 1`), the results will be 
 If alignment type is set to lolalign (`--alignment-type 3`), the result will be sorted by the LoLscore, a novel alignment log-odds score without length normalization. When set to single domain mode (`--lolalign-multidomain 0`) the query and target lengths are incorporated. The e-value is a normalized LoLscore (<= 1) while the score is unnormalized. All output fields (e.g., pident, fident, and alnlen) are calculated based on the LoLalign alignment.
 
 ### Visualize Results with StrucTTY
-Foldseek includes [StrucTTY](https://github.com/steineggerlab/StrucTTY), an interactive terminal-based structure viewer, built directly into the binary.
+Foldseek includes [StrucTTY](https://github.com/steineggerlab/StrucTTY), an interactive terminal-based structure viewer, built directly into the binary (embedded as a static library — no separate install or `PATH` lookup required). It renders 3D structures in the terminal with Unicode Braille sub-pixel graphics and lets you navigate search hits, superpose the query and target, and inspect residues without leaving the shell.
 
-**Launch the viewer automatically after a search** with `--view-structty 1`:
-```
-foldseek easy-search query.pdb target/ result.m8 tmp --view-structty 1
-foldseek search queryDB targetDB result tmp --view-structty 1
-foldseek easy-rbh query.pdb target/ result.m8 tmp --view-structty 1
-```
+When launched from a search, StrucTTY reads the query and target structures directly from the run's temporary databases, so hits load offline with no network fetch (folder/tar/gz inputs are supported). The temporary databases are kept alive while the viewer is open and cleaned up after it closes.
 
-**View existing results** using the `foldseek structty` command:
+**Launch the viewer automatically after a search** by adding the `--view-structty` flag (it takes no value):
 ```
-foldseek structty query.pdb result.m8 [targetDB]
+foldseek easy-search query.cif targetDir result.m8 tmp --view-structty
+foldseek search queryDB targetDB result tmp --view-structty
+foldseek easy-rbh query.cif targetDir result.m8 tmp --view-structty
 ```
+Inside the viewer, press `N`/`P` to step through hits and `]`/`[` to switch between queries; the target is superposed onto the query using the alignment's rotation/translation matrix. See the [StrucTTY documentation](https://github.com/steineggerlab/StrucTTY) for the full key bindings and color modes.
 
-**Multimer search** requires `--multimer-report-mode 1` for the viewer to run:
+**Multimer search** works with `--view-structty` out of the box, since the per-complex report (`--multimer-report-mode 1`) is the default. The output name you pass is used as-is (e.g. `result` below):
 ```
-foldseek easy-multimersearch query.pdb targetDB result tmp --view-structty 1 --multimer-report-mode 1
+foldseek easy-multimersearch queryDir targetDir result tmp --view-structty
 ```
+If you explicitly set `--multimer-report-mode 0`, the report is not written and the viewer launch is skipped with a warning.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.
@@ -428,7 +427,6 @@ The query and target coverages here represent the sum of the coverages of all al
 - `easy-multimercluster`       fast protein multimer-level structure clustering  
 - `createdb`          create a database from protein structures (PDB,mmCIF, mmJSON)
 - `databases`         download pre-assembled databases
-- `structty`          view search results interactively with [StrucTTY](https://github.com/steineggerlab/StrucTTY)
 
 ## Examples
 #### Faster Search with GPU Acceleration
