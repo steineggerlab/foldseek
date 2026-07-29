@@ -11,6 +11,27 @@
 #include "easystructuresearch.sh.h"
 #include "structty.h"
 
+// 17-column layout that StrucTTY's FoldseekParser parses as fmt 17
+// (see lib/structty/src/structure/FoldseekParser.hpp). Column order matters:
+// a different order makes lddt/qtmscore swap places and qaln/taln be read as numbers.
+static const char VIEWER_OUTFMT[] =
+    "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,"
+    "evalue,bits,lddt,qtmscore,ttmscore,qaln,taln";
+
+// StrucTTY color modes accepted by structty::RunOptions::mode
+// (lib/structty/src/structure/Parameters.cpp). mmseqs does not regex-check
+// string parameters, so validate here instead of relying on the regex.
+static void validateStructtyMode(const std::string &mode) {
+    if (mode == "protein" || mode == "chain" || mode == "rainbow" || mode == "plddt"
+        || mode == "interface" || mode == "conservation" || mode == "aligned") {
+        return;
+    }
+    Debug(Debug::ERROR) << "Invalid --structty-mode: " << mode << "\n"
+                        << "Choose one of: protein, chain, rainbow, plddt, interface, "
+                        << "conservation, aligned\n";
+    EXIT(EXIT_FAILURE);
+}
+
 void setEasyStructureSearchDefaults(Parameters *p) {
     // TODO: 7-mer sensitivity is not optimized yet
     p->kmerSize = 6;
@@ -47,6 +68,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     setEasyStructureSearchDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setEasyStructureSearchMustPassAlong(&par);
+    validateStructtyMode(par.structtyMode);
     bool needBacktrace = false;
     bool needTaxonomy = false;
     bool needTaxonomyMapping = false;
@@ -81,6 +103,14 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         par.addBacktrace = true;
         par.PARAM_ADD_BACKTRACE.wasSet = true;
     }
+    // The StrucTTY viewer m8 carries qaln/taln/lddt, which all need alignment
+    // backtraces. needBacktrace above is derived from the *user's* --format-output
+    // and knows nothing about the viewer format, so force backtraces on here.
+    if (par.viewResults && par.addBacktrace == false) {
+        Debug(Debug::INFO) << "Alignment backtraces will be computed for the StrucTTY viewer.\n";
+        par.addBacktrace = true;
+        par.PARAM_ADD_BACKTRACE.wasSet = true;
+    }
     if(needLookup){
         par.writeLookup = true;
     }
@@ -95,7 +125,6 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
 
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    std::string resultsPath = par.filenames.back();
     cmd.addVariable("RESULTS", par.filenames.back().c_str());
     par.filenames.pop_back();
     std::string target = par.filenames.back().c_str();
@@ -121,6 +150,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATELININDEX_PAR", NULL);
     {
         std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
+        searchParams = par.removeParameter(searchParams, par.PARAM_STRUCTTY_MODE);
         cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
     }
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
@@ -139,6 +169,21 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.prostt5Model = "";
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
+    // Viewer m8: same convertalis parameters, but with the fixed viewer layout.
+    // Swap par.outfmt instead of appending --format-output, because convertalis
+    // rejects a duplicated flag ("Duplicate parameter --format-output").
+    std::string viewerConvertPar;
+    {
+        const std::string userOutfmt = par.outfmt;
+        const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
+        par.outfmt = VIEWER_OUTFMT;
+        par.PARAM_FORMAT_OUTPUT.wasSet = true;
+        viewerConvertPar = par.createParameterString(par.convertalignments);
+        par.outfmt = userOutfmt;
+        par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
+    }
+    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("VIEWER_CONVERT_PAR", par.viewResults ? viewerConvertPar.c_str() : NULL);
     cmd.addVariable("SUMMARIZE_PAR", par.createParameterString(par.summarizeresult).c_str());
     
     cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
@@ -157,7 +202,8 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         opts.input_files.push_back(queryInput);
         opts.foldseek_query_db = queryIsDb  ? queryInput : (tmpDir + "/query");
         opts.foldseek_db       = targetIsDb ? target     : (tmpDir + "/target");
-        opts.foldseek_file     = resultsPath;
+        opts.foldseek_file     = tmpDir + "/viewer_results.m8";
+        opts.mode              = par.structtyMode;
         structty::run(opts);
         // D10: cleanup was deferred past launch (Step 2); re-invoke the workflow
         // script in cleanup-only mode now that the viewer has closed.

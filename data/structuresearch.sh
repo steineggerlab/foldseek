@@ -149,7 +149,7 @@ fi
 if [ -n "${VIEW_RESULTS}" ]; then
     VIEWER_M8="${TMP_PATH}/viewer_results.m8"
     # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${RESULTS}" "${VIEWER_M8}" ${CONVERT_PAR} \
+    "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
         || fail "convertalis for viewer died"
 fi
 

@@ -44,7 +44,8 @@ LocalParameters::LocalParameters() :
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
         PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$"),
-        PARAM_VIEW_RESULTS(PARAM_VIEW_RESULTS_ID, "--view-structty", "View results with StrucTTY", "Launch StrucTTY viewer after result generation (embedded, no separate install required)",  typeid(bool), (void *) &viewResults, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT)
+        PARAM_VIEW_RESULTS(PARAM_VIEW_RESULTS_ID, "--view-structty", "View results with StrucTTY", "Launch StrucTTY viewer after result generation (embedded, no separate install required)",  typeid(bool), (void *) &viewResults, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_STRUCTTY_MODE(PARAM_STRUCTTY_MODE_ID, "--structty-mode", "StrucTTY color mode", "Color mode for the StrucTTY viewer: protein, chain, rainbow, plddt, interface, conservation, aligned", typeid(std::string), (void *) &structtyMode, "^(protein|chain|rainbow|plddt|interface|conservation|aligned)$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT)
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -269,6 +270,7 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
     structuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    structuresearchworkflow.push_back(&PARAM_STRUCTTY_MODE);
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
@@ -370,6 +372,7 @@ LocalParameters::LocalParameters() :
 
     // view
     viewResults = false;
+    structtyMode = "protein";
 
     // structtyworkflow
     structtyworkflow.push_back(&PARAM_THREADS);

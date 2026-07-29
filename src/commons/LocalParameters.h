@@ -174,6 +174,7 @@ public:
     PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
     PARAMETER(PARAM_MULTIDOMAIN)
     PARAMETER(PARAM_VIEW_RESULTS)
+    PARAMETER(PARAM_STRUCTTY_MODE)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -211,6 +212,7 @@ public:
     int minAlignedChains;
     int multiDomain;
     bool viewResults;
+    std::string structtyMode;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

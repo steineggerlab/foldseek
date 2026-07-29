@@ -63,6 +63,7 @@ do_cleanup() {
         fi
     fi
     rm -rf "${TMP_PATH}/search_tmp"
+    rm -f "${TMP_PATH}/viewer_results.m8"
     rm -f "${TMP_PATH}/easystructuresearch.sh"
 }
 
@@ -142,6 +143,14 @@ if [ -n "${TAXONOMY}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" taxonomyreport "${TARGET}" "${INTERMEDIATE}" "${RESULTS}_report" ${TAXONOMYREPORT_PAR} \
         || fail "taxonomyreport died"
+fi
+
+# Produce viewer_results.m8 for StrucTTY (read from C++ after this script).
+# Separate from ${RESULTS} so the user-facing output keeps its own format.
+if [ -n "${VIEW_RESULTS}" ]; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${TMP_PATH}/viewer_results.m8" ${VIEWER_CONVERT_PAR} \
+        || fail "convertalis for viewer died"
 fi
 
 

@@ -11,6 +11,27 @@
 #include "structureprofile.sh.h"
 #include "structty.h"
 
+// 17-column layout that StrucTTY's FoldseekParser parses as fmt 17
+// (see lib/structty/src/structure/FoldseekParser.hpp). Keep in sync with
+// the same constant in EasyStructureSearch.cpp.
+static const char VIEWER_OUTFMT[] =
+    "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,"
+    "evalue,bits,lddt,qtmscore,ttmscore,qaln,taln";
+
+// StrucTTY color modes accepted by structty::RunOptions::mode
+// (lib/structty/src/structure/Parameters.cpp). mmseqs does not regex-check
+// string parameters, so validate here instead of relying on the regex.
+static void validateStructtyMode(const std::string &mode) {
+    if (mode == "protein" || mode == "chain" || mode == "rainbow" || mode == "plddt"
+        || mode == "interface" || mode == "conservation" || mode == "aligned") {
+        return;
+    }
+    Debug(Debug::ERROR) << "Invalid --structty-mode: " << mode << "\n"
+                        << "Choose one of: protein, chain, rainbow, plddt, interface, "
+                        << "conservation, aligned\n";
+    EXIT(EXIT_FAILURE);
+}
+
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
     p->sensitivity = 9.5;
@@ -33,6 +54,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     setStructureSearchWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setStructureSearchMustPassAlong(&par);
+    validateStructtyMode(par.structtyMode);
     if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
         Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
         Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
@@ -75,6 +97,14 @@ int structuresearch(int argc, const char **argv, const Command &command) {
                 EXIT(EXIT_FAILURE);
             }
         }
+    }
+
+    // The StrucTTY viewer m8 carries qaln/taln/lddt, which all need alignment
+    // backtraces. This must happen before any alignment parameter string is built.
+    if (par.viewResults && par.addBacktrace == false) {
+        Debug(Debug::INFO) << "Alignment backtraces will be computed for the StrucTTY viewer.\n";
+        par.addBacktrace = true;
+        par.PARAM_ADD_BACKTRACE.wasSet = true;
     }
 
 
@@ -154,9 +184,20 @@ int structuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
     cmd.addVariable("QUERY", query.c_str());
     cmd.addVariable("TARGET", target.c_str());
-    if (par.viewResults) {
-        cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
+    // Viewer m8: fixed 17-column layout. Swap par.outfmt rather than appending
+    // --format-output — convertalis rejects a duplicated flag.
+    // Needs alignment backtraces (forced above).
+    std::string viewerConvertPar;
+    {
+        const std::string userOutfmt = par.outfmt;
+        const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
+        par.outfmt = VIEWER_OUTFMT;
+        par.PARAM_FORMAT_OUTPUT.wasSet = true;
+        viewerConvertPar = par.createParameterString(par.convertalignments);
+        par.outfmt = userOutfmt;
+        par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
     }
+    cmd.addVariable("VIEWER_CONVERT_PAR", par.viewResults ? viewerConvertPar.c_str() : NULL);
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
@@ -261,6 +302,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         opts.foldseek_file = tmpDir + "/viewer_results.m8";
         opts.foldseek_db = target;
         opts.foldseek_query_db = query;
+        opts.mode              = par.structtyMode;
         structty::run(opts);
     }
     return EXIT_SUCCESS;
