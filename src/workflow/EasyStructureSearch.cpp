@@ -151,6 +151,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     {
         std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
         searchParams = par.removeParameter(searchParams, par.PARAM_STRUCTTY_MODE);
+        searchParams = par.removeParameter(searchParams, par.PARAM_STRUCTTY_SS);
         cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
     }
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
@@ -204,6 +205,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         opts.foldseek_db       = targetIsDb ? target     : (tmpDir + "/target");
         opts.foldseek_file     = tmpDir + "/viewer_results.m8";
         opts.mode              = par.structtyMode;
+        opts.show_structure    = par.structtyShowStructure;
         structty::run(opts);
         // D10: cleanup was deferred past launch (Step 2); re-invoke the workflow
         // script in cleanup-only mode now that the viewer has closed.

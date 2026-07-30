@@ -303,6 +303,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         opts.foldseek_db = target;
         opts.foldseek_query_db = query;
         opts.mode              = par.structtyMode;
+        opts.show_structure    = par.structtyShowStructure;
         structty::run(opts);
     }
     return EXIT_SUCCESS;
