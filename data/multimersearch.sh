@@ -8,6 +8,28 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+# Remove the tmp DBs produced by this workflow. A function so it can run both at the
+# end of a normal run (REMOVE_TMP) and on a CLEANUP_ONLY re-run after the StrucTTY
+# viewer closes -- the viewer reads the tmp DBs, so cleanup has to wait for it.
+do_cleanup() {
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
+
+    if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
+    fi
+    rm -f "${TMP_PATH}/viewer_report"
+    rm -rf "${TMP_PATH}/search_tmp"
+    rm -f "${TMP_PATH}/multimersearch.sh"
+}
+
+# Cleanup-only re-invocation (after the viewer closes). Run cleanup and exit.
+if [ -n "${CLEANUP_ONLY}" ]; then
+    do_cleanup
+    exit 0
+fi
+
 if notExists "${TMP_PATH}/result.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" search "${QUERYDB}" "${TARGETDB}" "${TMP_PATH}/result" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \
@@ -50,14 +72,17 @@ if notExists "${TMP_PATH}/scoremultimer.dbtype"; then
         || fail "mvdb died"
 fi
 
-if [ -n "${REMOVE_TMP}" ]; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
-
-    if [ "$PREFMODE" != "EXHAUSTIVE" ]; then
+# The viewer needs the per-complex report, which this workflow does not otherwise
+# produce (it stops at the scoremultimer alignment DB). Write it inside tmp so the
+# user's output files stay exactly as they are without --view-structty.
+if [ -n "${VIEW_RESULTS}" ]; then
+    if notExists "${TMP_PATH}/viewer_report"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
+        "$MMSEQS" createmultimerreport "${QUERYDB}" "${TARGETDB}" "${OUTPUT}" "${TMP_PATH}/viewer_report" ${REPORT_PAR} \
+            || fail "createmultimerreport died"
     fi
-    rm -rf "${TMP_PATH}/search_tmp"
-    rm -f "${TMP_PATH}/multimersearch.sh"
+fi
+
+if [ -n "${REMOVE_TMP}" ]; then
+    do_cleanup
 fi

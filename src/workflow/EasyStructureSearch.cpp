@@ -1,3 +1,5 @@
+#include <dirent.h>
+#include <fstream>
 #include <cassert>
 #include <LocalParameters.h>
 #include "LinsearchIndexReader.h"
@@ -30,6 +32,74 @@ static void validateStructtyMode(const std::string &mode) {
                         << "Choose one of: protein, chain, rainbow, plddt, interface, "
                         << "conservation, aligned\n";
     EXIT(EXIT_FAILURE);
+}
+
+// --view-structty needs 3D coordinates, so reject inputs that cannot supply any
+// before createdb runs -- otherwise the user waits out a whole search first.
+// Keep this identical in EasyStructureSearch, StructureSearch, EasyMultimerSearch
+// and MultimerSearch (the four workflows that support the viewer).
+static bool isSequenceFasta(const std::string &path) {
+    std::ifstream ifs(path.c_str());
+    if (ifs.is_open() == false) {
+        return false;
+    }
+    std::string line;
+    while (std::getline(ifs, line)) {
+        const size_t first = line.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) {
+            continue;
+        }
+        return line[first] == '>';
+    }
+    return false;
+}
+
+// A directory is judged by one representative file; scanning every entry would be
+// wasteful on large inputs and one FASTA is enough to know the input is sequences.
+static std::string firstFileInDirectory(const std::string &dir) {
+    DIR *handle = opendir(dir.c_str());
+    if (handle == NULL) {
+        return "";
+    }
+    std::string found;
+    while (dirent *entry = readdir(handle)) {
+        const std::string name(entry->d_name);
+        if (name == "." || name == "..") {
+            continue;
+        }
+        const std::string path = dir + "/" + name;
+        if (FileUtil::fileExists(path.c_str()) && FileUtil::directoryExists(path.c_str()) == false) {
+            found = path;
+            break;
+        }
+    }
+    closedir(handle);
+    return found;
+}
+
+static void validateStructtyInputs(const std::vector<std::string> &inputs) {
+    for (size_t i = 0; i < inputs.size(); i++) {
+        const std::string &input = inputs[i];
+        if (FileUtil::fileExists((input + ".dbtype").c_str())) {
+            if (FileUtil::fileExists((input + "_ca.dbtype").c_str()) == false) {
+                Debug(Debug::ERROR) << "--view-structty needs C-alpha coordinates, but the database "
+                                    << input << " has none (" << input << "_ca is missing).\n"
+                                    << "It was built from sequences, or with --index-exclude 2. "
+                                    << "Rebuild it from PDB/mmCIF structures.\n";
+                EXIT(EXIT_FAILURE);
+            }
+            continue;
+        }
+        const std::string probe = FileUtil::directoryExists(input.c_str())
+                                  ? firstFileInDirectory(input) : input;
+        if (probe.empty() == false && isSequenceFasta(probe)) {
+            Debug(Debug::ERROR) << "--view-structty cannot render " << input
+                                << ": it is a sequence FASTA and carries no 3D coordinates.\n"
+                                << "Pass PDB/mmCIF structures instead. createdb --prostt5-model "
+                                << "predicts 3Di from sequence, but writes no C-alpha coordinates.\n";
+            EXIT(EXIT_FAILURE);
+        }
+    }
 }
 
 void setEasyStructureSearchDefaults(Parameters *p) {
@@ -69,6 +139,11 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setEasyStructureSearchMustPassAlong(&par);
     validateStructtyMode(par.structtyMode);
+    if (par.viewResults && par.filenames.size() > 2) {
+        // <query...> <target> <results> <tmpDir>
+        validateStructtyInputs(std::vector<std::string>(par.filenames.begin(),
+                                                        par.filenames.end() - 2));
+    }
     bool needBacktrace = false;
     bool needTaxonomy = false;
     bool needTaxonomyMapping = false;
@@ -199,11 +274,11 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         const std::string queryInput = par.filenames[0];
         const bool queryIsDb  = FileUtil::fileExists((queryInput + ".dbtype").c_str());
         const bool targetIsDb = FileUtil::fileExists((target + ".dbtype").c_str());
-        // Fallback plaintext query load (Step 4 will switch to query DB read).
-        opts.input_files.push_back(queryInput);
-        opts.foldseek_query_db = queryIsDb  ? queryInput : (tmpDir + "/query");
-        opts.foldseek_db       = targetIsDb ? target     : (tmpDir + "/target");
-        opts.foldseek_file     = tmpDir + "/viewer_results.m8";
+        // The viewer probes each path and picks its scene from what it finds, so the
+        // query DB goes in as the positional query and the target DB as -fst.
+        opts.input_files.push_back(queryIsDb ? queryInput : (tmpDir + "/query"));
+        opts.foldseek_target   = targetIsDb ? target : (tmpDir + "/target");
+        opts.foldseek_result   = tmpDir + "/viewer_results.m8";
         opts.mode              = par.structtyMode;
         opts.show_structure    = par.structtyShowStructure;
         structty::run(opts);

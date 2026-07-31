@@ -120,6 +120,8 @@ public:
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
+    // easystructuresearchworkflow minus the StrucTTY viewer parameters (easy-rbh)
+    std::vector<MMseqsParameter *> easystructurerbhworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
@@ -176,6 +178,8 @@ public:
     PARAMETER(PARAM_VIEW_RESULTS)
     PARAMETER(PARAM_STRUCTTY_MODE)
     PARAMETER(PARAM_STRUCTTY_SS)
+    PARAMETER(PARAM_FOLDSEEK_TARGET)
+    PARAMETER(PARAM_FOLDSEEK_RESULT)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -215,6 +219,8 @@ public:
     bool viewResults;
     std::string structtyMode;
     bool structtyShowStructure;
+    std::string foldseekTarget;
+    std::string foldseekResult;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

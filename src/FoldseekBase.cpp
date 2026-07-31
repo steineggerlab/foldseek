@@ -104,7 +104,7 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"easy-rbh",                  structureeasyrbh,                  &localPar.easystructuresearchworkflow,       COMMAND_EASY,
+        {"easy-rbh",                  structureeasyrbh,                  &localPar.easystructurerbhworkflow,          COMMAND_EASY,
                 "Find reciprocal best hit",
                 "# Assign reciprocal best hit\n"
                 "mmseqs easy-rbh examples/QUERY.fasta examples/DB.fasta result tmp\n\n",
@@ -116,15 +116,17 @@ std::vector<Command> foldseekCommands = {
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"structty",             structtyview,                  &localPar.structtyworkflow,              COMMAND_EASY,
                 "Launch StrucTTY viewer for foldseek results",
-                "# View search results with StrucTTY\n"
-                "foldseek structty query.pdb result.m8\n"
-                "# View with target structure DB for local hit loading\n"
-                "foldseek structty query.pdb result.m8 targetDB\n\n",
+                "# View structures on their own\n"
+                "foldseek structty query.pdb\n"
+                "# View search hits, reading target coordinates from a Foldseek DB\n"
+                "foldseek structty query.pdb --foldseek-target targetDB --foldseek-result result.m8\n"
+                "# Query from a Foldseek DB, colour the aligned region\n"
+                "foldseek structty queryDB --foldseek-target targetDB --foldseek-result result.m8 --structty-mode aligned\n"
+                "# Download the hit structures instead of reading them locally\n"
+                "foldseek structty query.pdb --foldseek-target auto --foldseek-result result.m8\n\n",
                 "Luna Jang",
-                "<i:queryFile> <i:resultM8> [<i:targetDB>]",
-                CITATION_FOLDSEEK, {{"queryFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
-                                           {"resultM8", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
-                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::allDbAndFlat }}},
+                "<i:query...>",
+                CITATION_FOLDSEEK, {{"query", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::allDbAndFlat }}},
         {"rbh",                  structurerbh,                  &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Reciprocal best hit search",
                 NULL,

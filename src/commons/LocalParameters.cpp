@@ -46,7 +46,9 @@ LocalParameters::LocalParameters() :
         PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$"),
         PARAM_VIEW_RESULTS(PARAM_VIEW_RESULTS_ID, "--view-structty", "View results with StrucTTY", "Launch StrucTTY viewer after result generation (embedded, no separate install required)",  typeid(bool), (void *) &viewResults, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
         PARAM_STRUCTTY_MODE(PARAM_STRUCTTY_MODE_ID, "--structty-mode", "StrucTTY color mode", "Color mode for the StrucTTY viewer: protein, chain, rainbow, plddt, interface, conservation, aligned", typeid(std::string), (void *) &structtyMode, "^(protein|chain|rainbow|plddt|interface|conservation|aligned)$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
-        PARAM_STRUCTTY_SS(PARAM_STRUCTTY_SS_ID, "--structty-ss", "StrucTTY secondary structure", "Show secondary structure (helix/sheet) in the StrucTTY viewer", typeid(bool), (void *) &structtyShowStructure, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT)
+        PARAM_STRUCTTY_SS(PARAM_STRUCTTY_SS_ID, "--structty-ss", "StrucTTY secondary structure", "Show secondary structure (helix/sheet) in the StrucTTY viewer", typeid(bool), (void *) &structtyShowStructure, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FOLDSEEK_TARGET(PARAM_FOLDSEEK_TARGET_ID, "--foldseek-target", "StrucTTY target source", "Target source for the viewer: Foldseek DB, structure directory, structure file, or 'auto' to download. Same option name as StrucTTY's -fst", typeid(std::string), (void *) &foldseekTarget, ""),
+        PARAM_FOLDSEEK_RESULT(PARAM_FOLDSEEK_RESULT_ID, "--foldseek-result", "StrucTTY result file", "Foldseek result for the viewer: m8 (12/17/21/29 columns) or multimer _report (14 columns). Same option name as StrucTTY's -fsr", typeid(std::string), (void *) &foldseekResult, "")
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -280,6 +282,12 @@ LocalParameters::LocalParameters() :
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
     // PARAM_VIEW_RESULTS inherited via structuresearchworkflow (combineList dedupes)
 
+    // easy-rbh shares easystructuresearchworkflow but does not support the viewer,
+    // so the StrucTTY parameters must not show up in its --help either.
+    easystructurerbhworkflow = removeParameter(easystructuresearchworkflow, PARAM_VIEW_RESULTS);
+    easystructurerbhworkflow = removeParameter(easystructurerbhworkflow, PARAM_STRUCTTY_MODE);
+    easystructurerbhworkflow = removeParameter(easystructurerbhworkflow, PARAM_STRUCTTY_SS);
+
     structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
     structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
@@ -376,8 +384,15 @@ LocalParameters::LocalParameters() :
     viewResults = false;
     structtyMode = "protein";
     structtyShowStructure = false;
+    foldseekTarget = "";
+    foldseekResult = "";
 
-    // structtyworkflow
+    // structtyworkflow -- mirrors StrucTTY's own CLI: query is positional, target and
+    // result come in as options, plus the viewer's colour options.
+    structtyworkflow.push_back(&PARAM_FOLDSEEK_TARGET);
+    structtyworkflow.push_back(&PARAM_FOLDSEEK_RESULT);
+    structtyworkflow.push_back(&PARAM_STRUCTTY_MODE);
+    structtyworkflow.push_back(&PARAM_STRUCTTY_SS);
     structtyworkflow.push_back(&PARAM_THREADS);
     structtyworkflow.push_back(&PARAM_V);
 

@@ -9,8 +9,6 @@
 namespace structureRbh{
 #include "easyrbh.sh.h"
 }
-#include "easystructurerbh.sh.h"
-#include "structty.h"
 
 
 int structureeasyrbh(int argc, const char **argv, const Command &command) {
@@ -85,7 +83,6 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
 
     CommandCaller cmd;
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    std::string resultsPath = par.filenames.back();
     cmd.addVariable("RESULTS", par.filenames.back().c_str());
     par.filenames.pop_back();
     std::string target = par.filenames.back().c_str();
@@ -101,13 +98,8 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     }
 
     cmd.addVariable("QUERY", par.filenames.back().c_str());
-    {
-        std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
-        cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
-    }
-    // When viewing results, defer tmp cleanup so StrucTTY can read the tmp DBs (D10).
-    // Actual cleanup is re-invoked after launch in Step 3.
-    cmd.addVariable("REMOVE_TMP", (par.removeTmpFiles && !par.viewResults) ? "TRUE" : NULL);
+    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
+    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
 
     cmd.addVariable("RUNNER", par.runner.c_str());
@@ -117,33 +109,13 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
 
-    // Write helper scripts to tmpDir
-    std::string easyrbhProgram = tmpDir + "/easyrbh.sh";
-    FileUtil::writeFile(easyrbhProgram, structureRbh::easyrbh_sh, structureRbh::easyrbh_sh_len);
+    // easy-rbh does not support the StrucTTY viewer, so the process is replaced by
+    // the workflow script (upstream behaviour) instead of waiting for it to return.
+    std::string program = tmpDir + "/easyrbh.sh";
+    FileUtil::writeFile(program, structureRbh::easyrbh_sh, structureRbh::easyrbh_sh_len);
+    cmd.execProgram(program.c_str(), par.filenames);
 
-    std::string program = tmpDir + "/easystructurerbh.sh";
-    FileUtil::writeFile(program, easystructurerbh_sh, easystructurerbh_sh_len);
-    std::string argString = program;
-    for (const auto& s : par.filenames) { argString += " "; argString += s; }
-    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
-    if (par.viewResults) {
-        structty::RunOptions opts;
-        const std::string queryInput = par.filenames[0];
-        const bool queryIsDb  = FileUtil::fileExists((queryInput + ".dbtype").c_str());
-        const bool targetIsDb = FileUtil::fileExists((target + ".dbtype").c_str());
-        // Fallback plaintext query load (Step 4 will switch to query DB read).
-        opts.input_files.push_back(queryInput);
-        opts.foldseek_query_db = queryIsDb  ? queryInput : (tmpDir + "/query");
-        opts.foldseek_db       = targetIsDb ? target     : (tmpDir + "/target");
-        opts.foldseek_file     = resultsPath;
-        structty::run(opts);
-        // D10: cleanup was deferred past launch (Step 2); re-invoke the workflow
-        // script in cleanup-only mode now that the viewer has closed.
-        if (par.removeTmpFiles) {
-            cmd.addVariable("CLEANUP_ONLY", "TRUE");
-            if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
-        }
-    }
-    return EXIT_SUCCESS;
+    // Should never get here
+    assert(false);
+    return EXIT_FAILURE;
 }
-
