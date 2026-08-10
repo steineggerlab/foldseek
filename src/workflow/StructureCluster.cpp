@@ -110,6 +110,9 @@ int structurecluster(int argc, const char **argv, const Command& command) {
     } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI) {
         cmd.addVariable("ALIGNMENT_ALGO", "structurealign");
         alnParam = par.createParameterString(par.structurealign);
+    } else if(par.alignmentType == LocalParameters::ALIGNMENT_TYPE_LOLALIGN) {
+        cmd.addVariable("ALIGNMENT_ALGO", "lolalign");
+        alnParam = par.createParameterString(par.lolalign);
     }
 
     cmd.addVariable("RUNNER", par.runner.c_str());
@@ -185,6 +188,8 @@ int structurecluster(int argc, const char **argv, const Command& command) {
             cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.tmalign).c_str());
         } else if (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI_AA || par.alignmentType == LocalParameters::ALIGNMENT_TYPE_3DI) {
             cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.structurealign).c_str());
+        } else if (par.alignmentType == LocalParameters::ALIGNMENT_TYPE_LOLALIGN) {
+            cmd.addVariable("ALIGNMENT_REASSIGN_PAR", par.createParameterString(par.lolalign).c_str());
         }
         cmd.addVariable("MERGEDBS_PAR", par.createParameterString(par.mergedbs).c_str());
 

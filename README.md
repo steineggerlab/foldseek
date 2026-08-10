@@ -12,6 +12,8 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets,
 
 [Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, doi: 10.1101/2024.11.13.623350 (2024)](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1)
 
+[Reifenrath L, van Kempen M, Kim G, Kim SH, Radnezhad M, Mirdita M, Steinegger M, Söding J: LoL-align: sensitive and fast probabilistic protein structure alignment. bioRxiv, doi: 10.1101/2025.11.24.690091 (2025)](https://www.biorxiv.org/content/10.1101/2025.11.24.690091v1)
+
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/foldseek.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/foldseek) 
 [![Github All Releases](https://img.shields.io/github/downloads/steineggerlab/foldseek/total.svg)](https://github.com/steineggerlab/foldseek/releases/latest) 
 [![Biocontainer Pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fmmseqs.com%2Fbiocontainer.php%3Fcontainer%3Dfoldseek)](https://biocontainers.pro/#/tools/foldseek) 
@@ -159,6 +161,9 @@ foldseek easy-search example/d1asha_ example/ result.html tmp --format-mode 3
 | -e                  | Sensitivity | List matches below this E-value (range 0.0-inf, default: 0.001); increasing it reports more distant structures                         |
 | --cluster-search     | Sensitivity   | For clustered databases like AFDB50, CATH50 trigger a cluster search: 0: search only representatives (fast), 1: align and report also all members of a cluster (default: 0)                                                           |
 | --alignment-type    | Alignment   | 0: 3Di Gotoh-Smith-Waterman (local, not recommended), 1: TMalign (global, slow), 2: 3Di+AA Gotoh-Smith-Waterman (local, default), 3: LoLalign (local, slow)       |
+| --lolalign-multidomain | Alignment | LoLalign (`--alignment-type 3`) mode: 1: multi-domain (default, no length normalization), 0: single-domain (incorporates query/target lengths)                  |
+| --candidate-seeds   | Alignment   | LoLalign: number of candidate seeds to consider for expansion (default: 10)                                                            |
+| --refine-seeds      | Alignment   | LoLalign: number of top candidate seeds re-aligned to pick the best one for expansion (default: 3)                                     |
 | -c                  | Alignment   | List matches above this fraction of aligned (covered) residues (see --cov-mode) (default: 0.0); higher coverage = more global alignment |
 | --cov-mode          | Alignment   | 0: coverage of query and target, 1: coverage of target, 2: coverage of query                                                           |
 | --gpu               | Performance | Enables fast GPU-accelerated ungapped prefilter (`--prefilter-mode 1`) (default: off), ignores `-s`. Use `--gpu 1` to enable.          |
@@ -170,7 +175,7 @@ By default, Foldseek uses its local 3Di+AA structural alignment, but it also sup
 
 If alignment type is set to tmalign (`--alignment-type 1`), the results will be sorted by the TMscore normalized by query length. The TMscore is used for reporting two fields: the e-value=(qTMscore+tTMscore)/2 and the score=(qTMscore*100). All output fields (e.g., pident, fident, and alnlen) are calculated based on the TMalign alignment.
 
-If alignment type is set to lolalign (`--alignment-type 3`), the result will be sorted by the LoLscore, a novel alignment log-odds score without length normalization. When set to single domain mode (`--lolalign-multidomain 0`) the query and target lengths are incorporated. The e-value is a normalized LoLscore (<= 1) while the score is unnormalized. All output fields (e.g., pident, fident, and alnlen) are calculated based on the LoLalign alignment.
+If alignment type is set to lolalign (`--alignment-type 3`), results are sorted by the LoLscore, a novel alignment log-odds score. By default (multi-domain mode) the LoLscore is computed without length normalization; in single-domain mode (`--lolalign-multidomain 0`) the query and target lengths are incorporated. The e-value field reports the normalized LoLscore (<= 1), while the score/bits field reports the estimated homology probability scaled by 10000 (i.e. probability × 10000, range 0–10000). All output fields (e.g., pident, fident, and alnlen) are calculated based on the LoLalign alignment.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.

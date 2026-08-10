@@ -26,10 +26,14 @@
 #include <omp.h>
 #endif
 
-LoLAlign::LoLAlign(unsigned int maxSeqLen, bool computeExactScore)
+LoLAlign::LoLAlign(unsigned int maxSeqLen, bool computeExactScore, int candidateSeeds, int refineSeeds)
         : xtm(maxSeqLen), ytm(maxSeqLen), xt(maxSeqLen),
           r1(maxSeqLen), r2(maxSeqLen), computeExactScore(computeExactScore)
 {
+    seedNumber = refineSeeds;
+    this->candidateSeeds = candidateSeeds;
+    numStartAnchors = std::max(candidateSeeds, 2 * seedNumber);
+    StartAnchorNum = candidateSeeds;
     queryX = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
     queryY = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
     queryZ = (float*)mem_align(ALIGN_FLOAT, maxSeqLen * sizeof(float));
@@ -54,8 +58,10 @@ LoLAlign::LoLAlign(unsigned int maxSeqLen, bool computeExactScore)
     newAnchorLength = new int[numStartAnchors];
     gaps = new int[4]{0, 0, 0, 0};
 
+
     finalAnchorQuery = nullptr;
     finalAnchorTarget = nullptr;
+    lddtcalc = new LDDTCalculator(maxSeqLen + 1, maxSeqLen + 1);
     //P = malloc_matrix<float>(maxSeqLen, maxSeqLen);
 }
 
@@ -91,6 +97,7 @@ LoLAlign::~LoLAlign()
         delete[] finalAnchorTarget;
     }
     free(lolScoreVecSh);
+    delete lddtcalc;
 }
 
 void LoLAlign::calcGap(int* anchorQuery, int* anchorTarget, int* gaps, int queryLen, int targetLen)
@@ -205,22 +212,41 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
     fwbwaln->initScoreMatrix(lolScoreMatrix, gaps);
     fwbwaln->runFwBw<false, 0>();
 
+    // If the posterior overflowed to all-zeros (maxP == 0), the exponentials in the
+    // forward-backward blew past float range. Raising the temperature shrinks the score
+    // exponents back into range, so re-run the FwBw at a higher temperature until we recover a
+    // usable posterior, giving up past temperature 30. This mirrors the refinement phase below.
+    // initScoreMatrix must be re-called because it divides the score matrix by the temperature.
+    while (fwbwaln->maxP == 0 && fwbwaln->temperature <= 30) {
+        fwbwaln->temperature += 2;
+        fwbwaln->initScoreMatrix(lolScoreMatrix, gaps);
+        fwbwaln->runFwBw<false, 0>();
+    }
 
+    for (int startAnchor = 0; startAnchor < candidateSeeds; startAnchor++) {
 
-
-    for (int startAnchor = 0; startAnchor < numStartAnchors; startAnchor++) {
+        // If the temperature retry above could not recover a non-zero posterior, there is no
+        // probability signal to seed an anchor from. Scanning the dead posterior would leave
+        // maxIndexX/maxIndexY at the sentinel 0 and index out of bounds, so record an empty
+        // anchor and skip the scan.
+        if (fwbwaln->maxP == 0) {
+            startAnchorScores[startAnchor] = 0;
+            anchorLength[startAnchor] = 0;
+            newAnchorLength[startAnchor] = 0;
+            continue;
+        }
 
         maxIndexX = 0;
         maxIndexY = 0;
 
         float maxScore = 0;
-        
+
         if (startAnchor % 2 == 0) {
 
             for (int i = startAnchorLength; i < queryLen - startAnchorLength; ++i) {
                 for (int j = startAnchorLength; j < targetLen - startAnchorLength; ++j) {
                     float alignProb = fwbwaln->getProbability(i, j);
-                    if (alignProb > maxScore) {
+                    if (alignProb >= maxScore) {
                         maxScore = alignProb;
                         maxIndexX = i;
                         maxIndexY = j;
@@ -258,8 +284,16 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         for (int i = 0; i < diagLength; i++) {
             lolScoreVec[i] = lolScoreMatrix[startRow + i][startCol + i];
         }
+        lolScoreVec[std::min(maxIndexX, maxIndexY)] += 200;
          
         for (int i = -startAnchorLength; i < startAnchorLength; i++) {
+            // The neighborhood offset i can push maxIndexX/maxIndexY below 0 (or past the
+            // sequence end) when the best seed lies within startAnchorLength of a terminus;
+            // skip those out-of-range rows instead of indexing outside the distance matrices.
+            if (maxIndexX + i < 0 || maxIndexX + i >= queryLen ||
+                maxIndexY + i < 0 || maxIndexY + i >= targetLen) {
+                continue;
+            }
             for (int j = 0; j < diagLength; j++) {
                 if (distanceij[maxIndexX+i][startRow + j] > 0) {
                     lolDist[j] = std::abs(distanceij[maxIndexX+i][startRow + j] - distancekl[maxIndexY+i][startCol+j]);
@@ -274,7 +308,7 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         }
         startAnchorScores[startAnchor] = maxSubArray(lolScoreVec, diagLength);
         alignStartAnchors(anchorQuery[startAnchor], anchorTarget[startAnchor], maxIndexX, maxIndexY,
-                          &newAnchorLength[startAnchor], fwbwaln->getProbabiltyMatrix(), lolScoreMatrix);
+                          &newAnchorLength[startAnchor], fwbwaln->getProbabiltyMatrix(), lolScoreMatrix, targetLen);
         anchorLength[startAnchor] = newAnchorLength[startAnchor];
     }
     
@@ -282,7 +316,7 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         std::memset(lolScoreMatrix[i], 0, targetLen * sizeof(lolScoreMatrix[0][0]));
     }
     
-    indexSort(startAnchorScores, startAnchorIndex, numStartAnchors);
+    indexSort(startAnchorScores, startAnchorIndex, candidateSeeds);
 
     gaps[0] = 0;
     gaps[1] = 0;
@@ -292,8 +326,9 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
     fwbwaln->resetParams(lolGo, lolGe, lolT);
     int startAnchor;
 
-    for (int startAnchorIter = 0; startAnchorIter < seedNumber; startAnchorIter++) {
-        startAnchor = startAnchorIndex[numStartAnchors - startAnchorIter - 1];
+    int refineIter = std::min(seedNumber, candidateSeeds);
+    for (int startAnchorIter = 0; startAnchorIter < refineIter; startAnchorIter++) {
+        startAnchor = startAnchorIndex[candidateSeeds - startAnchorIter - 1];
         bool addSeq = false;
 
         for(int iteration = 0; iteration < 1000; iteration++){
@@ -528,6 +563,7 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
 
     for(int i = 0; i < queryLen; i++){
         lolScoreVecSh[i] = 0;
+        lolScoreVec[i] = 0;
         
     }
     for (int i = 0; i < anchorLength[maxLolIdx]; i++) {
@@ -564,8 +600,8 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
     float nanCheck = 0;
     maxLolScore = 0;
     for (int i = 0; i < anchorLength[maxLolIdx]; i++) {
+        maxLolScore += lolScoreVec[i];
         if(lolScoreVecSh[i] != 0){
-            maxLolScore += lolScoreVec[i];
             nanCheck = lolScoreVec[i] / (lolScoreVecSh[i]);
             normalizedLolscoreSelfhit +=  nanCheck == nanCheck ? nanCheck : 0;
         }
@@ -602,14 +638,18 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
     result.seqId = seqId / (float)anchorLength[maxLolIdx];
     result.qcov = anchorLength[maxLolIdx] / (float)queryLen;
     result.dbcov = anchorLength[maxLolIdx] / (float)targetLen;
-    if(multiDomain == 0){
-        result.eval = (((maxLolScore +3 * maxAA3DiScore) * normalizedLolscoreSelfhit/anchorLength[maxLolIdx])/qqScore)/ std::pow(queryLen * targetLen, 0.25);
-        result.score = (((maxLolScore +3 * maxAA3DiScore) * normalizedLolscoreSelfhit/anchorLength[maxLolIdx]))/ std::pow(queryLen * targetLen, 0.25);
+    // eval: sqrt of the qqScore-normalized LoL score, clipped to >=0.
+    // Length normalization /(qLen*tLen)^0.25 applies only in single-domain mode
+    // (multiDomain==0); in multi-domain mode it is intentionally omitted, matching
+    // the pre-existing branching.
+    // score: filled in below with the LoLAlign homology probability * 10000.
+    float lolEvalRaw = ((maxLolScore + 3.0f * maxAA3DiScore) * normalizedLolscoreSelfhit
+                       / (float)anchorLength[maxLolIdx]) / qqScore;
+    if (multiDomain == 0) {
+        lolEvalRaw /= std::pow(queryLen * targetLen, 0.25);
     }
-    else{
-        result.eval = (((maxLolScore +3 * maxAA3DiScore) * normalizedLolscoreSelfhit/anchorLength[maxLolIdx])/qqScore);
-        result.score = (((maxLolScore +3 * maxAA3DiScore) * normalizedLolscoreSelfhit/anchorLength[maxLolIdx]));
-    }
+    result.eval  = std::sqrt(std::max(0.0f, lolEvalRaw));
+    result.score = 0;
     result.dbKey = dbKey;
     result.qStartPos = 0;
     result.dbStartPos = 0;
@@ -665,14 +705,52 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
     result.backtrace = Matcher::compressAlignment(backtrace.substr(firstM));
     result.alnLength = (int)result.backtrace.size();
 
+    // ---- LoLAlign homology probability, written into result.score * 10000 -----
+    {
+        std::string aln = backtrace.substr(firstM);          // uncompressed M/I/D, aligned region
+        std::vector<int> qAln, tAln;
+        qAln.reserve(aln.size()); tAln.reserve(aln.size());
+        int qpos = result.qStartPos, tpos = result.dbStartPos;
+        int alnlen = 0, gapopen = 0, numGaps = 0;
+        char prevOp = 0;
+        for (size_t i = 0; i < aln.size(); ++i) {
+            char op = aln[i];
+            ++alnlen;
+            if (op == 'M') {
+                qAln.push_back(qpos++); tAln.push_back(tpos++);
+            } else {
+                ++numGaps;
+                if (op != prevOp) ++gapopen;                 // gap-run count (= compressed-cigar token)
+                if (op == 'I') ++qpos; else if (op == 'D') ++tpos;
+            }
+            prevOp = op;
+        }
+        double rawBits = (double)maxLolScore + 3.0 * (double)maxAA3DiScore;   // 'bits' feature (raw LoL score)
+        double rawEval = (double)normalizedLolscoreSelfhit;                   // 'evalue' feature (self-hit normalized)
+        double lddt = lddtcalc->computeLDDTScore(targetLen, result.qStartPos, result.dbStartPos,
+                                                 aln, targetX, targetY, targetZ).avgLddtScore;
+        float prob = lolProb.predict(targetLen, targetX, targetY, targetZ,
+                                     qAln.data(), tAln.data(), (int)qAln.size(),
+                                     rawEval, rawBits, lddt, alnlen, gapopen, numGaps);
+        // Homology probability lives in score, scaled by 10000 to survive int truncation.
+        result.score = static_cast<int>(prob * 10000.0f + 0.5f);
+    }
+
     return result;
 
 }
 void LoLAlign::alignStartAnchors(int* anchorQuery, int* anchorTarget, int maxQuery, int maxTarget,
-                                 int* anchorLength, float** fwbwP, float** lolScoreMatrix) {
+                                 int* anchorLength, float** fwbwP, float** lolScoreMatrix, int targetLen) {
 
     for (int i = maxQuery - this->startAnchorLength; i <= maxQuery + this->startAnchorLength; ++i) {
         int maxInd = maxTarget + i - maxQuery;
+
+        // The anchor diagonal can extend past either terminus when the seed lies within
+        // startAnchorLength of a sequence end; skip out-of-range cells rather than indexing
+        // outside anchorQuery/anchorTarget and the probability/score matrices.
+        if (i < 0 || i >= this->queryLen || maxInd < 0 || maxInd >= targetLen) {
+            continue;
+        }
 
         anchorQuery[i] = 2;
         anchorTarget[maxInd] = 2;
@@ -732,6 +810,9 @@ void LoLAlign::initQuery(float* x, float* y, float* z, Sequence& qSeqAA, Sequenc
     memcpy(queryY, y, sizeof(float) * queryLen);
     memcpy(queryZ, z, sizeof(float) * queryLen);
 
+    lddtcalc->initQuery(queryLen, queryX, queryY, queryZ);
+    lolProb.prepareQuery(queryLen, queryX, queryY, queryZ);
+
     this->queryLen = queryLen;
     this->querySeq = qSeqAA.getSeqData();
     this->query3DiSeq = qSeq3Di.getSeqData();
@@ -769,6 +850,7 @@ void LoLAlign::initQuery(float* x, float* y, float* z, Sequence& qSeqAA, Sequenc
     qqScore = 0;
     for (int i = 0; i < queryLen; i++) {
         diScore += lolScoreVec[i];
+        lolScoreVec[i] = 0;
     }
 
     for (int i = 0; i < queryLen; i++) {

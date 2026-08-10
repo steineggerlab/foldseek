@@ -14,10 +14,12 @@
 
 #include "Matcher.h"
 #include "tmalign/Coordinates.h"
+#include "LDDT.h"
+#include "LoLAlignProbability.h"
 
 class LoLAlign {
 public:
-    LoLAlign(unsigned int maxSeqLen, bool exact);
+    LoLAlign(unsigned int maxSeqLen, bool exact, int candidateSeeds, int refineSeeds);
     ~LoLAlign();
 
     void computeForwardScoreMatrix(
@@ -44,7 +46,7 @@ public:
                             Sequence& tSeqAA, Sequence& tSeq3Di, int targetLen, SubstitutionMatrix& subMatAA, FwBwAligner* fwbwaln, int multiDomain);
     float maxSubArray(float* nums, int numsSize);
 
-    void alignStartAnchors(int* anchorQuery, int* anchorTarget, int maxQuery, int maxTarget, int* anchorLength, float** fwbwP, float** lolScoreMatrix);
+    void alignStartAnchors(int* anchorQuery, int* anchorTarget, int maxQuery, int maxTarget, int* anchorLength, float** fwbwP, float** lolScoreMatrix, int targetLen);
     void indexSort(float* nums, int* index, int numsSize);
 
 
@@ -90,6 +92,8 @@ private:
     int** anchorQuery;
     int** anchorTarget;
     int numStartAnchors = 10;
+    int StartAnchorNum = 10;
+    int candidateSeeds = 10;
     int seedNumber = 3;
     float startAnchorGo = -6.0;
     float startAnchorGe = -3.0;
@@ -116,6 +120,9 @@ private:
     unsigned char* queryNumAA;
     unsigned char* queryNum3Di;
     float* lolScoreVecSh;
+
+    LDDTCalculator*      lddtcalc;   // foldseek LDDT (one of the LoLAlignProbability features)
+    LoLAlignProbability  lolProb;    // homology probability classifier (written into result.score * 10000)
 
     float w1[2][3] = {
         {-1.3584513e-04,7.6149112e-01,-8.1348085e-01 },

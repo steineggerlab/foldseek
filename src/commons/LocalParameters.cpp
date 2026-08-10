@@ -43,7 +43,9 @@ LocalParameters::LocalParameters() :
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold", "accept alignments with a minimum chain tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
-        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$")
+        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$"),
+        PARAM_CANDIDATE_SEEDS(PARAM_CANDIDATE_SEEDS_ID, "--candidate-seeds", "Candidate seeds", "Number of candidate seeds to consider for expansion", typeid(int), (void *) &candidateSeeds, "^([1-9][0-9]?|100)$"),
+        PARAM_REFINE_SEEDS(PARAM_REFINE_SEEDS_ID, "--refine-seeds", "Refine seeds", "Whether to refine seeds by re-aligning top candidate seeds and picking the best one for expansion", typeid(int), (void *) &refineSeeds, "^([1-9][0-9]?|100)$")
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -109,6 +111,7 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_V);
 
     convertalignments.push_back(&PARAM_EXACT_TMSCORE);
+    convertalignments.push_back(&PARAM_ALIGNMENT_TYPE);
 
     createindex.push_back(&PARAM_INDEX_EXCLUDE);
 
@@ -132,6 +135,8 @@ LocalParameters::LocalParameters() :
 
     //LoLalign
     lolalign.push_back(&PARAM_MULTIDOMAIN);
+    lolalign.push_back(&PARAM_CANDIDATE_SEEDS);
+    lolalign.push_back(&PARAM_REFINE_SEEDS);
     lolalign.push_back(&PARAM_MIN_SEQ_ID);
     lolalign.push_back(&PARAM_PRELOAD_MODE);
     lolalign.push_back(&PARAM_MAX_REJECTED);
@@ -139,6 +144,7 @@ LocalParameters::LocalParameters() :
     lolalign.push_back(&PARAM_C);
     lolalign.push_back(&PARAM_COV_MODE);
     lolalign.push_back(&PARAM_ADD_BACKTRACE);
+    lolalign.push_back(&PARAM_BLOCKLEN);
     lolalign.push_back(&PARAM_THREADS);
     lolalign.push_back(&PARAM_V);
 
@@ -363,6 +369,8 @@ LocalParameters::LocalParameters() :
 
     // LoLalign
     multiDomain = 1;
+    candidateSeeds = 10;
+    refineSeeds = 3;
 
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)");
