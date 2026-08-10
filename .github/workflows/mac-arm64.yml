@@ -16,8 +16,9 @@ jobs:
 
       - name: Dependencies
         run: |
-          brew install -f --overwrite libomp rustup
-          rustup-init --profile minimal -q -y
+          brew install -f --overwrite libomp
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Build
         run: |
