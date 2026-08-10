@@ -196,6 +196,8 @@ public:
     PARAMETER(PARAM_VIEW_RESULTS)
     PARAMETER(PARAM_STRUCTTY_MODE)
     PARAMETER(PARAM_STRUCTTY_SS)
+    PARAMETER(PARAM_CANDIDATE_SEEDS)
+    PARAMETER(PARAM_REFINE_SEEDS)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -236,6 +238,8 @@ public:
     bool viewResults;
     int structtyMode;
     bool structtyShowStructure;
+    int candidateSeeds;
+    int refineSeeds;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
