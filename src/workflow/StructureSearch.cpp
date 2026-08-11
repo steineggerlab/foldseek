@@ -42,7 +42,6 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         par.sortByStructureBits = false;
     }
 
-
     {
         bool needBacktrace = false;
         bool needTaxonomy = false;
@@ -85,7 +84,6 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         par.addBacktrace = true;
         par.PARAM_ADD_BACKTRACE.wasSet = true;
     }
-
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
@@ -165,16 +163,13 @@ int structuresearch(int argc, const char **argv, const Command &command) {
                     ? par.createParameterString(par.structtyworkflow).c_str() : NULL);
     cmd.addVariable("QUERY", query.c_str());
     cmd.addVariable("TARGET", target.c_str());
-    std::string viewerConvertPar;
-    {
-        const std::string userOutfmt = par.outfmt;
-        const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
-        par.outfmt = VIEWER_OUTFMT;
-        par.PARAM_FORMAT_OUTPUT.wasSet = true;
-        viewerConvertPar = par.createParameterString(par.convertalignments);
-        par.outfmt = userOutfmt;
-        par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
-    }
+    const std::string userOutfmt = par.outfmt;
+    const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
+    par.outfmt = VIEWER_OUTFMT;
+    par.PARAM_FORMAT_OUTPUT.wasSet = true;
+    const std::string viewerConvertPar = par.createParameterString(par.convertalignments);
+    par.outfmt = userOutfmt;
+    par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
     cmd.addVariable("VIEWER_CONVERT_PAR", par.viewResults ? viewerConvertPar.c_str() : NULL);
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);

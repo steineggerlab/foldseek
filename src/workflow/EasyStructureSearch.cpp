@@ -126,12 +126,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
 
     cmd.addVariable("CREATELININDEX_PAR", NULL);
-    {
-        std::vector<MMseqsParameter*> searchParams = par.removeParameter(par.structuresearchworkflow, par.PARAM_VIEW_RESULTS);
-        searchParams = par.removeParameter(searchParams, par.PARAM_STRUCTTY_MODE);
-        searchParams = par.removeParameter(searchParams, par.PARAM_STRUCTTY_SS);
-        cmd.addVariable("SEARCH_PAR", par.createParameterString(searchParams, true).c_str());
-    }
+    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.removeStructtyParameters(par.structuresearchworkflow), true).c_str());
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
@@ -146,16 +141,13 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.prostt5Model = "";
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
-    std::string viewerConvertPar;
-    {
-        const std::string userOutfmt = par.outfmt;
-        const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
-        par.outfmt = VIEWER_OUTFMT;
-        par.PARAM_FORMAT_OUTPUT.wasSet = true;
-        viewerConvertPar = par.createParameterString(par.convertalignments);
-        par.outfmt = userOutfmt;
-        par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
-    }
+    const std::string userOutfmt = par.outfmt;
+    const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
+    par.outfmt = VIEWER_OUTFMT;
+    par.PARAM_FORMAT_OUTPUT.wasSet = true;
+    const std::string viewerConvertPar = par.createParameterString(par.convertalignments);
+    par.outfmt = userOutfmt;
+    par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
     cmd.addVariable("STRUCTTY_PAR", par.viewResults
                     ? par.createParameterString(par.structtyworkflow).c_str() : NULL);
@@ -172,5 +164,4 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     assert(false);
     return EXIT_FAILURE;
 }
-
 

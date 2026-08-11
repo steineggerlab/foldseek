@@ -12,8 +12,6 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-
-
 if notExists "${QUERY}.dbtype"; then
     if notExists "${TMP_PATH}/query"; then
         # shellcheck disable=SC2086

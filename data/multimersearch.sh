@@ -8,8 +8,6 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-
-
 if notExists "${TMP_PATH}/result.dbtype"; then
     # shellcheck disable=SC2086
     "$MMSEQS" search "${QUERYDB}" "${TARGETDB}" "${TMP_PATH}/result" "${TMP_PATH}/search_tmp" ${SEARCH_PAR} \

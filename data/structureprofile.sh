@@ -11,7 +11,6 @@ notExists() {
 
 QUERYDB="$1"
 
-
 STEP=0
 
 while [ "$STEP" -lt "$NUM_IT" ]; do
@@ -77,9 +76,6 @@ if [ -n "${VIEW_RESULTS}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
         || fail "convertalis for viewer died"
-fi
-
-if [ -n "${VIEW_RESULTS}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" structty "${QUERY}" "${TARGET}" "${TMP_PATH}/viewer_results.m8" ${STRUCTTY_PAR} \
         || fail "structty died"

@@ -12,8 +12,6 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-
-
 if notExists "${1}.dbtype"; then
     if notExists "${TMP_PATH}/query.dbtype"; then
         # shellcheck disable=SC2086
@@ -57,7 +55,6 @@ else
     fi
 fi
 
-
 INTERMEDIATE="${TMP_PATH}/result"
 if notExists "${INTERMEDIATE}.dbtype"; then
     # shellcheck disable=SC2086
@@ -90,10 +87,6 @@ if [ -n "${VIEW_RESULTS}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${INTERMEDIATE}" "${TMP_PATH}/viewer_results.m8" ${VIEWER_CONVERT_PAR} \
         || fail "convertalis for viewer died"
-fi
-
-
-if [ -n "${VIEW_RESULTS}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" structty "${QUERY}" "${TARGET}" "${TMP_PATH}/viewer_results.m8" ${STRUCTTY_PAR} \
         || fail "structty died"

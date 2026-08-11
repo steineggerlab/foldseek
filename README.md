@@ -174,39 +174,7 @@ If alignment type is set to tmalign (`--alignment-type 1`), the results will be 
 If alignment type is set to lolalign (`--alignment-type 3`), the result will be sorted by the LoLscore, a novel alignment log-odds score without length normalization. When set to single domain mode (`--lolalign-multidomain 0`) the query and target lengths are incorporated. The e-value is a normalized LoLscore (<= 1) while the score is unnormalized. All output fields (e.g., pident, fident, and alnlen) are calculated based on the LoLalign alignment.
 
 ### Visualize Results with StrucTTY
-Foldseek includes [StrucTTY](https://github.com/steineggerlab/StrucTTY), an interactive terminal-based structure viewer, built directly into the binary (embedded as a static library — no separate install or `PATH` lookup required). It renders 3D structures in the terminal with Unicode Braille sub-pixel graphics and lets you navigate search hits, superpose the query and target, and inspect residues without leaving the shell.
-
-When launched from a search, StrucTTY reads the query and target structures directly from the run's temporary databases, so hits load offline with no network fetch (folder/tar/gz inputs are supported). The temporary databases are kept alive while the viewer is open and cleaned up after it closes.
-
-**Launch the viewer automatically after a search** by adding the `--view-structty` flag (it takes no value). Four workflows support it:
-```
-foldseek easy-search query.cif targetDir result.m8 tmp --view-structty
-foldseek search queryDB targetDB resultDB tmp --view-structty
-foldseek easy-multimersearch queryDir targetDir result tmp --view-structty
-foldseek multimersearch queryDB targetDB alignmentDB tmp --view-structty
-```
-Two options control how the viewer draws:
-```
---structty-mode INT   0: protein (default), 1: chain, 2: rainbow, 3: plddt, 4: interface, 5: conservation, 6: aligned
---structty-ss         show secondary structure (helix/sheet)
-```
-Inside the viewer, press `N`/`P` to step through the hits of the current query and `]`/`[` to switch between queries; the target is superposed onto the query using the alignment's rotation/translation matrix. Since `createdb` indexes a multimer per chain, each chain is its own query entry — the panel shows `Q[3/22][2 / 14]` for query 3 of 22, hit 2 of 14. See the [StrucTTY documentation](https://github.com/steineggerlab/StrucTTY) for the full key bindings and color modes.
-
-**Multimer search** needs the per-complex report, which is the default (`--multimer-report-mode 1`). `easy-multimersearch` hands the viewer its `<output>_report`; `multimersearch` stops at the alignment database, so the report the viewer needs is written to `tmp/<hash>/viewer_report` and removed when the viewer closes — your output files are untouched either way. Combining `--view-structty` with `--multimer-report-mode 0` is an error, since there would be no report to show.
-
-**The viewer needs coordinates.** With `--view-structty`, sequence FASTA inputs and databases without a `_ca` part (built from sequences, or with `--index-exclude 2`) are rejected **before the search starts**, so a run does not finish only to fail at the viewer. `createdb --prostt5-model` predicts 3Di from sequence but writes no coordinates, so such databases can never be rendered. The check runs just after the command line is parsed, and parsing already creates the temporary directory you named, so a rejected run leaves that directory behind, empty; it is safe to delete.
-
-`easy-rbh` does not support the viewer and rejects `--view-structty`.
-
-**Open results later** with the `structty` command. Query and target are structure files, directories of them or Foldseek databases:
-```
-# search hits, target coordinates read straight from a database
-foldseek structty queryDB targetDB result.m8
-
-# every query in the result, looked up in a directory of structures
-foldseek structty queryDir targetDir result.m8 --structty-mode 6
-```
-The result may be an `.m8` (12/17/21/29 columns) or a multimer `_report` (14 columns); the column count picks the scene, so no format flag is needed. Colouring the aligned region (`--structty-mode 6`) needs `qaln`/`taln` in the result, which `--view-structty` arranges for you — for a hand-made `.m8`, generate it with `convertalis --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddt,qtmscore,ttmscore,qaln,taln` from a search run with `-a`.
+Add `--view-structty` to `easy-search`, `search`, `easy-multimersearch` or `multimersearch` to open [StrucTTY](https://github.com/steineggerlab/StrucTTY), a terminal structure viewer built into the binary, on the results. `foldseek structty <query> <target> <resultFile>` opens an earlier result. See the [wiki](https://github.com/steineggerlab/foldseek/wiki) for the key bindings and the `--structty-mode`/`--structty-ss` options.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.

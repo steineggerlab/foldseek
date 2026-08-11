@@ -225,13 +225,13 @@ public:
     int structtyMode;
     bool structtyShowStructure;
 
+    std::vector<MMseqsParameter *> removeStructtyParameters(const std::vector<MMseqsParameter *> &params);
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
         bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
         bool &needLDDT
     );
-
 
 private:
     LocalParameters(LocalParameters const&);

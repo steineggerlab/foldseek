@@ -125,12 +125,7 @@ int easymultimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     par.filenames.pop_back();
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
-    {
-        std::vector<MMseqsParameter*> multiserParams = par.removeParameter(par.multimersearchworkflow, par.PARAM_VIEW_RESULTS);
-        multiserParams = par.removeParameter(multiserParams, par.PARAM_STRUCTTY_MODE);
-        multiserParams = par.removeParameter(multiserParams, par.PARAM_STRUCTTY_SS);
-        cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(multiserParams, true).c_str());
-    }
+    cmd.addVariable("MULTIMERSEARCH_PAR", par.createParameterString(par.removeStructtyParameters(par.multimersearchworkflow), true).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
     cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

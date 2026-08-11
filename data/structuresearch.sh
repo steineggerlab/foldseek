@@ -9,7 +9,6 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-
 abspath() {
     if [ -d "$1" ]; then
         (cd "$1"; pwd)
@@ -150,9 +149,6 @@ if [ -n "${VIEW_RESULTS}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
         || fail "convertalis for viewer died"
-fi
-
-if [ -n "${VIEW_RESULTS}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" structty "${QUERY}" "${TARGET}" "${TMP_PATH}/viewer_results.m8" ${STRUCTTY_PAR} \
         || fail "structty died"

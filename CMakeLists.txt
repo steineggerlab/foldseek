@@ -47,26 +47,7 @@ add_subdirectory(lib/foldcomp EXCLUDE_FROM_ALL)
 if(ENABLE_STRUCTTY)
     set(STRUCTTY_BUILD_APP OFF CACHE BOOL "" FORCE)
     if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/structty/lib/lodepng/lodepng.cpp")
-        find_package(Git QUIET)
-        if(GIT_FOUND)
-            execute_process(
-                COMMAND ${GIT_EXECUTABLE} submodule update --init lib/structty
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                RESULT_VARIABLE GIT_SUBMODULE_RESULT
-            )
-            if(GIT_SUBMODULE_RESULT EQUAL 0)
-                execute_process(
-                    COMMAND ${GIT_EXECUTABLE} submodule update --init lib/lodepng
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/structty
-                    RESULT_VARIABLE GIT_SUBMODULE_RESULT
-                )
-            endif()
-            if(NOT GIT_SUBMODULE_RESULT EQUAL 0)
-                message(FATAL_ERROR "git submodule update --init lib/structty failed")
-            endif()
-        else()
-            message(FATAL_ERROR "Git not found and lib/structty is not initialized. Run: git submodule update --init lib/structty && git -C lib/structty submodule update --init lib/lodepng")
-        endif()
+        message(FATAL_ERROR "lib/structty is not initialized. Run: git submodule update --init lib/structty && git -C lib/structty submodule update --init lib/lodepng")
     endif()
     add_library(gemmi_cpp INTERFACE)
     add_library(gemmi::gemmi_cpp ALIAS gemmi_cpp)

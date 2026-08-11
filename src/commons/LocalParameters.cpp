@@ -145,8 +145,6 @@ LocalParameters::LocalParameters() :
     lolalign.push_back(&PARAM_THREADS);
     lolalign.push_back(&PARAM_V);
 
-
-
     structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD_MODE);
@@ -270,9 +268,11 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
+#ifdef HAVE_STRUCTTY
     structuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
     structuresearchworkflow.push_back(&PARAM_STRUCTTY_MODE);
     structuresearchworkflow.push_back(&PARAM_STRUCTTY_SS);
+#endif
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
@@ -395,8 +395,6 @@ LocalParameters::LocalParameters() :
     PARAM_V.regex = "^[0-4]{1}$";
 }
 
-
-
 std::vector<int> LocalParameters::getOutputFormat(
     int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
     bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
@@ -482,6 +480,11 @@ std::vector<int> LocalParameters::getOutputFormat(
     return formatCodes;
 }
 
+std::vector<MMseqsParameter *> LocalParameters::removeStructtyParameters(const std::vector<MMseqsParameter *> &params) {
+    std::vector<MMseqsParameter *> out = removeParameter(params, PARAM_VIEW_RESULTS);
+    out = removeParameter(out, PARAM_STRUCTTY_MODE);
+    return removeParameter(out, PARAM_STRUCTTY_SS);
+}
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
 std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};
