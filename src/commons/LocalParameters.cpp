@@ -280,9 +280,10 @@ LocalParameters::LocalParameters() :
     easystructuresearchworkflow.push_back(&PARAM_STRUCTTY_SS);
 #endif
 
-    easystructurerbhworkflow = removeParameter(easystructuresearchworkflow, PARAM_VIEW_RESULTS);
-    easystructurerbhworkflow = removeParameter(easystructurerbhworkflow, PARAM_STRUCTTY_MODE);
-    easystructurerbhworkflow = removeParameter(easystructurerbhworkflow, PARAM_STRUCTTY_SS);
+    easystructurerbhworkflow = combineList(structuresearchworkflow, structurecreatedb);
+    easystructurerbhworkflow = combineList(easystructurerbhworkflow, convertalignments);
+    easystructurerbhworkflow = combineList(easystructurerbhworkflow, taxonomyreport);
+    easystructurerbhworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
     structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
