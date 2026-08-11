@@ -145,6 +145,10 @@ public:
     std::vector<MMseqsParameter *> createstructsubdb;
     std::vector<MMseqsParameter *> lolalign;
     std::vector<MMseqsParameter *> structtyworkflow;
+    // 워크플로가 내부 search/multimersearch 를 부를 때 쓰는 리스트. 뷰어 파라미터가
+    // 섞이면 안쪽 워크플로가 뷰어를 한 번 더 띄운다.
+    std::vector<MMseqsParameter *> structuresearchinnerworkflow;
+    std::vector<MMseqsParameter *> multimersearchinnerworkflow;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
@@ -224,8 +228,6 @@ public:
     bool viewResults;
     int structtyMode;
     bool structtyShowStructure;
-
-    std::vector<MMseqsParameter *> removeStructtyParameters(const std::vector<MMseqsParameter *> &params);
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,

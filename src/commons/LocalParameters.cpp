@@ -306,6 +306,14 @@ LocalParameters::LocalParameters() :
     multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE);
     multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE_BC_COMPAT);
 
+    // structuresearchinnerworkflow / multimersearchinnerworkflow
+    structuresearchinnerworkflow = removeParameter(structuresearchworkflow, PARAM_VIEW_RESULTS);
+    structuresearchinnerworkflow = removeParameter(structuresearchinnerworkflow, PARAM_STRUCTTY_MODE);
+    structuresearchinnerworkflow = removeParameter(structuresearchinnerworkflow, PARAM_STRUCTTY_SS);
+    multimersearchinnerworkflow = removeParameter(multimersearchworkflow, PARAM_VIEW_RESULTS);
+    multimersearchinnerworkflow = removeParameter(multimersearchinnerworkflow, PARAM_STRUCTTY_MODE);
+    multimersearchinnerworkflow = removeParameter(multimersearchinnerworkflow, PARAM_STRUCTTY_SS);
+
     // easymultimersearchworkflow
     easymultimersearchworkflow = combineList(structurecreatedb, multimersearchworkflow);
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, convertalignments);
@@ -478,12 +486,6 @@ std::vector<int> LocalParameters::getOutputFormat(
         formatCodes.push_back(code);
     }
     return formatCodes;
-}
-
-std::vector<MMseqsParameter *> LocalParameters::removeStructtyParameters(const std::vector<MMseqsParameter *> &params) {
-    std::vector<MMseqsParameter *> out = removeParameter(params, PARAM_VIEW_RESULTS);
-    out = removeParameter(out, PARAM_STRUCTTY_MODE);
-    return removeParameter(out, PARAM_STRUCTTY_SS);
 }
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};

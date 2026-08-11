@@ -106,7 +106,7 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     par.addBacktrace = par.exhaustiveSearch;
     par.alignmentType = par.exhaustiveSearch ? par.alignmentType : LocalParameters::ALIGNMENT_TYPE_3DI_AA;
 
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.removeStructtyParameters(par.structuresearchworkflow), true).c_str());
+    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchinnerworkflow, true).c_str());
     cmd.addVariable("SCOREMULTIMER_PAR", par.createParameterString(par.scoremultimer).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
