@@ -15,6 +15,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 #include <limits>
 #include <sys/stat.h>
 
@@ -911,7 +912,7 @@ bool GemmiToFoldcomp(
     }
 
     std::vector<AtomCoordinate> chainAtoms;
-    chainAtoms.reserve((end - start) * 3);
+    chainAtoms.reserve((end - start) * 4);
 
     std::string chainName = gw.chainNames[ci];
     int serial = gw.chainStartSerial[ci];
@@ -921,7 +922,10 @@ bool GemmiToFoldcomp(
         chainAtoms.emplace_back("N", resName, chainName, serial++, resid, gw.n[r].x, gw.n[r].y, gw.n[r].z, 0.0f, 0.0f);
         chainAtoms.emplace_back("CA", resName, chainName, serial++, resid, gw.ca[r].x, gw.ca[r].y, gw.ca[r].z, 0.0f, gw.ca_bfactor[r]);
         chainAtoms.emplace_back("C", resName, chainName, serial++, resid, gw.c[r].x, gw.c[r].y, gw.c[r].z, 0.0f, 0.0f);
-        // chainAtoms.emplace_back("CB", resName, chainName, serial++, resid, gw.cb[r].x, gw.cb[r].y, gw.cb[r].z, 0.0f, 0.0f);
+        // glycine has no CB; cb is also NaN whenever the CB atom is absent from the input
+        if (std::isnan(gw.cb[r].x) == false) {
+            chainAtoms.emplace_back("CB", resName, chainName, serial++, resid, gw.cb[r].x, gw.cb[r].y, gw.cb[r].z, 0.0f, 0.0f);
+        }
     }
 
     if (chainAtoms.empty()) {

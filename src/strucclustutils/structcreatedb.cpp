@@ -482,6 +482,7 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
         size_t chainStart = readStructure.chain[ch].first;
         size_t chainEnd = readStructure.chain[ch].second;
         size_t chainLen = chainEnd - chainStart;
+        bool foldcompWritten = false;
         header.clear();
         if (par.dbExtractionMode == LocalParameters::DB_EXTRACT_MODE_CHAIN) {
             if (chainLen <= 3) {
@@ -515,6 +516,14 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
                                         &readStructure.ami[chainStart],
                                         chainLen);
 
+            }
+
+            // Run before structure2states: that call replaces cb with the 3Di virtual center in place
+            if (foldcompWriter != NULL) {
+                std::string foldcompStr;
+                GemmiToFoldcomp(readStructure, ch, foldcompStr);
+                foldcompWriter->writeData(foldcompStr.c_str(), foldcompStr.size(), dbKey, thread_idx, false);
+                foldcompWritten = true;
             }
             char * states = structureTo3Di.structure2states(&readStructure.ca[chainStart],
                                                             &readStructure.n[chainStart],
@@ -622,7 +631,10 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
             mappingWriter->writeData(taxId.c_str(), taxId.size(), dbKey, thread_idx, false);
         }
 
-        if (foldcompWriter != NULL) {
+        // interface extraction mode does not reach the call above, so it still
+        // writes here. Its cb is untouched by structure2states, which runs on
+        // local copies in compute3DiInterfaces.
+        if (foldcompWriter != NULL && foldcompWritten == false) {
             std::string foldcompStr;
             GemmiToFoldcomp(readStructure, ch, foldcompStr);
             foldcompWriter->writeData(foldcompStr.c_str(), foldcompStr.size(), dbKey, thread_idx, false);
