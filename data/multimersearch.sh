@@ -50,22 +50,6 @@ if notExists "${TMP_PATH}/scoremultimer.dbtype"; then
         || fail "mvdb died"
 fi
 
-if [ -n "${VIEW_RESULTS}" ]; then
-    if notExists "${TMP_PATH}/viewer_report"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" createmultimerreport "${QUERYDB}" "${TARGETDB}" "${OUTPUT}" "${TMP_PATH}/viewer_report" ${REPORT_PAR} \
-            || fail "createmultimerreport died"
-    fi
-fi
-
-if [ -n "${VIEW_RESULTS}" ]; then
-    if [ -f "${TMP_PATH}/viewer_report" ]; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" structty "${QUERYDB}" "${TARGETDB}" "${TMP_PATH}/viewer_report" ${STRUCTTY_PAR} \
-            || fail "structty died"
-    fi
-fi
-
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
@@ -74,7 +58,6 @@ if [ -n "${REMOVE_TMP}" ]; then
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/result_expand_aligned" ${VERBOSITY}
     fi
-    rm -f "${TMP_PATH}/viewer_report"
     rm -rf "${TMP_PATH}/search_tmp"
     rm -f "${TMP_PATH}/multimersearch.sh"
 fi

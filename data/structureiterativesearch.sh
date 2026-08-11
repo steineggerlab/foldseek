@@ -120,16 +120,6 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 	STEP=$((STEP+1))
 done
 
-if [ -n "${VIEW_RESULTS}" ]; then
-    VIEWER_M8="${TMP_PATH}/viewer_results.m8"
-    # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
-        || fail "convertalis for viewer died"
-    # shellcheck disable=SC2086
-    "$MMSEQS" structty "${QUERY}" "${TARGET}" "${TMP_PATH}/viewer_results.m8" ${STRUCTTY_PAR} \
-        || fail "structty died"
-fi
-
 if [ -n "$REMOVE_TMP" ]; then
     STEP=0
     while [ "${STEP}" -lt "${NUM_IT}" ]; do
@@ -155,7 +145,6 @@ if [ -n "$REMOVE_TMP" ]; then
       # shellcheck disable=SC2086
       "$MMSEQS" rmdb "${TMP_PATH}/aln_expanded" ${VERBOSITY}
     fi
-    rm -f "${TMP_PATH}/viewer_results.m8"
     rm -f "$TMP_PATH/structureiterativesearch.sh"
 fi
 

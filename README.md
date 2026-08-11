@@ -174,7 +174,7 @@ If alignment type is set to tmalign (`--alignment-type 1`), the results will be 
 If alignment type is set to lolalign (`--alignment-type 3`), the result will be sorted by the LoLscore, a novel alignment log-odds score without length normalization. When set to single domain mode (`--lolalign-multidomain 0`) the query and target lengths are incorporated. The e-value is a normalized LoLscore (<= 1) while the score is unnormalized. All output fields (e.g., pident, fident, and alnlen) are calculated based on the LoLalign alignment.
 
 ### Visualize Results with StrucTTY
-Add `--view-structty` to `easy-search`, `search`, `easy-multimersearch` or `multimersearch` to open [StrucTTY](https://github.com/steineggerlab/StrucTTY), a terminal structure viewer built into the binary, on the results. `foldseek structty <query> <target> <resultFile>` opens an earlier result. See the [wiki](https://github.com/steineggerlab/foldseek/wiki) for the key bindings and the `--structty-mode`/`--structty-ss` options.
+Add `--view-structty` to `easy-search` or `easy-multimersearch` to open [StrucTTY](https://github.com/steineggerlab/StrucTTY), a terminal structure viewer built into the binary, on the results. `foldseek structty <query> <target> <resultFile>` opens an earlier result. See the [wiki](https://github.com/steineggerlab/foldseek/wiki) for the key bindings and the `--structty-mode`/`--structty-ss` options.
 
 ### Databases 
 The `databases` command downloads pre-generated databases like PDB or AlphaFoldDB.

@@ -106,13 +106,9 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     par.addBacktrace = par.exhaustiveSearch;
     par.alignmentType = par.exhaustiveSearch ? par.alignmentType : LocalParameters::ALIGNMENT_TYPE_3DI_AA;
 
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchinnerworkflow, true).c_str());
+    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
     cmd.addVariable("SCOREMULTIMER_PAR", par.createParameterString(par.scoremultimer).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
-    cmd.addVariable("REPORT_PAR", par.createParameterString(par.createmultimerreport).c_str());
-    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
-    cmd.addVariable("STRUCTTY_PAR", par.viewResults
-                    ? par.createParameterString(par.structtyworkflow).c_str() : NULL);
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 //    cmd.addVariable("EXP_MULTIMER_PAR", ("-e " + std::to_string(par.eValueThrExpandMultimer)).c_str());

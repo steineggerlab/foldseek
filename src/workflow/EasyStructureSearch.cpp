@@ -126,7 +126,7 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("INDEXEXT", isIndex ? ".idx" : NULL);
 
     cmd.addVariable("CREATELININDEX_PAR", NULL);
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchinnerworkflow, true).c_str());
+    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.structuresearchworkflow, true).c_str());
     cmd.addVariable("LNDB_PAR", par.createParameterString(par.verbandcompression, true).c_str());
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);

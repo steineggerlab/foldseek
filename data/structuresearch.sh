@@ -144,16 +144,6 @@ fi
 # shellcheck disable=SC2086
 "$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}" ${VERBOSITY}
 
-if [ -n "${VIEW_RESULTS}" ]; then
-    VIEWER_M8="${TMP_PATH}/viewer_results.m8"
-    # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
-        || fail "convertalis for viewer died"
-    # shellcheck disable=SC2086
-    "$MMSEQS" structty "${QUERY}" "${TARGET}" "${TMP_PATH}/viewer_results.m8" ${STRUCTTY_PAR} \
-        || fail "structty died"
-fi
-
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
     if [ "$ALIGNMENT_ALGO" = "tmalign" ]; then
@@ -168,5 +158,4 @@ if [ -n "$REMOVE_TMP" ]; then
 
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/pref" ${VERBOSITY}
-    rm -f "${TMP_PATH}/viewer_results.m8"
 fi

@@ -10,10 +10,6 @@
 #include "structureiterativesearch.sh.h"
 #include "structureprofile.sh.h"
 
-static const char VIEWER_OUTFMT[] =
-    "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,"
-    "evalue,bits,lddt,qtmscore,ttmscore,qaln,taln";
-
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
     p->sensitivity = 9.5;
@@ -79,11 +75,6 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         }
     }
 
-    if (par.viewResults && par.addBacktrace == false) {
-        Debug(Debug::INFO) << "Alignment backtraces will be computed for the StrucTTY viewer.\n";
-        par.addBacktrace = true;
-        par.PARAM_ADD_BACKTRACE.wasSet = true;
-    }
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
@@ -158,19 +149,8 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
-    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
-    cmd.addVariable("STRUCTTY_PAR", par.viewResults
-                    ? par.createParameterString(par.structtyworkflow).c_str() : NULL);
     cmd.addVariable("QUERY", query.c_str());
     cmd.addVariable("TARGET", target.c_str());
-    const std::string userOutfmt = par.outfmt;
-    const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
-    par.outfmt = VIEWER_OUTFMT;
-    par.PARAM_FORMAT_OUTPUT.wasSet = true;
-    const std::string viewerConvertPar = par.createParameterString(par.convertalignments);
-    par.outfmt = userOutfmt;
-    par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
-    cmd.addVariable("VIEWER_CONVERT_PAR", par.viewResults ? viewerConvertPar.c_str() : NULL);
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());

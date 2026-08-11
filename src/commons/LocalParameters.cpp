@@ -268,16 +268,17 @@ LocalParameters::LocalParameters() :
     structuresearchworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
     structuresearchworkflow.push_back(&PARAM_REUSELATEST);
     structuresearchworkflow.push_back(&PARAM_RUNNER);
-#ifdef HAVE_STRUCTTY
-    structuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
-    structuresearchworkflow.push_back(&PARAM_STRUCTTY_MODE);
-    structuresearchworkflow.push_back(&PARAM_STRUCTTY_SS);
-#endif
 
     easystructuresearchworkflow = combineList(structuresearchworkflow, structurecreatedb);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, convertalignments);
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
+
+#ifdef HAVE_STRUCTTY
+    easystructuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    easystructuresearchworkflow.push_back(&PARAM_STRUCTTY_MODE);
+    easystructuresearchworkflow.push_back(&PARAM_STRUCTTY_SS);
+#endif
 
     easystructurerbhworkflow = removeParameter(easystructuresearchworkflow, PARAM_VIEW_RESULTS);
     easystructurerbhworkflow = removeParameter(easystructurerbhworkflow, PARAM_STRUCTTY_MODE);
@@ -306,19 +307,16 @@ LocalParameters::LocalParameters() :
     multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE);
     multimersearchworkflow.push_back(&PARAM_MULTIMER_REPORT_MODE_BC_COMPAT);
 
-    // structuresearchinnerworkflow / multimersearchinnerworkflow
-    structuresearchinnerworkflow = removeParameter(structuresearchworkflow, PARAM_VIEW_RESULTS);
-    structuresearchinnerworkflow = removeParameter(structuresearchinnerworkflow, PARAM_STRUCTTY_MODE);
-    structuresearchinnerworkflow = removeParameter(structuresearchinnerworkflow, PARAM_STRUCTTY_SS);
-    multimersearchinnerworkflow = removeParameter(multimersearchworkflow, PARAM_VIEW_RESULTS);
-    multimersearchinnerworkflow = removeParameter(multimersearchinnerworkflow, PARAM_STRUCTTY_MODE);
-    multimersearchinnerworkflow = removeParameter(multimersearchinnerworkflow, PARAM_STRUCTTY_SS);
-
     // easymultimersearchworkflow
     easymultimersearchworkflow = combineList(structurecreatedb, multimersearchworkflow);
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, convertalignments);
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
     easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
+#ifdef HAVE_STRUCTTY
+    easymultimersearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    easymultimersearchworkflow.push_back(&PARAM_STRUCTTY_MODE);
+    easymultimersearchworkflow.push_back(&PARAM_STRUCTTY_SS);
+#endif
 
     // multimerclusterworkflow
     multimerclusterworkflow  = combineList(multimersearchworkflow, clust);
