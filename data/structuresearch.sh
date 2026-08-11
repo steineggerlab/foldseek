@@ -145,12 +145,17 @@ fi
 # shellcheck disable=SC2086
 "$MMSEQS" mvdb "${TMP_PATH}/aln" "${RESULTS}" ${VERBOSITY}
 
-# Produce viewer_results.m8 for StrucTTY (called from C++ after this script)
 if [ -n "${VIEW_RESULTS}" ]; then
     VIEWER_M8="${TMP_PATH}/viewer_results.m8"
     # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
+    "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
         || fail "convertalis for viewer died"
+fi
+
+if [ -n "${VIEW_RESULTS}" ]; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" structty "${QUERY}" "${TARGET}" "${TMP_PATH}/viewer_results.m8" ${STRUCTTY_PAR} \
+        || fail "structty died"
 fi
 
 if [ -n "$REMOVE_TMP" ]; then
@@ -167,4 +172,5 @@ if [ -n "$REMOVE_TMP" ]; then
 
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/pref" ${VERBOSITY}
+    rm -f "${TMP_PATH}/viewer_results.m8"
 fi

@@ -16,6 +16,8 @@ STEP=0
 if [ -z "$NUM_IT" ]; then
     NUM_IT=3
 fi
+
+
 while [ "$STEP" -lt "$NUM_IT" ]; do
     # call prefilter module
     if notExists "$TMP_PATH/pref_tmp_${STEP}.done"; then
@@ -119,12 +121,17 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 	STEP=$((STEP+1))
 done
 
-# Produce viewer_results.m8 for StrucTTY (called from C++ after this script)
 if [ -n "${VIEW_RESULTS}" ]; then
     VIEWER_M8="${TMP_PATH}/viewer_results.m8"
     # shellcheck disable=SC2086
-    "$MMSEQS" convertalis "${QUERY}" "${TARGET}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
+    "$MMSEQS" convertalis "${QUERY}" "${TARGET}${INDEXEXT}" "${RESULTS}" "${VIEWER_M8}" ${VIEWER_CONVERT_PAR} \
         || fail "convertalis for viewer died"
+fi
+
+if [ -n "${VIEW_RESULTS}" ]; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" structty "${QUERY}" "${TARGET}" "${TMP_PATH}/viewer_results.m8" ${STRUCTTY_PAR} \
+        || fail "structty died"
 fi
 
 if [ -n "$REMOVE_TMP" ]; then
@@ -152,6 +159,7 @@ if [ -n "$REMOVE_TMP" ]; then
       # shellcheck disable=SC2086
       "$MMSEQS" rmdb "${TMP_PATH}/aln_expanded" ${VERBOSITY}
     fi
+    rm -f "${TMP_PATH}/viewer_results.m8"
     rm -f "$TMP_PATH/structureiterativesearch.sh"
 fi
 

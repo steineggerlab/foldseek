@@ -109,8 +109,6 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
 
-    // easy-rbh does not support the StrucTTY viewer, so the process is replaced by
-    // the workflow script (upstream behaviour) instead of waiting for it to return.
     std::string program = tmpDir + "/easyrbh.sh";
     FileUtil::writeFile(program, structureRbh::easyrbh_sh, structureRbh::easyrbh_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);

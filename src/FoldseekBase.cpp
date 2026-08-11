@@ -114,19 +114,19 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileStdinAndFolder },
                                            {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"structty",             structtyview,                  &localPar.structtyworkflow,              COMMAND_EASY,
+        {"structty",             structtyview,                  &localPar.structtyworkflow,              COMMAND_FORMAT_CONVERSION,
                 "Launch StrucTTY viewer for foldseek results",
-                "# View structures on their own\n"
-                "foldseek structty query.pdb\n"
-                "# View search hits, reading target coordinates from a Foldseek DB\n"
-                "foldseek structty query.pdb --foldseek-target targetDB --foldseek-result result.m8\n"
-                "# Query from a Foldseek DB, colour the aligned region\n"
-                "foldseek structty queryDB --foldseek-target targetDB --foldseek-result result.m8 --structty-mode aligned\n"
-                "# Download the hit structures instead of reading them locally\n"
-                "foldseek structty query.pdb --foldseek-target auto --foldseek-result result.m8\n\n",
+                "# View search hits, reading coordinates from Foldseek databases\n"
+                "foldseek structty queryDB targetDB result.m8\n"
+                "# Query and target can also be structure files or folders of them\n"
+                "foldseek structty query.pdb pdbFolder result.m8 --structty-mode 6\n"
+                "# Multimer results: the 14-column report picks the complex view\n"
+                "foldseek structty queryDB targetDB result_report\n\n",
                 "Luna Jang",
-                "<i:query...>",
-                CITATION_FOLDSEEK, {{"query", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::allDbAndFlat }}},
+                "<i:query> <i:target> <i:resultFile>",
+                CITATION_FOLDSEEK, {{"query", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
+                                           {"target", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
+                                           {"resultFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"rbh",                  structurerbh,                  &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Reciprocal best hit search",
                 NULL,

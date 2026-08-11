@@ -1,5 +1,3 @@
-#include <dirent.h>
-#include <fstream>
 #include <cassert>
 #include "DBReader.h"
 #include "Util.h"
@@ -11,28 +9,10 @@
 #include "structuresearch.sh.h"
 #include "structureiterativesearch.sh.h"
 #include "structureprofile.sh.h"
-#include "structty.h"
 
-// 17-column layout that StrucTTY's FoldseekParser parses as fmt 17
-// (see lib/structty/src/structure/FoldseekParser.hpp). Keep in sync with
-// the same constant in EasyStructureSearch.cpp.
 static const char VIEWER_OUTFMT[] =
     "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,"
     "evalue,bits,lddt,qtmscore,ttmscore,qaln,taln";
-
-// StrucTTY color modes accepted by structty::RunOptions::mode
-// (lib/structty/src/structure/Parameters.cpp). mmseqs does not regex-check
-// string parameters, so validate here instead of relying on the regex.
-static void validateStructtyMode(const std::string &mode) {
-    if (mode == "protein" || mode == "chain" || mode == "rainbow" || mode == "plddt"
-        || mode == "interface" || mode == "conservation" || mode == "aligned") {
-        return;
-    }
-    Debug(Debug::ERROR) << "Invalid --structty-mode: " << mode << "\n"
-                        << "Choose one of: protein, chain, rainbow, plddt, interface, "
-                        << "conservation, aligned\n";
-    EXIT(EXIT_FAILURE);
-}
 
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
@@ -50,86 +30,12 @@ void setStructureSearchMustPassAlong(LocalParameters *p) {
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
 }
 
-// --view-structty needs 3D coordinates, so reject inputs that cannot supply any
-// before createdb runs -- otherwise the user waits out a whole search first.
-// Keep this identical in EasyStructureSearch, StructureSearch, EasyMultimerSearch
-// and MultimerSearch (the four workflows that support the viewer).
-static bool isSequenceFasta(const std::string &path) {
-    std::ifstream ifs(path.c_str());
-    if (ifs.is_open() == false) {
-        return false;
-    }
-    std::string line;
-    while (std::getline(ifs, line)) {
-        const size_t first = line.find_first_not_of(" \t\r\n");
-        if (first == std::string::npos) {
-            continue;
-        }
-        return line[first] == '>';
-    }
-    return false;
-}
-
-// A directory is judged by one representative file; scanning every entry would be
-// wasteful on large inputs and one FASTA is enough to know the input is sequences.
-static std::string firstFileInDirectory(const std::string &dir) {
-    DIR *handle = opendir(dir.c_str());
-    if (handle == NULL) {
-        return "";
-    }
-    std::string found;
-    while (dirent *entry = readdir(handle)) {
-        const std::string name(entry->d_name);
-        if (name == "." || name == "..") {
-            continue;
-        }
-        const std::string path = dir + "/" + name;
-        if (FileUtil::fileExists(path.c_str()) && FileUtil::directoryExists(path.c_str()) == false) {
-            found = path;
-            break;
-        }
-    }
-    closedir(handle);
-    return found;
-}
-
-static void validateStructtyInputs(const std::vector<std::string> &inputs) {
-    for (size_t i = 0; i < inputs.size(); i++) {
-        const std::string &input = inputs[i];
-        if (FileUtil::fileExists((input + ".dbtype").c_str())) {
-            if (FileUtil::fileExists((input + "_ca.dbtype").c_str()) == false) {
-                Debug(Debug::ERROR) << "--view-structty needs C-alpha coordinates, but the database "
-                                    << input << " has none (" << input << "_ca is missing).\n"
-                                    << "It was built from sequences, or with --index-exclude 2. "
-                                    << "Rebuild it from PDB/mmCIF structures.\n";
-                EXIT(EXIT_FAILURE);
-            }
-            continue;
-        }
-        const std::string probe = FileUtil::directoryExists(input.c_str())
-                                  ? firstFileInDirectory(input) : input;
-        if (probe.empty() == false && isSequenceFasta(probe)) {
-            Debug(Debug::ERROR) << "--view-structty cannot render " << input
-                                << ": it is a sequence FASTA and carries no 3D coordinates.\n"
-                                << "Pass PDB/mmCIF structures instead. createdb --prostt5-model "
-                                << "predicts 3Di from sequence, but writes no C-alpha coordinates.\n";
-            EXIT(EXIT_FAILURE);
-        }
-    }
-}
-
 int structuresearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
 
     setStructureSearchWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     setStructureSearchMustPassAlong(&par);
-    validateStructtyMode(par.structtyMode);
-    if (par.viewResults && par.filenames.size() > 2) {
-        // <queryDB> <targetDB> <resultDB> <tmpDir>
-        validateStructtyInputs(std::vector<std::string>(par.filenames.begin(),
-                                                        par.filenames.begin() + 2));
-    }
     if((par.alignmentMode == 1 || par.alignmentMode == 2) && par.sortByStructureBits){
         Debug(Debug::WARNING) << "Cannot use --sort-by-structure-bits 1 with --alignment-mode 1 or 2\n";
         Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
@@ -174,8 +80,6 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         }
     }
 
-    // The StrucTTY viewer m8 carries qaln/taln/lddt, which all need alignment
-    // backtraces. This must happen before any alignment parameter string is built.
     if (par.viewResults && par.addBacktrace == false) {
         Debug(Debug::INFO) << "Alignment backtraces will be computed for the StrucTTY viewer.\n";
         par.addBacktrace = true;
@@ -257,11 +161,10 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
     cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("STRUCTTY_PAR", par.viewResults
+                    ? par.createParameterString(par.structtyworkflow).c_str() : NULL);
     cmd.addVariable("QUERY", query.c_str());
     cmd.addVariable("TARGET", target.c_str());
-    // Viewer m8: fixed 17-column layout. Swap par.outfmt rather than appending
-    // --format-output — convertalis rejects a duplicated flag.
-    // Needs alignment backtraces (forced above).
     std::string viewerConvertPar;
     {
         const std::string userOutfmt = par.outfmt;
@@ -369,19 +272,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("MERGERESULTBYSET_PAR", par.createParameterString(par.mergeresultsbyset).c_str());
         cmd.addVariable("EXPAND", "1");
     }
-    std::string argString = program;
-    for (const auto& s : par.filenames) { argString += " "; argString += s; }
-    if (std::system(argString.c_str()) != EXIT_SUCCESS) { EXIT(EXIT_FAILURE); }
-    if (par.viewResults) {
-        structty::RunOptions opts;
-        // query/target are already DBs here; the viewer probes them and takes the
-        // query-from-DB path (multi-query navigation with ]/[).
-        opts.input_files.push_back(query);
-        opts.foldseek_target   = target;
-        opts.foldseek_result   = tmpDir + "/viewer_results.m8";
-        opts.mode              = par.structtyMode;
-        opts.show_structure    = par.structtyShowStructure;
-        structty::run(opts);
-    }
-    return EXIT_SUCCESS;
+    cmd.execProgram(program.c_str(), par.filenames);
+
+    // Should never get here
+    assert(false);
+    return EXIT_FAILURE;
 }

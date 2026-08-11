@@ -33,6 +33,14 @@ public:
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
     static const int ALIGNMENT_TYPE_LOLALIGN = 3;
 
+    static const int STRUCTTY_MODE_PROTEIN = 0;
+    static const int STRUCTTY_MODE_CHAIN = 1;
+    static const int STRUCTTY_MODE_RAINBOW = 2;
+    static const int STRUCTTY_MODE_PLDDT = 3;
+    static const int STRUCTTY_MODE_INTERFACE = 4;
+    static const int STRUCTTY_MODE_CONSERVATION = 5;
+    static const int STRUCTTY_MODE_ALIGNED = 6;
+
     static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
     static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
     static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
@@ -120,7 +128,6 @@ public:
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
-    // easystructuresearchworkflow minus the StrucTTY viewer parameters (easy-rbh)
     std::vector<MMseqsParameter *> easystructurerbhworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
@@ -178,8 +185,6 @@ public:
     PARAMETER(PARAM_VIEW_RESULTS)
     PARAMETER(PARAM_STRUCTTY_MODE)
     PARAMETER(PARAM_STRUCTTY_SS)
-    PARAMETER(PARAM_FOLDSEEK_TARGET)
-    PARAMETER(PARAM_FOLDSEEK_RESULT)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -217,10 +222,9 @@ public:
     int minAlignedChains;
     int multiDomain;
     bool viewResults;
-    std::string structtyMode;
+    int structtyMode;
     bool structtyShowStructure;
-    std::string foldseekTarget;
-    std::string foldseekResult;
+
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
