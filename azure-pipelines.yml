@@ -96,7 +96,7 @@ jobs:
           DOCKER: .github/workflows/Dockerfile.GPU-buster-cross-sbsa
     steps:
       - checkout: self
-        submodules: false
+        submodules: true
       - script: |
           mkdir -p ${BUILD_SOURCESDIRECTORY}/output
           docker build -t manylinux-builder \
@@ -122,6 +122,8 @@ jobs:
           ARCH: arm64
           CPREF: aarch64
     steps:
+      - checkout: self
+        submodules: true
       - script: |
           CODENAME=$(lsb_release -cs)
           sudo dpkg --add-architecture "$ARCH"
