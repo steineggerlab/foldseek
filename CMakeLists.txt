@@ -10,6 +10,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lib/mmseqs/cmake")
 
 set(ENABLE_PROSTT5 1 CACHE BOOL "Enable ProstT5")
 set(ENABLE_CUDA 0 CACHE BOOL "Enable CUDA")
+set(ENABLE_STRUCTTY 1 CACHE BOOL "Enable StrucTTY viewer")
 set(FORCE_STATIC_DEPS 0 CACHE BOOL "Force static linking of deps")
 
 if(FORCE_STATIC_DEPS)
@@ -43,33 +44,40 @@ add_subdirectory(lib/kerasify)
 add_subdirectory(lib/tmalign)
 set(BUILD_LIBRARY 1 CACHE INTERNAL "" FORCE)
 add_subdirectory(lib/foldcomp EXCLUDE_FROM_ALL)
-# StrucTTY render+viewer library (ncurses 불필요)
-# Must be added before include_directories(lib) to avoid foldseek's gemmi
-# headers polluting StrucTTY's own gemmi compilation.
-set(STRUCTTY_BUILD_APP OFF CACHE BOOL "" FORCE)
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/structty/lib/gemmi/CMakeLists.txt")
-    find_package(Git QUIET)
-    if(GIT_FOUND)
-        execute_process(
-            COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive lib/structty
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            RESULT_VARIABLE GIT_SUBMODULE_RESULT
-        )
-        if(NOT GIT_SUBMODULE_RESULT EQUAL 0)
-            message(FATAL_ERROR "git submodule update --init --recursive lib/structty failed")
+if(ENABLE_STRUCTTY)
+    set(STRUCTTY_BUILD_APP OFF CACHE BOOL "" FORCE)
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/structty/lib/lodepng/lodepng.cpp")
+        find_package(Git QUIET)
+        if(GIT_FOUND)
+            execute_process(
+                COMMAND ${GIT_EXECUTABLE} submodule update --init lib/structty
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                RESULT_VARIABLE GIT_SUBMODULE_RESULT
+            )
+            if(GIT_SUBMODULE_RESULT EQUAL 0)
+                execute_process(
+                    COMMAND ${GIT_EXECUTABLE} submodule update --init lib/lodepng
+                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/structty
+                    RESULT_VARIABLE GIT_SUBMODULE_RESULT
+                )
+            endif()
+            if(NOT GIT_SUBMODULE_RESULT EQUAL 0)
+                message(FATAL_ERROR "git submodule update --init lib/structty failed")
+            endif()
+        else()
+            message(FATAL_ERROR "Git not found and lib/structty is not initialized. Run: git submodule update --init lib/structty && git -C lib/structty submodule update --init lib/lodepng")
         endif()
-    else()
-        message(FATAL_ERROR "Git not found and lib/structty/lib/gemmi is not initialized. Run: git submodule update --init --recursive lib/structty")
     endif()
-endif()
-add_library(gemmi_cpp INTERFACE)
-add_library(gemmi::gemmi_cpp ALIAS gemmi_cpp)
-target_include_directories(gemmi_cpp INTERFACE ${CMAKE_SOURCE_DIR}/lib)
-add_subdirectory(lib/structty)
-# stdc++fs needed for std::filesystem on cross-compile toolchains using GCC < 9 (e.g. aarch64 buster).
-# GCC 9+ ships an empty compatibility stdc++fs archive so this is safe on all Linux builds.
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(structty PUBLIC stdc++fs)
+    add_library(gemmi_cpp INTERFACE)
+    add_library(gemmi::gemmi_cpp ALIAS gemmi_cpp)
+    target_include_directories(gemmi_cpp INTERFACE ${CMAKE_SOURCE_DIR}/lib)
+    if(NOT MSVC)
+        target_compile_options(gemmi_cpp INTERFACE -include cstdint)
+    endif()
+    add_subdirectory(lib/structty)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(structty PUBLIC stdc++fs)
+    endif()
 endif()
 
 add_subdirectory(data)

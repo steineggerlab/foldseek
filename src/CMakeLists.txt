@@ -13,7 +13,11 @@ add_library(foldseek-framework
         FoldseekBase.cpp
 )
 mmseqs_setup_derived_target(foldseek-framework)
-target_link_libraries(foldseek-framework gemmiwrapper 3di pulchra kerasify tmalign structty)
+target_link_libraries(foldseek-framework gemmiwrapper 3di pulchra kerasify tmalign)
+if(ENABLE_STRUCTTY)
+        target_link_libraries(foldseek-framework structty)
+        target_compile_definitions(foldseek-framework PUBLIC -DHAVE_STRUCTTY=1)
+endif()
 if(ENABLE_PROSTT5)
         add_library(prostt5 ${prostt5_source_files})
         target_link_libraries(prostt5 llama)
