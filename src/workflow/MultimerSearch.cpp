@@ -94,11 +94,9 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("OUTPUT", par.filenames.back().c_str());
     par.filenames.pop_back();
-    const std::string targetDb = par.filenames.back();
-    cmd.addVariable("TARGETDB", targetDb.c_str());
+    cmd.addVariable("TARGETDB", par.filenames.back().c_str());
     par.filenames.pop_back();
-    const std::string queryDb = par.filenames.back();
-    cmd.addVariable("QUERYDB", queryDb.c_str());
+    cmd.addVariable("QUERYDB", par.filenames.back().c_str());
     cmd.addVariable("LEAVE_INPUT", par.dbOut ? "TRUE" : NULL);
     par.filenames.pop_back();
 
@@ -115,7 +113,6 @@ int multimersearch(int argc, const char **argv, const Command &command) {
     std::string program = tmpDir + "/multimersearch.sh";
     FileUtil::writeFile(program, multimersearch_sh, multimersearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
-
     // Should never get here
     assert(false);
     return EXIT_FAILURE;

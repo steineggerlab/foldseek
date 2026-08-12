@@ -16,7 +16,6 @@ STEP=0
 if [ -z "$NUM_IT" ]; then
     NUM_IT=3
 fi
-
 while [ "$STEP" -lt "$NUM_IT" ]; do
     # call prefilter module
     if notExists "$TMP_PATH/pref_tmp_${STEP}.done"; then

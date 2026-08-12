@@ -10,6 +10,7 @@
 #include "structureiterativesearch.sh.h"
 #include "structureprofile.sh.h"
 
+
 void setStructureSearchWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 0;
     p->sensitivity = 9.5;
@@ -37,6 +38,7 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         Debug(Debug::WARNING) << "Disabling --sort-by-structure-bits\n";
         par.sortByStructureBits = false;
     }
+
 
     {
         bool needBacktrace = false;
@@ -149,13 +151,9 @@ int structuresearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("TARGET_ALIGNMENT", target.c_str());
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.structurealign).c_str());
     }
-    cmd.addVariable("QUERY", query.c_str());
-    cmd.addVariable("TARGET", target.c_str());
-
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
-
     std::string program;
     if(par.numIterations > 1 || par.numIterations == 0){
 	//par.evalProfile = 0.1;
@@ -251,5 +249,6 @@ int structuresearch(int argc, const char **argv, const Command &command) {
 
     // Should never get here
     assert(false);
+    // Should never get here
     return EXIT_FAILURE;
 }

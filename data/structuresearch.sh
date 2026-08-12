@@ -9,6 +9,7 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+
 abspath() {
     if [ -d "$1" ]; then
         (cd "$1"; pwd)
