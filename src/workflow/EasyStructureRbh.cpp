@@ -117,3 +117,4 @@ int structureeasyrbh(int argc, const char **argv, const Command &command) {
     assert(false);
     return EXIT_FAILURE;
 }
+
