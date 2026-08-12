@@ -9,6 +9,3 @@
 [submodule "regression"]
 	path = regression
 	url = https://github.com/steineggerlab/foldseek-regression
-[submodule "lib/structty"]
-	path = lib/structty
-	url = https://github.com/steineggerlab/StrucTTY.git
