@@ -117,6 +117,7 @@ public:
     std::vector<MMseqsParameter *> structurerescorediagonal;
     std::vector<MMseqsParameter *> structuresearchworkflow;
     std::vector<MMseqsParameter *> structureclusterworkflow;
+    std::vector<MMseqsParameter *> structureclusterupdate;
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
