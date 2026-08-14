@@ -1067,6 +1067,7 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                         contents.c_str(),
                         contents.size(),
                         obj_name,
+                        par.saveResIndex,
                         (GemmiWrapper::Format)inputFormat,
                         (GemmiWrapper::CompressionFormat)inputCompressionFormat
                     ) == false) {
@@ -1075,10 +1076,10 @@ int structcreatedb(int argc, const char **argv, const Command& command) {
                     __sync_add_and_fetch(&needToWriteModel, (readStructure.modelCount > 1));
                     writeStructureEntry(
                         mat, readStructure, structureTo3Di, pulchra,
-                        alphabet3di, alphabetAA, camol, header, aadbw, hdbw, torsiondbw, cadbw,
+                        alphabet3di, alphabetAA, camol, header, resId, aadbw, hdbw, torsiondbw, cadbw,
                         par.chainNameMode, par.maskBfactorThreshold, tooShort, notProtein, globalCnt, thread_idx, par.coordStoreMode,
                         globalFileidCnt, entrynameToFileId, filenameToFileId, fileIdToName,
-                        mappingWriter, foldcompWriter
+                        mappingWriter, foldcompWriter, idbw
                     );
                 }
             }
