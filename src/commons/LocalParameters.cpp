@@ -36,6 +36,7 @@ LocalParameters::LocalParameters() :
         PARAM_INPUT_FORMAT(PARAM_INPUT_FORMAT_ID, "--input-format", "Input format", "Format of input structures:\n0: Auto-detect by extension\n1: PDB\n2: mmCIF\n3: mmJSON\n4: ChemComp\n5: Foldcomp", typeid(int), (void *) &inputFormat, "^[0-5]{1}$"),
         PARAM_INPUT_COMPRESSION_FORMAT(PARAM_INPUT_COMPRESSION_FORMAT_ID, "--input-compression-format", "Input compression format", "Compression format of input structures:\n0: Auto/File-ending based\n1: gzip\n2: zstd", typeid(int), (void *) &inputCompressionFormat, "^[0-2]{1}$"),
         PARAM_PDB_OUTPUT_MODE(PARAM_PDB_OUTPUT_MODE_ID, "--pdb-output-mode", "PDB output mode", "PDB output mode:\n0: Single multi-model PDB file\n1: One PDB file per chain\n2: One PDB file per complex", typeid(int), (void *) &pdbOutputMode, "^[0-2]{1}$", MMseqsParameter::COMMAND_MISC),
+        PARAM_OUTPUT_FORMAT(PARAM_OUTPUT_FORMAT_ID, "--output-format", "Output format", "Format of output structures:\n0: PDB\n1: mmCIF (keeps multi-character chain names)", typeid(int), (void *) &outputFormat, "^[0-1]{1}$", MMseqsParameter::COMMAND_MISC),
         PARAM_PROSTT5_MODEL(PARAM_PROSTT5_MODEL_ID, "--prostt5-model", "Path to ProstT5", "Path to ProstT5 model", typeid(std::string), (void *) &prostt5Model, "^.*$", MMseqsParameter::COMMAND_COMMON),
         PARAM_DB_EXTRACTION_MODE(PARAM_DB_EXTRACTION_MODE_ID, "--db-extraction-mode", "Createdb extraction mode", "createdb extraction mode: 0: chain 1: interface", typeid(int), (void *) &dbExtractionMode, "^[0-1]{1}$"),
         PARAM_DISTANCE_THRESHOLD(PARAM_DISTANCE_THRESHOLD_ID, "--distance-threshold", "Interface distance threshold", "Residues with C-beta below this threshold will be part of interface", typeid(float), (void *) &distanceThreshold, "^[0-9]*(\\.[0-9]+)?$"),
@@ -252,6 +253,7 @@ LocalParameters::LocalParameters() :
 
     // convert2pdb
     convert2pdb.push_back(&PARAM_PDB_OUTPUT_MODE);
+    convert2pdb.push_back(&PARAM_OUTPUT_FORMAT);
     convert2pdb.push_back(&PARAM_THREADS);
     convert2pdb.push_back(&PARAM_V);
 
@@ -328,6 +330,7 @@ LocalParameters::LocalParameters() :
     coordStoreMode = COORD_STORE_MODE_CA_DIFF;
     inputFormat = 0; // auto detect
     inputCompressionFormat = INPUT_COMPRESSION_AUTO;
+    outputFormat = STRUCTURE_OUTPUT_FORMAT_PDB;
     fileInclude = ".*";
     fileExclude = "^$";
     prostt5SplitLength = 1024;

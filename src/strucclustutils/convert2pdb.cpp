@@ -1,5 +1,6 @@
 #include <cstring>
 #include <cstdio>
+#include <string>
 
 #include "LocalParameters.h"
 #include "DBReader.h"
@@ -72,11 +73,128 @@ void writeTitle(FILE* handle, const char* headerData, size_t headerLen) {
     }
 }
 
+// mmCIF _atom_site column order used by writeAtomCif below
+static const char* CIF_ATOM_SITE_LOOP =
+    "loop_\n"
+    "_atom_site.group_PDB\n"
+    "_atom_site.id\n"
+    "_atom_site.type_symbol\n"
+    "_atom_site.label_atom_id\n"
+    "_atom_site.label_alt_id\n"
+    "_atom_site.label_comp_id\n"
+    "_atom_site.label_asym_id\n"
+    "_atom_site.label_entity_id\n"
+    "_atom_site.label_seq_id\n"
+    "_atom_site.pdbx_PDB_ins_code\n"
+    "_atom_site.Cartn_x\n"
+    "_atom_site.Cartn_y\n"
+    "_atom_site.Cartn_z\n"
+    "_atom_site.occupancy\n"
+    "_atom_site.B_iso_or_equiv\n"
+    "_atom_site.auth_seq_id\n"
+    "_atom_site.auth_asym_id\n"
+    "_atom_site.pdbx_PDB_model_num\n";
+
+// quote a value so that it survives as a single CIF token, "." for an empty value
+std::string cifValue(const std::string& value) {
+    if (value.empty()) {
+        return ".";
+    }
+    bool needsQuote = false;
+    for (size_t i = 0; i < value.size(); ++i) {
+        const char c = value[i];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\'' || c == '"') {
+            needsQuote = true;
+            break;
+        }
+    }
+    switch (value[0]) {
+        case '_':
+        case '#':
+        case '$':
+        case ';':
+        case '[':
+        case ']':
+            needsQuote = true;
+            break;
+        default:
+            break;
+    }
+    if (needsQuote == false) {
+        return value;
+    }
+    std::string quoted;
+    quoted.reserve(value.size() + 2);
+    quoted.append(1, '\'');
+    for (size_t i = 0; i < value.size(); ++i) {
+        // a single quote cannot be escaped inside a single quoted CIF string
+        quoted.append(1, value[i] == '\'' ? '"' : value[i]);
+    }
+    quoted.append(1, '\'');
+    return quoted;
+}
+
+// a data block name must not contain whitespace
+std::string cifBlockName(const std::string& name) {
+    std::string blockName = name;
+    for (size_t i = 0; i < blockName.size(); ++i) {
+        const char c = blockName[i];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+            blockName[i] = '_';
+        }
+    }
+    if (blockName.empty()) {
+        blockName = "structure";
+    }
+    return blockName;
+}
+
+// a header must stay on a single line, both in a comment and in a text field
+void writeSingleLineCif(FILE* handle, const char* headerData, size_t headerLen) {
+    for (size_t i = 0; i < headerLen; ++i) {
+        const char c = headerData[i];
+        fputc((c == '\n' || c == '\r') ? ' ' : c, handle);
+    }
+}
+
+void writeTitleCif(FILE* handle, const char* headerData, size_t headerLen) {
+    // multi line text field, robust against quotes and arbitrary length
+    fprintf(handle, "_struct.title\n;");
+    writeSingleLineCif(handle, headerData, headerLen);
+    fprintf(handle, "\n;\n#\n");
+}
+
+void writeBlockStartCif(FILE* handle, const std::string& name, const char* headerData, size_t headerLen) {
+    fprintf(handle, "data_%s\n#\n", cifBlockName(name).c_str());
+    fprintf(handle, "_entry.id   %s\n#\n", cifValue(name).c_str());
+    if (headerData != NULL) {
+        writeTitleCif(handle, headerData, headerLen);
+    }
+    fputs(CIF_ATOM_SITE_LOOP, handle);
+}
+
+void writeAtomCif(FILE* handle, int atomId, const char* aa3, const std::string& asymId, int entityId, int seqId, float x, float y, float z, int modelNum) {
+    fprintf(handle, "ATOM %d C CA . %s %s %d %d ? %.3f %.3f %.3f 1.00 0.00 %d %s %d\n",
+            atomId, aa3, asymId.c_str(), entityId, seqId, x, y, z, seqId, asymId.c_str(), modelNum);
+}
+
+std::string stripPathAndExtension(const std::string& path) {
+    size_t start = path.find_last_of('/');
+    start = (start == std::string::npos) ? 0 : start + 1;
+    size_t end = path.find_last_of('.');
+    if (end == std::string::npos || end <= start) {
+        end = path.size();
+    }
+    return path.substr(start, end - start);
+}
+
 int convert2pdb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     int outputMode = par.pdbOutputMode;
+    const bool cifOutput = par.outputFormat == LocalParameters::STRUCTURE_OUTPUT_FORMAT_MMCIF;
+    const char* extension = cifOutput ? ".cif" : ".pdb";
     int localThreads = par.threads;
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         localThreads = 1;
@@ -85,7 +203,8 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     }
 
     int mode = DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX;
-    if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
+    // mmCIF can hold the real chain name in every mode, so the lookup is always needed for it
+    if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL || cifOutput) {
         mode |= DBReader<unsigned int>::USE_LOOKUP;
     }
     DBReader<unsigned int> db(par.db1.c_str(), par.db1Index.c_str(), localThreads, mode);
@@ -114,6 +233,11 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
         if (handle == NULL) {
             perror(par.db2.c_str());
             EXIT(EXIT_FAILURE);
+        }
+        if (cifOutput) {
+            // one data block holding all entries as models, separate data blocks per entry
+            // would be valid CIF but are not read by common mmCIF parsers
+            writeBlockStartCif(handle, stripPathAndExtension(par.db2), NULL, 0);
         }
     } else {
         if (mkdir(par.db2.c_str(), 0755) != 0) {
@@ -145,10 +269,15 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
             keyIterator = new DbKeyIterator(db);
         }
         const size_t size = keyIterator->getSize();
+        // atom ids are continuous within one data block, models share the block of a multi model file
+        int atomId = 0;
+        // only used for multi model mmCIF output, which runs single threaded
+        int modelNum = 0;
 #pragma omp for schedule(dynamic, 1)
         for (size_t i = 0; i < size; ++i) {
             std::pair<const unsigned int*, size_t> keys = keyIterator->getDbKeys(i);
             if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
+                atomId = 0;
                 unsigned int key = keys.first[0];
                 // std::string name = db.getLookupEntryName(key);
                 size_t lookupKey = db.getLookupIdByKey(key);
@@ -162,7 +291,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                         name = name.substr(0, name.find_last_of('_'));
                     }
                 }
-                std::string filename = par.db2 + "/" + name + ".pdb";
+                std::string filename = par.db2 + "/" + name + extension;
                 threadHandle = fopen(filename.c_str(), "w");
                 if (threadHandle == NULL) {
                     perror(filename.c_str());
@@ -172,7 +301,11 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                 unsigned int headerId = db_header.getId(key);
                 const char* headerData = db_header.getData(headerId, thread_idx);
                 const size_t headerLen = db_header.getEntryLen(headerId) - 2;
-                writeTitle(threadHandle, headerData, headerLen);
+                if (cifOutput) {
+                    writeBlockStartCif(threadHandle, name, headerData, headerLen);
+                } else {
+                    writeTitle(threadHandle, headerData, headerLen);
+                }
             }
 
             std::string chainName = "A";
@@ -190,13 +323,21 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                 float* ca = coords.read(caData, seqLen, caLen);
 
                 if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
-                    fprintf(threadHandle, "MODEL % 8d\n", key);
-
                     unsigned int headerId = db_header.getId(key);
                     const char* headerData = db_header.getData(headerId, thread_idx);
                     const size_t headerLen = db_header.getEntryLen(headerId) - 2;
-                    writeTitle(threadHandle, headerData, headerLen);
-                } else {
+                    if (cifOutput) {
+                        // mmCIF has no per model title item, keep it as a comment
+                        modelNum++;
+                        fprintf(threadHandle, "# model %d ", modelNum);
+                        writeSingleLineCif(threadHandle, headerData, headerLen);
+                        fputc('\n', threadHandle);
+                    } else {
+                        fprintf(threadHandle, "MODEL % 8d\n", key);
+                        writeTitle(threadHandle, headerData, headerLen);
+                    }
+                }
+                if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL || cifOutput) {
                     // std::string name = db.getLookupEntryName(key);
                     size_t lookupKey = db.getLookupIdByKey(key);
                     std::string name = db.getLookupEntryName(lookupKey);
@@ -205,6 +346,10 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                         chainName = "A";
                     }
                 }
+                // mmCIF keeps the full chain name, the PDB record has room for one character only
+                const std::string asymId = cifOutput ? cifValue(chainName) : std::string();
+                const int entityId = (int)(j + 1);
+                const int atomModelNum = (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) ? modelNum : 1;
                 for (size_t j = 0; j < seqLen; ++j) {
                     // make AA upper case
                     char aa = seqData[j] & ~0x20;
@@ -212,22 +357,34 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                         aa = 'X';
                     }
                     const char* aa3 = threeLetterLookup[(int)(aa - 'A')];
-                    fprintf(threadHandle, "ATOM  %5d  CA  %s %c%4d    %8.3f%8.3f%8.3f\n", (int)(j + 1), aa3, chainName[0], int(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)]);
+                    if (cifOutput) {
+                        writeAtomCif(threadHandle, ++atomId, aa3, asymId, entityId, (int)(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)], atomModelNum);
+                    } else {
+                        fprintf(threadHandle, "ATOM  %5d  CA  %s %c%4d    %8.3f%8.3f%8.3f\n", (int)(j + 1), aa3, chainName[0], int(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)]);
+                    }
                 }
-                if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
+                if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL && cifOutput == false) {
                     fprintf(threadHandle, "ENDMDL\n");
                 }
             }
             if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
+                if (cifOutput) {
+                    fprintf(threadHandle, "#\n");
+                }
                 fclose(threadHandle);
             }
         }
         delete keyIterator;
     }
 
-    if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL && fclose(handle) != 0) {
-        Debug(Debug::ERROR) << "Cannot close file " << par.db2 << "\n";
-        EXIT(EXIT_FAILURE);
+    if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
+        if (cifOutput) {
+            fprintf(handle, "#\n");
+        }
+        if (fclose(handle) != 0) {
+            Debug(Debug::ERROR) << "Cannot close file " << par.db2 << "\n";
+            EXIT(EXIT_FAILURE);
+        }
     }
     db_ca.close();
     db_header.close();
