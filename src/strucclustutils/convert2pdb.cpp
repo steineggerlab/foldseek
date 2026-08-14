@@ -271,8 +271,6 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
         const size_t size = keyIterator->getSize();
         // atom ids are continuous within one data block, models share the block of a multi model file
         int atomId = 0;
-        // only used for multi model mmCIF output, which runs single threaded
-        int modelNum = 0;
 #pragma omp for schedule(dynamic, 1)
         for (size_t i = 0; i < size; ++i) {
             std::pair<const unsigned int*, size_t> keys = keyIterator->getDbKeys(i);
@@ -328,8 +326,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                     const size_t headerLen = db_header.getEntryLen(headerId) - 2;
                     if (cifOutput) {
                         // mmCIF has no per model title item, keep it as a comment
-                        modelNum++;
-                        fprintf(threadHandle, "# model %d ", modelNum);
+                        fprintf(threadHandle, "# model %d ", key);
                         writeSingleLineCif(threadHandle, headerData, headerLen);
                         fputc('\n', threadHandle);
                     } else {
@@ -349,7 +346,8 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                 // mmCIF keeps the full chain name, the PDB record has room for one character only
                 const std::string asymId = cifOutput ? cifValue(chainName) : std::string();
                 const int entityId = (int)(j + 1);
-                const int atomModelNum = (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) ? modelNum : 1;
+                // same model numbering as the PDB MODEL record, which uses the db key
+                const int atomModelNum = (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) ? (int)key : 1;
                 for (size_t j = 0; j < seqLen; ++j) {
                     // make AA upper case
                     char aa = seqData[j] & ~0x20;
