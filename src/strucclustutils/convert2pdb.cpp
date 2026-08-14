@@ -195,6 +195,8 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     int outputMode = par.pdbOutputMode;
     const bool cifOutput = par.outputFormat == LocalParameters::STRUCTURE_OUTPUT_FORMAT_MMCIF;
     const char* extension = cifOutput ? ".cif" : ".pdb";
+    // one file per chain, the PDB output keeps its existing grouping in every mode
+    const bool splitPerChain = cifOutput && outputMode == LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN;
     int localThreads = par.threads;
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         localThreads = 1;
@@ -203,8 +205,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     }
 
     int mode = DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX;
-    // mmCIF can hold the real chain name in every mode, so the lookup is always needed for it
-    if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL || cifOutput) {
+    if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         mode |= DBReader<unsigned int>::USE_LOOKUP;
     }
     DBReader<unsigned int> db(par.db1.c_str(), par.db1Index.c_str(), localThreads, mode);
@@ -263,7 +264,9 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
         Coordinate16 coords;
 
         KeyIterator* keyIterator;
-        if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX || LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN) {
+        if (splitPerChain) {
+            keyIterator = new DbKeyIterator(db);
+        } else if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX || LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN) {
             keyIterator = new MapIterator(complexIdToChainKeysMap, complexIndices);
         } else {
             keyIterator = new DbKeyIterator(db);
@@ -306,6 +309,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                 }
             }
 
+            // the multi model output has no chain information, mmCIF collapses it like the PDB record
             std::string chainName = "A";
             for (size_t j = 0; j < keys.second; ++j) {
                 unsigned int key = keys.first[j];
@@ -333,8 +337,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                         fprintf(threadHandle, "MODEL % 8d\n", key);
                         writeTitle(threadHandle, headerData, headerLen);
                     }
-                }
-                if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL || cifOutput) {
+                } else {
                     // std::string name = db.getLookupEntryName(key);
                     size_t lookupKey = db.getLookupIdByKey(key);
                     std::string name = db.getLookupEntryName(lookupKey);
