@@ -78,7 +78,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     int outputMode = par.pdbOutputMode;
-    const bool cifOutput = par.outputFormat == LocalParameters::STRUCTURE_OUTPUT_FORMAT_MMCIF;
+    const bool cifOutput = par.pdbOutputFormat == LocalParameters::PDB_OUTPUT_FORMAT_MMCIF;
     const char* extension = cifOutput ? ".cif" : ".pdb";
     // one file per chain, the PDB output keeps its existing grouping in every mode
     const bool splitPerChain = cifOutput && outputMode == LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN;
