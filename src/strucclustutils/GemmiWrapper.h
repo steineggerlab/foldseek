@@ -5,6 +5,7 @@
 #ifndef FOLDSEEK_GEMMIWRAPPER_H
 #define FOLDSEEK_GEMMIWRAPPER_H
 #include <vector>
+#include <iosfwd>
 #include <unordered_map>
 #include <string>
 #include <cstdlib>
@@ -111,8 +112,9 @@ public:
     void addChain(const std::string& chainName);
     // appends a C-alpha only residue to the current chain
     void addCalpha(const char* residueName, int seqId, float x, float y, float z);
-    // serializes the accumulated structure as mmCIF, false if it could not be written
-    bool writeCif(const std::string& path);
+    // serializes the accumulated structure as mmCIF into stream, false if gemmi
+    // rejected the structure. Stream errors are left to the caller to check.
+    bool writeCif(std::ostream& stream);
 
 private:
     GemmiWriter(const GemmiWriter&);

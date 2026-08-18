@@ -1,5 +1,6 @@
 #include <cstring>
 #include <cstdio>
+#include <fstream>
 
 #include "LocalParameters.h"
 #include "DBReader.h"
@@ -115,10 +116,16 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     Debug(Debug::INFO) << "Start writing file to " << par.db2 << "\n";
     FILE* handle = NULL;
     GemmiWriter multiModelWriter;
+    std::ofstream multiModelStream;
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         if (cifOutput) {
             // all entries share one data block, gemmi serializes it after the loop
             multiModelWriter.reset(Util::remove_extension(FileUtil::baseName(par.db2)), "");
+            multiModelStream.open(par.db2.c_str());
+            if (multiModelStream.is_open() == false) {
+                perror(par.db2.c_str());
+                EXIT(EXIT_FAILURE);
+            }
         } else {
             handle = fopen(par.db2.c_str(), "w");
             if (handle == NULL) {
@@ -151,7 +158,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
         GemmiWriter threadWriter;
         GemmiWriter* writer = (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL)
                                   ? &multiModelWriter : &threadWriter;
-        std::string cifPath;
+        std::ofstream cifStream;
         Coordinate16 coords;
 
         KeyIterator* keyIterator;
@@ -180,18 +187,23 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                         name = name.substr(0, name.find_last_of('_'));
                     }
                 }
-                cifPath = par.db2 + "/" + name + extension;
+                std::string filename = par.db2 + "/" + name + extension;
 
                 unsigned int headerId = db_header.getId(key);
                 const char* headerData = db_header.getData(headerId, thread_idx);
                 const size_t headerLen = db_header.getEntryLen(headerId) - 2;
                 if (cifOutput) {
+                    cifStream.open(filename.c_str());
+                    if (cifStream.is_open() == false) {
+                        perror(filename.c_str());
+                        EXIT(EXIT_FAILURE);
+                    }
                     writer->reset(name, std::string(headerData, headerLen));
                     writer->addModel(1, "");
                 } else {
-                    threadHandle = fopen(cifPath.c_str(), "w");
+                    threadHandle = fopen(filename.c_str(), "w");
                     if (threadHandle == NULL) {
-                        perror(cifPath.c_str());
+                        perror(filename.c_str());
                         EXIT(EXIT_FAILURE);
                     }
                     writeTitle(threadHandle, headerData, headerLen);
@@ -255,8 +267,10 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
             }
             if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
                 if (cifOutput) {
-                    if (writer->writeCif(cifPath) == false) {
-                        Debug(Debug::ERROR) << "Cannot write file " << cifPath << "\n";
+                    const bool written = writer->writeCif(cifStream);
+                    cifStream.close();
+                    if (written == false || cifStream.fail()) {
+                        Debug(Debug::ERROR) << "Cannot write file " << par.db2 << "\n";
                         EXIT(EXIT_FAILURE);
                     }
                 } else {
@@ -269,7 +283,9 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
 
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         if (cifOutput) {
-            if (multiModelWriter.writeCif(par.db2) == false) {
+            const bool written = multiModelWriter.writeCif(multiModelStream);
+            multiModelStream.close();
+            if (written == false || multiModelStream.fail()) {
                 Debug(Debug::ERROR) << "Cannot write file " << par.db2 << "\n";
                 EXIT(EXIT_FAILURE);
             }
