@@ -84,16 +84,6 @@ void writeTitle(FILE* handle, const char* headerData, size_t headerLen) {
     }
 }
 
-std::string stripPathAndExtension(const std::string& path) {
-    size_t start = path.find_last_of('/');
-    start = (start == std::string::npos) ? 0 : start + 1;
-    size_t end = path.find_last_of('.');
-    if (end == std::string::npos || end <= start) {
-        end = path.size();
-    }
-    return path.substr(start, end - start);
-}
-
 // gemmi prints coordinates with the shortest round trip representation of the
 // double, so a float 3.8 would end up as 3.79999995. The source files and the
 // PDB output carry three decimals, keep the same precision here.
@@ -101,17 +91,12 @@ static double roundToPdbPrecision(float value) {
     return std::round((double)value * 1000.0) / 1000.0;
 }
 
-// Only the categories that carry information for a C-alpha only structure, the
-// default groups would emit empty _exptl, _refine, _cell, ... categories.
+// The defaults would emit a bogus 1x1x1 unit cell and an empty _symmetry for a
+// coordinate only structure, everything else gemmi writes is real information.
 static gemmi::MmcifOutputGroups calphaOutputGroups() {
-    gemmi::MmcifOutputGroups groups(false);
-    groups.block_name = true;
-    groups.entry = true;
-    groups.title_keywords = true;
-    groups.entity = true;
-    groups.struct_asym = true;
-    groups.atom_type = true;
-    groups.atoms = true;
+    gemmi::MmcifOutputGroups groups(true);
+    groups.cell = false;
+    groups.symmetry = false;
     groups.group_pdb = true;
     return groups;
 }
@@ -208,7 +193,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         if (cifOutput) {
             // all entries share one data block, gemmi serializes it after the loop
-            multiModelSt.name = stripPathAndExtension(par.db2);
+            multiModelSt.name = Util::remove_extension(FileUtil::baseName(par.db2));
             multiModelSt.info["_entry.id"] = multiModelSt.name;
         } else {
             handle = fopen(par.db2.c_str(), "w");
