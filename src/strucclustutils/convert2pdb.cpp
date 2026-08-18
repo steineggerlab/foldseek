@@ -1,5 +1,10 @@
 #include <cstring>
 #include <cstdio>
+#include <cmath>
+#include <fstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "LocalParameters.h"
 #include "DBReader.h"
@@ -8,7 +13,13 @@
 #include "FileUtil.h"
 #include "Coordinate16.h"
 #include "MultimerUtil.h"
-#include "StructureWriter.h"
+
+// gemmi throws, so this single file is compiled with -fexceptions
+// (see set_source_files_properties in src/CMakeLists.txt)
+#define GEMMI_WRITE_IMPLEMENTATION
+#include "to_mmcif.hpp"
+#include "to_cif.hpp"
+#include "polyheur.hpp"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -83,6 +94,74 @@ std::string stripPathAndExtension(const std::string& path) {
     return path.substr(start, end - start);
 }
 
+// gemmi prints coordinates with the shortest round trip representation of the
+// double, so a float 3.8 would end up as 3.79999995. The source files and the
+// PDB output carry three decimals, keep the same precision here.
+static double roundToPdbPrecision(float value) {
+    return std::round((double)value * 1000.0) / 1000.0;
+}
+
+// Only the categories that carry information for a C-alpha only structure, the
+// default groups would emit empty _exptl, _refine, _cell, ... categories.
+static gemmi::MmcifOutputGroups calphaOutputGroups() {
+    gemmi::MmcifOutputGroups groups(false);
+    groups.block_name = true;
+    groups.entry = true;
+    groups.title_keywords = true;
+    groups.entity = true;
+    groups.struct_asym = true;
+    groups.atom_type = true;
+    groups.atoms = true;
+    groups.group_pdb = true;
+    return groups;
+}
+
+static void addCalpha(gemmi::Structure& st, const char* residueName, int seqId, float x, float y, float z) {
+    gemmi::Residue residue;
+    residue.name = residueName;
+    residue.seqid = gemmi::SeqId(seqId, ' ');
+    residue.label_seq = seqId;
+    residue.het_flag = 'A';
+    residue.entity_type = gemmi::EntityType::Polymer;
+
+    gemmi::Atom atom;
+    atom.name = "CA";
+    atom.element = gemmi::El::C;
+    atom.occ = 1.0f;
+    atom.b_iso = 0.0f;
+    atom.pos = gemmi::Position(roundToPdbPrecision(x), roundToPdbPrecision(y), roundToPdbPrecision(z));
+    residue.atoms.push_back(atom);
+
+    st.models.back().chains.back().residues.push_back(residue);
+}
+
+// modelTitles keeps the source entry per model, mmCIF has no per model title item
+static bool writeStructureCif(gemmi::Structure& st,
+                              const std::vector<std::pair<std::string, std::string>>& modelTitles,
+                              const std::string& path) {
+    try {
+        gemmi::setup_entities(st);
+        gemmi::cif::Document doc = gemmi::make_mmcif_document(st, calphaOutputGroups());
+        if (modelTitles.empty() == false && doc.blocks.empty() == false) {
+            gemmi::cif::Loop& loop = doc.blocks[0].init_loop("_foldseek_model.",
+                                                             {"pdbx_PDB_model_num", "title"});
+            for (size_t i = 0; i < modelTitles.size(); ++i) {
+                loop.add_row({gemmi::cif::quote(modelTitles[i].first),
+                              gemmi::cif::quote(modelTitles[i].second)});
+            }
+        }
+        std::ofstream os(path.c_str());
+        if (os.is_open() == false) {
+            return false;
+        }
+        gemmi::cif::write_cif_to_stream(os, doc, gemmi::cif::Style::Pdbx);
+        os.close();
+        return os.fail() == false;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
 int convert2pdb(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
@@ -124,11 +203,13 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
 
     Debug(Debug::INFO) << "Start writing file to " << par.db2 << "\n";
     FILE* handle = NULL;
-    StructureWriter multiModelWriter;
+    gemmi::Structure multiModelSt;
+    std::vector<std::pair<std::string, std::string>> multiModelTitles;
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         if (cifOutput) {
             // all entries share one data block, gemmi serializes it after the loop
-            multiModelWriter.reset(stripPathAndExtension(par.db2), "");
+            multiModelSt.name = stripPathAndExtension(par.db2);
+            multiModelSt.info["_entry.id"] = multiModelSt.name;
         } else {
             handle = fopen(par.db2.c_str(), "w");
             if (handle == NULL) {
@@ -158,9 +239,11 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
             threadHandle = handle;
         }
         // the multi model output shares one structure, every other mode writes one per file
-        StructureWriter threadWriter;
-        StructureWriter* writer = (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL)
-                                  ? &multiModelWriter : &threadWriter;
+        gemmi::Structure threadSt;
+        std::vector<std::pair<std::string, std::string>> threadTitles;
+        const bool sharedStructure = outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL;
+        gemmi::Structure& st = sharedStructure ? multiModelSt : threadSt;
+        std::vector<std::pair<std::string, std::string>>& titles = sharedStructure ? multiModelTitles : threadTitles;
         std::string cifPath;
         Coordinate16 coords;
 
@@ -196,8 +279,12 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                 const char* headerData = db_header.getData(headerId, thread_idx);
                 const size_t headerLen = db_header.getEntryLen(headerId) - 2;
                 if (cifOutput) {
-                    writer->reset(name, std::string(headerData, headerLen));
-                    writer->addModel(1, "");
+                    st = gemmi::Structure();
+                    titles.clear();
+                    st.name = name;
+                    st.info["_entry.id"] = name;
+                    st.info["_struct.title"] = std::string(headerData, headerLen);
+                    st.models.emplace_back("1");
                 } else {
                     threadHandle = fopen(cifPath.c_str(), "w");
                     if (threadHandle == NULL) {
@@ -228,7 +315,10 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                     const size_t headerLen = db_header.getEntryLen(headerId) - 2;
                     if (cifOutput) {
                         // mmCIF has no MODEL record, the model number carries the db key
-                        writer->addModel((int)key, std::string(headerData, headerLen));
+                        // mmCIF has no MODEL record, the model number carries the db key
+                        std::string modelName = std::to_string(key);
+                        st.models.emplace_back(modelName);
+                        titles.emplace_back(modelName, std::string(headerData, headerLen));
                     } else {
                         fprintf(threadHandle, "MODEL % 8d\n", key);
                         writeTitle(threadHandle, headerData, headerLen);
@@ -244,7 +334,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                 }
                 if (cifOutput) {
                     // mmCIF keeps the full chain name, the PDB record has room for one character
-                    writer->addChain(chainName);
+                    st.models.back().chains.emplace_back(chainName);
                 }
                 for (size_t j = 0; j < seqLen; ++j) {
                     // make AA upper case
@@ -254,7 +344,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                     }
                     const char* aa3 = threeLetterLookup[(int)(aa - 'A')];
                     if (cifOutput) {
-                        writer->addCalpha(aa3, (int)(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)]);
+                        addCalpha(st, aa3, (int)(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)]);
                     } else {
                         fprintf(threadHandle, "ATOM  %5d  CA  %s %c%4d    %8.3f%8.3f%8.3f\n", (int)(j + 1), aa3, chainName[0], int(j + 1), ca[j], ca[j + (1 * seqLen)], ca[j + (2 * seqLen)]);
                     }
@@ -265,7 +355,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
             }
             if (outputMode != LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
                 if (cifOutput) {
-                    if (writer->writeCif(cifPath) == false) {
+                    if (writeStructureCif(st, titles, cifPath) == false) {
                         Debug(Debug::ERROR) << "Cannot write file " << cifPath << "\n";
                         EXIT(EXIT_FAILURE);
                     }
@@ -279,7 +369,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
 
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         if (cifOutput) {
-            if (multiModelWriter.writeCif(par.db2) == false) {
+            if (writeStructureCif(multiModelSt, multiModelTitles, par.db2) == false) {
                 Debug(Debug::ERROR) << "Cannot write file " << par.db2 << "\n";
                 EXIT(EXIT_FAILURE);
             }

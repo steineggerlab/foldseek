@@ -28,8 +28,6 @@ set(strucclustutils_source_files
 add_library(gemmiwrapper
     GemmiWrapper.cpp
     GemmiWrapper.h
-    StructureWriter.cpp
-    StructureWriter.h
     )
 
 get_target_property(COMPILE_TMP mmseqs-framework COMPILE_FLAGS)

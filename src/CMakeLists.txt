@@ -13,6 +13,13 @@ add_library(foldseek-framework
         FoldseekBase.cpp
 )
 mmseqs_setup_derived_target(foldseek-framework)
+
+# convert2pdb writes mmCIF with gemmi, which needs exceptions and its own headers.
+# Source properties are directory scoped, so this has to live next to the target.
+set_source_files_properties(strucclustutils/convert2pdb.cpp PROPERTIES
+        COMPILE_FLAGS "-fexceptions -w"
+        INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/lib/gemmi"
+        )
 target_link_libraries(foldseek-framework gemmiwrapper 3di pulchra kerasify tmalign)
 if(ENABLE_PROSTT5)
         add_library(prostt5 ${prostt5_source_files})
