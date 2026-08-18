@@ -1033,7 +1033,7 @@ void GemmiWriter::addCalpha(const char* residueName, int seqId, float x, float y
     writerState(state).st.models.back().chains.back().residues.push_back(residue);
 }
 
-bool GemmiWriter::writeCif(const std::string& path) {
+bool GemmiWriter::writeCif(std::ostream& stream) {
     WriterState& s = writerState(state);
     // gemmi throws, the callers are compiled without exceptions
     try {
@@ -1047,13 +1047,8 @@ bool GemmiWriter::writeCif(const std::string& path) {
                               gemmi::cif::quote(s.modelTitles[i].second)});
             }
         }
-        std::ofstream os(path.c_str());
-        if (os.is_open() == false) {
-            return false;
-        }
-        gemmi::cif::write_cif_to_stream(os, doc, gemmi::cif::Style::Pdbx);
-        os.close();
-        return os.fail() == false;
+        gemmi::cif::write_cif_to_stream(stream, doc, gemmi::cif::Style::Pdbx);
+        return true;
     } catch (const std::exception&) {
         return false;
     }
