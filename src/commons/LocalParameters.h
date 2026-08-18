@@ -104,6 +104,9 @@ public:
     static const int PDB_OUTPUT_MODE_SINGLECHAIN = 1;
     static const int PDB_OUTPUT_MODE_COMPLEX = 2;
 
+    static const int PDB_OUTPUT_FORMAT_PDB = 0;
+    static const int PDB_OUTPUT_FORMAT_MMCIF = 1;
+
     // filter mode
     // static const int FILTER_MODE_INTERFACE  = 0;
     // static const int FILTER_MODE_CONFORMATION = 1;
@@ -165,6 +168,7 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_INPUT_COMPRESSION_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
+    PARAMETER(PARAM_PDB_OUTPUT_FORMAT)
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_DB_EXTRACTION_MODE)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
@@ -200,6 +204,7 @@ public:
     int inputFormat;
     int inputCompressionFormat;
     int pdbOutputMode;
+    int pdbOutputFormat;
     float filtMultTmThr;
     float filtChainTmThr;
     float filtInterfaceLddtThr;

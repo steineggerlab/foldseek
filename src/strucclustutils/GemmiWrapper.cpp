@@ -1,8 +1,14 @@
 //
 // Created by Martin Steinegger on 6/7/21.
 //
+#define GEMMI_WRITE_IMPLEMENTATION
 #include "GemmiWrapper.h"
 #include "mmread.hpp"
+#include "to_mmcif.hpp"
+#include "to_cif.hpp"
+#include "polyheur.hpp"
+#include <fstream>
+#include <cmath>
 #ifdef HAVE_ZLIB
 #include "gz.hpp"
 #include <zlib.h>
@@ -941,4 +947,109 @@ bool GemmiToFoldcomp(
     outBlob.assign(oss.str());
 
     return true;
+}
+
+
+// --- GemmiWriter ---------------------------------------------------------
+
+namespace {
+
+struct WriterState {
+    gemmi::Structure st;
+    // model number and source entry title, mmCIF has no per model title item
+    std::vector<std::pair<std::string, std::string>> modelTitles;
+};
+
+WriterState& writerState(void* state) {
+    return *static_cast<WriterState*>(state);
+}
+
+// gemmi prints coordinates with the shortest round trip representation of the
+// double, so a float 3.8 would end up as 3.79999995. The source files and the
+// PDB output carry three decimals, keep the same precision here.
+double roundToPdbPrecision(float value) {
+    return std::round((double)value * 1000.0) / 1000.0;
+}
+
+// The defaults would emit a bogus 1x1x1 unit cell and an empty _symmetry for a
+// coordinate only structure, everything else gemmi writes is real information.
+gemmi::MmcifOutputGroups calphaOutputGroups() {
+    gemmi::MmcifOutputGroups groups(true);
+    groups.cell = false;
+    groups.symmetry = false;
+    groups.group_pdb = true;
+    return groups;
+}
+
+}
+
+GemmiWriter::GemmiWriter() : state(new WriterState()) {}
+
+GemmiWriter::~GemmiWriter() {
+    delete static_cast<WriterState*>(state);
+}
+
+void GemmiWriter::reset(const std::string& entryName, const std::string& title) {
+    WriterState& s = writerState(state);
+    s.st = gemmi::Structure();
+    s.modelTitles.clear();
+    s.st.name = entryName;
+    s.st.info["_entry.id"] = entryName;
+    if (title.empty() == false) {
+        s.st.info["_struct.title"] = title;
+    }
+}
+
+void GemmiWriter::addModel(int modelNumber, const std::string& modelTitle) {
+    WriterState& s = writerState(state);
+    // gemmi keeps the model number as a string
+    std::string modelName = std::to_string(modelNumber);
+    s.st.models.emplace_back(modelName);
+    if (modelTitle.empty() == false) {
+        s.modelTitles.emplace_back(modelName, modelTitle);
+    }
+}
+
+void GemmiWriter::addChain(const std::string& chainName) {
+    writerState(state).st.models.back().chains.emplace_back(chainName);
+}
+
+void GemmiWriter::addCalpha(const char* residueName, int seqId, float x, float y, float z) {
+    gemmi::Residue residue;
+    residue.name = residueName;
+    residue.seqid = gemmi::SeqId(seqId, ' ');
+    residue.label_seq = seqId;
+    residue.het_flag = 'A';
+    residue.entity_type = gemmi::EntityType::Polymer;
+
+    gemmi::Atom atom;
+    atom.name = "CA";
+    atom.element = gemmi::El::C;
+    atom.occ = 1.0f;
+    atom.b_iso = 0.0f;
+    atom.pos = gemmi::Position(roundToPdbPrecision(x), roundToPdbPrecision(y), roundToPdbPrecision(z));
+    residue.atoms.push_back(atom);
+
+    writerState(state).st.models.back().chains.back().residues.push_back(residue);
+}
+
+bool GemmiWriter::writeCif(std::ostream& stream) {
+    WriterState& s = writerState(state);
+    // gemmi throws, the callers are compiled without exceptions
+    try {
+        gemmi::setup_entities(s.st);
+        gemmi::cif::Document doc = gemmi::make_mmcif_document(s.st, calphaOutputGroups());
+        if (s.modelTitles.empty() == false && doc.blocks.empty() == false) {
+            gemmi::cif::Loop& loop = doc.blocks[0].init_loop("_foldseek_model.",
+                                                             {"pdbx_PDB_model_num", "title"});
+            for (size_t i = 0; i < s.modelTitles.size(); ++i) {
+                loop.add_row({gemmi::cif::quote(s.modelTitles[i].first),
+                              gemmi::cif::quote(s.modelTitles[i].second)});
+            }
+        }
+        gemmi::cif::write_cif_to_stream(stream, doc, gemmi::cif::Style::Pdbx);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
 }
