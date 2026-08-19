@@ -5,6 +5,11 @@ exists() {
 	[ -f "$1" ]
 }
 
+fail() {
+    echo "Error: $1"
+    exit 1
+}
+
 if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" filterdimerdb "${IN}" "${TMP_PATH}/contactlist" ${FILTERDIMERDB_PAR} \

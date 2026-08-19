@@ -19,17 +19,11 @@
 #include <omp.h>
 #endif
 
-std::vector<unsigned int> getIdVec(char* idData, size_t chainLen) {
-    std::vector<unsigned int> idVec;
-    unsigned int currId;
-    const char* data = idData;
-    idVec.resize(chainLen);
-    for (size_t i = 0; i < chainLen; i++) {
-        memcpy(&currId, data, sizeof(unsigned int));
-        idVec[i] = currId;
-        data += sizeof(unsigned int);
-    }
-    return idVec;
+// read one residue index out of the packed _id entry, without copying the whole chain
+static inline unsigned int getResId(const char *idData, size_t resIdx) {
+    unsigned int resId;
+    memcpy(&resId, idData + resIdx * sizeof(unsigned int), sizeof(unsigned int));
+    return resId;
 }
 
 //one dimer db as an input, one interface db as an output
@@ -64,7 +58,22 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
     complexIdToChainKeys_t qComplexIdToChainKeysMap;
     getKeyToIdMapIdToKeysMapIdVec(qDbr, qLookupFile, qChainKeyToComplexIdMap, qComplexIdToChainKeysMap, qComplexIndices);
     qChainKeyToComplexIdMap.clear();
-    
+
+    // flatten the dimers into a contiguous list so that the parallel loop needs no map lookup,
+    // is not unbalanced by skipped complexes, and the lookup maps can be released up front
+    std::vector<std::pair<unsigned int, unsigned int>> dimerChainKeys;
+    dimerChainKeys.reserve(qComplexIndices.size());
+    for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
+        const std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexIndices[qCompIdx]);
+        if (qChainKeys.size() != 2) {
+            continue;
+        }
+        dimerChainKeys.emplace_back(qChainKeys[0], qChainKeys[1]);
+    }
+    qComplexIdToChainKeysMap.clear();
+    qComplexIndices.clear();
+    qComplexIndices.shrink_to_fit();
+
     int aadbType = Parameters::DBTYPE_AMINO_ACIDS;
     int cadbType = LocalParameters::DBTYPE_CA_ALPHA;
 
@@ -89,34 +98,47 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
     unsigned int minimumResidue = par.minResidueNum;
     const float squareThreshold = distanceThreshold * distanceThreshold;
 
+    // only num2aa is needed, parsing the matrix once is enough for all threads
+    SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
+    Debug::Progress progress(dimerChainKeys.size());
+
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
     #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
     #endif
-        std::vector<int8_t> camol1, camol2;
-        std::vector<float> ca1, ca2;
+        // these are expensive to construct (pulchra allocates per-residue scratch,
+        // StructureTo3Di loads the kerasify model), so keep one per thread
+        StructureTo3Di structureTo3Di;
+        PulchraWrapper pulchra;
         Coordinate16 qcoords;
         Coordinate16 tcoords;
-#pragma omp for schedule(static)
-        for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
-            unsigned int qComplexId = qComplexIndices[qCompIdx];
-            std::vector<unsigned int> &qChainKeys = qComplexIdToChainKeysMap.at(qComplexId);
-            if (qChainKeys.size() != 2) {
-                continue;
-            }
-            unsigned int qChainIdx = 0;
-            unsigned int qChainKey = qChainKeys[qChainIdx];
+        std::vector<int8_t> camol1, camol2;
+        std::vector<float> ca1, ca2;
+        std::vector<size_t> resIdx1, resIdx2;
+        std::vector<Vec3> caB, nB, cB;
+        std::vector<char> amiB;
+        std::vector<Vec3> ca, n, c, cb;
+        std::vector<char> ami;
+        std::vector<char> alphabet3di1, alphabet3di2;
+        std::vector<char> alphabetAA1, alphabetAA2;
+        std::vector<unsigned int> resId1, resId2;
+        // dynamic: per-dimer cost is O(qLen*tLen) and varies by orders of magnitude.
+        // note this makes the physical entry order in the data file depend on thread
+        // timing; entry content and the key-sorted index are unaffected
+#pragma omp for schedule(dynamic, 1)
+        for (size_t dimerIdx = 0; dimerIdx < dimerChainKeys.size(); dimerIdx++) {
+            progress.updateProgress();
+            unsigned int qChainKey = dimerChainKeys[dimerIdx].first;
             unsigned int qChainDbId = qDbr.getId(qChainKey);
             char *qaaadata = qDbr.getData(qChainDbId, thread_idx);
-            char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);     
+            char *qcadata = qStructDbr.getData(qChainDbId, thread_idx);
             size_t qCaLength = qStructDbr.getEntryLen(qChainDbId);
             size_t qChainLen = qDbr.getSeqLen(qChainDbId);
             float* qdata = qcoords.read(qcadata, qChainLen, qCaLength);
 
-            unsigned int tChainIdx = 1;
-            unsigned int tChainKey = qChainKeys[tChainIdx];
+            unsigned int tChainKey = dimerChainKeys[dimerIdx].second;
             unsigned int tChainDbId = qDbr.getId(tChainKey);
             char *taaadata = qDbr.getData(tChainDbId, thread_idx);
             char *tcadata = qStructDbr.getData(tChainDbId, thread_idx);
@@ -124,23 +146,21 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
             size_t tChainLen = qDbr.getSeqLen(tChainDbId);
             float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
 
-            char* qiddata;
-            char* tiddata;
-            std::vector<unsigned int> qIdVec, tIdVec;
-            if (saveResIndex) {
-                qiddata = qIdDbr->getData(qChainDbId, thread_idx);
-                qIdVec = getIdVec(qiddata, qChainLen);
-                tiddata = qIdDbr->getData(tChainDbId, thread_idx);
-                tIdVec = getIdVec(tiddata, tChainLen);
+            // the interface only depends on the C-alpha coordinates, so decide whether this
+            // dimer is kept before paying for the backbone reconstruction
+            resIdx1.clear();
+            resIdx2.clear();
+            findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
+            findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
+            if (resIdx1.size() < minimumResidue || resIdx2.size() < minimumResidue) {
+                continue;
             }
-            std::vector<size_t> resIdx1, resIdx2;
-            PulchraWrapper pulchra;
-            std::vector<Vec3> caB, nB, cB;
-            std::vector<char> amiB;
-            amiB.resize(qChainLen + tChainLen);
-            caB.resize(qChainLen + tChainLen);
-            nB.resize(qChainLen + tChainLen);
-            cB.resize(qChainLen + tChainLen);
+
+            const size_t chainLenSum = qChainLen + tChainLen;
+            amiB.resize(chainLenSum);
+            caB.resize(chainLenSum);
+            nB.resize(chainLenSum);
+            cB.resize(chainLenSum);
             for (size_t i = 0; i < qChainLen; i++) {
                 caB[i] = Vec3(qdata[i], qdata[i + qChainLen], qdata[i + qChainLen * 2]);
                 nB[i] = Vec3(NAN,NAN,NAN);
@@ -153,107 +173,100 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                 cB[qChainLen + i] = Vec3(NAN,NAN,NAN);
                 amiB[qChainLen + i] = taaadata[i];
             }
-            pulchra.rebuildBackbone(&caB[0], &nB[0], &cB[0], &amiB[0], qChainLen + tChainLen);
-            findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
-            findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
-            if (resIdx1.size() >= minimumResidue && resIdx2.size() >= minimumResidue) {
-                StructureTo3Di structureTo3Di;
-                std::vector<Vec3> ca, n, c, cb;
-                std::vector<char> ami;
-                std::vector<char> alphabet3di1, alphabet3di2;
-                std::vector<char> alphabetAA1, alphabetAA2;
-                std::vector<unsigned int> resId1, resId2;
-                SubstitutionMatrix mat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, par.scoreBias);
-                ami.resize(resIdx1.size() + resIdx2.size());
-                ca.resize(resIdx1.size() + resIdx2.size());
-                n.resize(resIdx1.size() + resIdx2.size());
-                c.resize(resIdx1.size() + resIdx2.size());
-                cb.resize(resIdx1.size() + resIdx2.size());
-                for (size_t i = 0; i < resIdx1.size(); i++) {
-                    ca[i] = caB[resIdx1[i]];
-                    n[i] = nB[resIdx1[i]];
-                    c[i] = cB[resIdx1[i]];
-                    cb[i] = Vec3(NAN,NAN,NAN);
-                    ami[i] = amiB[resIdx1[i]];
-                    if (saveResIndex) {
-                        resId1.push_back(qIdVec[resIdx1[i]]);
-                    }
-                }
-                for (size_t i = 0; i < resIdx2.size(); i++) {
-                    ca[resIdx1.size() + i] = caB[qChainLen + resIdx2[i]];
-                    n[resIdx1.size() + i] = nB[qChainLen + resIdx2[i]];
-                    c[resIdx1.size() + i] = cB[qChainLen + resIdx2[i]];
-                    cb[resIdx1.size() + i] = Vec3(NAN,NAN,NAN);
-                    ami[resIdx1.size() + i] = amiB[qChainLen + resIdx2[i]];
-                    if (saveResIndex) {
-                        resId2.push_back(tIdVec[resIdx2[i]]);
-                    }
-                }
+            pulchra.rebuildBackbone(&caB[0], &nB[0], &cB[0], &amiB[0], chainLenSum);
 
-                char *states = structureTo3Di.structure2states(&ca[0],
-                                                                    &n[0],
-                                                                    &c[0],
-                                                                    &cb[0],
-                                                                    resIdx1.size() + resIdx2.size());
-                alphabet3di1.resize(resIdx1.size() + 1);
-                alphabetAA1.resize(resIdx1.size() + 1);
-                alphabet3di2.resize(resIdx2.size() + 1);                               
-                alphabetAA2.resize(resIdx2.size() + 1);                             
-                ca1.resize(3 * resIdx1.size() * sizeof(float));                          
-                ca2.resize(3 * resIdx2.size() * sizeof(float));
-                camol1.resize((resIdx1.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t));
-                camol2.resize((resIdx2.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t));
-                int16_t* camol1f16 = reinterpret_cast<int16_t*>(camol1.data());
-                int16_t* camol2f16 = reinterpret_cast<int16_t*>(camol2.data());
-                for (size_t pos = 0; pos < resIdx1.size(); pos++) {
-                    alphabet3di1[pos] = mat.num2aa[static_cast<int>(states[pos])];
-                    alphabetAA1[pos] = ami[pos];
-                    ca1[pos] = ca[pos].x;
-                    ca1[pos + resIdx1.size()] = ca[pos].y;
-                    ca1[pos + 2 * resIdx1.size()] = ca[pos].z;
-                }
-                alphabet3di1[resIdx1.size()] = '\n';
-                alphabetAA1[resIdx1.size()] = '\n';
-                // ca1[resIdx1.size()] = '\n';
-                for (size_t pos = 0; pos < resIdx2.size(); pos++) {
-                    alphabet3di2[pos] = mat.num2aa[static_cast<int>(states[resIdx1.size() + pos])];
-                    alphabetAA2[pos] = ami[resIdx1.size() + pos];
-                    ca2[pos] = ca[resIdx1.size() + pos].x;
-                    ca2[pos + resIdx2.size()] = ca[resIdx1.size() + pos].y;
-                    ca2[pos + 2 * resIdx2.size()] = ca[resIdx1.size() + pos].z;
-                }
-                alphabet3di2[resIdx2.size()] = '\n';
-                alphabetAA2[resIdx2.size()] = '\n';
-                // ca2[resIdx2.size()] = '\n';
-                ssdbw.writeData(alphabet3di1.data(), alphabet3di1.size(), qChainKey, thread_idx);
-                ssdbw.writeData(alphabet3di2.data(), alphabet3di2.size(), tChainKey, thread_idx);
-                aadbw.writeData(alphabetAA1.data(), alphabetAA1.size(), qChainKey, thread_idx);
-                aadbw.writeData(alphabetAA2.data(), alphabetAA2.size(), tChainKey, thread_idx);
+            const size_t interfaceLen = resIdx1.size() + resIdx2.size();
+            ami.resize(interfaceLen);
+            ca.resize(interfaceLen);
+            n.resize(interfaceLen);
+            c.resize(interfaceLen);
+            cb.resize(interfaceLen);
+            if (saveResIndex) {
+                resId1.resize(resIdx1.size());
+                resId2.resize(resIdx2.size());
+            }
+            const char *qiddata = saveResIndex ? qIdDbr->getData(qChainDbId, thread_idx) : NULL;
+            const char *tiddata = saveResIndex ? qIdDbr->getData(tChainDbId, thread_idx) : NULL;
+            for (size_t i = 0; i < resIdx1.size(); i++) {
+                ca[i] = caB[resIdx1[i]];
+                n[i] = nB[resIdx1[i]];
+                c[i] = cB[resIdx1[i]];
+                cb[i] = Vec3(NAN,NAN,NAN);
+                ami[i] = amiB[resIdx1[i]];
                 if (saveResIndex) {
-                    idbw->writeData((const char*)resId1.data(), resIdx1.size() * sizeof(unsigned int), qChainKey, thread_idx);
-                    idbw->writeData((const char*)resId2.data(), resIdx2.size() * sizeof(unsigned int), tChainKey, thread_idx);
-                }
-                char *data1 = reinterpret_cast<char*>(ca1.data());
-                char *data2 = reinterpret_cast<char*>(ca2.data());
-                if (!Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1), camol1f16, 1)
-                        && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + resIdx1.size(), camol1f16 + 1 * (resIdx1.size() + 1), 1)
-                        && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + 2 * resIdx1.size(), camol1f16 + 2 * (resIdx1.size() + 1), 1)) {
-                    cadbw.writeData((const char*)camol1.data(), (resIdx1.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), qChainKey, thread_idx);
-                } else {
-                    cadbw.writeData(data1, resIdx1.size() * 3 * sizeof(float), qChainKey, thread_idx);
-                }
-                if (!Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2), camol2f16, 1)
-                        && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + resIdx2.size(), camol2f16 + 1 * (resIdx2.size() + 1), 1)
-                        && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + 2 * resIdx2.size(), camol2f16 + 2 * (resIdx2.size() + 1), 1)) {
-                    cadbw.writeData((const char*)camol2.data(), (resIdx2.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), tChainKey, thread_idx);
-                } else {
-                    cadbw.writeData(data2, resIdx2.size() * 3 * sizeof(float), tChainKey, thread_idx);
+                    resId1[i] = getResId(qiddata, resIdx1[i]);
                 }
             }
-            ca1.clear();
-            ca2.clear();
-            camol1.clear();
-            camol2.clear();
+            for (size_t i = 0; i < resIdx2.size(); i++) {
+                ca[resIdx1.size() + i] = caB[qChainLen + resIdx2[i]];
+                n[resIdx1.size() + i] = nB[qChainLen + resIdx2[i]];
+                c[resIdx1.size() + i] = cB[qChainLen + resIdx2[i]];
+                cb[resIdx1.size() + i] = Vec3(NAN,NAN,NAN);
+                ami[resIdx1.size() + i] = amiB[qChainLen + resIdx2[i]];
+                if (saveResIndex) {
+                    resId2[i] = getResId(tiddata, resIdx2[i]);
+                }
+            }
+
+            char *states = structureTo3Di.structure2states(&ca[0],
+                                                                &n[0],
+                                                                &c[0],
+                                                                &cb[0],
+                                                                interfaceLen);
+            alphabet3di1.resize(resIdx1.size() + 1);
+            alphabetAA1.resize(resIdx1.size() + 1);
+            alphabet3di2.resize(resIdx2.size() + 1);
+            alphabetAA2.resize(resIdx2.size() + 1);
+            ca1.resize(3 * resIdx1.size());
+            ca2.resize(3 * resIdx2.size());
+            // assign, not resize: convertToDiff16 leaves the trailing padding byte untouched
+            // and it is part of the written entry, so it has to be zeroed like everywhere else
+            camol1.assign((resIdx1.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), 0);
+            camol2.assign((resIdx2.size() - 1) * 3 * sizeof(int16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), 0);
+            int16_t* camol1f16 = reinterpret_cast<int16_t*>(camol1.data());
+            int16_t* camol2f16 = reinterpret_cast<int16_t*>(camol2.data());
+            for (size_t pos = 0; pos < resIdx1.size(); pos++) {
+                alphabet3di1[pos] = mat.num2aa[static_cast<int>(states[pos])];
+                alphabetAA1[pos] = ami[pos];
+                ca1[pos] = ca[pos].x;
+                ca1[pos + resIdx1.size()] = ca[pos].y;
+                ca1[pos + 2 * resIdx1.size()] = ca[pos].z;
+            }
+            alphabet3di1[resIdx1.size()] = '\n';
+            alphabetAA1[resIdx1.size()] = '\n';
+            for (size_t pos = 0; pos < resIdx2.size(); pos++) {
+                alphabet3di2[pos] = mat.num2aa[static_cast<int>(states[resIdx1.size() + pos])];
+                alphabetAA2[pos] = ami[resIdx1.size() + pos];
+                ca2[pos] = ca[resIdx1.size() + pos].x;
+                ca2[pos + resIdx2.size()] = ca[resIdx1.size() + pos].y;
+                ca2[pos + 2 * resIdx2.size()] = ca[resIdx1.size() + pos].z;
+            }
+            alphabet3di2[resIdx2.size()] = '\n';
+            alphabetAA2[resIdx2.size()] = '\n';
+            ssdbw.writeData(alphabet3di1.data(), alphabet3di1.size(), qChainKey, thread_idx);
+            ssdbw.writeData(alphabet3di2.data(), alphabet3di2.size(), tChainKey, thread_idx);
+            aadbw.writeData(alphabetAA1.data(), alphabetAA1.size(), qChainKey, thread_idx);
+            aadbw.writeData(alphabetAA2.data(), alphabetAA2.size(), tChainKey, thread_idx);
+            if (saveResIndex) {
+                idbw->writeData((const char*)resId1.data(), resIdx1.size() * sizeof(unsigned int), qChainKey, thread_idx);
+                idbw->writeData((const char*)resId2.data(), resIdx2.size() * sizeof(unsigned int), tChainKey, thread_idx);
+            }
+            char *data1 = reinterpret_cast<char*>(ca1.data());
+            char *data2 = reinterpret_cast<char*>(ca2.data());
+            if (!Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1), camol1f16, 1)
+                    && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + resIdx1.size(), camol1f16 + 1 * (resIdx1.size() + 1), 1)
+                    && !Coordinate16::convertToDiff16(resIdx1.size(), (float*)(data1) + 2 * resIdx1.size(), camol1f16 + 2 * (resIdx1.size() + 1), 1)) {
+                cadbw.writeData((const char*)camol1.data(), (resIdx1.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), qChainKey, thread_idx);
+            } else {
+                cadbw.writeData(data1, resIdx1.size() * 3 * sizeof(float), qChainKey, thread_idx);
+            }
+            if (!Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2), camol2f16, 1)
+                    && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + resIdx2.size(), camol2f16 + 1 * (resIdx2.size() + 1), 1)
+                    && !Coordinate16::convertToDiff16(resIdx2.size(), (float*)(data2) + 2 * resIdx2.size(), camol2f16 + 2 * (resIdx2.size() + 1), 1)) {
+                cadbw.writeData((const char*)camol2.data(), (resIdx2.size() - 1) * 3 * sizeof(uint16_t) + 3 * sizeof(float) + 1 * sizeof(uint8_t), tChainKey, thread_idx);
+            } else {
+                cadbw.writeData(data2, resIdx2.size() * 3 * sizeof(float), tChainKey, thread_idx);
+            }
         }
     }
     ssdbw.close(true);
@@ -263,7 +276,9 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
     qDbr.close();
     if (saveResIndex) {
         idbw->close(true);
+        delete idbw;
         qIdDbr->close();
+        delete qIdDbr;
     }
     return EXIT_SUCCESS;
 }

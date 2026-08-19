@@ -352,7 +352,7 @@ LocalParameters::LocalParameters() :
     easymultimerclusterworkflow = combineList(easymultimerclusterworkflow, result2repseq);
 
     // easyinterfaceclusterworkflow
-    easyinterfaceclusterworkflow  = combineList(easymultimerclusterworkflow, easyinterfaceclusterworkflow);
+    easyinterfaceclusterworkflow  = combineList(easymultimerclusterworkflow, interfaceclusterworkflow);
 
     // set masking
     maskMode = 0;
