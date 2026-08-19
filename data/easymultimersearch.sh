@@ -55,6 +55,14 @@ if [ -z "${NO_REPORT}" ]; then
         || fail "createmultimerreport died"
 fi
 
+if [ -n "${VIEW_RESULTS}" ]; then
+    if [ -f "${OUTPUT}_report" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" structty "${QUERY}" "${TARGET}" "${OUTPUT}_report" ${STRUCTTY_PAR} \
+            || fail "structty died"
+    fi
+fi
+
 if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/multimer_result" ${VERBOSITY}
@@ -75,7 +83,7 @@ if [ -n "${REMOVE_TMP}" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/query" ${VERBOSITY}
         # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/query_h" ${VERBOSITY}
-        if exists "${TMP_PATH}/target_ca.dbtype"; then
+        if exists "${TMP_PATH}/query_ca.dbtype"; then
             # shellcheck disable=SC2086
             "$MMSEQS" rmdb "${TMP_PATH}/query_ca" ${VERBOSITY}
         fi

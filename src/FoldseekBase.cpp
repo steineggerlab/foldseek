@@ -135,7 +135,7 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                            {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"easy-rbh",                  structureeasyrbh,                  &localPar.easystructuresearchworkflow,       COMMAND_EASY,
+        {"easy-rbh",                  structureeasyrbh,                  &localPar.easystructurerbhworkflow,          COMMAND_EASY,
                 "Find reciprocal best hit",
                 "# Assign reciprocal best hit\n"
                 "mmseqs easy-rbh examples/QUERY.fasta examples/DB.fasta result tmp\n\n",
@@ -145,6 +145,19 @@ std::vector<Command> foldseekCommands = {
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileStdinAndFolder },
                                            {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"structty",             structtyview,                  &localPar.structtyworkflow,              COMMAND_FORMAT_CONVERSION,
+                "Launch StrucTTY viewer for foldseek results",
+                "# View search hits, reading coordinates from Foldseek databases\n"
+                "foldseek structty queryDB targetDB result.m8\n"
+                "# Query and target can also be structure files or folders of them\n"
+                "foldseek structty query.pdb pdbFolder result.m8 --structty-mode 6\n"
+                "# Multimer results: the 14-column report picks the complex view\n"
+                "foldseek structty queryDB targetDB result_report\n\n",
+                "Luna Jang",
+                "<i:query> <i:target> <i:resultFile>",
+                CITATION_FOLDSEEK, {{"query", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
+                                           {"target", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
+                                           {"resultFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"rbh",                  structurerbh,                  &localPar.structuresearchworkflow,       COMMAND_MAIN,
                 "Reciprocal best hit search",
                 NULL,
@@ -337,9 +350,9 @@ std::vector<Command> foldseekCommands = {
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::sequenceDb },
                                            {"caDb", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::cadb }}},
         {"convert2pdb",          convert2pdb,             &localPar.convert2pdb,          COMMAND_FORMAT_CONVERSION,
-                "Convert a foldseek structure db to a single multi model PDB file or a directory of PDB files",
+                "Convert a foldseek structure db to a single multi model PDB/mmCIF file or a directory of PDB/mmCIF files",
                 NULL,
-                "Milot Mirdita <milot@mirdita.de>",
+                "Milot Mirdita <milot@mirdita.de>, Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:Db> <o:pdbFile|pdbDir>",
                 CITATION_FOLDSEEK, {{"Db", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
                                            {"pdbFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},

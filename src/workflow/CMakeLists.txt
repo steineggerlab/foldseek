@@ -16,5 +16,6 @@ set(workflow_source_files
         workflow/EasyInterfaceSearch.cpp
         workflow/InterfaceCluster.cpp
         workflow/EasyInterfaceCluster.cpp
+        workflow/StructTTYView.cpp
         PARENT_SCOPE
         )
