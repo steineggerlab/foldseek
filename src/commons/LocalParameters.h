@@ -33,6 +33,16 @@ public:
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
     static const int ALIGNMENT_TYPE_LOLALIGN = 3;
 
+    static const int STRUCTTY_MODE_PROTEIN = 0;
+    static const int STRUCTTY_MODE_CHAIN = 1;
+    static const int STRUCTTY_MODE_RAINBOW = 2;
+    static const int STRUCTTY_MODE_PLDDT = 3;
+    static const int STRUCTTY_MODE_INTERFACE = 4;
+    static const int STRUCTTY_MODE_CONSERVATION = 5;
+    static const int STRUCTTY_MODE_ALIGN = 6;
+    static const int STRUCTTY_MODE_ALIGN_FS = 7;
+    static const int STRUCTTY_MODE_ALIGN_NEAR = 8;
+
     static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
     static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
     static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
@@ -124,6 +134,7 @@ public:
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
+    std::vector<MMseqsParameter *> easystructurerbhworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
@@ -139,6 +150,7 @@ public:
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
     std::vector<MMseqsParameter *> lolalign;
+    std::vector<MMseqsParameter *> structtyworkflow;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
@@ -177,6 +189,9 @@ public:
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
     PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
     PARAMETER(PARAM_MULTIDOMAIN)
+    PARAMETER(PARAM_VIEW_RESULTS)
+    PARAMETER(PARAM_STRUCTTY_MODE)
+    PARAMETER(PARAM_STRUCTTY_SS)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -214,13 +229,15 @@ public:
     int prostt5SplitLength;
     int minAlignedChains;
     int multiDomain;
+    bool viewResults;
+    int structtyMode;
+    bool structtyShowStructure;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
         bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
         bool &needLDDT
     );
-
 
 private:
     LocalParameters(LocalParameters const&);

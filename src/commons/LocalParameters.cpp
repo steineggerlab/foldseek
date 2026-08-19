@@ -44,7 +44,10 @@ LocalParameters::LocalParameters() :
         PARAM_CHAIN_TM_THRESHOLD(PARAM_CHAIN_TM_THRESHOLD_ID,"--chain-tm-threshold", "chain TMscore threshold", "accept alignments with a minimum chain tmsore > thr [0.0,1.0]",typeid(float), (void *) &filtChainTmThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_INTERFACE_LDDT_THRESHOLD(PARAM_INTERFACE_LDDT_THRESHOLD_ID,"--interface-lddt-threshold", "Interface LDDT threshold", "accept alignments with a lddt > thr [0.0,1.0]",typeid(float), (void *) &filtInterfaceLddtThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_MIN_ALIGNED_CHAINS(PARAM_MIN_ALIGNED_CHAINS_ID, "--min-aligned-chains", "Minimum threshold of aligned chains","save alignments with at least n chain aligned between query and target" ,typeid(int), (void *) &minAlignedChains, "^[0-9]{1}[0-9]*$"),
-        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$")
+        PARAM_MULTIDOMAIN(PARAM_MULTIDOMAIN_ID, "--lolalign-multidomain", "MultiDomain Mode", "MultiDomain Mode LoLalign", typeid(int), (void *) &multiDomain, "^[0-1]{1}$"),
+        PARAM_VIEW_RESULTS(PARAM_VIEW_RESULTS_ID, "--view-structty", "View results with StrucTTY", "Launch StrucTTY viewer after result generation (requires a build with -DENABLE_STRUCTTY=1)",  typeid(bool), (void *) &viewResults, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_STRUCTTY_MODE(PARAM_STRUCTTY_MODE_ID, "--structty-mode", "StrucTTY color mode", "Color mode for the StrucTTY viewer:\n0: protein\n1: chain\n2: rainbow\n3: plddt\n4: interface\n5: conservation\n6: align\n7: align-fs\n8: align-near", typeid(int), (void *) &structtyMode, "^[0-8]{1}$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_STRUCTTY_SS(PARAM_STRUCTTY_SS_ID, "--structty-ss", "StrucTTY secondary structure", "Show secondary structure (helix/sheet) in the StrucTTY viewer", typeid(bool), (void *) &structtyShowStructure, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT)
         {
     PARAM_ALIGNMENT_MODE.description = "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id";
     PARAM_ALIGNMENT_MODE.regex = "^[0-3]{1}$";
@@ -142,8 +145,6 @@ LocalParameters::LocalParameters() :
     lolalign.push_back(&PARAM_ADD_BACKTRACE);
     lolalign.push_back(&PARAM_THREADS);
     lolalign.push_back(&PARAM_V);
-
-
 
     structurerescorediagonal.push_back(&PARAM_EXACT_TMSCORE);
     structurerescorediagonal.push_back(&PARAM_TMSCORE_THRESHOLD);
@@ -275,6 +276,17 @@ LocalParameters::LocalParameters() :
     easystructuresearchworkflow = combineList(easystructuresearchworkflow, taxonomyreport);
     easystructuresearchworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
 
+#ifdef HAVE_STRUCTTY
+    easystructuresearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    easystructuresearchworkflow.push_back(&PARAM_STRUCTTY_MODE);
+    easystructuresearchworkflow.push_back(&PARAM_STRUCTTY_SS);
+#endif
+
+    easystructurerbhworkflow = combineList(structuresearchworkflow, structurecreatedb);
+    easystructurerbhworkflow = combineList(easystructurerbhworkflow, convertalignments);
+    easystructurerbhworkflow = combineList(easystructurerbhworkflow, taxonomyreport);
+    easystructurerbhworkflow.push_back(&PARAM_GREEDY_BEST_HITS);
+
     structureclusterworkflow = combineList(prefilter, structurealign);
     structureclusterworkflow = combineList(structureclusterworkflow, structurerescorediagonal);
     structureclusterworkflow = combineList(structureclusterworkflow, tmalign);
@@ -307,6 +319,11 @@ LocalParameters::LocalParameters() :
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, convertalignments);
     easymultimersearchworkflow = combineList(easymultimersearchworkflow, createmultimerreport);
     easymultimersearchworkflow = removeParameter(easymultimersearchworkflow, PARAM_PROSTT5_MODEL);
+#ifdef HAVE_STRUCTTY
+    easymultimersearchworkflow.push_back(&PARAM_VIEW_RESULTS);
+    easymultimersearchworkflow.push_back(&PARAM_STRUCTTY_MODE);
+    easymultimersearchworkflow.push_back(&PARAM_STRUCTTY_SS);
+#endif
 
     // multimerclusterworkflow
     multimerclusterworkflow  = combineList(multimersearchworkflow, clust);
@@ -371,6 +388,16 @@ LocalParameters::LocalParameters() :
     // LoLalign
     multiDomain = 1;
 
+    // view
+    viewResults = false;
+    structtyMode = STRUCTTY_MODE_PROTEIN;
+    structtyShowStructure = false;
+
+    structtyworkflow.push_back(&PARAM_STRUCTTY_MODE);
+    structtyworkflow.push_back(&PARAM_STRUCTTY_SS);
+    structtyworkflow.push_back(&PARAM_THREADS);
+    structtyworkflow.push_back(&PARAM_V);
+
     citations.emplace(CITATION_FOLDSEEK, "van Kempen, M., Kim, S.S., Tumescheit, C., Mirdita, M., Lee, J., Gilchrist, C.L.M., Söding, J., and Steinegger, M. Fast and accurate protein structure search with Foldseek. Nature Biotechnology, doi:10.1038/s41587-023-01773-0 (2023)");
     citations.emplace(CITATION_FOLDSEEK_MULTIMER, "Kim, W., Mirdita, M., Levy Karin, E., Gilchrist, C.L.M., Schweke, H., Söding, J., Levy, E., and Steinegger, M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)");
     citations.emplace(CITATION_PROSTT5, "Heinzinger, M., Weissenow, K., Gomez Sanchez, J., Henkel, A., Mirdita, M., Steinegger, M., and Burkhard, R. Bilingual Language Model for Protein Sequence and Structure. NAR Genomics and Bioinformatics, doi:10.1093/nargab/lqae150 (2024)");
@@ -381,8 +408,6 @@ LocalParameters::LocalParameters() :
     // allow higher values for GGML debug trace
     PARAM_V.regex = "^[0-4]{1}$";
 }
-
-
 
 std::vector<int> LocalParameters::getOutputFormat(
     int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
@@ -468,7 +493,6 @@ std::vector<int> LocalParameters::getOutputFormat(
     }
     return formatCodes;
 }
-
 
 std::vector<int> FoldSeekDbValidator::tmscore = {LocalParameters::DBTYPE_TMSCORE};
 std::vector<int> FoldSeekDbValidator::cadb = {LocalParameters::DBTYPE_CA_ALPHA};
