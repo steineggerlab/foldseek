@@ -49,6 +49,9 @@ int easyinterfacesearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
+    cmd.addVariable("CREATEDIMERDB_PAR", par.createParameterString(par.createdimerdbworkflow).c_str());
+    cmd.addVariable("CREATEINTERFACEDB_PAR", par.createParameterString(par.createinterfacedb).c_str());
+    cmd.addVariable("MAKEPADDEDSEQDB_PAR", par.createParameterString(par.makepaddeddb).c_str());
     cmd.addVariable("EASYMULTIMERSEARCH_PAR", par.createParameterString(par.easymultimersearchworkflow, true).c_str()); 
 
     std::string program = tmpDir + "/easyinterfacesearch.sh";

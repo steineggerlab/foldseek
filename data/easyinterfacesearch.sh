@@ -30,10 +30,10 @@ if exists "${TARGET}.dbtype" ; then
             fail "We cannot make an interface db out of padded db"
         fi
         # shellcheck disable=SC2086
-        "$MMSEQS" createdimerdb "${TARGET}" "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/dimertmp_target" ${THREADS_PAR} \
+        "$MMSEQS" createdimerdb "${TARGET}" "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/dimertmp_target" ${CREATEDIMERDB_PAR} \
             || fail "createdimerdb died"
         # shellcheck disable=SC2086
-        "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/interfacedb_target" ${THREADS_PAR} \
+        "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/interfacedb_target" ${CREATEINTERFACEDB_PAR} \
             || fail "createinterfacedb died"
         TARGET="${TMP_PATH}/interfacedb_target"
         if [ -n "${GPU}" ]; then
@@ -48,10 +48,10 @@ else
     "$MMSEQS" createdb "${TARGET}" "${TMP_PATH}/target" ${CREATEDB_PAR} \
         || fail "target createdb died"
     # shellcheck disable=SC2086
-    "$MMSEQS" createdimerdb "${TMP_PATH}/target" "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/dimertmp_target" ${THREADS_PAR} \
+    "$MMSEQS" createdimerdb "${TMP_PATH}/target" "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/dimertmp_target" ${CREATEDIMERDB_PAR} \
         || fail "createdimerdb died"
     # shellcheck disable=SC2086
-    "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/interfacedb_target" ${THREADS_PAR} \
+    "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_target" "${TMP_PATH}/interfacedb_target" ${CREATEINTERFACEDB_PAR} \
         || fail "createinterfacedb died"
     TARGET="${TMP_PATH}/interfacedb_target"
     if [ -n "${GPU}" ]; then
@@ -67,10 +67,10 @@ if exists "${QUERY}.dbtype" ; then
             fail "We cannot make an interface db out of padded db"
         fi
         # shellcheck disable=SC2086
-        "$MMSEQS" createdimerdb "${QUERY}" "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/dimertmp_query" ${THREADS_PAR} \
+        "$MMSEQS" createdimerdb "${QUERY}" "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/dimertmp_query" ${CREATEDIMERDB_PAR} \
             || fail "createdimerdb died"
         # shellcheck disable=SC2086
-        "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/interfacedb_query" ${THREADS_PAR} \
+        "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/interfacedb_query" ${CREATEINTERFACEDB_PAR} \
             || fail "createinterfacedb died"
         QUERY="${TMP_PATH}/interfacedb_query"
     fi
@@ -79,10 +79,10 @@ else
     "$MMSEQS" createdb "${QUERY}" "${TMP_PATH}/query" ${CREATEDB_PAR} \
         || fail "query createdb died"
     # shellcheck disable=SC2086
-    "$MMSEQS" createdimerdb "${TMP_PATH}/query" "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/dimertmp_query" ${THREADS_PAR} \
+    "$MMSEQS" createdimerdb "${TMP_PATH}/query" "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/dimertmp_query" ${CREATEDIMERDB_PAR} \
         || fail "createdimerdb died"
     # shellcheck disable=SC2086
-    "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/interfacedb_query" ${THREADS_PAR} \
+    "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb_query" "${TMP_PATH}/interfacedb_query" ${CREATEINTERFACEDB_PAR} \
         || fail "createinterfacedb died"
     QUERY="${TMP_PATH}/interfacedb_query"
 fi

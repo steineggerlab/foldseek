@@ -29,10 +29,10 @@ if exists "${INPUT}.dbtype" ; then
             fail "We cannot make an interface db out of padded db"
         fi
         # shellcheck disable=SC2086
-        "$MMSEQS" createdimerdb "${QUERYDB}" "${TMP_PATH}/dimerdb" "${TMP_PATH}/dimertmp" ${THREADS_PAR} \
+        "$MMSEQS" createdimerdb "${QUERYDB}" "${TMP_PATH}/dimerdb" "${TMP_PATH}/dimertmp" ${CREATEDIMERDB_PAR} \
             || fail "createdimerdb died"
         # shellcheck disable=SC2086
-        "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb" "${TMP_PATH}/interfacedb" ${THREADS_PAR} \
+        "$MMSEQS" createinterfacedb "${TMP_PATH}/dimerdb" "${TMP_PATH}/interfacedb" ${CREATEINTERFACEDB_PAR} \
             || fail "createinterfacedb died"
         QUERYDB="${TMP_PATH}/interfacedb"
         if [ -n "${GPU}" ]; then

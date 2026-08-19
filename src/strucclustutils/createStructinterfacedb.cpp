@@ -26,6 +26,11 @@ static inline unsigned int getResId(const char *idData, size_t resIdx) {
     return resId;
 }
 
+// pulchra needs two residues of context on each side of a residue it reconstructs, and
+// prepare_rbins extrapolates a window's ends from its first/last five residues
+const size_t PULCHRA_HALO = 2;
+const size_t PULCHRA_MIN_WINDOW = 5;
+
 //one dimer db as an input, one interface db as an output
 int createStructinterfacedb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -124,6 +129,8 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
         std::vector<char> alphabet3di1, alphabet3di2;
         std::vector<char> alphabetAA1, alphabetAA2;
         std::vector<unsigned int> resId1, resId2;
+        std::vector<std::pair<size_t, size_t>> pulchraWindows;
+        std::vector<unsigned char> qFlag, tFlag;
         // dynamic: per-dimer cost is O(qLen*tLen) and varies by orders of magnitude.
         // note this makes the physical entry order in the data file depend on thread
         // timing; entry content and the key-sorted index are unaffected
@@ -148,10 +155,7 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
 
             // the interface only depends on the C-alpha coordinates, so decide whether this
             // dimer is kept before paying for the backbone reconstruction
-            resIdx1.clear();
-            resIdx2.clear();
-            findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
-            findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
+            findInterface(resIdx1, resIdx2, squareThreshold, qdata, tdata, qChainLen, tChainLen, qFlag, tFlag);
             if (resIdx1.size() < minimumResidue || resIdx2.size() < minimumResidue) {
                 continue;
             }
@@ -173,7 +177,46 @@ int createStructinterfacedb(int argc, const char **argv, const Command &command)
                 cB[qChainLen + i] = Vec3(NAN,NAN,NAN);
                 amiB[qChainLen + i] = taaadata[i];
             }
-            pulchra.rebuildBackbone(&caB[0], &nB[0], &cB[0], &amiB[0], chainLenSum);
+            // pulchra reconstructs residue j purely from ca[j-2..j+2]: prepare_rbins only
+            // takes the 1-3/1-4 distances of that window and the main loop superimposes a
+            // template picked from the fixed nco_stat table, so there is no spatial neighbour
+            // lookup over the residues. Rebuilding merged windows around the interface
+            // residues therefore yields the same N/C as rebuilding both chains in full.
+            // Windows live in the concatenated index space, so behaviour at the junction of
+            // the two chains is unchanged.
+            pulchraWindows.clear();
+            for (int ch = 0; ch < 2; ch++) {
+                const std::vector<size_t> &res = (ch == 0) ? resIdx1 : resIdx2;
+                const size_t base = (ch == 0) ? 0 : qChainLen;
+                for (size_t i = 0; i < res.size(); i++) {
+                    const size_t idx = base + res[i];
+                    const size_t begin = (idx > PULCHRA_HALO) ? idx - PULCHRA_HALO : 0;
+                    size_t end = idx + PULCHRA_HALO + 1;
+                    if (end > chainLenSum) {
+                        end = chainLenSum;
+                    }
+                    if (pulchraWindows.empty() == false && begin <= pulchraWindows.back().second) {
+                        if (end > pulchraWindows.back().second) {
+                            pulchraWindows.back().second = end;
+                        }
+                    } else {
+                        pulchraWindows.emplace_back(begin, end);
+                    }
+                }
+            }
+            for (size_t w = 0; w < pulchraWindows.size(); w++) {
+                size_t begin = pulchraWindows[w].first;
+                size_t end = pulchraWindows[w].second;
+                // prepare_rbins extrapolates the window ends from five residues, so never
+                // hand it a shorter window than that
+                while (end - begin < PULCHRA_MIN_WINDOW && end < chainLenSum) {
+                    end++;
+                }
+                while (end - begin < PULCHRA_MIN_WINDOW && begin > 0) {
+                    begin--;
+                }
+                pulchra.rebuildBackbone(&caB[begin], &nB[begin], &cB[begin], &amiB[begin], end - begin);
+            }
 
             const size_t interfaceLen = resIdx1.size() + resIdx2.size();
             ami.resize(interfaceLen);

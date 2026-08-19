@@ -369,10 +369,9 @@ writeStructureEntry(SubstitutionMatrix & mat, GemmiWrapper & readStructure, Stru
 #pragma omp critical
         {
             std::string filenameWithExtension;
-            if (Util::endsWith(".gz", readStructure.names[ch] )) {
+            if (Util::endsWith(".gz", readStructure.names[ch]) || Util::endsWith(".zstd", readStructure.names[ch]) || Util::endsWith(".zst", readStructure.names[ch])) {
                 filenameWithExtension = Util::remove_extension(Util::remove_extension(readStructure.names[ch]));
-            }
-            else {
+            } else {
                 filenameWithExtension = Util::remove_extension(readStructure.names[ch]);
             }
             std::string filenameWithoutExtension = Util::remove_extension(filenameWithExtension);

@@ -48,6 +48,8 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
     #endif
         Coordinate16 qcoords;
         Coordinate16 tcoords;
+        std::vector<size_t> resIdx1, resIdx2;
+        std::vector<unsigned char> qFlag, tFlag;
 #pragma omp for schedule(static)
         for (size_t qCompIdx = 0; qCompIdx < qComplexIndices.size(); qCompIdx++) {
             progress.updateProgress();
@@ -72,15 +74,11 @@ int filterdimerdb(int argc, const char **argv, const Command &command) {
                     size_t tChainLen = qDbr.getSeqLen(tChainDbId);
                     float* tdata = tcoords.read(tcadata, tChainLen, tCaLength);
 
-                    std::vector<size_t> resIdx1, resIdx2;
-                    findInterface(resIdx1, squareThreshold, qdata, tdata, qChainLen, tChainLen);
-                    findInterface(resIdx2, squareThreshold, tdata, qdata, tChainLen, qChainLen);
-                    if (resIdx1.size() >= minimumResidue && resIdx2.size() >= minimumResidue) {  
+                    findInterface(resIdx1, resIdx2, squareThreshold, qdata, tdata, qChainLen, tChainLen, qFlag, tFlag);
+                    if (resIdx1.size() >= minimumResidue && resIdx2.size() >= minimumResidue) {
                         resultWriter.writeData("0\n", 2, qChainKey, thread_idx);
                         resultWriter.writeData("0\n", 2, tChainKey, thread_idx);
                     }
-                    resIdx1.clear();
-                    resIdx2.clear();
                 }
             }
         }
