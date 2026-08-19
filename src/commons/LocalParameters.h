@@ -34,6 +34,16 @@ public:
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
     static const int ALIGNMENT_TYPE_LOLALIGN = 3;
 
+    static const int STRUCTTY_MODE_PROTEIN = 0;
+    static const int STRUCTTY_MODE_CHAIN = 1;
+    static const int STRUCTTY_MODE_RAINBOW = 2;
+    static const int STRUCTTY_MODE_PLDDT = 3;
+    static const int STRUCTTY_MODE_INTERFACE = 4;
+    static const int STRUCTTY_MODE_CONSERVATION = 5;
+    static const int STRUCTTY_MODE_ALIGN = 6;
+    static const int STRUCTTY_MODE_ALIGN_FS = 7;
+    static const int STRUCTTY_MODE_ALIGN_NEAR = 8;
+
     static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
     static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;
     static const int TMSCORE_THRESHOLD_MODE_TARGET = 2;
@@ -104,6 +114,9 @@ public:
     static const int PDB_OUTPUT_MODE_SINGLECHAIN = 1;
     static const int PDB_OUTPUT_MODE_COMPLEX = 2;
 
+    static const int PDB_OUTPUT_FORMAT_PDB = 0;
+    static const int PDB_OUTPUT_FORMAT_MMCIF = 1;
+
     // filter mode
     // static const int FILTER_MODE_INTERFACE  = 0;
     // static const int FILTER_MODE_CONFORMATION = 1;
@@ -121,6 +134,7 @@ public:
     std::vector<MMseqsParameter *> databases;
     std::vector<MMseqsParameter *> samplemulambda;
     std::vector<MMseqsParameter *> easystructuresearchworkflow;
+    std::vector<MMseqsParameter *> easystructurerbhworkflow;
     std::vector<MMseqsParameter *> easystructureclusterworkflow;
     std::vector<MMseqsParameter *> structurecreatedb;
     std::vector<MMseqsParameter *> compressca;
@@ -144,6 +158,7 @@ public:
     std::vector<MMseqsParameter *> easyinterfaceclusterworkflow;
     std::vector<MMseqsParameter *> interfacesearchworkflow;
     std::vector<MMseqsParameter *> easyinterfacesearchworkflow;
+    std::vector<MMseqsParameter *> structtyworkflow;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
     PARAMETER(PARAM_TMSCORE_THRESHOLD_MODE)
@@ -174,6 +189,7 @@ public:
     PARAMETER(PARAM_INPUT_FORMAT)
     PARAMETER(PARAM_INPUT_COMPRESSION_FORMAT)
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
+    PARAMETER(PARAM_PDB_OUTPUT_FORMAT)
     PARAMETER(PARAM_PROSTT5_MODEL)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
     PARAMETER(PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN)
@@ -182,6 +198,9 @@ public:
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
     PARAMETER(PARAM_MIN_ALIGNED_CHAINS)
     PARAMETER(PARAM_MULTIDOMAIN)
+    PARAMETER(PARAM_VIEW_RESULTS)
+    PARAMETER(PARAM_STRUCTTY_MODE)
+    PARAMETER(PARAM_STRUCTTY_SS)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -210,6 +229,7 @@ public:
     int inputFormat;
     int inputCompressionFormat;
     int pdbOutputMode;
+    int pdbOutputFormat;
     float filtMultTmThr;
     float filtChainTmThr;
     float filtInterfaceLddtThr;
@@ -219,13 +239,15 @@ public:
     int prostt5SplitLength;
     int minAlignedChains;
     int multiDomain;
+    bool viewResults;
+    int structtyMode;
+    bool structtyShowStructure;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
         bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy, bool &needQCa, bool &needTCa, bool &needTMaligner,
         bool &needLDDT
     );
-
 
 private:
     LocalParameters(LocalParameters const&);

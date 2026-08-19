@@ -10,6 +10,10 @@
 #include "Parameters.h"
 #include "easystructuresearch.sh.h"
 
+static const char VIEWER_OUTFMT[] =
+    "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,"
+    "evalue,bits,lddt,qtmscore,ttmscore,qaln,taln";
+
 void setEasyStructureSearchDefaults(Parameters *p) {
     // TODO: 7-mer sensitivity is not optimized yet
     p->kmerSize = 6;
@@ -80,6 +84,11 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
         par.addBacktrace = true;
         par.PARAM_ADD_BACKTRACE.wasSet = true;
     }
+    if (par.viewResults && par.addBacktrace == false) {
+        Debug(Debug::INFO) << "Alignment backtraces will be computed for the StrucTTY viewer.\n";
+        par.addBacktrace = true;
+        par.PARAM_ADD_BACKTRACE.wasSet = true;
+    }
     if(needLookup){
         par.writeLookup = true;
     }
@@ -132,11 +141,21 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     par.prostt5Model = "";
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.structurecreatedb).c_str());
     cmd.addVariable("CONVERT_PAR", par.createParameterString(par.convertalignments).c_str());
+    const std::string userOutfmt = par.outfmt;
+    const bool userOutfmtWasSet = par.PARAM_FORMAT_OUTPUT.wasSet;
+    par.outfmt = VIEWER_OUTFMT;
+    par.PARAM_FORMAT_OUTPUT.wasSet = true;
+    const std::string viewerConvertPar = par.createParameterString(par.convertalignments);
+    par.outfmt = userOutfmt;
+    par.PARAM_FORMAT_OUTPUT.wasSet = userOutfmtWasSet;
+    cmd.addVariable("VIEW_RESULTS", par.viewResults ? "TRUE" : NULL);
+    cmd.addVariable("STRUCTTY_PAR", par.viewResults
+                    ? par.createParameterString(par.structtyworkflow).c_str() : NULL);
+    cmd.addVariable("VIEWER_CONVERT_PAR", par.viewResults ? viewerConvertPar.c_str() : NULL);
     cmd.addVariable("SUMMARIZE_PAR", par.createParameterString(par.summarizeresult).c_str());
     
     cmd.addVariable("TAXONOMY", needTaxonomy && needTaxonomyMapping && par.reportMode != 2 ? "TRUE" : NULL);
     cmd.addVariable("TAXONOMYREPORT_PAR", par.createParameterString(par.taxonomyreport).c_str());
-
     std::string program = tmpDir + "/easystructuresearch.sh";
     FileUtil::writeFile(program, easystructuresearch_sh, easystructuresearch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
@@ -145,5 +164,4 @@ int easystructuresearch(int argc, const char **argv, const Command &command) {
     assert(false);
     return EXIT_FAILURE;
 }
-
 
