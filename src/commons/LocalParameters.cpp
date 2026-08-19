@@ -250,12 +250,12 @@ LocalParameters::LocalParameters() :
     createinterfacedb.push_back(&PARAM_DISTANCE_THRESHOLD);
     createinterfacedb.push_back(&PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN);
 
-    //createStructinterfacedb
-    createStructinterfacedb.push_back(&PARAM_V);
-    createStructinterfacedb.push_back(&PARAM_THREADS);
-    createStructinterfacedb.push_back(&PARAM_PRELOAD_MODE);
-    createStructinterfacedb.push_back(&PARAM_DISTANCE_THRESHOLD);
-    createStructinterfacedb.push_back(&PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN);
+    //createstructinterfacedb
+    createstructinterfacedb.push_back(&PARAM_V);
+    createstructinterfacedb.push_back(&PARAM_THREADS);
+    createstructinterfacedb.push_back(&PARAM_PRELOAD_MODE);
+    createstructinterfacedb.push_back(&PARAM_DISTANCE_THRESHOLD);
+    createstructinterfacedb.push_back(&PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN);
 
     //filterdimerdb
     filterdimerdb.push_back(&PARAM_THREADS);

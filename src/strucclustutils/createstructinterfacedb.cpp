@@ -32,7 +32,7 @@ const size_t PULCHRA_HALO = 2;
 const size_t PULCHRA_MIN_WINDOW = 5;
 
 //one dimer db as an input, one interface db as an output
-int createStructinterfacedb(int argc, const char **argv, const Command &command) {
+int createstructinterfacedb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     bool saveResIndex = true;
     par.parseParameters(argc, argv, command, true, 0, 0);

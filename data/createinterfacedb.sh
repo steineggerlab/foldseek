@@ -25,8 +25,8 @@ abspath() {
 
 if [ -e "${IN}.dbtype" ]; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createStructinterfacedb "${IN}" "${OUT}" ${CREATESTRUCTINTERFACEDB_PAR} \
-        || fail "createStructinterfacedb died"
+    "$MMSEQS" createstructinterfacedb "${IN}" "${OUT}" ${CREATESTRUCTINTERFACEDB_PAR} \
+        || fail "createstructinterfacedb died"
     # shellcheck disable=SC2086
     "$MMSEQS" createsubdb "${OUT}.index" "${IN}_h" "${OUT}_h" \
         || fail "createsubdb died"

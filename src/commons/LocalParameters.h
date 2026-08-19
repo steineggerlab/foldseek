@@ -27,6 +27,11 @@ public:
 
     static const int DBTYPE_CA_ALPHA;
     static const int DBTYPE_TMSCORE;
+
+    // Not a database type but a flag in the extended dbtype bit field, shared with
+    // Parameters::DBTYPE_EXTENDED_* (upstream uses 1..16). DBReader::setExtendedDbtype
+    // keeps bits 1..14 (mask 0x7FFE), so bit 10 is valid. The value is stored in the
+    // .dbtype of existing interface databases, so do not renumber it.
     static const unsigned int DBTYPE_EXTENDED_INTERFACE = 1024;
 
     static const int ALIGNMENT_TYPE_3DI = 0;
@@ -149,7 +154,7 @@ public:
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
-    std::vector<MMseqsParameter *> createStructinterfacedb;
+    std::vector<MMseqsParameter *> createstructinterfacedb;
     std::vector<MMseqsParameter *> createinterfacedb;
     std::vector<MMseqsParameter *> createdimerdbworkflow;
     std::vector<MMseqsParameter *> filterdimerdb;
