@@ -39,7 +39,9 @@ public:
     static const int STRUCTTY_MODE_PLDDT = 3;
     static const int STRUCTTY_MODE_INTERFACE = 4;
     static const int STRUCTTY_MODE_CONSERVATION = 5;
-    static const int STRUCTTY_MODE_ALIGNED = 6;
+    static const int STRUCTTY_MODE_ALIGN = 6;
+    static const int STRUCTTY_MODE_ALIGN_FS = 7;
+    static const int STRUCTTY_MODE_ALIGN_NEAR = 8;
 
     static const int TMSCORE_THRESHOLD_MODE_ALIGNMENT = 0;
     static const int TMSCORE_THRESHOLD_MODE_QUERY = 1;

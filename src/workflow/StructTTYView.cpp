@@ -4,7 +4,8 @@
 #include "structty.h"
 
 static const char *STRUCTTY_MODES[] = {
-        "protein", "chain", "rainbow", "plddt", "interface", "conservation", "aligned"
+        "protein", "chain", "rainbow", "plddt", "interface", "conservation", "align",
+        "align-fs", "align-near"
 };
 
 int structtyview(int argc, const char **argv, const Command &command) {
