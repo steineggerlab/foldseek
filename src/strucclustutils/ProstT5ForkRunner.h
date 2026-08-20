@@ -4,6 +4,7 @@
 #include "DBWriter.h"
 #include "ProstT5.h"
 
+#include <iostream>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/ipc.h>

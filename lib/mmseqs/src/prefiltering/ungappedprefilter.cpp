@@ -39,7 +39,7 @@ void intHandlerClient(int) {
 }
 
 void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
-                    DBReader<unsigned int> * qdbr, DBReader<unsigned int> * tdbr,
+                    DBReader<DBKeyType> * qdbr, DBReader<DBKeyType> * tdbr,
                     bool sameDB, DBWriter & resultWriter, EvalueComputation * evaluer,
                     QueryMatcherTaxonomyHook *taxonomyHook){
     Debug::Progress progress(qdbr->getSize());
@@ -86,7 +86,11 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
             if (waitTimeout == 0) {
                 Debug(Debug::ERROR) 
                     << "gpuserver for database " << par.db2 << " not found.\n"
+                    #ifdef HAVE_HIP
+                    << "Please start gpuserver with the same HIP_VISIBLE_DEVICES\n";
+                    #else
                     << "Please start gpuserver with the same CUDA_VISIBLE_DEVICES\n";
+                    #endif
                 EXIT(EXIT_FAILURE);
             }
 
@@ -102,7 +106,11 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
                 if (elapsed >= waitTimeout) {
                     Debug(Debug::ERROR)
                         << "\ngpuserver for database " << par.db2 << " not found after " << elapsed <<  "seconds.\n"
+                        #ifdef HAVE_HIP
+                        << "Please start gpuserver with the same HIP_VISIBLE_DEVICES\n";
+                        #else
                         << "Please start gpuserver with the same CUDA_VISIBLE_DEVICES\n";
+                        #endif
                     EXIT(EXIT_FAILURE);
                 }
             }
@@ -177,7 +185,7 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
                 profile = (int8_t*)realloc(profile, subMat->alphabetSize * profileBufferLength * sizeof(int8_t));
             }
             if (compositionBias != NULL) {
-                if ((size_t)qSeq.L >= compBufferSize) {
+                if ((size_t)qSeq.L * sizeof(float) >= compBufferSize) {
                     compBufferSize = (size_t)qSeq.L * 1.5 * sizeof(float);
                     compositionBias = (float*)realloc(compositionBias, compBufferSize);
                     // memset(compositionBias, 0, compBufferSize);
@@ -252,7 +260,7 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
         }
 
         for(size_t i = 0; i < stats.results; i++){
-            unsigned int targetKey = tdbr->getDbKey(results[i].id);
+            DBKeyType targetKey = tdbr->getDbKey(results[i].id);
             int score = results[i].score;
             if(taxonomyHook != NULL){
                 TaxID currTax = taxonomyHook->taxonomyMapping->lookup(targetKey);
@@ -336,7 +344,7 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
 #endif
 
 void runFilterOnCpu(Parameters & par, BaseMatrix * subMat, int8_t * tinySubMat,
-                    DBReader<unsigned int> * qdbr, DBReader<unsigned int> * tdbr,
+                    DBReader<DBKeyType> * qdbr, DBReader<DBKeyType> * tdbr,
                     SequenceLookup * sequenceLookup, bool sameDB, DBWriter & resultWriter, EvalueComputation * evaluer,
                     QueryMatcherTaxonomyHook *taxonomyHook, int alignmentMode){
     std::vector<hit_t> shortResults;
@@ -377,7 +385,7 @@ void runFilterOnCpu(Parameters & par, BaseMatrix * subMat, int8_t * tinySubMat,
             }
 #pragma omp for schedule(static) nowait
             for (size_t tId = 0; tId < tdbr->getSize(); tId++) {
-                unsigned int targetKey = tdbr->getDbKey(tId);
+                DBKeyType targetKey = tdbr->getDbKey(tId);
                 if(taxonomyHook != NULL){
                     TaxID currTax = taxonomyHook->taxonomyMapping->lookup(targetKey);
                     if (taxonomyHook->expression[thread_idx]->isAncestor(currTax) == false) {
@@ -484,11 +492,11 @@ int prefilterInternal(int argc, const char **argv, const Command &command, int m
     bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     IndexReader tDbrIdx(par.db2, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0 );
     IndexReader * qDbrIdx = NULL;
-    DBReader<unsigned int> * qdbr = NULL;
-    DBReader<unsigned int> * tdbr = tDbrIdx.sequenceReader;
+    DBReader<DBKeyType> * qdbr = NULL;
+    DBReader<DBKeyType> * tdbr = tDbrIdx.sequenceReader;
 
     if (par.gpu == true) {
-        const bool isGpuDb = DBReader<unsigned int>::getExtendedDbtype(tdbr->getDbtype()) & Parameters::DBTYPE_EXTENDED_GPU;
+        const bool isGpuDb = DBReader<DBKeyType>::getExtendedDbtype(tdbr->getDbtype()) & Parameters::DBTYPE_EXTENDED_GPU;
         if (isGpuDb == false) {
             Debug(Debug::ERROR) << "Database " << FileUtil::baseName(par.db2) << " is not a valid GPU database\n" 
                                 << "Please call: makepaddedseqdb " << FileUtil::baseName(par.db2) << " " << FileUtil::baseName(par.db2) << "_pad\n";

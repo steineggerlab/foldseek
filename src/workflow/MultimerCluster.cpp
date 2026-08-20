@@ -1,4 +1,5 @@
 #include <cassert>
+#include <iostream>
 
 #include "FileUtil.h"
 #include "CommandCaller.h"

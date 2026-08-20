@@ -557,6 +557,10 @@ R"html(<!DOCTYPE html>
         resultWriter.writeData(header.c_str(), header.length(), 0, 0, false, false);
     }
 
+    // LoL-align stores the homology probability in res.score as prob*10000 (to
+    // survive int truncation) and the normalized LoL-score in res.eval
+    const bool isLolAlign = (extended & LocalParameters::DBTYPE_EXTENDED_LOLALIGN) != 0;
+
     Debug::Progress progress(alnDbr.getSize());
 #pragma omp parallel num_threads(localThreads)
     {
@@ -770,13 +774,25 @@ R"html(<!DOCTYPE html>
                 switch (format) {
                     case Parameters::FORMAT_ALIGNMENT_BLAST_TAB: {
                         if (outcodes.empty()) {
-                            int count = snprintf(buffer, sizeof(buffer),
+                            int count;
+                            if (isLolAlign) {
+                                // LoL-align: score holds the homology probability (*10000); emit it as [0,1].
+                                count = snprintf(buffer, sizeof(buffer),
+                                                 "%s\t%s\t%1.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2E\t%.4f\n",
+                                                 queryId.c_str(), targetId.c_str(), res.seqId, alnLen,
+                                                 missMatchCount, gapOpenCount,
+                                                 res.qStartPos + 1, res.qEndPos + 1,
+                                                 res.dbStartPos + 1, res.dbEndPos + 1,
+                                                 res.eval, res.score / 10000.0f);
+                            } else {
+                                count = snprintf(buffer, sizeof(buffer),
                                                  "%s\t%s\t%1.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2E\t%d\n",
                                                  queryId.c_str(), targetId.c_str(), res.seqId, alnLen,
                                                  missMatchCount, gapOpenCount,
                                                  res.qStartPos + 1, res.qEndPos + 1,
                                                  res.dbStartPos + 1, res.dbEndPos + 1,
                                                  res.eval, res.score);
+                            }
                             if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
                                 Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
                                 continue;
@@ -880,10 +896,23 @@ R"html(<!DOCTYPE html>
                                         result.append(SSTR(alnLen));
                                         break;
                                     case Parameters::OUTFMT_RAW:
-                                        result.append(SSTR(static_cast<int>(evaluer->computeRawScoreFromBitScore(res.score) + 0.5)));
+                                        if (isLolAlign) {
+                                            // LoL-align: score is prob*10000, not a bit score; emit the probability.
+                                            char lbuf[32];
+                                            int n = snprintf(lbuf, sizeof(lbuf), "%.4f", res.score / 10000.0f);
+                                            result.append(lbuf, n);
+                                        } else {
+                                            result.append(SSTR(static_cast<int>(evaluer->computeRawScoreFromBitScore(res.score) + 0.5)));
+                                        }
                                         break;
                                     case Parameters::OUTFMT_BITS:
-                                        result.append(SSTR(res.score));
+                                        if (isLolAlign) {
+                                            char lbuf[32];
+                                            int n = snprintf(lbuf, sizeof(lbuf), "%.4f", res.score / 10000.0f);
+                                            result.append(lbuf, n);
+                                        } else {
+                                            result.append(SSTR(res.score));
+                                        }
                                         break;
                                     case Parameters::OUTFMT_CIGAR:
                                         if(isTranslatedSearch == true && targetNucs == true && queryNucs == true ){
@@ -1078,7 +1107,14 @@ R"html(<!DOCTYPE html>
                                         break;
                                     }
                                     case LocalParameters::OUTFMT_PROBTP:
-                                        result.append(SSTR(CalcProbTP::calculate(res.score)));
+                                        if (isLolAlign) {
+                                            // LoL-align: score already IS the homology probability (*10000).
+                                            char lbuf[32];
+                                            int n = snprintf(lbuf, sizeof(lbuf), "%.4f", res.score / 10000.0f);
+                                            result.append(lbuf, n);
+                                        } else {
+                                            result.append(SSTR(CalcProbTP::calculate(res.score)));
+                                        }
                                         break;
                                     case LocalParameters::OUTFMT_Q_COMPLEX_TMSCORE:
                                         if (!retComplex.isValid) {
@@ -1160,7 +1196,19 @@ R"html(<!DOCTYPE html>
                         break;
                     }
                     case Parameters::FORMAT_ALIGNMENT_BLAST_WITH_LEN: {
-                        int count = snprintf(buffer, sizeof(buffer),
+                        int count;
+                        if (isLolAlign) {
+                            // LoL-align: score holds the homology probability (*10000); emit it as [0,1].
+                            count = snprintf(buffer, sizeof(buffer),
+                                             "%s\t%s\t%1.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2E\t%.4f\t%d\t%d\n",
+                                             queryId.c_str(), targetId.c_str(), res.seqId, alnLen,
+                                             missMatchCount, gapOpenCount,
+                                             res.qStartPos + 1, res.qEndPos + 1,
+                                             res.dbStartPos + 1, res.dbEndPos + 1,
+                                             res.eval, res.score / 10000.0f,
+                                             res.qLen, res.dbLen);
+                        } else {
+                        count = snprintf(buffer, sizeof(buffer),
                                              "%s\t%s\t%1.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2E\t%d\t%d\t%d\n",
                                              queryId.c_str(), targetId.c_str(), res.seqId, alnLen,
                                              missMatchCount, gapOpenCount,
@@ -1168,6 +1216,7 @@ R"html(<!DOCTYPE html>
                                              res.dbStartPos + 1, res.dbEndPos + 1,
                                              res.eval, res.score,
                                              res.qLen, res.dbLen);
+                        }
 
                         if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
                             Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
@@ -1251,8 +1300,24 @@ R"html(<!DOCTYPE html>
                         break;
                     }
                     case Parameters::FORMAT_ALIGNMENT_HTML: {
+                        int count;
+                        if (isLolAlign) {
+                            // LoL-align: score is the homology probability (*10000); surface it in
+                            // both "prob" and "score" instead of the bit-score-based CalcProbTP.
+                            float lolProb = res.score / 10000.0f;
+                            const char* jsAlnLol = "{\"target\": \"%s\", \"prob\": %1.4f, \"seqId\": %1.3f, \"alnLength\": %d, \"mismatch\": %d, \"gapopen\": %d, \"qStartPos\": %d, \"qEndPos\": %d, \"dbStartPos\": %d, \"dbEndPos\": %d, \"eval\": %.2E, \"score\": %1.4f, \"qLen\": %d, \"dbLen\": %d, \"qAln\": \"";
+                            count = snprintf(buffer, sizeof(buffer), jsAlnLol,
+                                             targetId.c_str(),
+                                             lolProb,
+                                             res.seqId, alnLen,
+                                             missMatchCount, gapOpenCount,
+                                             res.qStartPos + 1, res.qEndPos + 1,
+                                             res.dbStartPos + 1, res.dbEndPos + 1,
+                                             res.eval, lolProb,
+                                             res.qLen, res.dbLen);
+                        } else {
                         const char* jsAln = "{\"target\": \"%s\", \"prob\": %1.2f, \"seqId\": %1.3f, \"alnLength\": %d, \"mismatch\": %d, \"gapopen\": %d, \"qStartPos\": %d, \"qEndPos\": %d, \"dbStartPos\": %d, \"dbEndPos\": %d, \"eval\": %.2E, \"score\": %d, \"qLen\": %d, \"dbLen\": %d, \"qAln\": \"";
-                        int count = snprintf(buffer, sizeof(buffer), jsAln,
+                        count = snprintf(buffer, sizeof(buffer), jsAln,
                                              targetId.c_str(),
                                              CalcProbTP::calculate(res.score),
                                              res.seqId, alnLen,
@@ -1261,6 +1326,7 @@ R"html(<!DOCTYPE html>
                                              res.dbStartPos + 1, res.dbEndPos + 1,
                                              res.eval, res.score,
                                              res.qLen, res.dbLen);
+                        }
                         if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
                             Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
                             continue;

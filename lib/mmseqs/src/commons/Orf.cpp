@@ -103,14 +103,18 @@ Orf::~Orf() {
     free(codon);
 }
 
-Matcher::result_t Orf::getFromDatabase(const size_t id, DBReader<unsigned int> & contigsReader, DBReader<unsigned int> & orfHeadersReader, int thread_idx) {
+Matcher::result_t Orf::getFromDatabase(const size_t id, DBReader<DBKeyType> & contigsReader, DBReader<DBKeyType> & orfHeadersReader, int thread_idx) {
     char * orfHeader = orfHeadersReader.getData(id, thread_idx);
     Orf::SequenceLocation orfLocOnContigParsed;
     orfLocOnContigParsed = Orf::parseOrfHeader(orfHeader);
 
     // get contig key and its length in nucleotides
-    int contigKey = orfLocOnContigParsed.id;
-    unsigned int contigId = contigsReader.getId(contigKey);
+    DBKeyType contigKey = orfLocOnContigParsed.id;
+    size_t contigId = contigsReader.getId(contigKey);
+    if (contigId == DB_ENTRY_NOT_FOUND) {
+        Debug(Debug::ERROR) << "Invalid contig key " << contigKey << " in ORF header.\n";
+        EXIT(EXIT_FAILURE);
+    }
 
     size_t contigLen = contigsReader.getSeqLen(contigId);
     if (contigLen < 2) {
@@ -219,7 +223,7 @@ inline bool isInCodons(const char* sequence, simd_int codons, simd_int) {
 #ifndef AVX2
     if (N > 4) {
         simd_int test2 = simdi32_eq(c, codons2);
-        return (simdi8_movemask(test) != 0) && (simdi8_movemask(test2) != 0);
+        return (simdi8_movemask(test) != 0) || (simdi8_movemask(test2) != 0);
     }
 #endif
     return simdi8_movemask(test) != 0;
@@ -402,11 +406,11 @@ Orf::SequenceLocation Orf::parseOrfHeader(const char *data) {
 
     Orf::SequenceLocation loc;
     if(found == false){
-        loc.id = UINT_MAX;
+        loc.id = DB_KEY_INVALID;
         return loc;
     }
 
-    loc.id =  Util::fast_atoi<unsigned int>(entry[0]);
+    loc.id =  Util::fast_atoi<DBKeyType>(entry[0]);
     loc.from = from;
     loc.to = to;
     loc.hasIncompleteStart = false;
@@ -437,10 +441,10 @@ Orf::SequenceLocation Orf::parseOrfHeader(const char *data) {
     return loc;
 }
 
-size_t Orf::writeOrfHeader(char *buffer, unsigned int key, size_t fromPos, size_t toPos,
+size_t Orf::writeOrfHeader(char *buffer, DBKeyType key, size_t fromPos, size_t toPos,
                            bool hasIncompleteStart, bool hasIncompleteEnd) {
     char * basePos = buffer;
-    char * tmpBuff = Itoa::u32toa_sse2((uint32_t) key, buffer);
+    char * tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(key), buffer);
     *(tmpBuff-1) = '\t';
     tmpBuff = Itoa::u32toa_sse2(static_cast<uint32_t>(fromPos), tmpBuff);
     *(tmpBuff-1) = (fromPos < toPos) ? '+' : '-';

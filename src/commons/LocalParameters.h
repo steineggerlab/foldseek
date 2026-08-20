@@ -28,11 +28,10 @@ public:
     static const int DBTYPE_CA_ALPHA;
     static const int DBTYPE_TMSCORE;
 
-    // Not a database type but a flag in the extended dbtype bit field, shared with
-    // Parameters::DBTYPE_EXTENDED_* (upstream uses 1..16). DBReader::setExtendedDbtype
-    // keeps bits 1..14 (mask 0x7FFE), so bit 10 is valid. The value is stored in the
-    // .dbtype of existing interface databases, so do not renumber it.
-    static const unsigned int DBTYPE_EXTENDED_INTERFACE = 1024;
+    // Foldseek specific extended db types
+    // mmseqs allocates upwards from 1<<1, child projects should allocate downwards from 1<<14
+    static const unsigned int DBTYPE_EXTENDED_INTERFACE = 1u << 14;
+    static const unsigned int DBTYPE_EXTENDED_LOLALIGN = 1u << 13;
 
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
@@ -206,6 +205,8 @@ public:
     PARAMETER(PARAM_VIEW_RESULTS)
     PARAMETER(PARAM_STRUCTTY_MODE)
     PARAMETER(PARAM_STRUCTTY_SS)
+    PARAMETER(PARAM_CANDIDATE_SEEDS)
+    PARAMETER(PARAM_REFINE_SEEDS)
 
     float tmScoreThr;
     int tmScoreThrMode;
@@ -247,6 +248,8 @@ public:
     bool viewResults;
     int structtyMode;
     bool structtyShowStructure;
+    int candidateSeeds;
+    int refineSeeds;
 
     static std::vector<int> getOutputFormat(
         int formatMode, const std::string &outformat, bool &needSequences, bool &need3Di, bool &needBacktrace, bool &needFullHeaders,
