@@ -115,6 +115,9 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
     if (alignmentIsExtended) {
         dbtype = DBReader<unsigned int>::setExtendedDbtype(dbtype,Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
     }
+    if (runLoLAlign) {
+        dbtype = DBReader<unsigned int>::setExtendedDbtype(dbtype, LocalParameters::DBTYPE_EXTENDED_LOLALIGN);
+    }
     DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), 1, par.compressed, dbtype);
     dbw.open();
 

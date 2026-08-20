@@ -28,6 +28,10 @@ public:
     static const int DBTYPE_CA_ALPHA;
     static const int DBTYPE_TMSCORE;
 
+    // Foldseek specific extended db types
+    // mmseqs allocates upwards from 1<<1, child projects should allocate downwards from 1<<14
+    static const unsigned int DBTYPE_EXTENDED_LOLALIGN = 1u << 13;
+
     static const int ALIGNMENT_TYPE_3DI = 0;
     static const int ALIGNMENT_TYPE_TMALIGN = 1;
     static const int ALIGNMENT_TYPE_3DI_AA = 2;
