@@ -57,6 +57,7 @@ set(util_source_files
         util/result2rbh.cpp
         util/result2profile.cpp
         util/result2repseq.cpp
+        util/pickrepprofile.cpp
         util/result2stats.cpp
         util/reverseseq.cpp
         util/cpmvrmlndb.cpp
@@ -81,6 +82,7 @@ set(util_source_files
         util/unpackdb.cpp
         util/proteinaln2nucl.cpp
         util/proteomecluster.cpp
+        util/parseproteomealignments.cpp
         util/versionstring.cpp
         util/diskspaceavail.cpp
         PARENT_SCOPE

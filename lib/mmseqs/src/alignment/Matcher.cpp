@@ -6,6 +6,9 @@
 #include "StripedSmithWaterman.h"
 #include <fast_float/fast_float.h>
 
+#include "CovSeqidQscPercMinDiag.lib.h"
+#include "CovSeqidQscPercMinDiagTargetCov.lib.h"
+
 
 Matcher::Matcher(int querySeqType, int maxSeqLen, BaseMatrix *m, EvalueComputation * evaluer,
                  bool aaBiasCorrection, float aaBiasCorrectionScale, int gapOpen, int gapExtend, float correlationScoreWeight, int zdrop)
@@ -212,7 +215,7 @@ Matcher::result_t Matcher::parseAlignmentRecord(const char *data, bool readCompr
     strncpy(key, data, keySize);
     key[keySize] = '\0';
 
-    unsigned int targetId = Util::fast_atoi<unsigned int>(key);
+    DBKeyType targetId = Util::fast_atoi<DBKeyType>(key);
     int score = Util::fast_atoi<int>(entry[1]);
     double seqId;
     fast_float::from_chars(entry[2], entry[3] - 1, seqId);
@@ -278,7 +281,7 @@ Matcher::result_t Matcher::parseAlignmentRecord(const char *data, bool readCompr
 
 size_t Matcher::resultToBuffer(char * buff1, const result_t &result, bool addBacktrace, bool compress, bool addOrfPosition) {
     char * basePos = buff1;
-    char * tmpBuff = Itoa::u32toa_sse2((uint32_t) result.dbKey, buff1);
+    char * tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(result.dbKey), buff1);
     *(tmpBuff-1) = '\t';
     tmpBuff = Itoa::i32toa_sse2(result.score, tmpBuff);
     *(tmpBuff-1) = '\t';
@@ -396,3 +399,16 @@ void Matcher::updateResultByRescoringBacktrace(const char *querySeq, const char 
 }
 
 
+std::string getCovSeqidQscPercMinDiag() {
+    return std::string(
+        reinterpret_cast<const char*>(CovSeqidQscPercMinDiag_lib),
+        CovSeqidQscPercMinDiag_lib_len
+    );
+}
+
+std::string getCovSeqidQscPercMinDiagTargetCov() {
+    return std::string(
+        reinterpret_cast<const char*>(CovSeqidQscPercMinDiagTargetCov_lib),
+        CovSeqidQscPercMinDiagTargetCov_lib_len
+    );
+}
