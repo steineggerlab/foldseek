@@ -96,6 +96,11 @@ public:
 
     // don't forget to add new database types to DBReader::getDbTypeName and Parameters::PARAM_OUTPUT_DBTYPE
 
+    static const int LINCLUST_VERSION1 = 1;
+    static const int LINCLUST_VERSION2 = 2;
+    static const int CLUSTER_VERSION1 = 1;
+    static const int CLUSTER_VERSION2 = 2;
+
     static const int SEARCH_TYPE_AUTO = 0;
     static const int SEARCH_TYPE_PROTEIN = 1;
     static const int SEARCH_TYPE_TRANSLATED = 2;
@@ -556,6 +561,9 @@ public:
     MultiParam<PseudoCounts> pcb;
     int profileOutputMode;
 
+    // pickrepprofile / pickconsensusrepfast
+    bool switchConsensusRep;
+
     // sequence2profile
     float neff;
     float tau;
@@ -580,6 +588,16 @@ public:
     int resultDirection;
     float weightThr;
     std::string weightFile;
+    bool useParallelism;
+    bool needWriteBuffer;
+    bool includeCountTable;
+    int countTableIteration;
+    float countTableScale;
+    bool includeAdjacency;
+    int adjIteration;
+    bool clustHash;
+    int linclustVersion;
+    int clusterVersion;
 
     // indexdb
     int checkCompatible;
@@ -636,6 +654,10 @@ public:
     bool beatsFirst;
     std::string joinDB;
 
+    // align2clust
+    std::string filterCluDBFile;
+    std::string filterSeqDBFile;
+
     // besthitperset
     bool simpleBestHit;
     float alpha;
@@ -645,6 +667,7 @@ public:
     // mergedbs
     std::string mergePrefixes;
     bool mergeStopEmpty;
+    bool mergeFilterTarget;
 
     // summarizetabs
     float overlap;
@@ -757,7 +780,6 @@ public:
     bool         proteomeCascadedClustering;
     bool         includeAlignFiles;
     bool         proteomeIncludeAlignFiles;
-    bool         proteomeHiddenReport;
 
     // for modules that should handle -h themselves
     bool help;
@@ -906,6 +928,9 @@ public:
     PARAMETER(PARAM_PCB)
     PARAMETER(PARAM_PROFILE_OUTPUT_MODE)
 
+    // pickrepprofile / pickconsensusrepfast
+    PARAMETER(PARAM_SWITCH_CONSENSUS_REP)
+
     // sequence2profile
     PARAMETER(PARAM_NEFF)
     PARAMETER(PARAM_TAU)
@@ -930,6 +955,15 @@ public:
     PARAMETER(PARAM_RESULT_DIRECTION)
     PARAMETER(PARAM_WEIGHT_FILE)
     PARAMETER(PARAM_WEIGHT_THR)
+    PARAMETER(PARAM_INCLUDE_COUNTTABLE)
+    PARAMETER(PARAM_NUM_COUNTS)
+    PARAMETER(PARAM_INCLUDE_ADJACENCY)
+    PARAMETER(PARAM_NUM_ADJACENCY)
+    PARAMETER(PARAM_USE_PARALLELISM)
+    PARAMETER(PARAM_NEED_WRITEBUFFER)
+    PARAMETER(PARAM_CLUST_HASH)
+    PARAMETER(PARAM_LINCLUST_VERSION)
+    PARAMETER(PARAM_CLUSTER_VERSION)
 
     // workflow
     PARAMETER(PARAM_RUNNER)
@@ -1021,6 +1055,10 @@ public:
     PARAMETER(PARAM_BEATS_FIRST)
     PARAMETER(PARAM_JOIN_DB)
 
+    // align2clust
+    PARAMETER(PARAM_FILTER_CLUDB_FILE)
+    PARAMETER(PARAM_FILTER_SEQDB_FILE)
+
     //besthitperset
     PARAMETER(PARAM_SIMPLE_BEST_HIT)
     PARAMETER(PARAM_ALPHA)
@@ -1052,6 +1090,7 @@ public:
     // mergedbs
     PARAMETER(PARAM_MERGE_PREFIXES)
     PARAMETER(PARAM_MERGE_STOP_EMPTY)
+    PARAMETER(PARAM_MERGE_FILTER_TARGET)
 
     // summarizetabs
     PARAMETER(PARAM_OVERLAP)
@@ -1142,7 +1181,6 @@ public:
     PARAMETER(PARAM_PROTEOME_WEIGHT_FILE)
     PARAMETER(PARAM_PROTEOME_WEIGHT_CLUSTER_COUNT)
     PARAMETER(PARAM_PROTEOME_INCLUDE_ALIGN_FILES)
-    PARAMETER(PARAM_PROTEOME_HIDDEN_REPORT)
 
     // for modules that should handle -h themselves
     PARAMETER(PARAM_HELP)
@@ -1167,6 +1205,7 @@ public:
 
     std::vector<MMseqsParameter*> alignall;
     std::vector<MMseqsParameter*> align;
+    std::vector<MMseqsParameter*> align2clust;
     std::vector<MMseqsParameter*> rescorediagonal;
     std::vector<MMseqsParameter*> alignbykmer;
     std::vector<MMseqsParameter*> createFasta;
@@ -1198,6 +1237,8 @@ public:
     std::vector<MMseqsParameter*> convert2fasta;
     std::vector<MMseqsParameter*> result2flat;
     std::vector<MMseqsParameter*> result2repseq;
+    std::vector<MMseqsParameter*> pickrepprofile;
+    std::vector<MMseqsParameter*> pickconsensusrepfast;
     std::vector<MMseqsParameter*> gff2db;
     std::vector<MMseqsParameter*> clusthash;
     std::vector<MMseqsParameter*> kmermatcher;
@@ -1273,6 +1314,8 @@ public:
     std::vector<MMseqsParameter*> fwbw;
     std::vector<MMseqsParameter*> proteomecluster;
     std::vector<MMseqsParameter*> easyproteomeclusterworkflow;
+    std::vector<MMseqsParameter*> parseproteomealignments;
+    std::vector<MMseqsParameter*> easyproteomesearchworkflow;
 
     std::vector<MMseqsParameter*> combineList(const std::vector<MMseqsParameter*> &par1,
                                              const std::vector<MMseqsParameter*> &par2);

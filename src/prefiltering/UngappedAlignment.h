@@ -97,7 +97,7 @@ private:
 
     // Fetch db sequence, applying remap when HasRemap=true. Zero overhead when HasRemap=false.
     template <bool HasRemap>
-    inline const unsigned char* getDbSeq(unsigned int seqId, unsigned int &outLen, unsigned int bufferOffset = 0);
+    inline const unsigned char* getDbSeq(DBLocalId seqId, unsigned int &outLen, unsigned int bufferOffset = 0);
 
     unsigned short distanceFromDiagonal(const unsigned short diagonal);
 

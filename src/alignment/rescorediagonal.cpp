@@ -6,8 +6,8 @@
 #include "DBReader.h"
 #include "DBWriter.h"
 #include "QueryMatcher.h"
-#include "CovSeqidQscPercMinDiag.lib.h"
-#include "CovSeqidQscPercMinDiagTargetCov.lib.h"
+// #include "CovSeqidQscPercMinDiag.lib.h"
+// #include "CovSeqidQscPercMinDiagTargetCov.lib.h"
 #include "QueryMatcher.h"
 #include "NucleotideMatrix.h"
 #include "IndexReader.h"
@@ -44,13 +44,13 @@ float parsePrecisionLib(const std::string &scoreFile, double targetSeqid, double
 
 int doRescorediagonal(Parameters &par,
                       DBWriter &resultWriter,
-                      DBReader<unsigned int> &resultReader,
+                      DBReader<DBKeyType> &resultReader,
               const size_t dbFrom, const size_t dbSize) {
 
 
     IndexReader * qDbrIdx = NULL;
-    DBReader<unsigned int> * qdbr = NULL;
-    DBReader<unsigned int> * tdbr = NULL;
+    DBReader<DBKeyType> * qdbr = NULL;
+    DBReader<DBKeyType> * tdbr = NULL;
     bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     IndexReader * tDbrIdx = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES,   (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0 );
     int querySeqType = 0;
@@ -99,8 +99,8 @@ int doRescorediagonal(Parameters &par,
         }
 
         std::string libraryString = (par.covMode == Parameters::COV_MODE_BIDIRECTIONAL)
-                                    ? std::string((const char*)CovSeqidQscPercMinDiag_lib, CovSeqidQscPercMinDiag_lib_len)
-                                    : std::string((const char*)CovSeqidQscPercMinDiagTargetCov_lib, CovSeqidQscPercMinDiagTargetCov_lib_len);
+                                        ? getCovSeqidQscPercMinDiag()
+                                        : getCovSeqidQscPercMinDiagTargetCov();
         scorePerColThr = parsePrecisionLib(libraryString, par.seqIdThr, par.covThr, 0.99);
     }
     bool reversePrefilterResult = (Parameters::isEqualDbtype(resultReader.getDbtype(), Parameters::DBTYPE_PREFILTER_REV_RES));
@@ -147,14 +147,18 @@ int doRescorediagonal(Parameters &par,
                 progress.updateProgress();
 
                 char *data = resultReader.getData(id, thread_idx);
-                size_t queryKey = resultReader.getDbKey(id);
+                DBKeyType queryKey = resultReader.getDbKey(id);
 
                 char *querySeq = NULL;
                 std::string queryToWrap; // needed only for wrapped end-start scoring
-                unsigned int queryId = UINT_MAX;
+                size_t queryId = DB_ENTRY_NOT_FOUND;
                 int queryLen = -1, origQueryLen = -1;
                 if(*data !=  '\0'){
                     queryId = qdbr->getId(queryKey);
+                    if (queryId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Invalid query key " << queryKey << " in result database.\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     querySeq = qdbr->getData(queryId, thread_idx);
                     queryLen = static_cast<int>(qdbr->getSeqLen(queryId));
                     origQueryLen = queryLen;
@@ -201,7 +205,11 @@ int doRescorediagonal(Parameters &par,
                         }
                     }
 
-                    unsigned int targetId = tdbr->getId(results[entryIdx].seqId);
+                    size_t targetId = tdbr->getId(results[entryIdx].seqId);
+                    if (targetId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Invalid target key " << results[entryIdx].seqId << " in result entry " << queryKey << ".\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameQTDB)) ? true : false;
                     char *targetSeq = tdbr->getData(targetId, thread_idx);
                     int dbLen = static_cast<int>(tdbr->getSeqLen(targetId));
@@ -391,8 +399,8 @@ int rescorediagonal(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    resultReader.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
     int dbtype = resultReader.getDbtype(); // this is DBTYPE_PREFILTER_RES || DBTYPE_PREFILTER_REV_RES
     if(par.rescoreMode == Parameters::RESCORE_MODE_ALIGNMENT ||
        par.rescoreMode == Parameters::RESCORE_MODE_END_TO_END_ALIGNMENT ||
@@ -432,5 +440,4 @@ int rescorediagonal(int argc, const char **argv, const Command &command) {
     resultReader.close();
     return status;
 }
-
 
