@@ -373,6 +373,9 @@ LocalParameters::LocalParameters() :
     dbSuffixList = "_h,_ss,_ca";
     indexExclude = 0;
 
+    // clustering
+    linclustVersion = LINCLUST_VERSION1;
+
     // profiles
     evalProfile = 0.1;
     // multimer
