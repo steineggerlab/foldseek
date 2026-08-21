@@ -30,6 +30,7 @@ public:
 
     // Foldseek specific extended db types
     // mmseqs allocates upwards from 1<<1, child projects should allocate downwards from 1<<14
+    static const unsigned int DBTYPE_EXTENDED_INTERFACE = 1u << 14;
     static const unsigned int DBTYPE_EXTENDED_LOLALIGN = 1u << 13;
 
     static const int ALIGNMENT_TYPE_3DI = 0;
@@ -79,6 +80,8 @@ public:
     static const int OUTFMT_PROBTP = 48;
     static const int OUTFMT_QTMSCORE = 49;
     static const int OUTFMT_TTMSCORE = 50;
+    static const int OUTFMT_QKEY = 69;
+    static const int OUTFMT_TKEY = 70;
     // for Foldseek-MM
     static const int OUTFMT_QUERY_COMPLEX = 51;
     static const int OUTFMT_TARGET_COMPLEX = 52;
@@ -98,9 +101,6 @@ public:
     static const int OUTFMT_INTERFACE_LDDT =66;
     static const int OUTFMT_COMPLEX_QNAME = 67;
     static const int OUTFMT_COMPLEX_TNAME = 68;
-
-    static const int DB_EXTRACT_MODE_CHAIN = 0;
-    static const int DB_EXTRACT_MODE_INTERFACE = 1;
 
     static const int COORD_STORE_MODE_CA_FLOAT = 1;
     static const int COORD_STORE_MODE_CA_DIFF  = 2;
@@ -153,7 +153,15 @@ public:
     std::vector<MMseqsParameter *> makepaddeddb;
     std::vector<MMseqsParameter *> result2structprofile;
     std::vector<MMseqsParameter *> createstructsubdb;
+    std::vector<MMseqsParameter *> createstructinterfacedb;
+    std::vector<MMseqsParameter *> createinterfacedb;
+    std::vector<MMseqsParameter *> createdimerdbworkflow;
+    std::vector<MMseqsParameter *> filterdimerdb;
     std::vector<MMseqsParameter *> lolalign;
+    std::vector<MMseqsParameter *> interfaceclusterworkflow;
+    std::vector<MMseqsParameter *> easyinterfaceclusterworkflow;
+    std::vector<MMseqsParameter *> interfacesearchworkflow;
+    std::vector<MMseqsParameter *> easyinterfacesearchworkflow;
     std::vector<MMseqsParameter *> structtyworkflow;
 
     PARAMETER(PARAM_TMSCORE_THRESHOLD)
@@ -171,6 +179,7 @@ public:
     PARAMETER(PARAM_EXACT_TMSCORE)
     PARAMETER(PARAM_N_SAMPLE)
     PARAMETER(PARAM_COORD_STORE_MODE)
+    PARAMETER(PARAM_SAVE_RES_INDEX)
     PARAMETER(PARAM_MIN_ASSIGNED_CHAINS_THRESHOLD)
     PARAMETER(PARAM_MONOMER_INCLUDE_MODE)
     PARAMETER(PARAM_CLUSTER_SEARCH)
@@ -186,8 +195,8 @@ public:
     PARAMETER(PARAM_PDB_OUTPUT_MODE)
     PARAMETER(PARAM_PDB_OUTPUT_FORMAT)
     PARAMETER(PARAM_PROSTT5_MODEL)
-    PARAMETER(PARAM_DB_EXTRACTION_MODE)
     PARAMETER(PARAM_DISTANCE_THRESHOLD)
+    PARAMETER(PARAM_MIN_INTERFACE_RESIDUE_PER_CHAIN)
     PARAMETER(PARAM_MULTIMER_TM_THRESHOLD)
     PARAMETER(PARAM_CHAIN_TM_THRESHOLD)
     PARAMETER(PARAM_INTERFACE_LDDT_THRESHOLD)
@@ -214,6 +223,7 @@ public:
     int exactTMscore;
     int nsample;
     int coordStoreMode;
+    bool saveResIndex;
     float minAssignedChainsThreshold;
     int monomerIncludeMode;
     int clusterSearch;
@@ -230,8 +240,8 @@ public:
     float filtChainTmThr;
     float filtInterfaceLddtThr;
     std::string prostt5Model;
-    int dbExtractionMode;
     float distanceThreshold;
+    int minResidueNum;
     int prostt5SplitLength;
     int minAlignedChains;
     int multiDomain;

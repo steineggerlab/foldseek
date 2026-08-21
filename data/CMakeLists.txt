@@ -22,6 +22,12 @@ set(COMPILED_RESOURCES
         easymultimersearch.sh
         multimercluster.sh
         easymultimercluster.sh
+        createdimerdb.sh
+        createinterfacedb.sh
+        interfacesearch.sh
+        easyinterfacesearch.sh
+        interfacecluster.sh
+        easyinterfacecluster.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

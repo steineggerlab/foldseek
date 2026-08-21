@@ -307,4 +307,80 @@ static ComplexDataHandler parseScoreComplexResult(const char *data, Matcher::res
     }
 }
 
+static const unsigned char IFACE_HIT  = 1;
+static const unsigned char IFACE_SAME = 2;
+
+// Fills both directions of an interface in a single qChainLen x tChainLen sweep.
+// The per-residue predicate is (no partner closer than 0.01) && (some partner within
+// squareThreshold), which is symmetric in the two chains, so one pass over the residue
+// pairs decides both sides. qFlag/tFlag are scratch buffers owned by the caller.
+static void findInterface(std::vector<size_t> & resIdx1, std::vector<size_t> & resIdx2,
+                          float squareThreshold, const float* qdata, const float* tdata,
+                          unsigned int qChainLen, unsigned int tChainLen,
+                          std::vector<unsigned char> & qFlag, std::vector<unsigned char> & tFlag) {
+    resIdx1.clear();
+    resIdx2.clear();
+    qFlag.assign(qChainLen, 0);
+    tFlag.assign(tChainLen, 0);
+
+    const float* qx = qdata;
+    const float* qy = qdata + qChainLen;
+    const float* qz = qdata + 2 * qChainLen;
+    const float* tx = tdata;
+    const float* ty = tdata + tChainLen;
+    const float* tz = tdata + 2 * tChainLen;
+    // a pair closer than 0.01 counts as the same residue and has to survive the cheap
+    // reject below even when the caller asks for a threshold smaller than that
+    const float rejectThreshold = (squareThreshold > 0.01f) ? squareThreshold : 0.01f;
+
+    for (unsigned int qRes = 0; qRes < qChainLen; qRes++) {
+        const float x = qx[qRes];
+        const float y = qy[qRes];
+        const float z = qz[qRes];
+        unsigned char qf = qFlag[qRes];
+        for (unsigned int tRes = 0; tRes < tChainLen; tRes++) {
+            const float dx = x - tx[tRes];
+            const float dx2 = dx * dx;
+            if (dx2 >= rejectThreshold) {
+                // |dx| alone already exceeds the threshold, skip the rest of the distance
+                continue;
+            }
+            const float dy = y - ty[tRes];
+            const float dz = z - tz[tRes];
+            const float distance = dx2 + dy * dy + dz * dz;
+            if (distance < 0.01f) {
+                qf |= IFACE_SAME;
+                tFlag[tRes] |= IFACE_SAME;
+            } else if (distance < squareThreshold) {
+                qf |= IFACE_HIT;
+                tFlag[tRes] |= IFACE_HIT;
+            }
+        }
+        qFlag[qRes] = qf;
+    }
+
+    size_t qSameRes = 0;
+    for (unsigned int qRes = 0; qRes < qChainLen; qRes++) {
+        if (qFlag[qRes] & IFACE_SAME) {
+            qSameRes++;
+        } else if (qFlag[qRes] & IFACE_HIT) {
+            resIdx1.push_back(qRes);
+        }
+    }
+    size_t tSameRes = 0;
+    for (unsigned int tRes = 0; tRes < tChainLen; tRes++) {
+        if (tFlag[tRes] & IFACE_SAME) {
+            tSameRes++;
+        } else if (tFlag[tRes] & IFACE_HIT) {
+            resIdx2.push_back(tRes);
+        }
+    }
+    if (static_cast<float>(qSameRes) / qChainLen > 0.9f) {
+        resIdx1.clear();
+    }
+    if (static_cast<float>(tSameRes) / tChainLen > 0.9f) {
+        resIdx2.clear();
+    }
+}
+
 #endif //FOLDSEEK_MULTIMERUTIL_H
