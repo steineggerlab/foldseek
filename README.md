@@ -12,7 +12,7 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets,
 
 [Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, doi: 10.1101/2024.11.13.623350 (2024)](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1)
 
-[Reifenrath L, van Kempen M, Kim G, Kim SH, Radnezhad M, Mirdita M, Steinegger M, Söding J: LoL-align: sensitive and fast probabilistic protein structure alignment. bioRxiv, doi: 10.1101/2025.11.24.690091 (2025)](https://www.biorxiv.org/content/10.1101/2025.11.24.690091v1)
+[Reifenrath L, van Kempen M, Kim G, Kim SH, Radnezhad M, Gilchrist CLM, Mirdita M, Steinegger M, and Söding J. LoL-align: sensitive and fast probabilistic protein structure alignment. Nature Methods, doi:10.1038/s41592-026-03249-w (2026)](https://www.nature.com/articles/s41592-026-03249-w)
 
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/foldseek.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/foldseek) 
 [![Github All Releases](https://img.shields.io/github/downloads/steineggerlab/foldseek/total.svg)](https://github.com/steineggerlab/foldseek/releases/latest) 
