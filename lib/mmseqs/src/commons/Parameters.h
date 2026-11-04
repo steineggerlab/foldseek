@@ -93,6 +93,7 @@ public:
     static const unsigned int DBTYPE_EXTENDED_CONTEXT_PSEUDO_COUNTS = 4;
     static const unsigned int DBTYPE_EXTENDED_GPU = 8;
     static const unsigned int DBTYPE_EXTENDED_SET = 16;
+    static const unsigned int DBTYPE_EXTENDED_AUX_SEQ = 32;
 
     // don't forget to add new database types to DBReader::getDbTypeName and Parameters::PARAM_OUTPUT_DBTYPE
 
@@ -429,6 +430,7 @@ public:
     float    compBiasCorrectionScale;    // Aminoacid composiont correction scale factor
 
     bool   diagonalScoring;              // switch diagonal scoring
+    bool   useAuxScoring;                // use auxiliary sequence scoring in prefilter
     int    exactKmerMatching;            // only exact k-mer matching
     int    maskMode;                     // mask low complex areas
     float  maskProb;                     // mask probability
@@ -765,6 +767,7 @@ public:
     float temperature;
     int blocklen;
     int fwbwBacktraceMode;
+    int fwbwScaledMode;
 
     // touchdb
     bool touchLock;
@@ -780,6 +783,8 @@ public:
     bool         proteomeCascadedClustering;
     bool         includeAlignFiles;
     bool         proteomeIncludeAlignFiles;
+    int          proteomeScoreMode;
+    bool         proteomeReassign;
 
     // for modules that should handle -h themselves
     bool help;
@@ -1166,6 +1171,7 @@ public:
     PARAMETER(PARAM_TEMPERATURE)
     PARAMETER(PARAM_BLOCKLEN)
     PARAMETER(PARAM_FWBW_BACKTRACE_MODE)
+    PARAMETER(PARAM_FWBW_SCALED_MODE)
 
     // touchdb
     PARAMETER(PARAM_TOUCH_LOCK)
@@ -1181,6 +1187,8 @@ public:
     PARAMETER(PARAM_PROTEOME_WEIGHT_FILE)
     PARAMETER(PARAM_PROTEOME_WEIGHT_CLUSTER_COUNT)
     PARAMETER(PARAM_PROTEOME_INCLUDE_ALIGN_FILES)
+    PARAMETER(PARAM_PROTEOME_SCORE_MODE)
+    PARAMETER(PARAM_PROTEOME_REASSIGN)
 
     // for modules that should handle -h themselves
     PARAMETER(PARAM_HELP)
@@ -1315,6 +1323,7 @@ public:
     std::vector<MMseqsParameter*> proteomecluster;
     std::vector<MMseqsParameter*> easyproteomeclusterworkflow;
     std::vector<MMseqsParameter*> parseproteomealignments;
+    std::vector<MMseqsParameter*> mergeproteomeclusters;
     std::vector<MMseqsParameter*> easyproteomesearchworkflow;
 
     std::vector<MMseqsParameter*> combineList(const std::vector<MMseqsParameter*> &par1,

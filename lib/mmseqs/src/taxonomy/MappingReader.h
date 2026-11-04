@@ -99,7 +99,7 @@ private:
     Pair* entries;
     size_t count;
     //                    T  A   X   M  Version
-    const char magic[5] = {19, 0, 23, 12, sizeof(DBKeyType) == sizeof(uint64_t) ? 2 : 1};
+    const char magic[5] = {19, 0, 23, 12, sizeof(DBKeyType) == sizeof(uint64_t) ? 2 : 0};
     const size_t magicLen = 5;
     static bool compareTaxa(const Pair &lhs, const Pair &rhs) {
         return (lhs.dbkey <= rhs.dbkey);

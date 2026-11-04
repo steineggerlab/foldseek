@@ -1,3 +1,4 @@
+#include "simd.h"
 #include "SubstitutionMatrix.h"
 #include "QueryMatcher.h"
 #include "FastSort.h"
@@ -202,15 +203,46 @@ std::pair<hit_t*, size_t> QueryMatcher::matchQuery(Sequence *querySeq, DBLocalId
                 queryResult = getResult<UNGAPPED_DIAGONAL_SCORE>(resultReadPos, elementsCntAboveDiagonalThr, identityId, diagonalThr, ungappedAlignment, false);
             }
         }else{
-            size_t resultPos = 0;
-            for (size_t i = 0; i < resultSize; i++) {
-                resultReadPos[resultPos].id = resultReadPos[i].id;
-                resultReadPos[resultPos].diagonal = resultReadPos[i].diagonal;
-                resultReadPos[resultPos].count = resultReadPos[i].count;
-                resultPos += (resultReadPos[i].count >= diagonalThr);
+            unsigned int maxDiagonalScoreThr = (UCHAR_MAX - ungappedAlignment->getQueryBias());
+            bool scoreIsTruncated = (diagonalThr >= maxDiagonalScoreThr);
+            size_t availableSpace = foundDiagonalsSize - (resultReadPos - foundDiagonals);
+
+            if (scoreIsTruncated) {
+                // Filter in-place to only truncated-score hits
+                size_t filteredSize = 0;
+                for (size_t i = 0; i < resultSize; i++) {
+                    if (resultReadPos[i].count >= maxDiagonalScoreThr) {
+                        resultReadPos[filteredSize] = resultReadPos[i];
+                        filteredSize++;
+                    }
+                }
+                memset(scoreSizes, 0, SCORE_RANGE * sizeof(unsigned int));
+                std::pair<size_t, unsigned int> rescoreResult = rescoreHits(querySeq, scoreSizes, resultReadPos, filteredSize, ungappedAlignment, maxDiagonalScoreThr);
+                size_t newResultSize = rescoreResult.first;
+                unsigned int maxSelfScoreMinusDiag = rescoreResult.second;
+                size_t elementsCntAboveDiagonalThr;
+                if (filteredSize * 2 <= availableSpace) {
+                    // Room for the second buffer, radix sort the rescored hits
+                    resultWritePos = resultReadPos + filteredSize;
+                    elementsCntAboveDiagonalThr = radixSortByScoreSize(scoreSizes, resultWritePos, 0, resultReadPos, newResultSize);
+                    std::swap(resultReadPos, resultWritePos);
+                } else {
+                    // Too many truncated hits to double buffer, sort in-place instead
+                    SORT_SERIAL(resultReadPos, resultReadPos + newResultSize, CounterResult::sortScore);
+                    elementsCntAboveDiagonalThr = newResultSize;
+                }
+                queryResult = getResult<UNGAPPED_DIAGONAL_SCORE>(resultReadPos, elementsCntAboveDiagonalThr, identityId, 0, ungappedAlignment, maxSelfScoreMinusDiag);
+            } else {
+                size_t resultPos = 0;
+                for (size_t i = 0; i < resultSize; i++) {
+                    resultReadPos[resultPos].id = resultReadPos[i].id;
+                    resultReadPos[resultPos].diagonal = resultReadPos[i].diagonal;
+                    resultReadPos[resultPos].count = resultReadPos[i].count;
+                    resultPos += (resultReadPos[i].count >= diagonalThr);
+                }
+                SORT_SERIAL(resultReadPos, resultReadPos + resultPos, CounterResult::sortScore);
+                queryResult = getResult<UNGAPPED_DIAGONAL_SCORE>(resultReadPos, resultPos, identityId, diagonalThr, ungappedAlignment, false);
             }
-            SORT_SERIAL(resultReadPos, resultReadPos + resultPos, CounterResult::sortScore);
-            queryResult = getResult<UNGAPPED_DIAGONAL_SCORE>(resultReadPos, resultPos, identityId, diagonalThr, ungappedAlignment, false);
         }
     }else{
         unsigned int thr = computeScoreThreshold(scoreSizes, this->maxHitsPerQuery);
