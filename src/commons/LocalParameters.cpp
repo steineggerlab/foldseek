@@ -140,6 +140,7 @@ LocalParameters::LocalParameters() :
     lolalign.push_back(&PARAM_MULTIDOMAIN);
     lolalign.push_back(&PARAM_CANDIDATE_SEEDS);
     lolalign.push_back(&PARAM_REFINE_SEEDS);
+    lolalign.push_back(&PARAM_FWBW_SCALED_MODE);
     lolalign.push_back(&PARAM_MIN_SEQ_ID);
     lolalign.push_back(&PARAM_PRELOAD_MODE);
     lolalign.push_back(&PARAM_MAX_REJECTED);

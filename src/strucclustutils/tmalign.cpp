@@ -166,6 +166,7 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
             lolaligner[thread_idx] = new LoLAlign(std::max(static_cast<int>(qdbr.sequenceReader->getMaxSeqLen() + 1),
                                                        max_targetLen), false, par.candidateSeeds, par.refineSeeds);
             fwbwAligner[thread_idx] = new FwBwAligner(-par.fwbwGapopen, -par.fwbwGapextend, par.temperature, 0, qdbr.sequenceReader->getMaxSeqLen() + 1, tdbr->sequenceReader->getMaxSeqLen() + 1, blockLen, 0);
+            fwbwAligner[thread_idx]->setScaledMode(static_cast<FwBwAligner::ScaledMode>(par.fwbwScaledMode));
             tSeqAAs[thread_idx] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, subMatAA, 0, false, par.compBiasCorrection);
             tSeq3Dis[thread_idx] = new Sequence(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, subMat3Di, 0, false, par.compBiasCorrection);
            
