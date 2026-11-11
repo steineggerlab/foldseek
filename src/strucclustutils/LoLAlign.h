@@ -61,7 +61,7 @@ public:
                                             float** zm, float* zmax, float** zmBlock, float* zeBlock, float* zfBlock, int* gaps);
     void calcDistMatrix(float* x, float* y, float* z, size_t len, float** d, bool cutoff);
     float calcDiscore(int* anchorQuery, int* anchorTarget, int anchorLength);
-    void lolMatrix(int* anchorQuery, int* anchorTarget, int anchorLength, int* gaps, float** distanceij, float** distancekl, float** lolScoreMatrix, int queryLen, int targetLen, float** hiddenLayer, float* dDist);
+    void lolMatrix(const int* newQuery, const int* newTarget, int anchorLength, int* gaps, float** distanceij, float** distancekl, float** lolScoreMatrix, float** hiddenLayer, float* dDist);
     void lolScore(float* dist, float* dSeq, float* score, int length, float** hiddenLayer);
     void setStartAnchorLength(int length) { startAnchorLength = length; }
     
@@ -108,6 +108,10 @@ private:
     float* startAnchorScores;
     int* anchorLength;
     int* newAnchorLength;
+    // (query, target) positions of the anchors added last (status 2) for the seed being refined,
+    // in query order; consumed by lolMatrix
+    int* newAnchorQuery;
+    int* newAnchorTarget;
     int* gaps;
     float* lolDist;
     float* lolSeqDist;
