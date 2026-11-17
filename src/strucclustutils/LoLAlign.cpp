@@ -26,6 +26,15 @@
 #include <omp.h>
 #endif
 
+// The matrices are allocated for the longest sequence. Rows of the current length keep an alignment
+// in as few pages and cache lines as possible instead of spreading it over maxSeqLen^2 floats.
+static void setRowLength(float **matrix, int rows, int cols) {
+    const size_t stride = ((size_t)cols + VECSIZE_FLOAT - 1) / VECSIZE_FLOAT * VECSIZE_FLOAT;
+    for (int i = 1; i < rows; ++i) {
+        matrix[i] = matrix[0] + i * stride;
+    }
+}
+
 LoLAlign::LoLAlign(unsigned int maxSeqLen, bool computeExactScore, int candidateSeeds, int refineSeeds)
         : xtm(maxSeqLen), ytm(maxSeqLen), xt(maxSeqLen),
           r1(maxSeqLen), r2(maxSeqLen), computeExactScore(computeExactScore)
@@ -171,6 +180,9 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
 {
     maxLolMatrixIndex = 0;
     minLolMatrixIndex = queryLen;
+    setRowLength(lolScoreMatrix, queryLen, targetLen);
+    setRowLength(probabilityMatrix, queryLen, targetLen);
+    setRowLength(distancekl, targetLen, targetLen);
 
 
     unsigned char *targetNumAA = tSeqAA.numSequence;
@@ -865,6 +877,7 @@ void LoLAlign::initQuery(float* x, float* y, float* z, Sequence& qSeqAA, Sequenc
     else{
         startAnchorLength = 3;
     }
+    setRowLength(distanceij, queryLen, queryLen);
     calcDistMatrix(queryX, queryY, queryZ, queryLen, distanceij, true);
     for (int i = 0; i < queryLen; i++) {
         finalAnchorQuery[i] = i;
