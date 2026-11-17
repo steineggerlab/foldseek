@@ -13,6 +13,7 @@
 class LDDTCalculator {
 public:
     static constexpr float CUTOFF = 15.0;
+    static constexpr float CUTOFF_SQUARED = CUTOFF * CUTOFF;
     static constexpr float INF = std::numeric_limits<float>::infinity();
 
     LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength);

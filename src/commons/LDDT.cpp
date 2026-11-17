@@ -4,12 +4,16 @@
 #include <algorithm>
 
 
-static inline float dist(float* arr1, float* arr2) {
+static inline float dist2(float* arr1, float* arr2) {
     float D2 = 0;
     for(int i = 0; i < 3; i++) {
         D2 += (arr1[i] - arr2[i]) * (arr1[i] - arr2[i]);
     }
-    return sqrt(D2);
+    return D2;
+}
+
+static inline float dist(float* arr1, float* arr2) {
+    return sqrt(dist2(arr1, arr2));
 }
 
 LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
@@ -68,8 +72,7 @@ void LDDTCalculator::initQuery(unsigned int queryLen, float *qx, float *qy, floa
 
     for(unsigned int col = 0; col < queryLength; col++) {
         for (unsigned int row = 0; row < queryLength; row++) {
-            float distance = dist(query_coordinates[row], query_coordinates[col]);
-            bool isClose = (col != row) && (distance < CUTOFF);
+            bool isClose = (col != row) && (dist2(query_coordinates[row], query_coordinates[col]) < CUTOFF_SQUARED);
             dists_to_score[col][row] = isClose;
             dists_to_score[row][col] = isClose;
             norm[col] += dists_to_score[row][col];
