@@ -118,6 +118,8 @@ private:
     float* lolScoreVec;
     int* finalAnchorQuery;
     int* finalAnchorTarget;
+    // aligned query/target positions, reused across alignments like backtrace
+    std::vector<int> qAln, tAln;
     float qqScore;
     int maxAnchorLen;
 

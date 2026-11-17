@@ -70,8 +70,9 @@ LoLAlign::LoLAlign(unsigned int maxSeqLen, bool computeExactScore, int candidate
     gaps = new int[4]{0, 0, 0, 0};
 
 
-    finalAnchorQuery = nullptr;
-    finalAnchorTarget = nullptr;
+    // initQuery is called with query and target lengths up to maxSeqLen
+    finalAnchorQuery = new int[maxSeqLen];
+    finalAnchorTarget = new int[maxSeqLen];
     lddtcalc = new LDDTCalculator(maxSeqLen + 1, maxSeqLen + 1);
     //P = malloc_matrix<float>(maxSeqLen, maxSeqLen);
 }
@@ -649,7 +650,7 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         
     }
 
-    std::string backtrace = "";
+    backtrace.clear();
     int matches = 0;
     int queryCount = 0;
     int targetCount = 0;
@@ -743,14 +744,15 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
 
     result.qEndPos--;
     result.dbEndPos--;
-    result.backtrace = Matcher::compressAlignment(backtrace.substr(firstM));
+    backtrace.erase(0, firstM);
+    result.backtrace = Matcher::compressAlignment(backtrace);
     result.alnLength = (int)result.backtrace.size();
 
     // ---- LoLAlign homology probability, written into result.score * 10000 -----
     {
-        std::string aln = backtrace.substr(firstM);          // uncompressed M/I/D, aligned region
-        std::vector<int> qAln, tAln;
-        qAln.reserve(aln.size()); tAln.reserve(aln.size());
+        const std::string &aln = backtrace;                  // uncompressed M/I/D, aligned region
+        qAln.clear();
+        tAln.clear();
         int qpos = result.qStartPos, tpos = result.dbStartPos;
         int alnlen = 0, gapopen = 0, numGaps = 0;
         char prevOp = 0;
@@ -864,15 +866,6 @@ void LoLAlign::initQuery(float* x, float* y, float* z, Sequence& qSeqAA, Sequenc
     queryCaCords.y = queryY;
     queryCaCords.z = queryZ;
 
-    if (finalAnchorQuery != nullptr) {
-        delete[] finalAnchorQuery;
-    }
-    if (finalAnchorTarget != nullptr) {
-        delete[] finalAnchorTarget;
-    }
-
-    finalAnchorQuery = new int[std::max(queryLen, maxTLen)];
-    finalAnchorTarget = new int[std::max(queryLen, maxTLen)];
     maxAnchorLen = std::max(queryLen, maxTLen);
     if(queryLen < 10){
         startAnchorLength = 0;

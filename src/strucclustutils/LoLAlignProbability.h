@@ -44,9 +44,7 @@ public:
                   const int* qAln, const int* tAln, int nAln,
                   double evalue, double bits, double lddt,
                   int alnlen, int gapopen, int numGaps) {
-        std::vector<int> tDeg, tEdgeS, tEdgeD, tEdgeBin;
         buildAdjacency(targetLen, tx, ty, tz, tDeg, tEdgeS, tEdgeD, tEdgeBin);
-        std::vector<float> tHist6;
         buildResHist6(targetLen, tEdgeS, tEdgeD, tEdgeBin, tHist6);
 
         float feat[39];
@@ -85,6 +83,11 @@ private:
     int qLen_;
     std::vector<int>   qDeg_, qEdgeS_, qEdgeD_, qEdgeBin_;
     std::vector<float> qHist6_;   // qLen_ * NSEP6, row-major
+    // target buffers of predict, reused across alignments
+    std::vector<int>   tDeg, tEdgeS, tEdgeD, tEdgeBin;
+    std::vector<float> tHist6;
+    std::vector<char>  amask;
+    std::vector<int>   nAlnNb;
 
     static inline double sign(double x) { return (x > 0) - (x < 0); }
 
@@ -133,14 +136,14 @@ private:
     }
 
     // ANF: histogram of (aligned-neighbors / (degree + C)) over aligned residues w/ deg>0.
-    static void anfHist(int N, const std::vector<int>& deg,
+    void anfHist(int N, const std::vector<int>& deg,
                         const std::vector<int>& es, const std::vector<int>& ed,
                         const int* aln, int nAln, float* out) {
         for (int i = 0; i < NB; ++i) out[i] = 0.0f;
         if (deg.empty() || es.empty()) return;
-        std::vector<char> amask(N, 0);
+        amask.assign(N, 0);
         for (int k = 0; k < nAln; ++k) { int a = aln[k]; if (a >= 0 && a < N) amask[a] = 1; }
-        std::vector<int> nAlnNb(N, 0);
+        nAlnNb.assign(N, 0);
         for (size_t e = 0; e < es.size(); ++e) {
             int s = es[e], d = ed[e];
             nAlnNb[s] += amask[d];
@@ -203,15 +206,15 @@ private:
     }
 
     // qfrac: per seq-sep bin, fraction of query contacts that are aligned-aligned.
-    static void qfracFeat(int qN, const std::vector<int>& es, const std::vector<int>& ed,
+    void qfracFeat(int qN, const std::vector<int>& es, const std::vector<int>& ed,
                           const std::vector<int>& eb, const int* qAln, int nAln, float* out) {
         for (int i = 0; i < NSEP6; ++i) out[i] = 0.0f;
         if (es.empty()) return;
-        std::vector<char> mask(qN, 0);
-        for (int k = 0; k < nAln; ++k) { int a = qAln[k]; if (a >= 0 && a < qN) mask[a] = 1; }
+        amask.assign(qN, 0);
+        for (int k = 0; k < nAln; ++k) { int a = qAln[k]; if (a >= 0 && a < qN) amask[a] = 1; }
         double all_cnt[NSEP6] = {0}, aln_cnt[NSEP6] = {0};
         for (size_t e = 0; e < es.size(); ++e) {
-            int b = eb[e]; char ms = mask[es[e]], md = mask[ed[e]];
+            int b = eb[e]; char ms = amask[es[e]], md = amask[ed[e]];
             all_cnt[b] += (double)ms + (double)md;
             if (ms && md) aln_cnt[b] += 2.0;
         }
