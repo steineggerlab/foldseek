@@ -240,13 +240,16 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         fwbwaln->runFwBw<false, 0>();
     }
 
+    // read the posterior directly, getProbability is a virtual call per cell
+    float **fwbwP = fwbwaln->getProbabiltyMatrix();
+    const float fwbwMaxP = fwbwaln->getMaxP();
     for (int startAnchor = 0; startAnchor < candidateSeeds; startAnchor++) {
 
         // If the temperature retry above could not recover a non-zero posterior, there is no
         // probability signal to seed an anchor from. Scanning the dead posterior would leave
         // maxIndexX/maxIndexY at the sentinel 0 and index out of bounds, so record an empty
         // anchor and skip the scan.
-        if (fwbwaln->getMaxP() == 0) {
+        if (fwbwMaxP == 0) {
             startAnchorScores[startAnchor] = 0;
             anchorLength[startAnchor] = 0;
             newAnchorLength[startAnchor] = 0;
@@ -262,14 +265,14 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
 
             for (int i = startAnchorLength; i < queryLen - startAnchorLength; ++i) {
                 for (int j = startAnchorLength; j < targetLen - startAnchorLength; ++j) {
-                    float alignProb = fwbwaln->getProbability(i, j);
+                    float alignProb = fwbwP[i][j];
                     if (alignProb >= maxScore) {
                         maxScore = alignProb;
                         maxIndexX = i;
                         maxIndexY = j;
                     }
                 }
-                if (maxScore >= fwbwaln->getMaxP()){
+                if (maxScore >= fwbwMaxP){
                     break;
                 }
 
@@ -278,14 +281,14 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         else{
             for (int i = queryLen - startAnchorLength -1; i >= startAnchorLength; --i) {
                 for (int j = targetLen - startAnchorLength -1; j >= startAnchorLength; --j) {
-                    float alignProb = fwbwaln->getProbability(i, j);
+                    float alignProb = fwbwP[i][j];
                     if (alignProb > maxScore) {
                         maxScore = alignProb;
                         maxIndexX = i;
                         maxIndexY = j;
                     }
                 }
-                if (maxScore >= fwbwaln->getMaxP()){
+                if (maxScore >= fwbwMaxP){
                     break;
                 }
             }
@@ -327,7 +330,7 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         }
         startAnchorScores[startAnchor] = maxSubArray(lolScoreVec, diagLength);
         alignStartAnchors(anchorQuery[startAnchor], anchorTarget[startAnchor], maxIndexX, maxIndexY,
-                          &newAnchorLength[startAnchor], fwbwaln->getProbabiltyMatrix(), lolScoreMatrix, targetLen);
+                          &newAnchorLength[startAnchor], fwbwP, lolScoreMatrix, targetLen);
         anchorLength[startAnchor] = newAnchorLength[startAnchor];
     }
     
