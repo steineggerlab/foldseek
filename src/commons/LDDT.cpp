@@ -1,4 +1,5 @@
 #include "LDDT.h"
+#include "simd.h"
 #include <string.h>
 #include <algorithm>
 
@@ -14,23 +15,10 @@ static inline float dist(float* arr1, float* arr2) {
 LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
         : maxQueryLength(maxQueryLength), maxTargetLength(maxTargetLength) {
     maxAlignLength = std::max(maxQueryLength, maxTargetLength);
-    query_coordinates = new float*[maxQueryLength];
-    for(unsigned int i = 0; i < maxQueryLength; i++) {
-        query_coordinates[i] = new float[3];
-    }
-    target_coordinates = new float*[maxTargetLength];
-    for(unsigned int i = 0; i < maxTargetLength; i++) {
-        target_coordinates[i] = new float[3];
-    }
-    dists_to_score = new bool*[maxQueryLength];
-    for(unsigned int i = 0; i < maxQueryLength; i++) {
-        dists_to_score[i] = new bool[maxQueryLength];
-    }
-
-    score = new float*[maxAlignLength];
-    for(unsigned int i = 0; i < maxAlignLength; i++) {
-        score[i] = new float[maxAlignLength];
-    }
+    // one block per matrix, many small allocations make malloc grow the heap of each thread page by page
+    query_coordinates = malloc_matrix<float>(maxQueryLength, 3);
+    target_coordinates = malloc_matrix<float>(maxTargetLength, 3);
+    dists_to_score = malloc_matrix<bool>(maxQueryLength, maxQueryLength);
     reduce_score = new float[maxAlignLength];
     norm = new float[maxQueryLength];
     query_to_align = new int[maxQueryLength];
@@ -40,30 +28,9 @@ LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTarg
 }
 
 LDDTCalculator::~LDDTCalculator() {
-    if(query_coordinates) {
-        for(unsigned int i = 0; i < maxQueryLength; i++) {
-            delete[] query_coordinates[i];
-        }
-        delete[] query_coordinates;
-    }
-    if(target_coordinates) {
-        for(unsigned int i = 0; i < maxTargetLength; i++) {
-            delete[] target_coordinates[i];
-        }
-        delete[] target_coordinates;
-    }
-    if(dists_to_score) {
-        for(unsigned int i = 0; i < maxQueryLength; i++) {
-            delete[] dists_to_score[i];
-        }
-        delete[] dists_to_score;
-    }
-    if(score) {
-        for(unsigned int i = 0; i < maxAlignLength; i++) {
-            delete[] score[i];
-        }
-        delete[] score;
-    }
+    free(query_coordinates);
+    free(target_coordinates);
+    free(dists_to_score);
     if(reduce_score) {
         delete[] reduce_score;
     }
@@ -91,9 +58,9 @@ void LDDTCalculator::initQuery(unsigned int queryLen, float *qx, float *qy, floa
         query_coordinates[i][1] = qy[i];
         query_coordinates[i][2] = qz[i];
     }
-    // Initialize arrays
-    for(unsigned int i = 0; i < queryLength; i++) {
-        memset(dists_to_score[i], 0, sizeof(bool) * queryLength);
+    // rows of the query length keep the matrix in as few pages as possible
+    for(unsigned int i = 1; i < queryLength; i++) {
+        dists_to_score[i] = dists_to_score[0] + (size_t)i * queryLength;
     }
 
     query_grid = Grid(query_coordinates, queryLength);

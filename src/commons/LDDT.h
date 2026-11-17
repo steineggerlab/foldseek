@@ -162,7 +162,7 @@ private:
     int * target_to_align;
     int * align_to_query;
     int * align_to_target;
-    float **query_coordinates, **target_coordinates, **score;
+    float **query_coordinates, **target_coordinates;
     bool **dists_to_score;
     LDDTCalculator::Grid query_grid;
 };
