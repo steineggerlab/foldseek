@@ -130,18 +130,19 @@ void LDDTCalculator::calculateLddtScores() {
     int dy[DIR] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1, 1, 1, 1, 0};
     int dz[DIR] = {0, 1, 0, -1, 1, 0, -1, 1, 0, -1, 1, 0, -1, 1};
     memset(reduce_score, 0, sizeof(float) * alignLength);
-    std::map<std::tuple<int, int, int>, bool> visited_boxes;
+    visited_boxes.assign(query_grid.box_index.size(), 0);
     // Create a set of unique boxes containing aligned residues
     for (unsigned int align_idx = 0; align_idx < alignLength; align_idx++) {
         if (align_to_query[align_idx] != -1) {
             std::tuple<int, int, int> box_coord = query_grid.getGridCoordinates(query_coordinates[align_to_query[align_idx]]);
-            // If box_coord has been visited already, skip
-            if (visited_boxes.find(box_coord) != visited_boxes.end()) {
+            // the box of a query residue is always in the grid; skip it if it has been visited already
+            const size_t box_idx = query_grid.getBoxIndex(box_coord);
+            if (visited_boxes[box_idx]) {
                 continue;
             }
-            visited_boxes[box_coord] = true;
+            visited_boxes[box_idx] = 1;
 
-            std::pair<size_t, size_t> box_members = query_grid.getBoxMemberRange(box_coord);
+            std::pair<size_t, size_t> box_members = query_grid.box_index[box_idx].second;
 
             for (size_t i = box_members.first; i < box_members.second; i++) {
                 int query_idx1 = query_grid.box[i].second;

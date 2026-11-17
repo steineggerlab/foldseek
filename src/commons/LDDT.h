@@ -80,12 +80,18 @@ public:
             }
         };
 
-        std::pair<size_t, size_t> getBoxMemberRange(std::tuple<int, int, int> &box_coord) {
+        // position of box_coord in box_index, or box_index.size() if no query residue lies in it
+        size_t getBoxIndex(std::tuple<int, int, int> &box_coord) {
             auto it = std::lower_bound(box_index.begin(), box_index.end(), std::make_pair(box_coord, std::make_pair(0, 0)), Grid::PairTupleComparator());
             if(it == box_index.end() || it->first != box_coord) {
-                return std::make_pair(0, 0);
+                return box_index.size();
             }
-            return it->second;
+            return it - box_index.begin();
+        }
+
+        std::pair<size_t, size_t> getBoxMemberRange(std::tuple<int, int, int> &box_coord) {
+            size_t idx = getBoxIndex(box_coord);
+            return idx == box_index.size() ? std::make_pair((size_t)0, (size_t)0) : box_index[idx].second;
         }
 
         float min[3] = {INF, INF, INF};
@@ -166,6 +172,7 @@ private:
     float **query_coordinates, **target_coordinates;
     bool **dists_to_score;
     LDDTCalculator::Grid query_grid;
+    std::vector<char> visited_boxes; // per entry of query_grid.box_index, reused across targets
 };
 
 #endif
