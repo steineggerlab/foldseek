@@ -35,6 +35,34 @@ static void setRowLength(float **matrix, int rows, int cols) {
     }
 }
 
+// Largest value in row[begin, end), or 0 if none is larger
+static float rowMax(const float *row, int begin, int end) {
+    simd_float vmax = simdf32_set(0.0f);
+    int j = begin;
+    for (; j + VECSIZE_FLOAT <= end; j += VECSIZE_FLOAT) {
+        vmax = simdf32_max(simdf32_loadu(row + j), vmax);
+    }
+    float max = simdf32_hmax(vmax);
+    for (; j < end; ++j) {
+        max = std::max(max, row[j]);
+    }
+    return max;
+}
+
+// Last column in row[begin, end) holding value, or begin - 1 if none
+static int lastColOf(const float *row, int begin, int end, float value) {
+    const simd_float vvalue = simdf32_set(value);
+    int j = end;
+    for (; j - VECSIZE_FLOAT >= begin; j -= VECSIZE_FLOAT) {
+        const unsigned int mask = simdf32_movemask_ps(simdf32_eq(simdf32_loadu(row + j - VECSIZE_FLOAT), vvalue));
+        if (mask != 0) {
+            return j - VECSIZE_FLOAT + 31 - __builtin_clz(mask);
+        }
+    }
+    for (--j; j >= begin && row[j] != value; --j) {}
+    return j;
+}
+
 LoLAlign::LoLAlign(unsigned int maxSeqLen, bool computeExactScore, int candidateSeeds, int refineSeeds)
         : xtm(maxSeqLen), ytm(maxSeqLen), xt(maxSeqLen),
           r1(maxSeqLen), r2(maxSeqLen), computeExactScore(computeExactScore)
@@ -265,12 +293,14 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         if (startAnchor % 2 == 0) {
 
             for (int i = startAnchorLength; i < queryLen - startAnchorLength; ++i) {
-                for (int j = startAnchorLength; j < targetLen - startAnchorLength; ++j) {
-                    float alignProb = fwbwP[i][j];
-                    if (alignProb >= maxScore) {
-                        maxScore = alignProb;
+                // ties go to the last column, as with a scalar >= scan
+                const float max = rowMax(fwbwP[i], startAnchorLength, targetLen - startAnchorLength);
+                if (max >= maxScore) {
+                    const int col = lastColOf(fwbwP[i], startAnchorLength, targetLen - startAnchorLength, max);
+                    if (col >= startAnchorLength) {
+                        maxScore = max;
                         maxIndexX = i;
-                        maxIndexY = j;
+                        maxIndexY = col;
                     }
                 }
                 if (maxScore >= fwbwMaxP){
@@ -281,12 +311,14 @@ Matcher::result_t LoLAlign::align(unsigned int dbKey, float* targetX, float* tar
         }
         else{
             for (int i = queryLen - startAnchorLength -1; i >= startAnchorLength; --i) {
-                for (int j = targetLen - startAnchorLength -1; j >= startAnchorLength; --j) {
-                    float alignProb = fwbwP[i][j];
-                    if (alignProb > maxScore) {
-                        maxScore = alignProb;
+                // the first column a backwards > scan meets is also the last one holding the max
+                const float max = rowMax(fwbwP[i], startAnchorLength, targetLen - startAnchorLength);
+                if (max > maxScore) {
+                    const int col = lastColOf(fwbwP[i], startAnchorLength, targetLen - startAnchorLength, max);
+                    if (col >= startAnchorLength) {
+                        maxScore = max;
                         maxIndexX = i;
-                        maxIndexY = j;
+                        maxIndexY = col;
                     }
                 }
                 if (maxScore >= fwbwMaxP){
