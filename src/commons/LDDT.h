@@ -163,7 +163,6 @@ public:
 
 private:
     unsigned int queryLength, targetLength, alignLength;
-    unsigned int maxQueryLength, maxTargetLength, maxAlignLength;
     float *reduce_score, *norm;
     int * query_to_align;
     int * target_to_align;

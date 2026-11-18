@@ -16,9 +16,8 @@ static inline float dist(float* arr1, float* arr2) {
     return sqrt(dist2(arr1, arr2));
 }
 
-LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength)
-        : maxQueryLength(maxQueryLength), maxTargetLength(maxTargetLength) {
-    maxAlignLength = std::max(maxQueryLength, maxTargetLength);
+LDDTCalculator::LDDTCalculator(unsigned int maxQueryLength, unsigned int maxTargetLength) {
+    const unsigned int maxAlignLength = std::max(maxQueryLength, maxTargetLength);
     // one block per matrix, many small allocations make malloc grow the heap of each thread page by page
     query_coordinates = malloc_matrix<float>(maxQueryLength, 3);
     target_coordinates = malloc_matrix<float>(maxTargetLength, 3);
