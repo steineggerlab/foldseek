@@ -16,6 +16,11 @@
 #include <omp.h>
 #endif
 
+#ifdef __linux__
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
+
 bool compareHitsByScore(const Matcher::result_t &first, const Matcher::result_t &second) {
     if (first.eval != second.eval) {
         return first.eval > second.eval;
@@ -286,6 +291,14 @@ int runStructureAligner(int argc, const char **argv, const Command& command, boo
         unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
+#endif
+#if defined(__linux__) && defined(SYS_get_mempolicy) && defined(SYS_set_mempolicy)
+        // NUMA balancing pulls all threads onto the nodes holding most of the per-thread buffers; it skips memory
+        // with an explicit policy, so replace MPOL_DEFAULT (0) by MPOL_LOCAL (4) and keep any policy set by the user
+        int mode = -1;
+        if (syscall(SYS_get_mempolicy, &mode, NULL, 0, NULL, 0) == 0 && mode == 0) {
+            syscall(SYS_set_mempolicy, 4, NULL, 0);
+        }
 #endif
         if (runLoLAlign) {
             // max_targetLen is padded up to a multiple of par.blocklen (see above); the LoLAlign
