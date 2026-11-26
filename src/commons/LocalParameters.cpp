@@ -101,7 +101,8 @@ LocalParameters::LocalParameters() :
     structurecreatedb.push_back(&PARAM_CHAIN_NAME_MODE);
     structurecreatedb.push_back(&PARAM_MODEL_NAME_MODE);
     structurecreatedb.push_back(&PARAM_WRITE_MAPPING);
-    structurecreatedb.push_back(&PARAM_WRITE_FOLDCOMP);
+    // Disabled for Release 11
+    // structurecreatedb.push_back(&PARAM_WRITE_FOLDCOMP);
     structurecreatedb.push_back(&PARAM_MASK_BFACTOR_THRESHOLD);
     structurecreatedb.push_back(&PARAM_COORD_STORE_MODE);
     structurecreatedb.push_back(&PARAM_SAVE_RES_INDEX);
