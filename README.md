@@ -10,9 +10,13 @@ Foldseek enables fast and sensitive comparisons of large protein structure sets,
 
 [Kim W, Mirdita M, Levy Karin E, Gilchrist CLM, Schweke H, Söding J, Levy E, and Steinegger M. Rapid and sensitive protein complex alignment with Foldseek-Multimer. Nature Methods, doi:10.1038/s41592-025-02593-7 (2025)](https://www.nature.com/articles/s41592-025-02593-7)
 
-[Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, Steinegger M: GPU-accelerated homology search with MMseqs2. bioRxiv, doi: 10.1101/2024.11.13.623350 (2024)](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1)
+[Kallenborn F, Chacon A, Hundt C, Sirelkhatim H, Didi K, Cha S, Dallago C, Mirdita M, Schmidt B, and Steinegger M. GPU-accelerated homology search with MMseqs2. Nature Methods, doi:10.1038/s41592-025-02819-8 (2025)](https://www.nature.com/articles/s41592-025-02819-8)
 
 [Reifenrath L, van Kempen M, Kim G, Kim SH, Radnezhad M, Gilchrist CLM, Mirdita M, Steinegger M, and Söding J. LoL-align: sensitive and fast probabilistic protein structure alignment. Nature Methods, doi:10.1038/s41592-026-03249-w (2026)](https://www.nature.com/articles/s41592-026-03249-w)
+
+[Strom JM, Cha S, Kim RS, Sajal H, Gilchrist CLM, Steinegger M, and Luck K. Foldseek-Interface reveals a protein interface universe far from complete. bioRxiv, doi:10.64898/2026.08.24.746585 (2026)](https://www.biorxiv.org/content/10.64898/2026.08.24.746585v2)
+
+[Jang LS, Cha S, and Steinegger M. StrucTTY: An Interactive, Terminal-Native Protein Structure Viewer. bioRxiv, doi:10.64898/2026.03.17.712308 (2026)](https://www.biorxiv.org/content/10.64898/2026.03.17.712308v1)
 
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/foldseek.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/foldseek) 
 [![Github All Releases](https://img.shields.io/github/downloads/steineggerlab/foldseek/total.svg)](https://github.com/steineggerlab/foldseek/releases/latest) 

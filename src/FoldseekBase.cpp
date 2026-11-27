@@ -64,7 +64,7 @@ std::vector<Command> foldseekCommands = {
                 "foldseek createinterfacedb db_dimer db_int\n",
                 "Sooyoung Cha <ellen2g@snu.ac.kr> & Joelle Morgan Strom <stromjoelle@gmail.com>",
                 "<i:DB> <o:DB>",
-                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                CITATION_FOLDSEEK | CITATION_FOLDSEEK_INTERFACE, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"createstructinterfacedb",          createstructinterfacedb,          &localPar.createstructinterfacedb,          COMMAND_SET,
                 "Create an interface DB of a dimer DB",
@@ -72,14 +72,14 @@ std::vector<Command> foldseekCommands = {
                 "foldseek createstructinterfacedb db_dimer db_int\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:DB> <o:DB>",
-                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                CITATION_FOLDSEEK | CITATION_FOLDSEEK_INTERFACE, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"createdimerdb",          createdimerdb,          &localPar.createdimerdbworkflow,          COMMAND_SET,
                 "Create a dimer DB of a DB",
                 "foldseek createdimerdb db db_dimer\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:DB> <o:DB> <tmpDir>",
-                CITATION_FOLDSEEK, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
+                CITATION_FOLDSEEK | CITATION_FOLDSEEK_INTERFACE, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"filterdimerdb",          filterdimerdb,          &localPar.filterdimerdb,          COMMAND_HIDDEN,
@@ -155,7 +155,7 @@ std::vector<Command> foldseekCommands = {
                 "foldseek structty queryDB targetDB result_report\n\n",
                 "Luna Jang",
                 "<i:query> <i:target> <i:resultFile>",
-                CITATION_FOLDSEEK, {{"query", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
+                CITATION_FOLDSEEK | CITATION_STRUCTTY, {{"query", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
                                            {"target", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
                                            {"resultFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"rbh",                  structurerbh,                  &localPar.structuresearchworkflow,       COMMAND_MAIN,
@@ -238,7 +238,7 @@ std::vector<Command> foldseekCommands = {
                 NULL,
                 "Lasse Reifenrath <lasse.reifenrath@mpinat.mpg.de>",
                 "<i:queryDB> <i:targetDB> <i:prefilterDB> <o:resultDB>",
-                CITATION_FOLDSEEK, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                CITATION_FOLDSEEK | CITATION_LOLALIGN, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                 {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                 {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                 {"alnDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::alignmentDb }}},
@@ -428,7 +428,7 @@ std::vector<Command> foldseekCommands = {
                 "#        -c 0.6    +    +    +\n\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:sequenceDB|interfaceDB> <o:clusterDB> <tmpDir>",
-                CITATION_FOLDSEEK_MULTIMER, {
+                CITATION_FOLDSEEK_MULTIMER | CITATION_FOLDSEEK_INTERFACE, {
                                         {"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
                                         {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &FoldSeekDbValidator::clusterDb },
                                         {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
@@ -450,7 +450,7 @@ std::vector<Command> foldseekCommands = {
                 "#        -c 0.6    +    +    +\n\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]> <o:clusterPrefix> <tmpDir>",
-                CITATION_FOLDSEEK_MULTIMER, {
+                CITATION_FOLDSEEK_MULTIMER | CITATION_FOLDSEEK_INTERFACE, {
                                         {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
                                         {"clusterPrefix", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                         {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }
@@ -468,7 +468,7 @@ std::vector<Command> foldseekCommands = {
                 "foldseek interfacesearch queryDB targetDB result tmp --exhaustive-search 1\n\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
-                CITATION_FOLDSEEK_MULTIMER, {
+                CITATION_FOLDSEEK_MULTIMER | CITATION_FOLDSEEK_INTERFACE, {
                                            {"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::NEED_HEADER, &DbValidator::sequenceDb},
                                            {"complexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb},
@@ -487,7 +487,7 @@ std::vector<Command> foldseekCommands = {
                 "foldseek easy-interfacesearch example/1tim.pdb.gz example/8tim.pdb.gz result tmp --exhaustive-search 1\n\n",
                 "Sooyoung Cha <ellen2g77@gmail.com>",
                 "<i:PDB|mmCIF[.gz]> ... <i:PDB|mmCIF[.gz]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:outputFileName> <tmpDir>",
-                CITATION_FOLDSEEK_MULTIMER, {
+                CITATION_FOLDSEEK_MULTIMER | CITATION_FOLDSEEK_INTERFACE, {
                                            {"PDB|mmCIF[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &FoldSeekDbValidator::flatfileStdinAndFolder},
                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &FoldSeekDbValidator::flatfileAndFolder},
                                            {"outputFileName", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},

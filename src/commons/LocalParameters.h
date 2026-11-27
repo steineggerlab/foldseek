@@ -6,6 +6,9 @@
 const int CITATION_FOLDSEEK = CITATION_END;
 const int CITATION_FOLDSEEK_MULTIMER = CITATION_FOLDSEEK << 1;
 const int CITATION_PROSTT5 = CITATION_FOLDSEEK << 2;
+const int CITATION_LOLALIGN = CITATION_FOLDSEEK << 3;
+const int CITATION_FOLDSEEK_INTERFACE = CITATION_FOLDSEEK << 4;
+const int CITATION_STRUCTTY = CITATION_FOLDSEEK << 5;
 
 struct FoldSeekDbValidator : public DbValidator {
     static std::vector<int> tmscore;
