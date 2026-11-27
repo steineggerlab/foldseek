@@ -38,29 +38,50 @@ void getScoreComplexResults(
         unsigned int qComplexId,
         unsigned int assId
 ) {
-    char buffer[1024];
     resultToWrite_t resultToWrite;
-    std::string qComplexName;
-    std::string tComplexName;
-    std::string qChainString;
-    std::string tChainString;
     compNameChainName_t compAndChainName;
     getComplexNameChainName(qChainVector[0], compAndChainName);
-    qComplexName = compAndChainName.first;
-    qChainString = compAndChainName.second;
+    resultToWrite.append(compAndChainName.first);
+    resultToWrite.append(1, '\t');
     getComplexNameChainName(tChainVector[0], compAndChainName);
-    tComplexName = compAndChainName.first;
-    tChainString = compAndChainName.second;
-    for (size_t qChainId = 1; qChainId < qChainVector.size(); qChainId++) {
+    resultToWrite.append(compAndChainName.first);
+    resultToWrite.append(1, '\t');
+    for (size_t qChainId = 0; qChainId < qChainVector.size(); qChainId++) {
         getComplexNameChainName(qChainVector[qChainId], compAndChainName);
-        qChainString += ',' + compAndChainName.second;
+        if (qChainId > 0) {
+            resultToWrite.append(1, ',');
+        }
+        resultToWrite.append(compAndChainName.second);
     }
-    for (size_t tChainId = 1; tChainId < tChainVector.size(); tChainId++) {
+    resultToWrite.append(1, '\t');
+    for (size_t tChainId = 0; tChainId < tChainVector.size(); tChainId++) {
         getComplexNameChainName(tChainVector[tChainId], compAndChainName);
-        tChainString += ',' + compAndChainName.second;
+        if (tChainId > 0) {
+            resultToWrite.append(1, ',');
+        }
+        resultToWrite.append(compAndChainName.second);
     }
-    int count = snprintf(buffer,sizeof(buffer),"%s\t%s\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%1.5f\t%1.5f\t%s\t%s\t%s\t%d\n", qComplexName.c_str(), tComplexName.c_str(), qChainString.c_str(), tChainString.c_str(), qTMScore, tTMScore, u.c_str(), t.c_str(), qComplexCov, tComplexCov, qChainTms.c_str(), tChainTms.c_str(), interfaceLddtScore.c_str(), assId);
-    resultToWrite.append(buffer, count);
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(SSTR(static_cast<float>(qTMScore), 5));
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(SSTR(static_cast<float>(tTMScore), 5));
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(u);
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(t);
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(SSTR(static_cast<float>(qComplexCov), 5));
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(SSTR(static_cast<float>(tComplexCov), 5));
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(qChainTms);
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(tChainTms);
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(interfaceLddtScore);
+    resultToWrite.append(1, '\t');
+    resultToWrite.append(SSTR(assId));
+    resultToWrite.append(1, '\n');
     scoreComplexResults.emplace_back(qComplexId, assId, resultToWrite);
 }
 
