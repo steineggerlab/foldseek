@@ -81,8 +81,6 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     int outputMode = par.pdbOutputMode;
     const bool cifOutput = par.pdbOutputFormat == LocalParameters::PDB_OUTPUT_FORMAT_MMCIF;
     const char* extension = cifOutput ? ".cif" : ".pdb";
-    // one file per chain, the PDB output keeps its existing grouping in every mode
-    const bool splitPerChain = cifOutput && outputMode == LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN;
     int localThreads = par.threads;
     if (outputMode == LocalParameters::PDB_OUTPUT_MODE_MULTIMODEL) {
         localThreads = 1;
@@ -109,7 +107,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
     chainKeyToComplexId_t chainKeyToComplexIdMap;
     complexIdToChainKeys_t complexIdToChainKeysMap;
     std::vector<unsigned int> complexIndices;
-    if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX || LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN) {
+    if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX) {
         getKeyToIdMapIdToKeysMapIdVec(db, lookupFile, chainKeyToComplexIdMap, complexIdToChainKeysMap, complexIndices);
     }
 
@@ -162,9 +160,7 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
         Coordinate16 coords;
 
         KeyIterator* keyIterator;
-        if (splitPerChain) {
-            keyIterator = new DbKeyIterator(db);
-        } else if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX || LocalParameters::PDB_OUTPUT_MODE_SINGLECHAIN) {
+        if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX) {
             keyIterator = new MapIterator(complexIdToChainKeysMap, complexIndices);
         } else {
             keyIterator = new DbKeyIterator(db);
@@ -177,6 +173,9 @@ int convert2pdb(int argc, const char **argv, const Command& command) {
                 unsigned int key = keys.first[0];
                 // std::string name = db.getLookupEntryName(key);
                 size_t lookupKey = db.getLookupIdByKey(key);
+                if (lookupKey == DB_ENTRY_NOT_FOUND) {
+                    continue;
+                }
                 std::string name = db.getLookupEntryName(lookupKey);
                 if (outputMode == LocalParameters::PDB_OUTPUT_MODE_COMPLEX) {
                     std::string chain = name.substr(name.find_last_of('_') + 1);
