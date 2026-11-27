@@ -794,7 +794,7 @@ public:
     void filterAssignment(
         unsigned int assignmentId,
         Assignment &assignment,
-        std::map<unsigned int, std::pair<Assignment, unsigned int>> &tCompBestAssignment,
+        std::map<unsigned int, std::pair<Assignment, float>> &tCompBestAssignment,
         chainKeyToComplexId_t &dbChainKeyToComplexIdMap,
         complexIdToChainKeys_t &dbComplexIdToChainKeysMap
     ) 
@@ -802,7 +802,7 @@ public:
         unsigned int tComplexId = 0;
         unsigned int qalnlen = 0;
         unsigned int talnlen = 0;
-        unsigned int adjustAlnLen = 0;
+        float adjustAlnLen = 0;
         assignment.assignmentId = assignmentId;
         assignment.filterResult.clear();
         size_t alnChainNum = assignment.chainToChainResults.size();
@@ -1258,7 +1258,7 @@ int scoremultimer(int argc, const char **argv, const Command &command) {
         alignmentLinesMap_t alignmentLinesMap;
         SearchResult searchResult;
         std::vector<Assignment> assignments;
-        std::map<unsigned int, std::pair<Assignment, unsigned int>> tCompBestAssignment;
+        std::map<unsigned int, std::pair<Assignment, float>> tCompBestAssignment;
         ComplexScorer complexScorer(q3DiDbr, t3DiDbr, alnDbr, qCaDbr, tCaDbr, thread_idx, minAssignedChainsRatio, monomerIncludeMode);
 #pragma omp for schedule(dynamic, 1)
         // for each q complex
