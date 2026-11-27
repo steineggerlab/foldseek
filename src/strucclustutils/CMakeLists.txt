@@ -12,6 +12,7 @@ set(strucclustutils_source_files
         strucclustutils/PulchraWrapper.h
         strucclustutils/structurerescorediagonal.cpp
         strucclustutils/convert2pdb.cpp
+        strucclustutils/PdbWriter.h
         strucclustutils/compressca.cpp
         strucclustutils/scoremultimer.cpp
         strucclustutils/createmultimerreport.cpp
