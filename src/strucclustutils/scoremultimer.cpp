@@ -1054,7 +1054,9 @@ public:
                 lddtcalculator.initQuery(intAlnLen, &qIntVecX[0], &qIntVecY[0], &qIntVecZ[0]);
                 LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator.computeLDDTScore(intAlnLen, 0, 0, alnbt, &dbIntVecX[0], &dbIntVecY[0], &dbIntVecZ[0]);
                 interfaceLddt = lddtres.avgLddtScore * lddtres.scoreLength / wholeIntLen;
-
+                if (std::isnan(interfaceLddt)) {
+                    interfaceLddt = 0;
+                }
                 if(interfaceLddt < par_.filtInterfaceLddtThr) {
                     return;
                 }
