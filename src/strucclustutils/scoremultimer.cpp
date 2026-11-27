@@ -1055,7 +1055,7 @@ public:
                 LDDTCalculator::LDDTScoreResult lddtres = lddtcalculator.computeLDDTScore(intAlnLen, 0, 0, alnbt, &dbIntVecX[0], &dbIntVecY[0], &dbIntVecZ[0]);
                 interfaceLddt = lddtres.avgLddtScore * lddtres.scoreLength / wholeIntLen;
 
-                if(interfaceLddt < par_.filtInterfaceLddtThr) {
+                if(!(interfaceLddt >= par_.filtInterfaceLddtThr)) {
                     return;
                 }
             } else if (par_.filtInterfaceLddtThr > 0) {
