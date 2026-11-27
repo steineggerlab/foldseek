@@ -23,6 +23,7 @@
 #include "TMaligner.h"
 #include "LDDT.h"
 #include "CalcProbTP.h"
+#include "PdbWriter.h"
 #include <map>
 
 #ifdef OPENMP
@@ -1265,34 +1266,38 @@ R"html(<!DOCTYPE html>
                     case LocalParameters::FORMAT_ALIGNMENT_PDB_SUPERPOSED:{
                         // rotate and translate the target Calpha
                         // and write the results as pdb file
-                        std::string filename = resultWriter.getDataFileName() + queryId+"_"+targetId+".pdb";
+                        std::string filename = std::string(resultWriter.getDataFileName()) + "_" + queryId + "_" + targetId + ".pdb";
                         FILE * fp = fopen(filename.c_str(), "w");
-                        result.append("MODEL\n");
-                        result.append("REMARK ");
+                        if (fp == NULL) {
+                            perror(filename.c_str());
+                            EXIT(EXIT_FAILURE);
+                        }
+                        result.append("REMARK 999 ");
                         result.append(queryId);
                         result.append(" ");
                         result.append(targetId);
                         result.append("\n");
                         tmres = tmaligner->computeTMscore(targetCaData, &targetCaData[res.dbLen], &targetCaData[res.dbLen+res.dbLen], res.dbLen,
                                                           res.qStartPos, res.dbStartPos, tmpBt, res.dbLen);
+                        size_t tId = tDbr->sequenceReader->getId(res.dbKey);
+                        char* targetSeqData = (char*) tDbr->sequenceReader->getData(tId, thread_idx);
+                        bool overflow = false;
+                        char line[82];
+                        const char* aa3 = NULL;
                         for(unsigned int tpos = 0; tpos < res.dbLen; tpos++){
-                            size_t tId = tDbr->sequenceReader->getId(res.dbKey);
-                            char* targetSeqData  = (char*) tDbr->sequenceReader->getData(tId, thread_idx);
-                            // printf for ATOM Calpha record pdb
-                            int count = snprintf(buffer, sizeof(buffer),
-                                   "ATOM  %5d %4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n",
-                                   tpos+1, "CA", singleLetterToThree(targetSeqData[tpos]), "A", tpos+1,
-                                   tmres.t[0] + targetCaData[tpos] * tmres.u[0][0] + targetCaData[res.dbLen+tpos] * tmres.u[0][1] + targetCaData[res.dbLen+res.dbLen+tpos] * tmres.u[0][2],
-                                   tmres.t[1] + targetCaData[tpos] * tmres.u[1][0] + targetCaData[res.dbLen+tpos] * tmres.u[1][1] + targetCaData[res.dbLen+res.dbLen+tpos] * tmres.u[1][2],
-                                   tmres.t[2] + targetCaData[tpos] * tmres.u[2][0] + targetCaData[res.dbLen+tpos] * tmres.u[2][1] + targetCaData[res.dbLen+res.dbLen+tpos] * tmres.u[2][2],
-                                   1.0, 0.0);
-                            if (count < 0 || static_cast<size_t>(count) >= sizeof(buffer)) {
-                                Debug(Debug::WARNING) << "Truncated line in entry" << i << "!\n";
-                                continue;
-                            }
-                            result.append(buffer, count);
+                            const float x = targetCaData[tpos];
+                            const float y = targetCaData[res.dbLen+tpos];
+                            const float z = targetCaData[res.dbLen+res.dbLen+tpos];
+                            aa3 = threeLetterResidue(targetSeqData[tpos]);
+                            result.append(line, writeCalphaAtom(line, tpos + 1, aa3, "A", tpos + 1,
+                                tmres.t[0] + x * tmres.u[0][0] + y * tmres.u[0][1] + z * tmres.u[0][2],
+                                tmres.t[1] + x * tmres.u[1][0] + y * tmres.u[1][1] + z * tmres.u[1][2],
+                                tmres.t[2] + x * tmres.u[2][0] + y * tmres.u[2][1] + z * tmres.u[2][2], overflow));
                         }
-                        result.append("ENDMDL\n");
+                        if (res.dbLen > 0) {
+                            result.append(line, writeTer(line, res.dbLen + 1, aa3, "A", res.dbLen));
+                        }
+                        result.append("END   \n");
                         // use result size to write to fp
                         fwrite(result.c_str(), sizeof(char), result.size(), fp);
                         fclose(fp);
